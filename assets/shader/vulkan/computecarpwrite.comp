@@ -1,0 +1,48 @@
+#version 450
+
+#include "shader_common_vulkan.glsl"
+#include "common_buffers.glsl"
+
+
+layout(binding = 4) readonly buffer atomicBuffer
+{
+	IndirectValues indiretValues[];
+};
+
+
+layout (rgba32f, binding = 6) uniform image2D storeTex0;
+
+
+#define PIXEL_MULTIPLIER 2
+#define XSIZE 4
+#define YSIZE 6
+
+
+layout (local_size_x = XSIZE * PIXEL_MULTIPLIER, local_size_y = YSIZE * PIXEL_MULTIPLIER, local_size_z = 1) in;
+void main()
+{
+	uint colBlock = gl_LocalInvocationID.x / PIXEL_MULTIPLIER;
+	uint rowBlock = gl_LocalInvocationID.y / PIXEL_MULTIPLIER;
+	uint indexInThreadGroup = rowBlock * XSIZE + colBlock;
+	uint groupThreadIndex = gl_WorkGroupID.y * 0 + gl_WorkGroupID.x;
+
+	uint2 pos = uint2(16u, 16u) + gl_LocalInvocationID.xy + uint2(gl_WorkGroupID.x * (PIXEL_MULTIPLIER * XSIZE + 4), 0u);
+	pos.y += 18u * gl_WorkGroupID.y;
+	
+	uint number = (9 - (groupThreadIndex % 10)) % 10;
+
+	uint countValue = gl_WorkGroupID.y == 0 ? indiretValues[0].myAtomicValue : indiretValues[0].vertexAtomicStartIndex;
+
+	for(uint i = 0; i < number; ++i)
+		countValue /= 10;
+	
+	//number = (countValue / uint(pow(10, number))) % 10;
+	number = countValue % 10;
+	uint numberIndex = number / 4;
+	uint subNumber = number % 4; 
+
+
+	//if((alphabets[number] & (1 << indexInThreadGroup)) != 0)
+	if((alphabets[numberIndex][subNumber] & (1 << indexInThreadGroup)) != 0)
+		imageStore(storeTex0, int2(pos), float4(1.0f, 1.0f, 1.0f, 1.0f));
+}

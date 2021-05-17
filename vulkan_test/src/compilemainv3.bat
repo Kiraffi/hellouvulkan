@@ -1,0 +1,1 @@
+clang mainvulkan3.cpp -I..\externalsrc\glfw\include -I%VULKAN_SDK%\include -I..\externalsrc\glm -I..\externalsrc\ -std=c++17 -L..\externalsrc\glfw\buildlibs\release\ -v -L%VULKAN_SDK%\lib -Xclang -flto-visibility-public-std

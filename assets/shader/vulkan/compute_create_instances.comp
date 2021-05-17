@@ -1,0 +1,48 @@
+#version 450
+
+#include "shader_common_vulkan.glsl"
+#include "common_buffers.glsl"
+
+#define LOCAL_SIZE 32
+
+layout(binding = 4) buffer atomicBuffer
+{
+	IndirectValues indiretValues[];
+};
+
+layout(binding = 7) buffer instanceIndexOutData
+{
+	MeshInstanceData instanceIndexStart[];
+};
+
+
+
+
+
+layout (local_size_x = LOCAL_SIZE, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	uint indexInThreadGroup = gl_LocalInvocationID.y * 0 + gl_LocalInvocationID.x;
+	uint groupThreadIndex = gl_WorkGroupID.y * 0 + gl_WorkGroupID.x;
+	uint instanceIndex = groupThreadIndex;
+
+
+	if(instanceIndex < drawCountValues.x)
+	{
+		uint instanceModelType = instanceIndexes[instanceIndex / 4][instanceIndex % 4];
+		uint meshlets = instanceDatas[instanceModelType].meshletAmount;
+
+		for(uint i = indexInThreadGroup; i < (meshlets + COMPUTE_LOCAL_INDEX_SIZE - 1) / (COMPUTE_LOCAL_INDEX_SIZE);  i+= LOCAL_SIZE)
+		{
+			uint writeIndex = atomicAdd(indiretValues[1].myAtomicValue, 1);
+
+			MeshInstanceData d;
+			d.instanceModelType = instanceModelType;
+			d.meshletGroupIndex = i;
+			d.instanceIndex = instanceIndex;
+			d.meshletWriteCount = min(COMPUTE_LOCAL_INDEX_SIZE, meshlets - i * COMPUTE_LOCAL_INDEX_SIZE);
+
+			instanceIndexStart[writeIndex] = d;
+		}
+	}
+}

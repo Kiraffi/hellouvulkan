@@ -1,0 +1,1141 @@
+#version 450
+
+#extension GL_KHR_shader_subgroup_ballot: enable
+#extension GL_KHR_shader_subgroup_arithmetic: enable
+
+#include "shader_common_vulkan.glsl"
+#include "common_buffers.glsl"
+
+#define GROUP_SIZE COMPUTE_LOCAL_INDEX_SIZE
+//#define GROUP_SIZE 16
+#define WRITE_TRIANGLE_SIZE 128
+#define USE_WRITE4 0
+
+layout(binding = 2) writeonly buffer indiceWrite
+{
+	#if USE_WRITE4
+		uint4 indWrites[];
+	#else
+		uint indWrites[];
+	#endif
+};
+
+
+
+layout(binding = 3) readonly buffer indices
+{
+//	#if USE_WRITE4
+//		uint4 inds[];
+//	#else
+		uint inds[];
+//	#endif
+};
+
+
+layout(binding = 4) buffer atomicBuffer
+{
+	IndirectValues indiretValues[];
+};
+
+
+layout(binding = 7) readonly buffer instanceIndexOutData
+{
+	MeshInstanceData instanceIndexStart[];
+};
+
+layout(binding = 8) writeonly buffer vertexWriteBuffer
+{
+	Vertex vertexOut[];
+};
+
+#define TRIANGLE_MASK_COUNT ((GROUP_SIZE * 3u + 32u - 1u) / 32u)
+
+//shared uint writtenTriangles;
+// Used for rearranging idice->vertex
+shared uint triangleData[WRITE_TRIANGLE_SIZE * 3u];
+
+shared uint sharedTriangleMasks[TRIANGLE_MASK_COUNT];
+
+// CLUSTER SHARED
+shared uint sharedClusterData[GROUP_SIZE * 3u];
+shared uint passedTriangleCountShared;
+shared uint lastWrittenTriangleIndexShared;
+
+// Index and vertex shared start points
+shared uint sharedWriteIndice;
+shared uint vertexWriteStartIndexShared;
+
+// Values we start with
+shared uint passedIndices[WRITE_TRIANGLE_SIZE * 3u];
+shared uint transferedIndices[WRITE_TRIANGLE_SIZE * 3u];
+
+shared uint uniqueIndices[WRITE_TRIANGLE_SIZE * 3u];
+shared uint sharedMinUniqueIndex;
+
+shared uint tmpIndices[WRITE_TRIANGLE_SIZE * 3u * 2];
+shared uint tmpIndiceCount;
+
+//shared uint tmpIndices[WRITE_TRIANGLE_SIZE * 3u];
+//shared uint tmpVertice[WRITE_TRIANGLE_SIZE * 3u];
+
+/*
+shared uint sharedMinIndexValue;
+
+shared int sharedMinIndex;
+shared int sharedMaxIndex;
+shared uint vertexWriteMinIndex;
+shared uint vertexWriteMaxIndex;
+*/
+
+#if WRITE_LDS_ATOMIC
+	shared uint sharedAtomicValue;
+	shared uint sharedWriteIndex;
+#endif
+
+/*
+		float4 m1 = (matrices[instanceIndex * 3 + 0].xyzw);
+		float4 m2 = (matrices[instanceIndex * 3 + 1].xyzw);
+		float4 m3 = (matrices[instanceIndex * 3 + 2].xyzw);
+
+		float4 v14 = (proj * float4(getModelTransposed(vertices[ind1].p1.xyz, m1, m2, m3), 1.0f));
+		float4 v24 = (proj * float4(getModelTransposed(vertices[ind2].p1.xyz, m1, m2, m3), 1.0f));
+		float4 v34 = (proj * float4(getModelTransposed(vertices[ind3].p1.xyz, m1, m2, m3), 1.0f));
+
+float3 getModelTransposed(float3 pos, float4 m1, float4 m2, float4 m3)
+{
+	float4 posi = float4(pos, 1.0f);
+	float3 result;
+	// custom matrix multiply with float4 x 3
+	result.x = dot(posi, m1);
+	result.y = dot(posi, m2);
+	result.z = dot(posi, m3);
+	return result;
+}
+*/
+
+void writeTriangles(uint indexInThreadGroup, uint lastWrittenTriangleIndex, uint trianglesAmountToWrite, uint verticesCount)
+{
+	trianglesAmountToWrite *= 3u;
+	#if USE_WRITE4
+		// Round addevalue up by neareast divisable by 12, as in 4 triangles.
+		uint addedValue = ((trianglesAmountToWrite + 4 * 3 - 1) / 12) * 12;
+	#else
+		uint addedValue = trianglesAmountToWrite;
+	#endif
+	if(indexInThreadGroup == 0)
+	{
+		sharedWriteIndice = atomicAdd(indiretValues[0].myAtomicValue, addedValue);
+	}
+
+	
+	{
+		for(uint w2 = indexInThreadGroup + trianglesAmountToWrite; w2 < addedValue; w2 += GROUP_SIZE)
+		{
+			passedIndices[w2] = 0u;
+		}
+		for(uint w = indexInThreadGroup; w < TRIANGLE_MASK_COUNT; w += GROUP_SIZE)
+		{
+			sharedTriangleMasks[w] = 0u;
+		}
+	}
+
+	groupMemoryBarrier();
+	barrier();
+	 
+	#if USE_WRITE4
+#if 0
+		// Idea: broadcast smallest value, find in triangles the smallest
+		// maybe should split somehow? take triangles out, would mean everyone has max 4 triangles?, 12 indices.
+
+
+		uint currentIndice = 0u;
+		{
+			uint markedIndices = 0u;
+
+/*
+			if(indexInThreadGroup == 0)
+				tmpIndiceCount = trianglesAmountToWrite;
+
+			for(uint tmp = indexInThreadGroup; tmp < trianglesAmountToWrite; tmp += GROUP_SIZE)
+				tmpIndices[tmp] = tmp;
+
+
+			uint d = 0;
+
+			groupMemoryBarrier();
+			barrier();
+			while(tmpIndiceCount > 0)
+			{
+				uint previousD = d;
+				d = (d + 1) % 2; 
+				uint currentCount = tmpIndiceCount;
+
+				groupMemoryBarrier();
+				barrier();
+
+				uint sIndex = previousD * WRITE_TRIANGLE_SIZE * 3u;
+				uint foundIndex = passedIndices[tmpIndices[sIndex]];
+
+				if(indexInThreadGroup == 0)
+				{
+					tmpIndiceCount = 0;
+					triangleData[currentIndice] = foundIndex;
+
+				}
+
+				groupMemoryBarrier();
+				barrier();
+				uint mask = 0u;
+				uint addAmount = 0u;
+				uint sNewIndex = d * WRITE_TRIANGLE_SIZE * 3u;
+				uint currentMask = 1u;
+				for(uint tmp = indexInThreadGroup; tmp < currentCount; tmp += GROUP_SIZE)
+				{
+					uint oldIndex = tmpIndices[sIndex + tmp]; 
+					if(passedIndices[oldIndex] == foundIndex)
+					{
+						passedIndices[oldIndex] = currentIndice;
+					}
+					else
+					{
+						uint newIndex = atomicAdd(tmpIndiceCount, 1u);
+						tmpIndices[sNewIndex + newIndex] = oldIndex;
+//						++addAmount;
+//						mask |= currentMask;
+					}
+//					currentMask = currentMask << 1u;
+				}
+				/*
+				if(addAmount > 0u)
+				{
+					uint newIndex = atomicAdd(tmpIndiceCount, addAmount);
+					uint currentMask = 1u;
+					uint writtenAmount = 0u;
+					for(uint tmp = indexInThreadGroup; tmp < currentCount; tmp += GROUP_SIZE)
+					{
+						if((mask & currentMask) != 0u)
+						{
+							tmpIndices[sNewIndex + newIndex + writtenAmount] = tmpIndices[sIndex + tmp];
+							++writtenAmount;
+						}
+						currentMask = currentMask << 1u;
+					}
+				}
+				*/
+				/*
+				++currentIndice;
+				groupMemoryBarrier();
+				barrier();
+			}
+
+/*
+			uint customCount = 0u;
+			uint values[(WRITE_TRIANGLE_SIZE * 3u + GROUP_SIZE - 1u) / GROUP_SIZE];
+
+			{
+				for(uint tmpI = indexInThreadGroup; tmpI < trianglesAmountToWrite; tmpI += GROUP_SIZE)
+				{
+					values[customCount] = passedIndices[tmpI];
+					++customCount;
+				}
+			}
+
+			bool ended = false;
+
+			while(!ended)
+			{
+				uint localMinValue = ~0u;
+
+				if(indexInThreadGroup == 0u)
+					sharedMinIndexValue = ~0u;
+				
+				for(uint localCount = 0u; localCount < customCount; ++localCount)
+				{
+						uint indd = localCount * GROUP_SIZE + indexInThreadGroup;
+					if((markedIndices & (1 << localCount)) == 0)
+//						localMinValue = min(passedIndices[indd], localMinValue);
+						localMinValue = min(values[localCount], localMinValue);
+				}
+
+				groupMemoryBarrier();
+				barrier();
+
+
+				uint4 localMinValues;
+				uint minValueCount = 0;
+				bool lastMinValue = false;
+				bool canAdd = true;
+				while(minValueCount < 2 && !lastMinValue)
+				{
+					if(canAdd)
+						atomicMin(sharedMinIndexValue, localMinValue);
+
+					groupMemoryBarrier();
+					barrier();
+					uint tmp = sharedMinIndexValue;
+					canAdd = canAdd && bool(tmp == localMinValue);
+					lastMinValue = tmp == ~0u;
+					localMinValues[minValueCount] = tmp;
+					minValueCount = lastMinValue ? minValueCount : minValueCount + 1;
+				}
+
+				ended = minValueCount == 0u;
+				if(!ended)
+				{
+					if(indexInThreadGroup == 0u)
+						triangleData[currentIndice] = localMinValue;
+					for(uint localCount = 0u; localCount < customCount; ++localCount)
+					{
+						uint indd = localCount * GROUP_SIZE + indexInThreadGroup;
+						if((markedIndices & (1 << localCount)) == 0)
+						{
+							uint tmpValue = values[localCount];
+							for(uint p = 0; p < minValueCount; ++p)
+							{
+								if(tmpValue == localMinValues[p])
+								//if(passedIndices[indd] == localMinValue)
+								{
+									markedIndices |= (1 << localCount);
+									passedIndices[indexInThreadGroup + localCount * GROUP_SIZE] = currentIndice;
+								}
+							}
+						}
+					}
+					++currentIndice;
+					groupMemoryBarrier();
+					barrier();
+				}
+			}
+*/
+
+
+			for(uint currentWrittenIndex = 0u; currentWrittenIndex < trianglesAmountToWrite; ++currentWrittenIndex)
+			{
+				uint triangleMasks[TRIANGLE_MASK_COUNT];
+				for(uint ii = 0; ii < TRIANGLE_MASK_COUNT; ++ii)
+					triangleMasks[ii] = sharedTriangleMasks[ii];
+				
+				//if(indexInThreadGroup == 0)
+				//	sharedMinIndexValue = ~0u;
+				groupMemoryBarrier();
+				barrier();
+				{
+					//currentWrittenIndex += indexInThreadGroup;
+					uint p = currentWrittenIndex / 32;
+					uint q = currentWrittenIndex % 32;
+					while(all(bvec2(currentWrittenIndex < trianglesAmountToWrite, ((triangleMasks[p] >> q) & 1) != 0)))
+					{
+						//currentWrittenIndex += GROUP_SIZE;
+						p = currentWrittenIndex / 32;
+						q = currentWrittenIndex % 32;
+						++currentWrittenIndex;
+					}
+				}
+				//atomicMin(sharedMinIndexValue, currentWrittenIndex);
+				//groupMemoryBarrier();
+				//barrier();
+				//currentWrittenIndex = sharedMinIndexValue;
+
+				uint foundIndex = 0u;
+				if(currentWrittenIndex < trianglesAmountToWrite)
+				{
+					foundIndex = passedIndices[currentWrittenIndex];
+					if(indexInThreadGroup == 0)
+						triangleData[currentIndice] = foundIndex;
+				}
+				//groupMemoryBarrier();
+				//barrier();
+				if(currentWrittenIndex < trianglesAmountToWrite)
+				{	
+					bool write = false;
+					for(uint writeOnwards = currentWrittenIndex + indexInThreadGroup; writeOnwards < trianglesAmountToWrite; writeOnwards += GROUP_SIZE)
+					{
+						uint p = writeOnwards / 32;
+						uint q = writeOnwards % 32;
+						if((triangleMasks[p] >> q) == 0)
+						{
+							if(passedIndices[writeOnwards] == foundIndex)
+							{
+								write = true;
+								passedIndices[writeOnwards] = currentIndice;
+								triangleMasks[p] |= (1 << q);
+							}
+						}
+					}
+					if(write)
+					{
+						for(uint ii2 = 0; ii2 < TRIANGLE_MASK_COUNT; ++ii2)
+							atomicOr(sharedTriangleMasks[ii2], triangleMasks[ii2]);
+					}
+					++currentIndice;
+				}
+				groupMemoryBarrier();
+				barrier();
+			}
+		
+			#if 0
+			/*
+			for(uint currentTriangleDataThreadIndex = 0; currentTriangleDataThreadIndex < GROUP_SIZE; ++currentTriangleDataThreadIndex)
+			{
+				if(indexInThreadGroup == currentTriangleDataThreadIndex)
+				{
+					uint triangleCount = 0u;
+					uint lValue = indexInThreadGroup;
+
+					uint maskIndex = 1u;
+					while(lValue < addedValue)
+					{
+						if((markedIndices & maskIndex) == 0u)
+						{
+							markedIndices |= maskIndex;
+							uint value = passedIndices[lValue];
+							passedIndices[lValue] = currentIndice + triangleCount;
+							triangleData[currentIndice + triangleCount] = value;
+
+							uint tmpMaskIndex = maskIndex << 1u;
+							uint tmpLValue = lValue + GROUP_SIZE;
+							while(tmpLValue < addedValue)
+							{
+								if((markedIndices & tmpMaskIndex) == 0u)
+								{
+									uint value2 = passedIndices[tmpLValue];
+									if(value == value2)
+									{
+										markedIndices |= tmpMaskIndex;
+										passedIndices[tmpLValue] = currentIndice + triangleCount;
+									}
+								}
+								tmpLValue += GROUP_SIZE;
+								tmpMaskIndex = tmpMaskIndex << 1u;
+							}
+							++triangleCount;
+						}
+						lValue += GROUP_SIZE;
+						maskIndex = maskIndex << 1u;
+					}
+
+					writtenTriangles = triangleCount; 
+				}
+				*/
+
+
+
+
+			bool ended = false;
+
+			while(!ended)
+			{
+				if(indexInThreadGroup == 0)
+				{
+					sharedMinIndex = (1 << 30) - 1;
+					sharedMaxIndex = -1;
+				}
+				groupMemoryBarrier();
+				barrier();
+
+				int minIndice = (1 << 30) - 1;
+				int maxIndice = -1;
+
+				{
+					uint lValue = indexInThreadGroup;
+					uint maskIndex = 1u;
+					while(lValue < addedValue)
+					{
+						if((markedIndices & maskIndex) == 0u)
+						{
+							int indValue = int(passedIndices[lValue]);
+							minIndice = min(indValue, minIndice);
+							maxIndice = max(indValue, maxIndice);
+						}
+						lValue += GROUP_SIZE;
+						maskIndex = maskIndex << 1u;
+					}
+				}
+
+				atomicMax(sharedMaxIndex, maxIndice);
+				atomicMin(sharedMinIndex, minIndice);
+
+				groupMemoryBarrier();
+				barrier();
+
+
+
+
+				int groupMin = sharedMinIndex;
+				int groupMax = sharedMaxIndex;
+				bool bMinIndice = groupMin != (1 << 30) - 1;
+				bool bMaxIndice = groupMax != -1;
+				
+				uint minIndex = currentIndice;
+				uint maxIndex = bMinIndice ? currentIndice + 1 : currentIndice + 0;
+
+				if(indexInThreadGroup == 0)
+				{
+					if(bMinIndice)
+						triangleData[minIndex] = uint(groupMin);
+					if(bMaxIndice)
+						triangleData[maxIndex] = uint(groupMax); 
+				}
+				ended = !(all(bvec2(bMinIndice, bMaxIndice)));
+
+
+
+
+
+				uint newTriangles = 0u; //writtenTriangles;
+				if(bMinIndice) ++newTriangles;
+				if(bMaxIndice) ++newTriangles;
+
+				groupMemoryBarrier();
+				barrier();
+
+				for(uint sIndex = currentIndice; sIndex < currentIndice + newTriangles; ++sIndex)
+				{
+					uint value = triangleData[sIndex];
+					uint lValue = indexInThreadGroup;
+
+					uint maskIndex = 1u;
+					while(lValue < addedValue)
+					{
+						if((markedIndices & maskIndex) == 0u)
+						{
+							uint value2 = passedIndices[lValue];
+							if(value == value2)
+							{
+								markedIndices |= maskIndex;
+								passedIndices[lValue] = sIndex;
+							}
+						}
+						lValue += GROUP_SIZE;
+						maskIndex = maskIndex << 1u;
+					}
+				} 
+				currentIndice += newTriangles;
+			}
+#endif
+		}
+		
+		groupMemoryBarrier();
+		barrier();
+
+		if(indexInThreadGroup == 0)
+		{
+			vertexWriteStartIndexShared = atomicAdd(indiretValues[0].vertexAtomicStartIndex, currentIndice);
+		}
+		groupMemoryBarrier();
+		barrier();
+
+		uint vertStartWriteIndex = vertexWriteStartIndexShared;
+		{
+			for(uint lValue = indexInThreadGroup; lValue < currentIndice; lValue += GROUP_SIZE)
+			{
+				uint readIndex = triangleData[lValue];
+				uint writeIndex = lValue + vertStartWriteIndex;
+				vertexOut[writeIndex] = vertices[readIndex]; 
+			}
+		}
+		uint lValue = indexInThreadGroup;
+
+
+#if 0 
+		uint minIndex = 0u;
+		{
+			uint markedIndices = 0u;
+
+			if(indexInThreadGroup == 0)
+			{
+				sharedMinIndex = (1 << 30) - 1;
+				sharedMaxIndex = -1;
+				vertexWriteMinIndex = 0u;
+				vertexWriteMaxIndex = WRITE_TRIANGLE_SIZE * 3u;
+			}
+			bool ended = false;
+
+			while(!ended)
+			{
+				if(indexInThreadGroup == 0)
+				{
+					sharedMinIndex = (1 << 30) - 1;
+					sharedMaxIndex = -1;
+				}
+				groupMemoryBarrier();
+				barrier();
+
+				int minIndice = (1 << 30) - 1;
+				int maxIndice = -1;
+
+				{
+					uint lValue = indexInThreadGroup;
+					uint maskIndex = 1u;
+					while(lValue < addedValue)
+					{
+						if((markedIndices & maskIndex) == 0u)
+						{
+							int indValue = int(passedIndices[lValue]);
+							minIndice = min(indValue, minIndice);
+							maxIndice = max(indValue, maxIndice);
+						}
+						lValue += GROUP_SIZE;
+						maskIndex = maskIndex << 1u;
+					}
+				}
+
+				atomicMax(sharedMaxIndex, maxIndice);
+				atomicMin(sharedMinIndex, minIndice);
+
+				groupMemoryBarrier();
+				barrier();
+				
+				
+				int groupMin = sharedMinIndex;
+				int groupMax = sharedMaxIndex;
+				bool bMinIndice = groupMin != (1 << 30) - 1;
+				bool bMaxIndice = groupMax != -1;
+				
+				uint maxIndex = bMinIndice ? minIndex + 1 : minIndex + 0;
+
+				if(indexInThreadGroup == 0)
+				{
+					if(bMinIndice)
+						tmpVertice[minIndex] = uint(groupMin);
+					if(bMaxIndice)
+						tmpVertice[maxIndex] = uint(groupMax); 
+				}
+				ended = !(all(bvec2(bMinIndice, bMaxIndice)));
+
+				
+				if(!ended)
+				{ 
+					bool bMinIndice = groupMin != (1 << 30) - 1;
+					bool bMaxIndice = groupMax != -1;
+
+					uint lValue = indexInThreadGroup;
+					uint minWriteIndex = minIndex;
+					uint maxWriteIndex = maxIndex;
+
+					uint maskIndex = 1u;
+					while(lValue < addedValue)
+					{
+						int indValue = int(passedIndices[lValue]);
+						if(indValue == groupMin)
+						{
+							tmpIndices[lValue] = minWriteIndex;
+							markedIndices |= maskIndex;
+						}
+						else if(indValue == groupMax)
+						{
+							tmpIndices[lValue] = maxWriteIndex;
+							markedIndices |= maskIndex;
+						}
+						lValue += GROUP_SIZE;
+						maskIndex = maskIndex << 1u;
+
+					}
+				}
+				if(bMinIndice)
+					++minIndex;
+				if(bMaxIndice)
+					++minIndex;
+			}
+		}
+		groupMemoryBarrier();
+		barrier();
+
+		if(indexInThreadGroup == 0)
+		{
+			vertexWriteStartIndexShared = atomicAdd(indiretValues[0].vertexAtomicStartIndex, minIndex);
+		}
+		groupMemoryBarrier();
+		barrier();
+
+		uint vertStartWriteIndex = vertexWriteStartIndexShared;
+		{
+			uint toIndex = vertexWriteMinIndex;
+			uint lValue = indexInThreadGroup;
+			while(lValue < toIndex)
+			{
+				uint readIndex = tmpVertice[lValue];
+				uint writeIndex = lValue + vertStartWriteIndex;
+				vertexOut[writeIndex] = vertices[readIndex]; 
+				lValue += GROUP_SIZE;
+			}
+		}
+#endif
+
+		{
+			uint lValue = indexInThreadGroup;
+			while(lValue * 4 < addedValue)
+			{
+				uint writeIndex = sharedWriteIndice / 4u;
+				uint offset = lValue * 4u;
+				uint4 writeIndices = uint4(passedIndices[offset + 0], passedIndices[offset + 1], passedIndices[offset + 2], passedIndices[offset + 3]);
+				//uint4 writeIndices = uint4(tmpIndices[offset + 0], tmpIndices[offset + 1], tmpIndices[offset + 2], tmpIndices[offset + 3]);
+				indWrites[writeIndex + lValue] = writeIndices + vertStartWriteIndex.xxxx;
+				lValue += GROUP_SIZE;
+			}
+		}
+#else
+		#if 0
+		groupMemoryBarrier();
+		barrier();
+		if(indexInThreadGroup == 0)
+		{
+			vertexWriteStartIndexShared = atomicAdd(indiretValues[0].vertexAtomicStartIndex, addedValue);
+		}
+		groupMemoryBarrier();
+		barrier();
+
+		uint vertStartWriteIndex = vertexWriteStartIndexShared;
+		{
+			uint lValue = indexInThreadGroup;
+			while(lValue < trianglesAmountToWrite)
+			{
+				uint readIndex = passedIndices[lValue];
+				uint writeIndex = lValue + vertStartWriteIndex;
+				vertexOut[writeIndex] = vertices[readIndex];
+				lValue += GROUP_SIZE;
+			}
+		}
+		uint lValue = indexInThreadGroup;
+
+	
+
+		while(lValue * 4 < addedValue)
+		{
+			uint writeIndex = sharedWriteIndice / 4u;
+			//uint offset = lValue * 4u;
+			uint offset = lValue * 4u + vertStartWriteIndex;
+			//uint4 writeIndices = uint4(passedIndices[offset + 0], passedIndices[offset + 1], passedIndices[offset + 2], passedIndices[offset + 3]);
+			uint4 writeIndices = uint4(offset + 0, offset + 1, offset + 2, offset + 3);
+			indWrites[writeIndex + lValue] = writeIndices;
+			lValue += GROUP_SIZE;
+		}
+
+		#else
+// just write
+		uint lValue = indexInThreadGroup;
+
+	
+
+		while(lValue * 4 < addedValue)
+		{
+			uint writeIndex = sharedWriteIndice / 4u;
+			uint offset = lValue * 4u;
+			//uint offset = lValue * 4u + vertStartWriteIndex;
+			uint4 writeIndices = uint4(passedIndices[offset + 0], passedIndices[offset + 1], passedIndices[offset + 2], passedIndices[offset + 3]);
+			//uint4 writeIndices = uint4(offset + 0, offset + 1, offset + 2, offset + 3);
+			indWrites[writeIndex + lValue] = writeIndices;
+			lValue += GROUP_SIZE;
+		}
+		#endif
+#endif
+	#else
+
+
+
+		uint lValue = indexInThreadGroup;
+		while(lValue * 3 < addedValue)
+		{
+			uint writeIndex = sharedWriteIndice;
+			uint offset = lValue * 3u;
+			indWrites[writeIndex + offset + 0u] =  passedIndices[offset + 0]; //inds[readStart + 0u] + packedInstanceIndex;
+			indWrites[writeIndex + offset + 1u] =  passedIndices[offset + 1]; //inds[readStart + 1u] + packedInstanceIndex;
+			indWrites[writeIndex + offset + 2u] =  passedIndices[offset + 2]; //inds[readStart + 2u] + packedInstanceIndex;
+			lValue += GROUP_SIZE;
+		}
+	#endif
+	groupMemoryBarrier();
+	memoryBarrierShared();
+	barrier();
+}
+
+
+
+
+uint findUniques(uint indexInThreadGroup, uint lastUniqueWrittenIndice, uint uniqueWriteInto, uint uniqueCount)
+{
+	for(;lastUniqueWrittenIndice < uniqueWriteInto; ++lastUniqueWrittenIndice)
+	{
+		if(indexInThreadGroup == 0u)
+			sharedMinUniqueIndex = ~0u;
+		uint index = lastUniqueWrittenIndice % (WRITE_TRIANGLE_SIZE * 3u);
+		uint findIndex = passedIndices[index];
+		groupMemoryBarrier();
+		barrier();
+		uint minIndex = ~0u;
+		for(uint tmp = indexInThreadGroup; tmp < uniqueCount; tmp += GROUP_SIZE)
+		{
+			if(uniqueIndices[tmp] == findIndex)
+			{
+				sharedMinUniqueIndex = tmp;
+				passedIndices[index] = tmp;
+			}
+		}
+		groupMemoryBarrier();
+		barrier();
+
+		if(sharedMinUniqueIndex == ~0u)
+		{
+			if(indexInThreadGroup == 0u)
+				uniqueIndices[uniqueCount] = findIndex;
+			else if(indexInThreadGroup == 1u)
+				passedIndices[index] = uniqueCount;
+			++uniqueCount;
+		}
+		groupMemoryBarrier();
+		barrier();
+	}
+	return uniqueCount;
+
+}
+
+
+layout (local_size_x = GROUP_SIZE, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	uint indexInThreadGroup = gl_LocalInvocationID.y * 0 + gl_LocalInvocationID.x;
+	uint groupThreadIndex = gl_WorkGroupID.y * 0 + gl_WorkGroupID.x;
+
+	MeshInstanceData indexData = instanceIndexStart[groupThreadIndex];
+	uint meshletGroupIndex = indexData.meshletGroupIndex;
+	uint modelReadIndiceStart = instanceDatas[indexData.instanceModelType].indiceStartIndex;
+	uint readIndex = (meshletGroupIndex * GROUP_SIZE + indexInThreadGroup) * GROUP_SIZE * 3 + modelReadIndiceStart;
+	// instance should be same for every group thread, unless going for something more complex
+	
+	uint instanceIndex = indexData.instanceIndex;
+	
+	/*
+	float angleIncrease = cos( meshlets[gl_GlobalInvocationID.x].normalAngleMax + cameraAspectRatio.y) - 1.0f;
+	//float angleIncrease = meshlets[gl_GlobalInvocationID.x].normalAngleMax - 1.0f;
+	float3 normalDir = normalize(meshlets[gl_GlobalInvocationID.x].normal);
+	float3 transposedPosedNormalDir = normalDir;
+
+	mat4 m;
+	m[0] = (matrices[instanceIndex * 3 + 0].xyzw);
+	m[1] = (matrices[instanceIndex * 3 + 1].xyzw);
+	m[2] = (matrices[instanceIndex * 3 + 2].xyzw);
+	m[3] = float4(0.0, 0.0, 0.0, 1.0f);
+	transposedPosedNormalDir =  (m * float4(normalDir, 1.0f * m)).xyz;
+
+
+	//transposedPosedNormalDir.x = dot(normalDir, normalize(matrices[instanceIndex * 3 + 0].xyz));
+	//transposedPosedNormalDir.y = dot(normalDir, normalize(matrices[instanceIndex * 3 + 1].xyz));
+	//transposedPosedNormalDir.z = dot(normalDir, normalize(matrices[instanceIndex * 3 + 2].xyz));
+	
+	//transposedPosedNormalDir = normalize(transposedPosedNormalDir);
+	//transposedPosedNormalDir = (proj * float4(transposedPosedNormalDir, 1.0f)).xyz;
+	transposedPosedNormalDir = normalize(transposedPosedNormalDir);
+
+	float3 clusterPos = meshlets[gl_GlobalInvocationID.x].pos;
+	float3 cameraToCluster = clusterPos.xyz - cameraPosition.xyz;
+	float3 cameraToClusterDir = normalize(cameraToCluster);
+	// custom matrix multiply with float4 x 3
+	//transposedPosedNormalDir.x = dot(normalDir, matrices[instanceIndex * 3 + 0].xyz);
+	//transposedPosedNormalDir.y = dot(normalDir, matrices[instanceIndex * 3 + 1].xyz);
+	//transposedPosedNormalDir.z = dot(normalDir, matrices[instanceIndex * 3 + 2].xyz);
+
+	//uint writeIndexCount =  = instanceIndexes[indexData.instanceIndexType].indiceAmount;
+	//float normalAngle = dot(transposedPosedNormalDir, float3(0.0f, 0.0f, 1.0f));
+	//float normalAngle = dot(transposedPosedNormalDir, cameraToClusterDir.xyz);
+	float normalAngle = dot(transposedPosedNormalDir, cameraForwardDir.xyz);
+	//bool culled = index >= indiceCount; // || normalAngle < angleIncrease;
+
+*/
+	uint addAmount = min(GROUP_SIZE * 3, instanceDatas[indexData.instanceModelType].indiceAmount - meshletGroupIndex * GROUP_SIZE * 3);
+
+	//uint addAmount = min(indexData.meshletWriteCount * GROUP_SIZE * 3, instanceDatas[indexData.instanceModelType].indiceAmount - meshletGroupIndex * GROUP_SIZE * GROUP_SIZE * 3);
+	bool culled = false; // || normalAngle < angleIncrease;
+
+	#if WRITE_LDS_ATOMIC
+		if(indexInThreadGroup == 0)
+		{
+			sharedAtomicValue = 0u;
+		}
+		groupMemoryBarrier();
+		//memoryBarrierShared();
+		//barrier();
+	#endif
+	uint packedInstanceIndex = (instanceIndex << 20);
+	if(!culled) // && gl_GlobalInvocationID.x % 2 == 0)
+	{
+		//uint addAmount = indexData.meshletWriteCount * GROUP_SIZE * 3;
+		//uint addAmount = min(indiceCount - index, GROUP_SIZE * 3);
+		/*
+		#if WRITE_LDS_ATOMIC
+			uint writeIndex = atomicAdd(sharedAtomicValue, addAmount);
+		#else
+			uint writeIndex = atomicAdd(indiretValues[0].myAtomicValue, addAmount);
+		#endif
+		*/
+		//uint writeIndex = index + indiceCount * 3 * gl_GlobalInvocationID.y;
+
+		sharedClusterData[indexInThreadGroup + GROUP_SIZE * 0] = (addAmount << 1) + 1;
+		sharedClusterData[indexInThreadGroup + GROUP_SIZE * 1] = packedInstanceIndex;
+		sharedClusterData[indexInThreadGroup + GROUP_SIZE * 2] = readIndex;
+	}
+	else
+	{
+		sharedClusterData[indexInThreadGroup + GROUP_SIZE * 0] = 0;
+	}
+	//if(indexInThreadGroup == 0)
+	//	passedTriangleCount = 0;
+	// barrier, good enough for LDS?
+	groupMemoryBarrier();
+	//memoryBarrierShared();
+	barrier();
+
+	uint writeLoop = 0u;
+	uint offset = 0u;
+	uint indexWriteAmount = indexInThreadGroup * 3u;
+	
+	
+	#if USE_WRITE4
+		uint writeAmount = GROUP_SIZE / 4u * 3u;
+	#else
+		uint writeAmount = GROUP_SIZE;
+	#endif
+	
+
+
+	if(indexInThreadGroup == 0)
+	{
+		passedTriangleCountShared = 0u;
+		lastWrittenTriangleIndexShared = 0u;
+	}
+	groupMemoryBarrier();
+	//memoryBarrierShared();
+	barrier();
+
+
+
+	uint lastWrittenTriangleIndex = 0u;
+	uint lastUniqueWrittenIndice = 0u;
+	uint uniqueCount = 0u;
+	uint passedTriangleCount = 0u;
+	uint atomicWriteIndex = 0u;
+	uint previousPackedIndex = 0u;
+	mat4 m4;
+
+	m4[0] = (matrices[instanceIndex * 3 + 0].xyzw);
+	m4[1] = (matrices[instanceIndex * 3 + 1].xyzw);
+	m4[2] = (matrices[instanceIndex * 3 + 2].xyzw);
+	m4[3] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	m4 = transpose(m4);
+	m4 = proj * m4;
+
+	uint4 localTriangles[3];
+	localTriangles[0] = uint4(0,0,0,0);
+	localTriangles[1] = uint4(0,0,0,0);
+	localTriangles[2] = uint4(0,0,0,0);
+
+	uint localTriangleCount = 0;
+
+	for(uint loopValue = 0u; loopValue < GROUP_SIZE; ++loopValue)
+	{
+		uint addAmount = sharedClusterData[loopValue + GROUP_SIZE * 0u];
+		uint packedInstanceIndex = sharedClusterData[loopValue + GROUP_SIZE * 1u];
+		uint ind1 = 0;
+		uint ind2 = 0;
+		uint ind3 = 0;
+
+		bool adding = false;
+		if(addAmount > 0u)
+		{
+//			uint instanceIndex = (packedInstanceIndex >> 20);
+//			if(packedInstanceIndex != previousPackedIndex)
+//			{
+//				//float4 f4 = float4(0.0, 0.0, 0.0, 0.0);
+//				//if(indexInThreadGroup == 0)
+//				//	f4 = (matrices[instanceIndex * 3 + 0].xyzw);
+//				//else if(indexInThreadGroup == 1)
+//				// 	f4 = (matrices[instanceIndex * 3 + 1].xyzw);
+//				//else if(indexInThreadGroup == 2)
+//				//	f4 = (matrices[instanceIndex * 3 + 2].xyzw);
+//	//
+//	//
+//				//m4[0] = subgroupBroadcast(f4, 0); 
+//				//m4[1] = subgroupBroadcast(f4, 1); 
+//				//m4[2] = subgroupBroadcast(f4, 2); 
+//				m4[0] = (matrices[instanceIndex * 3 + 0].xyzw);
+//				m4[1] = (matrices[instanceIndex * 3 + 1].xyzw);
+//				m4[2] = (matrices[instanceIndex * 3 + 2].xyzw);
+//				m4[3] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+//				m4 = transpose(m4);
+//				m4 = proj * m4;
+//				previousPackedIndex = packedInstanceIndex;
+//			}
+			//atomicWriteIndex = subgroupMax(passedTriangleCount);
+/*
+
+
+			offset = (writeLoop + indexInThreadGroup) % GROUP_SIZE;
+			#if USE_WRITE4
+				indexWriteAmount = offset * 4u;
+			#else
+				indexWriteAmount = offset * 3u;
+			#endif
+
+			// indexes need to be divisable by 4 at least, when using USE_WRITE4
+			if(offset < writeAmount && indexWriteAmount < (addAmount >> 1u))
+			{
+
+				#if USE_WRITE4
+					//uint readIndex = (groupThreadIndex * GROUP_SIZE * GROUP_SIZE + loopValue * GROUP_SIZE) * 3u / 4u + offset;
+
+					uint writeIndex = sharedClusterData[loopValue + GROUP_SIZE * 1u] / 4u + offset;
+					uint readIndex = sharedClusterData[loopValue + GROUP_SIZE * 2u] / 4u + offset;
+					indWrites[writeIndex] = inds[readIndex] + packedInstanceIndex.xxxx;
+
+				#else
+					//uint readIndex = sharedClusterData[loopValue + GROUP_SIZE * 2] + indexInThreadGroup * 3; 
+
+					uint writeIndex =  sharedClusterData[loopValue + GROUP_SIZE * 1u] + offset * 3;
+					uint readIndex = sharedClusterData[loopValue + GROUP_SIZE * 2u] + offset * 3; 
+					indWrites[writeIndex + 0u] = inds[readIndex + 0u] + packedInstanceIndex.x;
+					indWrites[writeIndex + 1u] = inds[readIndex + 1u] + packedInstanceIndex.x;
+					indWrites[writeIndex + 2u] = inds[readIndex + 2u] + packedInstanceIndex.x;
+				#endif
+			}
+			++writeLoop;
+			*/
+
+
+			uint culledAmount = (addAmount >> 1u);
+			uint readIndex = sharedClusterData[loopValue + GROUP_SIZE * 2u] + indexInThreadGroup * 3;
+			if(indexInThreadGroup < culledAmount)
+			{
+
+				// Do culling
+				ind1 = inds[readIndex + 0];
+				ind2 = inds[readIndex + 1];
+				ind3 = inds[readIndex + 2];
+
+				float4 v14 = m4 * float4(vertices[ind1].p1.xyz, 1.0f);
+				float4 v24 = m4 * float4(vertices[ind2].p1.xyz, 1.0f);
+				float4 v34 = m4 * float4(vertices[ind3].p1.xyz, 1.0f);
+			
+				float3 v1 = v14.xyz / v14.w;
+				float3 v2 = v24.xyz / v24.w;
+				float3 v3 = v34.xyz / v34.w;
+
+				float3 n1 = normalize(v2 - v1);
+				float3 n2 = normalize(v3 - v1);
+				float3 fp = (cross(n1, n2));
+
+				float3 hx = float3(v1.x, v2.x, v3.x);
+				float3 hy = float3(v1.y, v2.y, v3.y);
+				float3 hz = float3(v1.z, v2.z, v3.z);
+
+				float3 graterValue = float3(1.0f, 1.0f, 1.0f);
+				float3 lesserValue = float3(-1.0f, -1.0f, -1.0f);
+				float3 lesserValueZ = float3(0.0f, 0.0f, 0.0f);
+				bool bOutside = any(bvec2(any(bvec3(any(greater(hx, graterValue)), any(greater(hy, graterValue)), any(greater(hz, graterValue)))),
+					any(bvec3(any(lesser(hx, lesserValue)), any(lesser(hy, lesserValue)), any(lesser(hz, lesserValueZ))))));
+				
+				bool frontFace = fp.z <= 0.0f;
+				bool sameIndices = any(bvec3(ind1 == ind2, ind1 == ind3, ind2 == ind1));
+				adding = all(bvec3(frontFace, !bOutside, !sameIndices));
+				adding = true;
+
+				if(adding)
+				{
+					uint triangleWriteIndex = atomicAdd(indiretValues[0].myAtomicValue, 3u);
+
+					indWrites[triangleWriteIndex + 0u] = ind1 + packedInstanceIndex;
+					indWrites[triangleWriteIndex + 1u] = ind2 + packedInstanceIndex;
+					indWrites[triangleWriteIndex + 2u] = ind3 + packedInstanceIndex;
+				}
+			}
+
+			//atomicWriteIndex += subgroupExclusiveAdd(addCount);
+			//passedTriangleCount = subgroupMax(atomicWriteIndex);
+			//subgroupBroadcast()
+/*
+			uint uniqueWriteInto = min(passedTriangleCount * 3, (lastWrittenTriangleIndex + 1) * WRITE_TRIANGLE_SIZE * 3u);
+			uniqueCount = findUniques(indexInThreadGroup, lastUniqueWrittenIndice, uniqueWriteInto, uniqueCount);
+			lastUniqueWrittenIndice = uniqueWriteInto;
+*/
+
+		}
+
+#if 0
+
+		uint addCount = adding ? 1u : 0u;
+		//atomicWriteIndex = (atomicAdd(passedTriangleCountShared, adding ? 1u : 0u));
+		atomicWriteIndex = subgroupMax(atomicWriteIndex);
+		atomicWriteIndex += subgroupExclusiveAdd(addCount);
+		passedTriangleCount = subgroupMax(atomicWriteIndex);
+		//groupMemoryBarrier();
+		//barrier();
+		if(adding) // && allGreaterEq(fp.xy, float2(-1.0f)) && allLesserEq(fp.xyz, float3(1.0f)))
+		{
+			if(atomicWriteIndex < lastWrittenTriangleIndex + WRITE_TRIANGLE_SIZE)
+			{
+				uint tmpWriteIndex = (atomicWriteIndex % WRITE_TRIANGLE_SIZE) * 3;
+				passedIndices[tmpWriteIndex + 0] = ind1 + packedInstanceIndex;
+				passedIndices[tmpWriteIndex + 1] = ind2 + packedInstanceIndex;
+				passedIndices[tmpWriteIndex + 2] = ind3 + packedInstanceIndex;
+				adding = false;
+			}
+		}
+//		if(loopValue + 1 == GROUP_SIZE)
+		{
+			groupMemoryBarrier();
+			memoryBarrierShared();
+			barrier();
+		}
+//		if(passedTriangleCountShared > lastWrittenTriangleIndex + WRITE_TRIANGLE_SIZE)
+		if(passedTriangleCount > lastWrittenTriangleIndex + WRITE_TRIANGLE_SIZE)
+		{
+			groupMemoryBarrier();
+			memoryBarrierShared();
+			barrier();
+			writeTriangles(indexInThreadGroup, lastWrittenTriangleIndex, WRITE_TRIANGLE_SIZE, uniqueCount);
+			groupMemoryBarrier();
+			memoryBarrierShared();
+			barrier();
+			if(indexInThreadGroup == 0)
+				lastWrittenTriangleIndexShared += WRITE_TRIANGLE_SIZE; 
+			lastWrittenTriangleIndex += WRITE_TRIANGLE_SIZE;
+			uniqueCount = 0u;
+			if(adding)
+			{
+				uint tmpWriteIndex = (atomicWriteIndex % WRITE_TRIANGLE_SIZE) * 3;
+				passedIndices[tmpWriteIndex + 0] = ind1 + packedInstanceIndex;
+				passedIndices[tmpWriteIndex + 1] = ind2 + packedInstanceIndex;
+				passedIndices[tmpWriteIndex + 2] = ind3 + packedInstanceIndex;
+			}
+			uniqueCount = 0u;
+		}
+		atomicWriteIndex = passedTriangleCount;
+#endif
+	}
+
+#if 0
+	groupMemoryBarrier();
+	barrier();
+
+/*
+	uint uniqueWriteInto = min(passedTriangleCount * 3, (lastWrittenTriangleIndex + 1) * WRITE_TRIANGLE_SIZE * 3u);
+	uniqueCount = findUniques(indexInThreadGroup, lastUniqueWrittenIndice, uniqueWriteInto, uniqueCount);
+*/
+	uint lastTriangleAmount = (passedTriangleCount % WRITE_TRIANGLE_SIZE);
+
+	if((passedTriangleCount % WRITE_TRIANGLE_SIZE) != 0)
+	{
+		#if USE_WRITE4
+			uint writeIndex = lastTriangleAmount * 3u + indexInThreadGroup;
+			while(writeIndex < WRITE_TRIANGLE_SIZE * 3u)
+			{
+				passedIndices[writeIndex] = 0;
+				writeIndex += GROUP_SIZE;
+			}
+			groupMemoryBarrier();
+			barrier();
+		#endif
+		writeTriangles(indexInThreadGroup, lastWrittenTriangleIndex, lastTriangleAmount, uniqueCount);
+	}
+//	imageData[WIDTH * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = float4(fract(float2(gl_GlobalInvocationID.xy) / screenSize + padding / 1024.0f), 0.0f, 1.0f);
+//	imageData[WIDTH * gl_GlobalInvocationID.y + gl_GlobalInvocationID.x] = float4(fract(float2(gl_GlobalInvocationID.xy) / screenSize + padding / 1024.0f), 0.0f, 1.0f);
+#endif
+}

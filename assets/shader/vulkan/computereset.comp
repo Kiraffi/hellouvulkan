@@ -1,0 +1,21 @@
+#version 450
+
+#include "shader_common_vulkan.glsl"
+#include "common_buffers.glsl"
+
+layout(binding = 4) buffer atomicBuffer4
+{
+	uint4 indiretValues[];
+} atomicB4;
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+	atomicB4.indiretValues[0] = uint4(0u, 1u, 0u, 0u); // The render command indexed instanced draw call with one instance 
+	atomicB4.indiretValues[1] = uint4(0u, 0u, 0u, 0u);
+
+
+	atomicB4.indiretValues[2] = uint4(0u, 1u, 1u, 0u); // for compute.comp from compute_create_instance
+	atomicB4.indiretValues[3] = uint4(0u, 0u, 0u, 0u);
+}
