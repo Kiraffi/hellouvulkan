@@ -12,6 +12,9 @@
 #include <fstream>
 #include <cmath>
 
+
+static double timer_frequency = 0.0;
+
 static void APIENTRY openglCallbackFunction(
 	GLenum source,
 	GLenum type,
@@ -148,12 +151,7 @@ bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 	glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
 
 	#if SDL_USAGE
-	nowStamp = SDL_GetPerformanceCounter();
-	lastStamp = nowStamp;
-	freq = (double)SDL_GetPerformanceFrequency();
-	#else
-	nowStamp = glfwGetTime();
-	lastStamp = nowStamp; 
+	timer_frequency = (double)SDL_GetPerformanceFrequency();
 	#endif
 
 	// rdoc....
@@ -210,17 +208,10 @@ void App::present()
 {
 	#if SDL_USAGE
 		SDL_GL_SwapWindow(window);
-		lastStamp = nowStamp;
-		nowStamp = SDL_GetPerformanceCounter();
-		dt = double((nowStamp - lastStamp) * 1000.0 / freq );
-
 	#else
 		glfwSwapBuffers(window);
-		lastStamp = nowStamp; 
-		nowStamp = glfwGetTime();
-		dt = (nowStamp - lastStamp) * 1000.0;
 	#endif
-
+	dt = timer.getLapDuration();
 }
 void App::setTitle(const char *str)
 {
@@ -233,6 +224,47 @@ void App::setTitle(const char *str)
 
 double App::getDeltaTime()
 {
+	return dt;
+}
+
+Timer::Timer()
+{
+	#if SDL_USAGE
+		nowStamp = SDL_GetPerformanceCounter();
+	#else
+		nowStamp = glfwGetTime();
+	#endif
+	startStamp = nowStamp;
+}
+
+double Timer::getDuration()
+{
+	double dt = 0.0;
+	#if SDL_USAGE
+		nowStamp = SDL_GetPerformanceCounter();
+		dt = double((nowStamp - startStamp) * 1000.0 / timer_frequency );
+
+	#else
+		nowStamp = glfwGetTime();
+		dt = (nowStamp - startStamp) * 1000.0;
+	#endif
+	return dt;
+
+}
+
+double Timer::getLapDuration()
+{
+	double dt = 0.0;
+	lastStamp = nowStamp;
+	#if SDL_USAGE
+		nowStamp = SDL_GetPerformanceCounter();
+		dt = double((nowStamp - lastStamp) * 1000.0 / timer_frequency );
+
+	#else
+		lastStamp = nowStamp; 
+		nowStamp = glfwGetTime();
+		dt = (nowStamp - lastStamp) * 1000.0;
+	#endif
 	return dt;
 }
 

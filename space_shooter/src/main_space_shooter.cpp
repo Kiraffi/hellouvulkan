@@ -2,15 +2,21 @@
 #include <cstdlib>
 #include <stdint.h>
 
+#include <core/app.h>
 
-#include "glad/glad.h"
-#include <SDL2/SDL.h>
+#include <glad/glad.h>
+#if SDL_USAGE
+	#include <SDL2/SDL.h>
+#else
+	#include <GLFW/glfw3.h>
+#endif
 
-#include "core/app.h"
+#include <ogl/shader.h>
+#include <ogl/shaderbuffer.h>
 
-#include "ogl/shader.h"
-#include "ogl/shaderbuffer.h"
 
+#include <chrono>
+#include <thread>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -132,6 +138,173 @@ static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, C
 	addText(str, vertData, cursor);
 }
 
+struct MyKeyStates
+{
+	int newWindowWidth = 0;
+	int newWindowHeight = 0;
+
+	bool quit = false;
+	bool resize = false;
+};
+
+static MyKeyStates keyStates;
+static bool keysDown[ 255 ] = {};
+
+
+#if SDL_USAGE
+static void handleSDLEvents()
+{
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	{
+		switch(event.type)
+		{
+			case SDL_QUIT:
+				keyStates.quit = true;
+				break;
+			
+			case SDL_KEYDOWN:
+			{
+				switch(event.key.keysym.sym)
+				{
+					case SDLK_ESCAPE:
+						keyStates.quit = true;
+						break;
+					case SDLK_UP:
+					case SDLK_w:
+						keysDown[ 0 ] = true;
+						break;
+
+					case SDLK_DOWN:
+					case SDLK_s:
+						break;
+
+					case SDLK_LEFT:
+					case SDLK_a:
+						keysDown[ 1 ] = true;
+						break;
+
+
+					case SDLK_RIGHT:
+					case SDLK_d:
+						keysDown[ 2 ] = true;
+						break;
+
+					default:
+						break;
+				}
+				break;
+			}
+			case SDL_KEYUP:
+			{
+				switch(event.key.keysym.sym)
+				{
+					case SDLK_UP:
+					case SDLK_w:
+						keysDown[ 0 ] = false;
+						break;
+
+					case SDLK_DOWN:
+					case SDLK_s:
+						break;
+
+					case SDLK_LEFT:
+					case SDLK_a:
+						keysDown[ 1 ] = false;
+						break;
+
+
+					case SDLK_RIGHT:
+					case SDLK_d:
+						keysDown[ 2 ] = false;
+						break;
+
+					default:
+						break;
+				}
+			}
+			case SDL_WINDOWEVENT:
+			{
+				if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+				{
+					keyStates.newWindowWidth = event.window.data1;
+					keyStates.newWindowHeight = event.window.data2;
+					keyStates.resize = true;
+				}
+				break;
+			}
+		}
+	}
+}
+#else
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if(action == GLFW_PRESS)
+	{
+		switch(key)
+		{
+			case GLFW_KEY_ESCAPE: 
+				keyStates.quit = true;
+				glfwSetWindowShouldClose(window, GLFW_TRUE);
+				break;
+			case GLFW_KEY_LEFT:
+			case GLFW_KEY_A:
+				keysDown[ 1 ] = true;
+				break;
+			case GLFW_KEY_RIGHT:
+			case GLFW_KEY_D:
+				keysDown[ 2 ] = true;
+				break;
+			case GLFW_KEY_UP:
+			case GLFW_KEY_W:
+				keysDown[ 0 ] = true;
+				break;
+			case GLFW_KEY_DOWN:
+			case GLFW_KEY_S:
+				break;
+
+			default:
+				break;
+		}
+
+	}
+	if(action == GLFW_RELEASE)
+	{
+		switch(key)
+		{
+			case GLFW_KEY_LEFT:
+			case GLFW_KEY_A:
+				keysDown[ 1 ] = false;
+				break;
+			case GLFW_KEY_RIGHT:
+			case GLFW_KEY_D:
+				keysDown[ 2 ] = false;
+				break;
+			case GLFW_KEY_UP:
+			case GLFW_KEY_W:
+				keysDown[ 0 ] = false;
+				break;
+			case GLFW_KEY_DOWN:
+			case GLFW_KEY_S:
+				break;
+
+			default:
+				break;
+		}
+
+	}
+}
+
+static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	keyStates.resize = true;
+	keyStates.newWindowWidth = width;
+	keyStates.newWindowHeight = height;
+}
+
+#endif
+
+
 
 
 
@@ -146,6 +319,12 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 		printf("Failed to init model shader\n");
 		return;
 	}
+
+	#if !SDL_USAGE
+	glfwSetKeyCallback(app.window, key_callback);
+	glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
+	#endif
+
 
 	Shader shaderTexture;
 	if (!shaderTexture.initShader("assets/shaders/texturedquad.vert", "assets/shaders/texturedquad.frag"))
@@ -332,18 +511,11 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 	Cursor cursor;
 	updateText(txt, vertData, cursor);
 
-	SDL_Event event;
 	bool quit = false;
-	float dt = 0.0f;
-
-	Uint64 nowStamp = SDL_GetPerformanceCounter();
-	Uint64 lastStamp = 0;
-	double freq = (double)SDL_GetPerformanceFrequency();
 
 
 	app.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-	bool keysDown[ 255 ] = {};
 
 
 	uint32_t queries[2 * 4] = {0, 0};
@@ -354,131 +526,61 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 	uint32_t queryIndex = 0;
 	while (!quit)
 	{
-		lastStamp = nowStamp;
-		nowStamp = SDL_GetPerformanceCounter();
-		dt = float(( nowStamp - lastStamp ) * 1000 / freq / 1000.0);
+		double dt = app.getDeltaTime();
+		keyStates = MyKeyStates{};
+		#if SDL_USAGE
+			handleSDLEvents();
+		#else
+		#endif
 
-		while (SDL_PollEvent(&event))
+		#if SDL_USAGE
+			handleSDLEvents();
+		#else
+			glfwPollEvents();
+			quit = glfwWindowShouldClose(app.window);
+		#endif
+
+		if(keyStates.quit)
+			quit = true;
+
+		if(quit)
+			break;
+
+		if(keyStates.resize)
 		{
-			switch (event.type)
-			{
-				case SDL_QUIT:
-					quit = true;
-					break;
+			app.resizeWindow(keyStates.newWindowWidth, keyStates.newWindowHeight);
+			glUniform2f(0, GLfloat(app.windowWidth), GLfloat(app.windowHeight));
 
-				case SDL_KEYDOWN:
-				{
-					switch (event.key.keysym.sym)
-					{
-						case SDLK_ESCAPE:
-							quit = true;
-							break;
-						case SDLK_UP:
-						case SDLK_w:
-						{
-							keysDown[ 0 ] = true;
-						}
-						break;
-
-						case SDLK_DOWN:
-							break;
-
-						case SDLK_LEFT:
-						case SDLK_a:
-						{
-							keysDown[ 1 ] = true;
-						}
-						break;
-
-
-						case SDLK_RIGHT:
-						case SDLK_d:
-						{
-							keysDown[ 2 ] = true;
-						}
-						break;
-
-						default:
-							break;
-					}
-				}
-				break;
-
-				case SDL_KEYUP:
-				{
-					switch (event.key.keysym.sym)
-					{
-						case SDLK_UP:
-						case SDLK_w:
-						{
-							keysDown[ 0 ] = false;
-						}
-						break;
-
-						case SDLK_DOWN:
-							break;
-
-						case SDLK_LEFT:
-						case SDLK_a:
-						{
-							keysDown[ 1 ] = false;
-						}
-						break;
-
-
-						case SDLK_RIGHT:
-						case SDLK_d:
-						{
-							keysDown[ 2 ] = false;
-						}
-						break;
-
-
-						default:
-							break;
-					}
-				}
-				break;
-
-				case SDL_WINDOWEVENT:
-				{
-					if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-					{
-						app.resizeWindow(event.window.data1, event.window.data2);
-					}
-				}
-				break;
-			}
 		}
 
 		Entity &playerEntity = entities[ AsteroidMaxTypes ];
 
-		float updateDur = 0.0f;
+		core::Timer updateDurTimer;
 		float dtSplit = dt;
 		{
-			Uint64 timer1 = SDL_GetPerformanceCounter();
 			// Update position, definitely not accurate physics, if dt is big this doesn't work properly, trying to split it into several updates.
 			while (dtSplit > 0.0f)
 			{
 				float dddt = fminf(dtSplit, 0.005f);
-				float origSpeed = sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+				float origSpeed = 0.01f * sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
 
 				if (keysDown[ 1 ])
 				{
-					float rotSpeed = fminf(origSpeed, 1.0f);
-					rotSpeed = rotSpeed * 2.0f + ( 1.0f - rotSpeed ) * 5.0f;
+					float rotSpeed = fmaxf(origSpeed, 0.01f);
+					//rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
 					playerEntity.rotation += rotSpeed * dddt;
 				}
 				if (keysDown[ 2 ])
 				{
-					float rotSpeed = fminf(origSpeed, 1.0f);
-					rotSpeed = rotSpeed * 2.0f + ( 1.0f - rotSpeed ) * 5.0f;
+					float rotSpeed = fmaxf(origSpeed, 0.01f);
+					//rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
 					playerEntity.rotation -= rotSpeed * dddt;
 				}
+				playerEntity.rotation = std::fmod(playerEntity.rotation, M_PI * 2.0);
 				if (keysDown[ 0 ])
 				{
-					playerEntity.speedX += cosf(playerEntity.rotation + float(M_PI) * 0.5f) * 1000.0f * dddt;
-					playerEntity.speedY += sinf(playerEntity.rotation + float(M_PI) * 0.5f) * 1000.0f * dddt;
+					playerEntity.speedX += cosf(playerEntity.rotation + float(M_PI) * 0.5f) * 5.0f * dddt;
+					playerEntity.speedY += sinf(playerEntity.rotation + float(M_PI) * 0.5f) * 5.0f * dddt;
 				}
 
 
@@ -486,9 +588,9 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 				{
 					float origSpeed = sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
-					float dec = dddt * 0.5f * origSpeed;
+					float dec = dddt * 0.001f * origSpeed;
 					float speed = fmax(origSpeed - dec, 0.0f);
-					float slowDown = origSpeed > 0.1f ? speed / origSpeed : 0.0f;
+					float slowDown = 0.95f; //origSpeed > 0.01f ? speed / std::max(origSpeed, 1.0f) : 0.0f;
 					playerEntity.speedX *= slowDown;
 					playerEntity.speedY *= slowDown;
 
@@ -539,9 +641,8 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 				//modelInstances[ i ].rotation = entities[ i ].rotation;
 				*/
 			}
-			Uint64 timer2 = SDL_GetPerformanceCounter();
-			updateDur = float(( timer2 - timer1 ) * 1000 / freq / 1000.0);
 		}
+		float updateDur = float(updateDurTimer.getDuration());
 		//Clear color buffer
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -586,8 +687,10 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 			ssbo.unbind();
 		}
 		glQueryCounter(queries[queryIndex + 1], GL_TIMESTAMP);
-		SDL_GL_SwapWindow(app.window);
-		SDL_Delay(1);
+
+		app.present();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
 		float gpuDuration = 0.0f;
 		
 		{
@@ -623,9 +726,11 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 			amount = 0;
 			avg = 0.0f;
 		}
+		float fps = dt > 0.0 ? float(1000.0 / dt) : 0.0f;
+
 		sprintf(str, "%2.2fms, fps: %4.2f, update: %2.3fms, gpu: %2.3fms, gpuavg: %2.3fms", 
-			dt * 1000.0f, 1.0f / dt, updateDur * 1000.0f, gpuDuration, avgShow);
-		SDL_SetWindowTitle(app.window, str);
+			float(dt), fps, updateDur, gpuDuration, avgShow);
+		app.setTitle(str);
 
 		queryIndex = (queryIndex + 2) % 8;
 

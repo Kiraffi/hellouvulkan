@@ -13,6 +13,7 @@ target_link_libraries(space_shooter PUBLIC
 	${CMAKE_DL_LIBS} 
 	${SDL2_LIBRARY}
 	-lSDL2
+	glfw
 	)
 
 

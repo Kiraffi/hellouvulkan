@@ -5,16 +5,30 @@
 #define SDL_USAGE 0
 
 #if SDL_USAGE
-struct SDL_Window;
-typedef void *SDL_GLContext;
+	struct SDL_Window;
+	typedef void *SDL_GLContext;
+	typedef uint64_t TimeSave;
 #else
-struct GLFWwindow;
-
+	struct GLFWwindow;
+	typedef double TimeSave;
 #endif
 
 
 namespace core
 {
+
+class Timer
+{
+public:
+	Timer();
+	double getDuration();
+	double getLapDuration();
+
+private:
+	TimeSave startStamp = 0;
+	TimeSave nowStamp = 0;
+	TimeSave lastStamp = 0;
+};
 
 struct MouseState
 {
@@ -52,14 +66,7 @@ public:
 		bool inited = false;
 
 	private:
-	#if SDL_USAGE
-		uint64_t nowStamp = 0;
-		uint64_t lastStamp = 0;
-		double freq = 0.0;
-	#else
-		double nowStamp = 0.0;
-		double lastStamp = 0.0; 
-	#endif
+	Timer timer;
 	double dt = 0.0;
 
 };
