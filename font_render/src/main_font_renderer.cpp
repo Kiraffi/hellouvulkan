@@ -450,34 +450,16 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 	updateText(txt, vertData, cursor);
 
 	bool quit = false;
-	float dt = 0.0f;
 
-	#if SDL_USAGE
-	Uint64 nowStamp = SDL_GetPerformanceCounter();
-	Uint64 lastStamp = 0;
-	double freq = (double)SDL_GetPerformanceFrequency();
-	#else
-	double nowStamp = glfwGetTime();
-	double lastStamp = nowStamp; 
-	#endif
 	app.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	while (!quit)
 	{
+		double dt = app.getDeltaTime();
 		#if SDL_USAGE
-		lastStamp = nowStamp;
-		nowStamp = SDL_GetPerformanceCounter();
-		dt = float((nowStamp - lastStamp)*1000 / freq );
-		handleSDLEvents();
-		
+			handleSDLEvents();
 		#else
-		glfwPollEvents();
-		lastStamp = nowStamp;
-		nowStamp = glfwGetTime();
-		dt = float((nowStamp - lastStamp) * 1000.0);
-
-		quit = glfwWindowShouldClose(app.window);
-
-		
+			glfwPollEvents();
+			quit = glfwWindowShouldClose(app.window);
 		#endif
 
 		if(keyStates.quit)
@@ -547,18 +529,15 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 		glDrawElements(GL_TRIANGLES, GLsizei(vertData.size() * 6), GL_UNSIGNED_INT, 0);
 
-		#if SDL_USAGE
-		SDL_GL_SwapWindow(app.window);
-		#else
-		glfwSwapBuffers(app.window);
-		#endif
+		app.present();
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		char str[100];
+		float fps = dt > 0.0 ? float(1000.0 / dt) : 0.0f;
 		sprintf(str, "%2.2fms, fps: %4.2f", 
-			dt, 1000.0f / dt);
-		#if SDL_USAGE
-		SDL_SetWindowTitle(app.window, str);
-		#endif
+			float(dt), fps);
+
+		app.setTitle(str);
 		//printf("Frame duration: %f fps: %f\n", dt, 1000.0f / dt);
 	}
 }

@@ -7,4 +7,10 @@ add_library(MyLibraries
 	ogl/shaderbuffer.h
 	)
 
-target_include_directories(MyLibraries PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")
+target_include_directories(MyLibraries PUBLIC 
+	glfw 
+	"${CMAKE_CURRENT_SOURCE_DIR}/"	
+	${CMAKE_DL_LIBS} 
+	${SDL2_LIBRARY}
+	-lSDL2
+	)

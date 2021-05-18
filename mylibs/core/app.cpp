@@ -36,7 +36,7 @@ static void APIENTRY openglCallbackFunction(
 	}
 }
 
-void error_callback(int error, const char* description)
+static void error_callback(int error, const char* description)
 {
 	fprintf(stderr, "Error: %s\n", description);
 }
@@ -96,8 +96,6 @@ bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 	SDL_SetWindowResizable(window, SDL_TRUE);
 	gladLoadGLLoader(SDL_GL_GetProcAddress);
 	resizeWindow(w, h);
-	glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
-	printf("Screen res: %i:%i\n", w, h);
 
 	#else
 
@@ -147,6 +145,16 @@ bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
+	glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
+
+	#if SDL_USAGE
+	nowStamp = SDL_GetPerformanceCounter();
+	lastStamp = nowStamp;
+	freq = (double)SDL_GetPerformanceFrequency();
+	#else
+	nowStamp = glfwGetTime();
+	lastStamp = nowStamp; 
+	#endif
 
 	// rdoc....
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
@@ -198,6 +206,35 @@ void App::setClearColor(float r, float g, float b, float a)
 	glClearColor(r, g, b, a);
 }
 
+void App::present()
+{
+	#if SDL_USAGE
+		SDL_GL_SwapWindow(window);
+		lastStamp = nowStamp;
+		nowStamp = SDL_GetPerformanceCounter();
+		dt = double((nowStamp - lastStamp) * 1000.0 / freq );
+
+	#else
+		glfwSwapBuffers(window);
+		lastStamp = nowStamp; 
+		nowStamp = glfwGetTime();
+		dt = (nowStamp - lastStamp) * 1000.0;
+	#endif
+
+}
+void App::setTitle(const char *str)
+{
+	#if SDL_USAGE
+	SDL_SetWindowTitle(window, str);
+	#else
+	glfwSetWindowTitle(window, str);
+	#endif
+}
+
+double App::getDeltaTime()
+{
+	return dt;
+}
 
 bool loadFontData(const std::string &fileName, std::vector<char> &dataOut)
 {
@@ -218,6 +255,30 @@ bool loadFontData(const std::string &fileName, std::vector<char> &dataOut)
 		return true;
 	}
 	return false;
+}
+
+MouseState App::getMouseState()
+{
+	MouseState mouseState;
+	#if SDL_USAGE
+		uint32_t mousePress = SDL_GetMouseState(&mouseState.x, &mouseState.y);
+		mouseState.y = windowHeight - mouseState.y;
+
+		mouseState.leftButtonDown = (mousePress & SDL_BUTTON(SDL_BUTTON_LEFT)) == SDL_BUTTON(SDL_BUTTON_LEFT);
+		mouseState.rightButtonDown = (mousePress & SDL_BUTTON(SDL_BUTTON_RIGHT)) == SDL_BUTTON(SDL_BUTTON_RIGHT);
+		mouseState.middleButtonDown = (mousePress & SDL_BUTTON(SDL_BUTTON_MIDDLE)) == SDL_BUTTON(SDL_BUTTON_MIDDLE);
+	#else
+		double xpos, ypos;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		mouseState.x = xpos;
+		mouseState.y = ypos;
+		mouseState.y = windowHeight - mouseState.y;
+
+		mouseState.leftButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+		mouseState.rightButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+		mouseState.middleButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+	#endif
+	return mouseState;
 }
 
 

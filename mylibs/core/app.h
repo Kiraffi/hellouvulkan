@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #define SDL_USAGE 0
 
@@ -10,9 +11,19 @@ typedef void *SDL_GLContext;
 struct GLFWwindow;
 
 #endif
+
+
 namespace core
 {
 
+struct MouseState
+{
+	int x;
+	int y;
+	bool leftButtonDown;
+	bool rightButtonDown;
+	bool middleButtonDown;
+};
 
 class App
 {
@@ -22,6 +33,11 @@ public:
 	void resizeWindow(int w, int h);
 	void setVsyncEnabled(bool enable);
 	void setClearColor(float r, float g, float b, float a);
+	void present();
+	void setTitle(const char *str);
+
+	double getDeltaTime();
+	MouseState getMouseState();
 
 	public: 
 	#if SDL_USAGE
@@ -34,6 +50,18 @@ public:
 		int windowHeight = 0;
 		bool vSync = true;
 		bool inited = false;
+
+	private:
+	#if SDL_USAGE
+		uint64_t nowStamp = 0;
+		uint64_t lastStamp = 0;
+		double freq = 0.0;
+	#else
+		double nowStamp = 0.0;
+		double lastStamp = 0.0; 
+	#endif
+	double dt = 0.0;
+
 };
 
 bool loadFontData(const std::string &fileName, std::vector<char> &dataOut);

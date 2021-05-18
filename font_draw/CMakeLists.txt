@@ -13,6 +13,7 @@ target_link_libraries(font_draw
 	${CMAKE_DL_LIBS} 
 	${SDL2_LIBRARY}
 	-lSDL2
+	glfw
 	#SDL2::SDL2
     #SDL2::SDL2main
 )
