@@ -2,16 +2,22 @@
 #include <cstdlib>
 #include <stdint.h>
 
+#include <core/app.h>
 
-#include "glad/glad.h"
+#include <glad/glad.h>
+#if SDL_USAGE
 #include <SDL2/SDL.h>
+#else
+#include <GLFW/glfw3.h>
+#endif
 
-#include "core/app.h"
 
-#include "ogl/shader.h"
-#include "ogl/shaderbuffer.h"
+#include <ogl/shader.h>
+#include <ogl/shaderbuffer.h>
 
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 #include <filesystem>
 #include <fstream>
@@ -154,6 +160,196 @@ static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, C
 	addText(str, vertData, cursor);
 }
 
+struct MyKeyStates
+{
+	char writeBuffer[20] = {};
+	int charsWritten = 0;
+	int newWindowWidth = 0;
+	int newWindowHeight = 0;
+
+	bool quit = false;
+	bool resize = false;
+
+	bool upPress = false;
+	bool downPress = false;
+	bool leftPress = false;
+	bool rightPress = false;
+};
+
+static MyKeyStates keyStates;
+
+#if SDL_USAGE
+static void handleSDLEvents()
+{
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	{
+		switch(event.type)
+		{
+			case SDL_QUIT:
+				keyStates.quit = true;
+				break;
+			
+			case SDL_KEYDOWN:
+			{
+				if(event.key.keysym.sym >= 32 && event.key.keysym.sym < 128)
+				{
+					char letter = '0';
+					if(((event.key.keysym.mod) & (KMOD_SHIFT | KMOD_LSHIFT | KMOD_RSHIFT | KMOD_CAPS)) != 0 &&
+						event.key.keysym.sym >= 96 && event.key.keysym.sym <= 122)
+					{
+
+						letter = char(event.key.keysym.sym - 32);
+					
+					} 
+					else
+					{
+						letter = char(event.key.keysym.sym);
+					}
+					keyStates.writeBuffer[keyStates.charsWritten] = letter; 
+					++keyStates.charsWritten;
+				}
+
+				switch(event.key.keysym.sym)
+				{
+					case SDLK_ESCAPE:
+						keyStates.quit = true;
+						break;
+					case SDLK_UP:
+						keyStates.upPress = true;
+						break;
+
+					case SDLK_DOWN:
+						keyStates.downPress = true;
+						break;
+
+					case SDLK_LEFT:
+						keyStates.leftPress = true;
+						break;
+
+
+					case SDLK_RIGHT:
+						keyStates.rightPress = true;
+						break;
+
+					default:
+						break;
+				}
+				break;
+			}
+			case SDL_KEYUP:
+			{
+				switch(event.key.keysym.sym)
+				{
+					case SDLK_UP:
+						keyStates.upPress = false;
+						break;
+
+					case SDLK_DOWN:
+						keyStates.downPress = false;
+						break;
+
+					case SDLK_LEFT:
+						keyStates.leftPress = false;
+						break;
+
+
+					case SDLK_RIGHT:
+						keyStates.rightPress = false;
+						break;
+
+					default:
+						break;
+				}
+			}
+
+			case SDL_WINDOWEVENT:
+			{
+				if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+				{
+					keyStates.newWindowWidth = event.window.data1;
+					keyStates.newWindowHeight = event.window.data2;
+					keyStates.resize = true;
+				}
+				break;
+			}
+		}
+	}
+}
+#else
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if(action == GLFW_PRESS)
+	{
+		switch(key)
+		{
+			case GLFW_KEY_ESCAPE: 
+				keyStates.quit = true;
+				glfwSetWindowShouldClose(window, GLFW_TRUE);
+				break;
+			case GLFW_KEY_LEFT:
+				keyStates.leftPress = true;
+				break;
+			case GLFW_KEY_RIGHT:
+				keyStates.rightPress = true;
+				break;
+			case GLFW_KEY_UP:
+				keyStates.upPress = true;
+				break;
+			case GLFW_KEY_DOWN:
+				keyStates.downPress = true;
+				break;
+
+			default:
+				if(key >= 32 && key < 128)
+				{
+					char letter = (char)key;
+					if(key >= 65 && key <= 90)
+					{
+						int adder = 32;
+						if(mods & (GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK) != 0)
+							adder = 0;
+						letter += adder;
+					}
+					keyStates.writeBuffer[keyStates.charsWritten] = letter; 
+					++keyStates.charsWritten;
+				}
+				break;
+		}
+
+	}
+	if(action == GLFW_RELEASE)
+	{
+		switch(key)
+		{
+			case GLFW_KEY_LEFT:
+				keyStates.leftPress = false;
+				break;
+			case GLFW_KEY_RIGHT:
+				keyStates.rightPress = false;
+				break;
+			case GLFW_KEY_UP:
+				keyStates.upPress = false;
+				break;
+			case GLFW_KEY_DOWN:
+				keyStates.downPress = false;
+				break;
+
+			default:
+				break;
+		}
+
+	}
+}
+
+static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	keyStates.resize = true;
+	keyStates.newWindowWidth = width;
+	keyStates.newWindowHeight = height;
+}
+
+#endif
 
 
 
@@ -166,7 +362,10 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 		return;
 	}
 
-
+	#if !SDL_USAGE
+	glfwSetKeyCallback(app.window, key_callback);
+	glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
+	#endif
 	ShaderBuffer ssbo(GL_SHADER_STORAGE_BUFFER, 10240u * 16u, GL_DYNAMIC_COPY, nullptr);
 	
 
@@ -202,7 +401,7 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 
 
-	std::string txt = "Hiiohoi";
+	std::string txt = "";
 
 
 	uint32_t texHandle = 0;
@@ -250,97 +449,83 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 	Cursor cursor;
 	updateText(txt, vertData, cursor);
 
-	SDL_Event event;
 	bool quit = false;
 	float dt = 0.0f;
 
+	#if SDL_USAGE
 	Uint64 nowStamp = SDL_GetPerformanceCounter();
 	Uint64 lastStamp = 0;
 	double freq = (double)SDL_GetPerformanceFrequency();
-
-
+	#else
+	double nowStamp = glfwGetTime();
+	double lastStamp = nowStamp; 
+	#endif
 	app.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	while (!quit)
 	{
+		#if SDL_USAGE
 		lastStamp = nowStamp;
 		nowStamp = SDL_GetPerformanceCounter();
 		dt = float((nowStamp - lastStamp)*1000 / freq );
+		handleSDLEvents();
+		
+		#else
+		glfwPollEvents();
+		lastStamp = nowStamp;
+		nowStamp = glfwGetTime();
+		dt = float((nowStamp - lastStamp) * 1000.0);
 
+		quit = glfwWindowShouldClose(app.window);
 
-		while (SDL_PollEvent(&event))
+		
+		#endif
+
+		if(keyStates.quit)
+			quit = true;
+
+		if(quit)
+			break;
+
+		for(int i = 0; i < keyStates.charsWritten; ++i)
 		{
-			switch(event.type)
-			{
-				case SDL_QUIT:
-					quit = true;
-					break;
-				
-				case SDL_KEYDOWN:
-				{
-					if(event.key.keysym.sym >= 32 && event.key.keysym.sym < 128)
-					{
-						if(((event.key.keysym.mod) & (KMOD_SHIFT | KMOD_LSHIFT | KMOD_RSHIFT | KMOD_CAPS)) != 0 &&
-							event.key.keysym.sym >= 96 && event.key.keysym.sym <= 122)
-						{
-							txt += char(event.key.keysym.sym - 32);
-						
-						} 
-						else
-						{
-							txt += char(event.key.keysym.sym);
-						}
-						updateText(txt, vertData, cursor);
-
-					}
-
-					switch(event.key.keysym.sym)
-					{
-						case SDLK_ESCAPE:
-							quit = true;
-							break;
-						case SDLK_UP:
-							cursor.charHeight++;
-							updateText(txt, vertData, cursor);
-							break;
-
-						case SDLK_DOWN:
-							cursor.charHeight--;
-							if(cursor.charHeight < 2)
-								++cursor.charHeight;
-							updateText(txt, vertData, cursor);
-							break;
-
-						case SDLK_LEFT:
-							cursor.charWidth--;
-							if(cursor.charWidth < 2)
-								++cursor.charWidth;
-							updateText(txt, vertData, cursor);
-							break;
-
-
-						case SDLK_RIGHT:
-							cursor.charWidth++;
-							updateText(txt, vertData, cursor);
-							break;
-
-						default:
-							break;
-					}
-					break;
-				}
-
-				case SDL_WINDOWEVENT:
-				{
-					if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-					{
-						app.resizeWindow(event.window.data1, event.window.data2);
-						glUniform2f(0, GLfloat(app.windowWidth), GLfloat(app.windowHeight));
-					}
-					break;
-				}
-			}
+			txt += keyStates.writeBuffer[i];
 		}
 
+		if(keyStates.resize)
+		{
+			app.resizeWindow(keyStates.newWindowWidth, keyStates.newWindowHeight);
+			glUniform2f(0, GLfloat(app.windowWidth), GLfloat(app.windowHeight));
+
+		}
+
+		if(keyStates.leftPress)
+		{
+			cursor.charWidth--;
+			if(cursor.charWidth < 2)
+				++cursor.charWidth;
+			
+		}
+		if(keyStates.rightPress)
+		{
+			cursor.charWidth++;
+		}
+		if(keyStates.upPress)
+		{
+			cursor.charHeight++;
+		}
+		if(keyStates.downPress)
+		{
+			cursor.charHeight--;
+			if(cursor.charHeight < 2)
+				++cursor.charHeight;
+		}
+
+		if(keyStates.charsWritten > 0 || keyStates.downPress || 
+			keyStates.upPress || keyStates.leftPress || keyStates.rightPress)
+			updateText(txt, vertData, cursor);
+
+		keyStates.charsWritten = 0;
+		keyStates.resize = false;
 		 //Clear color buffer
 		glClear( GL_COLOR_BUFFER_BIT );
 		
@@ -362,14 +547,18 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 		glDrawElements(GL_TRIANGLES, GLsizei(vertData.size() * 6), GL_UNSIGNED_INT, 0);
 
+		#if SDL_USAGE
 		SDL_GL_SwapWindow(app.window);
-		SDL_Delay(1);
-
+		#else
+		glfwSwapBuffers(app.window);
+		#endif
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		char str[100];
 		sprintf(str, "%2.2fms, fps: %4.2f", 
 			dt, 1000.0f / dt);
+		#if SDL_USAGE
 		SDL_SetWindowTitle(app.window, str);
-
+		#endif
 		//printf("Frame duration: %f fps: %f\n", dt, 1000.0f / dt);
 	}
 }

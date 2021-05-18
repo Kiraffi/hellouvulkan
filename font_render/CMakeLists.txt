@@ -11,6 +11,7 @@ add_executable (font_render "src/main_font_renderer.cpp")
 target_link_libraries(font_render PRIVATE MyGlad MyLibraries)
 # TODO: Add tests and install targets if needed.
 target_link_libraries(font_render PUBLIC 
+	glfw
 	OpenGL::GL 
 	${CMAKE_DL_LIBS} 
 	${SDL2_LIBRARY}

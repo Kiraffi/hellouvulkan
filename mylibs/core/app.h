@@ -1,9 +1,15 @@
 #include <string>
 #include <vector>
 
+#define SDL_USAGE 0
+
+#if SDL_USAGE
 struct SDL_Window;
 typedef void *SDL_GLContext;
+#else
+struct GLFWwindow;
 
+#endif
 namespace core
 {
 
@@ -18,11 +24,16 @@ public:
 	void setClearColor(float r, float g, float b, float a);
 
 	public: 
+	#if SDL_USAGE
 		SDL_Window *window = nullptr;
 		SDL_GLContext mainContext = nullptr;		
+	#else
+		GLFWwindow *window = nullptr;
+	#endif
 		int windowWidth = 0;
 		int windowHeight = 0;
 		bool vSync = true;
+		bool inited = false;
 };
 
 bool loadFontData(const std::string &fileName, std::vector<char> &dataOut);

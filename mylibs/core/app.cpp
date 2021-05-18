@@ -1,7 +1,11 @@
 #include "app.h"
-#include <SDL2/SDL.h>
-
 #include "glad/glad.h"
+#if SDL_USAGE
+#include <SDL2/SDL.h>
+#else
+#include <GLFW/glfw3.h>
+#endif
+
 
 #include <stdio.h>
 #include <filesystem>
@@ -32,11 +36,17 @@ static void APIENTRY openglCallbackFunction(
 	}
 }
 
+void error_callback(int error, const char* description)
+{
+	fprintf(stderr, "Error: %s\n", description);
+}
+
 
 namespace core {
 
 bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 {
+	#if SDL_USAGE
 	// Initialize SDL 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
@@ -79,10 +89,48 @@ bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 		return false;
 	}
 
+	int w,h;
+	SDL_GetWindowSize(window, &w, &h);
+	
+
+	SDL_SetWindowResizable(window, SDL_TRUE);
+	gladLoadGLLoader(SDL_GL_GetProcAddress);
+	resizeWindow(w, h);
+	glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
+	printf("Screen res: %i:%i\n", w, h);
+
+	#else
+
+	glfwSetErrorCallback(error_callback);
+	if (!glfwInit())
+	{
+		printf("Couldn't initialize GLFW\n");
+		return false;
+	}
+
+	inited = true;
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+	window = glfwCreateWindow(screenWidth, screenHeight, windowStr, NULL, NULL);
+	if (!window)
+	{
+		printf("Couldn't create glfw window\n");
+		return false;
+	}
+	glfwMakeContextCurrent(window);
+	//gladLoadGL(glfwGetProcAddress);
+	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+
+	int w,h;
+	glfwGetFramebufferSize(window, &w, &h);
+	resizeWindow(w, h);
+
+	#endif
+
 
 	// Check OpenGL properties
 	printf("OpenGL loaded\n");
-	gladLoadGLLoader(SDL_GL_GetProcAddress);
 	printf("Vendor:   %s\n", glGetString(GL_VENDOR));
 	printf("Renderer: %s\n", glGetString(GL_RENDERER));
 	printf("Version:  %s\n", glGetString(GL_VERSION));
@@ -99,17 +147,9 @@ bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
-	int w,h;
-	SDL_GetWindowSize(window, &w, &h);
-	
-	resizeWindow(w, h);
-	glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
-	printf("Screen res: %i:%i\n", w, h);
-
-	SDL_SetWindowResizable(window, SDL_TRUE);
 
 	// rdoc....
-	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 	//glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
 
 	return true;
@@ -118,10 +158,17 @@ bool App::init(const char *windowStr, int screenWidth, int screenHeight)
 
 App::~App()
 {
+	#if SDL_USAGE
 	if(mainContext)
 		SDL_GL_DeleteContext(mainContext);
 	mainContext = nullptr;
 	SDL_DestroyWindow(window);
+	#else
+	if(window)
+		glfwDestroyWindow(window);
+	if(inited)
+		glfwTerminate();
+	#endif
 	window = nullptr;
 }
 
@@ -137,7 +184,11 @@ void App::setVsyncEnabled(bool enable)
 {
 	vSync = enable;
 	// Use v-sync
-	SDL_GL_SetSwapInterval(vSync);
+	#if SDL_USAGE
+		SDL_GL_SetSwapInterval(vSync);
+	#else
+		glfwSwapInterval(vSync ? 1 : 0);
+	#endif
 }
 
 
