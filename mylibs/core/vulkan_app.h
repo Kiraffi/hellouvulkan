@@ -11,12 +11,12 @@
 #include "../myvulkan/vulkandevice.h"
 #include "../myvulkan/vulkanswapchain.h"
 
+constexpr u32 QUERY_COUNT = 128u;
 
 namespace core
 {
 struct MouseState;
 
-const u32 QUERY_COUNT = 128u;
 
 
 class VulkanApp

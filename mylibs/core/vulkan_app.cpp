@@ -282,6 +282,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 
 
+	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
 
 	// rdoc....

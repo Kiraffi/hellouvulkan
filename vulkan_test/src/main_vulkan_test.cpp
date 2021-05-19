@@ -100,7 +100,7 @@ struct MeshDatas
 	u32 indiceCount = 0u;
 };
 
-const u32 QUERY_COUNT = 128u;
+//
 
 
 enum ShaderModuleIndexes
@@ -260,6 +260,10 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 {
 	if(!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
+
+	glfwSetWindowUserPointer(window, this);
+	glfwSetKeyCallback(window, keyCallback);
+
 
 	// Threaded loads?
 	Mesh meshes[NUM_MESH_TYPES];
