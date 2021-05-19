@@ -64,7 +64,6 @@ ShaderBuffer::ShaderBuffer(unsigned int bufferType, unsigned int size, unsigned 
 	this->size = size;
 
 	glCreateBuffers(1, &handle);
-	this->handle = handle;
 	this->immutable = immutable;
 	assert(handle && "Failed to generate buffer handle!");
 	if(immutable)

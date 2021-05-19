@@ -9,4 +9,8 @@ add_library(MyGlad
 	stb/stb_image.h
 	)
 
+add_subdirectory("glfw-3.3.4")
+add_subdirectory("meshoptimizer")
+
+
 target_include_directories(MyLibraries PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/")

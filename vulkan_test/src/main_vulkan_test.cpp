@@ -23,14 +23,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
+
+#include <core/vulkan_app.h>
+
 #include <core/timer.h>
 #include "transform.h"
 #include <core/mytypes.h>
 
-#include "myvulkan/vulkandevice.h"
-#include "myvulkan/vulkanresource.h"
-#include "myvulkan/vulkanshader.h"
-#include "myvulkan/vulkanswapchain.h"
+#include <myvulkan/vulkandevice.h>
+#include <myvulkan/vulkanresource.h>
+#include <myvulkan/vulkanshader.h>
+#include <myvulkan/vulkanswapchain.h>
 
 #include "model.h"
 #include "camera.h"
@@ -164,6 +167,20 @@ struct PipelineWithDescriptors
 	Descriptor descriptor; // maybe needs more than one, possibly separated from each other?
 	std::vector<DescriptorSet> descriptorSet; // maybe needs more than one set?
 };
+
+
+
+
+class VulkanTest : core::VulkanApp
+{
+public:
+	VulkanTest() {}
+	virtual ~VulkanTest(){}
+
+
+};
+
+
 
 struct MainData
 {
