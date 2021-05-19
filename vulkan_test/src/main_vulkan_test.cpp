@@ -262,7 +262,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-	glfwSetKeyCallback(window, keyCallback);
+	glfwSetKeyCallback(window, keyboardHandlerCallback);
 
 
 	// Threaded loads?
@@ -876,7 +876,7 @@ void VulkanTest::run()
 			uniformValues.camMat = glm::lookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
 
 			camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
-			camera.fovY = 100.0f;
+			camera.fovY = 90.0f;
 			camera.zFar = 0.1f;
 
 			uniformValues.mvp = perspectiveProjection(camera) * uniformValues.camMat;

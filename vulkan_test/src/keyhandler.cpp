@@ -4,11 +4,11 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "camera.h"
-#include <core/mytypes.h>
+#include "core/mytypes.h"
 
 static bool keysDown[512] = {};
 
-void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 	if(action == GLFW_PRESS)
 	{
