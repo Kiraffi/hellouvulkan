@@ -307,7 +307,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 					if(key >= 65 && key <= 90)
 					{
 						int adder = 32;
-						if(mods & (GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK) != 0)
+						if((mods & (GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK)) != 0)
 							adder = 0;
 						letter += adder;
 					}
@@ -533,9 +533,9 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		char str[100];
-		float fps = dt > 0.0 ? float(1000.0 / dt) : 0.0f;
+		float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
 		sprintf(str, "%2.2fms, fps: %4.2f", 
-			float(dt), fps);
+			float(dt * 1000.0), fps);
 
 		app.setTitle(str);
 		//printf("Frame duration: %f fps: %f\n", dt, 1000.0f / dt);

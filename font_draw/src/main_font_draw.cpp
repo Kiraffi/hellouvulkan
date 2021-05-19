@@ -496,9 +496,9 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 		char str[100];
 		char renderLetter = chosenLetter != 127 ? char(chosenLetter) : ' ';
-		float fps = dt > 0.0 ? float(1000.0 / dt) : 0.0f;
+		float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
 		sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i, Letter: %c", 
-			float(dt), fps, 
+			float(dt * 1000.0), fps, 
 			mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown, 
 			renderLetter);
 		app.setTitle(str);

@@ -1,35 +1,19 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-
+#include <core/timer.h>
 #define SDL_USAGE 0
 
 #if SDL_USAGE
 	struct SDL_Window;
 	typedef void *SDL_GLContext;
-	typedef uint64_t TimeSave;
 #else
 	struct GLFWwindow;
-	typedef double TimeSave;
 #endif
 
 
 namespace core
 {
-
-class Timer
-{
-public:
-	Timer();
-	double getDuration();
-	double getLapDuration();
-
-private:
-	TimeSave startStamp = 0;
-	TimeSave nowStamp = 0;
-	TimeSave lastStamp = 0;
-};
-
 struct MouseState
 {
 	int x;

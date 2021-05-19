@@ -1,10 +1,13 @@
 add_library(MyLibraries
-	core/app.cpp
 	core/app.h
+	core/timer.h
 	core/mytypes.h
-	ogl/shader.cpp
-	ogl/shaderbuffer.cpp
 	ogl/shaderbuffer.h
+
+	core/app.cpp
+	core/timer.cpp
+	ogl/shaderbuffer.cpp
+	ogl/shader.cpp
 	)
 
 target_include_directories(MyLibraries PUBLIC 

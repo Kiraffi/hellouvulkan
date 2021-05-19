@@ -23,7 +23,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
-#include "timer.h"
+#include <core/timer.h>
 #include "transform.h"
 #include <core/mytypes.h>
 
@@ -954,7 +954,7 @@ int main(int argc, char **argv)
 		rotationVector.y = (rand() / float(RAND_MAX) * 2.0f - 1.0f);
 		rotationVector.z = (rand() / float(RAND_MAX) * 2.0f - 1.0f);
 		float angle = rand() / float(RAND_MAX) * pii * 2.0f;
-		transform.rot = glm::angleAxis(angle,uploadScratchBufferToGpuBuffer glm::normalize(rotationVector));
+		transform.rot = glm::angleAxis(angle, glm::normalize(rotationVector));
 
 		//glm::mat4 modelMatrix = glm::transpose(getModelMatrix(transform));
 		//uniformValues.transforms[i] = modelMatrix;

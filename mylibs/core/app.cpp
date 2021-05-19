@@ -227,46 +227,6 @@ double App::getDeltaTime()
 	return dt;
 }
 
-Timer::Timer()
-{
-	#if SDL_USAGE
-		nowStamp = SDL_GetPerformanceCounter();
-	#else
-		nowStamp = glfwGetTime();
-	#endif
-	startStamp = nowStamp;
-}
-
-double Timer::getDuration()
-{
-	double dt = 0.0;
-	#if SDL_USAGE
-		nowStamp = SDL_GetPerformanceCounter();
-		dt = double((nowStamp - startStamp) * 1000.0 / timer_frequency );
-
-	#else
-		nowStamp = glfwGetTime();
-		dt = (nowStamp - startStamp) * 1000.0;
-	#endif
-	return dt;
-
-}
-
-double Timer::getLapDuration()
-{
-	double dt = 0.0;
-	lastStamp = nowStamp;
-	#if SDL_USAGE
-		nowStamp = SDL_GetPerformanceCounter();
-		dt = double((nowStamp - lastStamp) * 1000.0 / timer_frequency );
-
-	#else
-		lastStamp = nowStamp; 
-		nowStamp = glfwGetTime();
-		dt = (nowStamp - lastStamp) * 1000.0;
-	#endif
-	return dt;
-}
 
 bool loadFontData(const std::string &fileName, std::vector<char> &dataOut)
 {

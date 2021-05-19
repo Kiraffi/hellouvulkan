@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include <core/app.h>
+#include <core/timer.h>
 
 #include <glad/glad.h>
 #if SDL_USAGE
@@ -555,32 +556,32 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 
 		Entity &playerEntity = entities[ AsteroidMaxTypes ];
 
-		core::Timer updateDurTimer;
+		Timer updateDurTimer;
 		float dtSplit = dt;
 		{
 			// Update position, definitely not accurate physics, if dt is big this doesn't work properly, trying to split it into several updates.
 			while (dtSplit > 0.0f)
 			{
 				float dddt = fminf(dtSplit, 0.005f);
-				float origSpeed = 0.01f * sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+				float origSpeed = 1.0f * sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
 
 				if (keysDown[ 1 ])
 				{
-					float rotSpeed = fmaxf(origSpeed, 0.01f);
-					//rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
+					float rotSpeed = 1.0f; // fminf(origSpeed, 1.00f);
+					rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
 					playerEntity.rotation += rotSpeed * dddt;
 				}
 				if (keysDown[ 2 ])
 				{
-					float rotSpeed = fmaxf(origSpeed, 0.01f);
-					//rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
+					float rotSpeed = 1.0f; //fminf(origSpeed, 1.0f);
+					rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
 					playerEntity.rotation -= rotSpeed * dddt;
 				}
 				playerEntity.rotation = std::fmod(playerEntity.rotation, M_PI * 2.0);
 				if (keysDown[ 0 ])
 				{
-					playerEntity.speedX += cosf(playerEntity.rotation + float(M_PI) * 0.5f) * 5.0f * dddt;
-					playerEntity.speedY += sinf(playerEntity.rotation + float(M_PI) * 0.5f) * 5.0f * dddt;
+					playerEntity.speedX += cosf(playerEntity.rotation + float(M_PI) * 0.5f) * 5000.0f * dddt;
+					playerEntity.speedY += sinf(playerEntity.rotation + float(M_PI) * 0.5f) * 5000.0f * dddt;
 				}
 
 
@@ -726,10 +727,10 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 			amount = 0;
 			avg = 0.0f;
 		}
-		float fps = dt > 0.0 ? float(1000.0 / dt) : 0.0f;
+		float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
 
 		sprintf(str, "%2.2fms, fps: %4.2f, update: %2.3fms, gpu: %2.3fms, gpuavg: %2.3fms", 
-			float(dt), fps, updateDur, gpuDuration, avgShow);
+			float(dt * 1000.0f), fps, updateDur, gpuDuration, avgShow);
 		app.setTitle(str);
 
 		queryIndex = (queryIndex + 2) % 8;

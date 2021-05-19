@@ -7,7 +7,7 @@
 #include <glm/gtx/hash.hpp>
 
 #include <core/mytypes.h>
-#include "timer.h"
+#include <core/timer.h>
 
 #include <stb/stb_image.h>
 
