@@ -234,46 +234,24 @@ struct MeshInstance
 VulkanTest::~VulkanTest()
 {
 	VkDevice device = deviceWithQueues.device;
+	
+	for (auto& image : renderTargetImages)
+		destroyImage(device, image);
+
 	for (auto& pipeline : pipelinesWithDescriptors)
 	{
 		destroyDescriptor(device, pipeline.descriptor);
 		destroyPipeline(device, pipeline.pipeline);
 	}
 
-	vkDestroyFramebuffer(device, targetFB, nullptr);
-	for (auto& image : renderTargetImages)
-		destroyImage(device, image);
+	vkDestroySampler(device, mainImageComputeWriteSampler, nullptr);
 
 	for (auto& buffer : buffers)
 		destroyBuffer(device, buffer);
 
-	vkDestroyCommandPool(device, commandPool, nullptr);
-
-	vkDestroyQueryPool(device, queryPool, nullptr);
-
-	destroySwapchain(swapchain, device);
-
-	vkDestroySampler(device, mainImageComputeWriteSampler, nullptr);
-
 	for (auto& shaderModule : shaderModules)
 		vkDestroyShaderModule(device, shaderModule, nullptr);
 
-
-	vkDestroyRenderPass(device, renderPass, nullptr);
-	vkDestroyFence(device, fence, nullptr);
-	vkDestroySemaphore(device, acquireSemaphore, nullptr);
-	vkDestroySemaphore(device, releaseSemaphore, nullptr);
-
-	vkDestroyDevice(device, nullptr);
-
-	vkDestroySurfaceKHR(instance, surface, nullptr);
-
-	if (enableValidationLayers)
-	{
-		auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-		dest(instance, debugCallBack, nullptr);
-	}
-	vkDestroyInstance(instance, nullptr);
 }
 
 

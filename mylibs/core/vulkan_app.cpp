@@ -294,6 +294,37 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 VulkanApp::~VulkanApp()
 {
+	VkDevice device = deviceWithQueues.device;
+	if(device)
+	{
+		vkDestroyFramebuffer(device, targetFB, nullptr);
+
+		vkDestroyCommandPool(device, commandPool, nullptr);
+
+		vkDestroyQueryPool(device, queryPool, nullptr);
+
+		destroySwapchain(swapchain, device);
+
+
+
+
+		vkDestroyRenderPass(device, renderPass, nullptr);
+		vkDestroyFence(device, fence, nullptr);
+		vkDestroySemaphore(device, acquireSemaphore, nullptr);
+		vkDestroySemaphore(device, releaseSemaphore, nullptr);
+
+		vkDestroyDevice(device, nullptr);
+	}
+	vkDestroySurfaceKHR(instance, surface, nullptr);
+
+	if (enableValidationLayers)
+	{
+		auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+		dest(instance, debugCallBack, nullptr);
+	}
+	vkDestroyInstance(instance, nullptr);
+
+
 	if(window)
 		glfwDestroyWindow(window);
 	if(inited)
