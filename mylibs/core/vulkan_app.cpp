@@ -306,7 +306,6 @@ void VulkanApp::resizeWindow(int w, int h)
 	windowWidth = w;
 	windowHeight = h;
 	printf("Window size: %i: %i\n", w, h);
-	glViewport(0, 0, w, h);
 }
 
 void VulkanApp::setVsyncEnabled(bool enable)

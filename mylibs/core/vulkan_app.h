@@ -26,7 +26,7 @@ public:
 	virtual ~VulkanApp();
 
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight);
-	
+	virtual void run() {}
 	virtual void resized() {}
 	virtual void present();
 
@@ -38,20 +38,18 @@ public:
 	double getDeltaTime();
 	MouseState getMouseState();
 
-	public:
+public:
 
-		GLFWwindow *window = nullptr;
-		int windowWidth = 0;
-		int windowHeight = 0;
-		bool vSync = true;
-		bool inited = false;
-		bool needToResize = false;
+	GLFWwindow *window = nullptr;
+	int windowWidth = 0;
+	int windowHeight = 0;
+	bool vSync = true;
+	bool inited = false;
+	bool needToResize = false;
 
-	private:
+public:
 	Timer timer;
 	double dt = 0.0;
-
-
 
 	VkDebugUtilsMessengerEXT debugCallBack = nullptr;
 
