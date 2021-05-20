@@ -11,8 +11,8 @@ target_link_libraries(font_draw PRIVATE MyGlad MyLibraries)
 target_link_libraries(font_draw 
 	PUBLIC OpenGL::GL 
 	${CMAKE_DL_LIBS} 
-	${SDL2_LIBRARY}
-	-lSDL2
+#	${SDL2_LIBRARY}
+#	-lSDL2
 	glfw
 	#SDL2::SDL2
     #SDL2::SDL2main

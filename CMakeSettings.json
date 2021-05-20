@@ -13,13 +13,18 @@
       "variables": [
         {
           "name": "SDL2_DIR",
-          "value": "${projectDir}/external/sdl2",
+          "value": "C:/Programming/cpp/hellouvulkan/external/sdl2",
           "type": "PATH"
         },
         {
           "name": "SDL2MAIN_LIBRARY",
-          "value": "${projectDir}/external/sdl2/external/sdl2/lib/x64/SDL2main.lib",
+          "value": "C:/Programming/cpp/hellouvulkan/external/sdl2/external/sdl2/lib/x64/SDL2main.lib",
           "type": "FILEPATH"
+        },
+        {
+          "name": "GLFW_INSTALL",
+          "value": "True",
+          "type": "BOOL"
         }
       ]
     }

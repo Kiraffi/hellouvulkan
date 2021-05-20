@@ -1,13 +1,13 @@
 #pragma once
 
-#include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
+#include <math/vector3.h>
+#include <math/matrix.h>
 
 struct Camera
 {
-	glm::vec3 forwardDir = glm::vec3(0.0f, 0.0f, 1.0f);
-	glm::vec3 upDir = glm::vec3(0.0f, 1.0f, 0.0f);
-	glm::vec3 position = glm::vec3(0.0f, 0.0f, -5.0f);
+	Vec3 forwardDir = Vec3(0.0f, 0.0f, 1.0f);
+	Vec3 upDir = Vec3(0.0f, 1.0f, 0.0f);
+	Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
 
 	float aspectRatioWByH = 1.667f;
 	float fovY = 100.0f;
@@ -21,4 +21,4 @@ struct Camera
 };
 
 
-glm::mat4 perspectiveProjection(const Camera &camera);
+Matrix perspectiveProjection(const Camera &camera);

@@ -1,10 +1,13 @@
 #include "keyhandler.h"
 
 #include <GLFW/glfw3.h>
-#include <glm/gtc/quaternion.hpp>
 
 #include "camera.h"
-#include "core/mytypes.h"
+#include <core/mytypes.h>
+#include <math/general_math.h>
+#include <math/vector3.h>
+#include <math/quaternion.h>
+#include <math/matrix.h>
 
 static bool keysDown[512] = {};
 
@@ -50,41 +53,41 @@ void checkKeypresses(float deltaTime, Camera &camera)
 		camera.yaw += rotationSpeed;
 	}
 
-	camera.pitch = glm::clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
+	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
 	camera.yaw = std::fmod(camera.yaw, 2.0f * pii);
 
 
-	glm::quat cameraRotation = glm::angleAxis(camera.yaw, glm::vec3(0.0f, 1.0f, 0.0f));
-	cameraRotation = cameraRotation * glm::angleAxis(camera.pitch, glm::vec3(1.0f, 0.0f, 0.0f));
-	camera.forwardDir = cameraRotation * glm::vec3(0.0, 0.0, 1.0f);
-	camera.upDir =  cameraRotation * glm::vec3(0.0, 1.0, 0.0f);
+	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);
+	cameraRotation = cameraRotation * getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), camera.pitch);
+	camera.forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
+	camera.upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
 
-	glm::vec3 cameraRight = cameraRotation * glm::vec3(1.0f, 0.0, 0.0f);
+	Vec3 cameraRight = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
 
 	if(keysDown[GLFW_KEY_W])
 	{
-		camera.position += camera.forwardDir * moveSpeed;
+		camera.position = camera.position + camera.forwardDir * moveSpeed;
 	}
 	if(keysDown[GLFW_KEY_S])
 	{
-		camera.position -= camera.forwardDir * moveSpeed;
+		camera.position = camera.position - camera.forwardDir * moveSpeed;
 	}
 	if(keysDown[GLFW_KEY_A])
 	{
-		camera.position -= cameraRight * moveSpeed;
+		camera.position = camera.position - cameraRight * moveSpeed;
 	}
 	if(keysDown[GLFW_KEY_D])
 	{
-		camera.position += cameraRight * moveSpeed;
+		camera.position = camera.position + cameraRight * moveSpeed;
 
 	}
 	if(keysDown[GLFW_KEY_Q])
 	{
-		camera.position += camera.upDir * moveSpeed;
+		camera.position = camera.position + camera.upDir * moveSpeed;
 	}
 	if(keysDown[GLFW_KEY_E])
 	{
-		camera.position -= camera.upDir * moveSpeed;
+		camera.position = camera.position - camera.upDir * moveSpeed;
 	}
 }
 

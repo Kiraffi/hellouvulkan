@@ -1,19 +1,17 @@
 #pragma once
 
 #include <core/mytypes.h>
+#include <math/vector3.h>
 
 #include <vector>
 #include <cstring> //memcmp
-#include <glm/glm.hpp> // min max
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
 const u32 trianglesPerPatch = 32u;
 
 struct Vertex
 {
-	glm::vec3 pos;
-	glm::vec3 normal;
-	glm::vec2 texCoord;
+	Vec3 pos;
+	Vec3 normal;
+	Vec2 texCoord;
 
 	bool operator==(const Vertex& other) const
 	{
@@ -25,10 +23,10 @@ struct Vertex
 
 struct Meshlet
 {
-	glm::vec3 normal;
+	Vec3 normal;
 	float normalAngleMax;
 
-	glm::vec3 pos;
+	Vec3 pos;
 	float radius;
 };
 
@@ -43,18 +41,24 @@ struct Mesh
 
 struct BoundingBox
 {
-	BoundingBox(glm::vec3 firstPoint)
+	BoundingBox(Vec3 firstPoint)
 	{
 		min = max = firstPoint;
 	}
 
-	void addPoint(glm::vec3 point)
+	void addPoint(Vec3 point)
 	{
-		min = glm::min(min, point);
-		max = glm::max(max, point);
+		min.x = min.x < point.x ? min.x : point.x;
+		min.y = min.y < point.y ? min.y : point.y;
+		min.z = min.z < point.z ? min.z : point.z;
+
+		max.x = max.x > point.x ? max.x : point.x;
+		max.y = max.y > point.y ? max.y : point.y;
+		max.z = max.z > point.z ? max.z : point.z;
+
 	}
-	glm::vec3 min;
-	glm::vec3 max;
+	Vec3 min;
+	Vec3 max;
 };
 
 

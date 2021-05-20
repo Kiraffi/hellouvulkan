@@ -1,21 +1,21 @@
 #pragma once
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <math/matrix.h>
+#include <math/quaternion.h>
+#include <math/vector3.h>
 
 struct Transform
 {
-	glm::vec3 pos;
-	glm::vec3 scale;
-	glm::quat rot;
+	Vec3 pos;
+	Vec3 scale;
+	Quat rot;
 };
 
-glm::mat4 getModelMatrix(const Transform &trans)
+Matrix getModelMatrix(const Transform &trans)
 {
-	glm::mat4 posMat = glm::translate(glm::mat4(1.0f), trans.pos);
-
-	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f),trans.scale);
-	glm::mat4 rotMat = glm::mat4_cast(trans.rot);
+	Matrix posMat = getMatrixFromTranslation(trans.pos);
+	Matrix scaleMat = getMatrixFromScale(trans.scale);
+	Matrix rotMat = getMatrixFromQuaternion(trans.rot);
 
 	return posMat * rotMat * scaleMat;
 }

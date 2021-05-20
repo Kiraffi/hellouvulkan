@@ -1,6 +1,7 @@
 #include <assert.h>
+#include <algorithm>
 #include <stdio.h>
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <set>
 #include <thread>
@@ -13,16 +14,6 @@
 #include <GLFW/glfw3.h>
 
 //#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_ENABLE_EXPERIMENTAL
-#define GLM_LANG_STL11_FORCED
-#include <glm/glm.hpp>
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/hash.hpp>
-
 
 #include <core/vulkan_app.h>
 
@@ -34,6 +25,13 @@
 #include <myvulkan/vulkanresource.h>
 #include <myvulkan/vulkanshader.h>
 #include <myvulkan/vulkanswapchain.h>
+
+#include <math/general_math.h>
+#include <math/matrix.h>
+#include <math/plane.h>
+#include <math/quaternion.h>
+#include <math/vector3.h>
+
 
 #include "model.h"
 #include "camera.h"
@@ -658,18 +656,18 @@ struct UniformValues
 	//float transforms[128 * 16];
 	float transforms[1200 * 12] = {};
 	//glm::mat4 transforms[512];
-	glm::mat4 mvp;
-	glm::mat4 camMat;
+	Matrix mvp;
+	Matrix camMat;
 
-	glm::vec4 cameraForwardDir; // padded
-	glm::vec4 cameraPosition; // padded
-	glm::vec4 screenSize; // padded
+	Vec4 cameraForwardDir; // padded
+	Vec4 cameraPosition; // padded
+	Vec4 screenSize; // padded
 
-	glm::vec4 cameraPerspectionAdding; // single value
+	Vec4 cameraPerspectionAdding; // single value
 
-	glm::vec4 frustumPlanes[6];
+	Vec4 frustumPlanes[6];
 	u32 someValues[4];
-	glm::vec4 padding2;
+	Vec4 padding2;
 
 	Alphabet alphabets[256] = {};
 
@@ -722,44 +720,44 @@ void VulkanTest::run()
 
 	generateAlphabets(uniformValues.alphabets);
 
-	glm::vec3 dirs[drawCount];
+	Vec3 dirs[drawCount];
 
 	static constexpr float SpreadDist = 5.0f;
 
 	for(u32 i = 0; i < drawCount; ++i)
 	{
 		Transform &transform = meshTransforms[i];
-		transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
-		transform.pos = glm::vec3(i, i, 15.0f - i * 3);
+		transform.scale = Vec3(1.0f, 1.0f, 1.0f);
+		transform.pos = Vec3(i, i, 15.0f - i * 3);
 		transform.pos.x = rand() / float(RAND_MAX) * 2.0f * SpreadDist - SpreadDist;
 		transform.pos.y = rand() / float(RAND_MAX) * 2.0f * SpreadDist - SpreadDist;
 		transform.pos.z = rand() / float(RAND_MAX) * 2.0f * SpreadDist + SpreadDist;
 
-		glm::vec3 rotationVector;
+		Vec3 rotationVector;
 		rotationVector.x = (rand() / float(RAND_MAX) * 2.0f - 1.0f);
 		rotationVector.y = (rand() / float(RAND_MAX) * 2.0f - 1.0f);
 		rotationVector.z = (rand() / float(RAND_MAX) * 2.0f - 1.0f);
 		float angle = rand() / float(RAND_MAX) * pii * 2.0f;
-		transform.rot = glm::angleAxis(angle, glm::normalize(rotationVector));
+		transform.rot = getQuaternionFromAxisAngle(normalize(rotationVector), angle);
 
 		//glm::mat4 modelMatrix = glm::transpose(getModelMatrix(transform));
 		//uniformValues.transforms[i] = modelMatrix;
 
-		glm::mat4 modelMatrix = glm::transpose(getModelMatrix(transform));
+		Matrix modelMatrix = transpose(getModelMatrix(transform));
 		memcpy(&uniformValues.transforms[i * 12], (float*)(&modelMatrix), sizeof(float) * 12);
 
 		float newangle = rand() / float(RAND_MAX) * pii * 2.0f;
 
-		glm::vec3 dir;
+		Vec3 dir;
 		dir.x = rand() / float(RAND_MAX) * 2.0f - 1.0f;
 		dir.y = rand() / float(RAND_MAX) * 2.0f - 1.0f;
 		dir.z = rand() / float(RAND_MAX) * 2.0f - 1.0f;
 
-		dir = glm::normalize(dir);
+		dir = normalize(dir);
 
-		glm::quat rotation = glm::angleAxis(newangle, dir);
-		dirs[i] = rotation * glm::vec3(0.0f, 0.0f, 1.0f);
-		dirs[i] = glm::vec3(0.0f, 0.0f, 0.0f);
+		Quat rotation = getQuaternionFromAxisAngle(dir, newangle);
+		dirs[i] = rotateVector(Vec3(0.0f, 0.0f, 1.0f), rotation);
+		//dirs[i] = Vec3(0.0f, 0.0f, 0.0f);
 /*
 		draws[i].offset[0] = float(i % drawCountSingleDir) / 7.0f + 1.0f / 14.0f;
 		draws[i].offset[1] = float(i / drawCountSingleDir) / 7.0f + 1.0f / 14.0f;
@@ -873,47 +871,47 @@ void VulkanTest::run()
 			uniformValues.screenSize.z = (float)(frameIndex % 1024);
 			uniformValues.screenSize.w = (float)(frameIndex % 1024);
 
-			uniformValues.camMat = glm::lookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
+			//uniformValues.camMat = glm::lookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
 
 			camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
 			camera.fovY = 90.0f;
 			camera.zFar = 0.1f;
 
 			uniformValues.mvp = perspectiveProjection(camera) * uniformValues.camMat;
-			uniformValues.cameraForwardDir = glm::vec4(camera.position, 0.0f);
-			uniformValues.cameraForwardDir = glm::vec4(camera.forwardDir, 0.0f);
+			uniformValues.cameraForwardDir = Vec4(camera.position, 0.0f);
+			uniformValues.cameraForwardDir = Vec4(camera.forwardDir, 0.0f);
 
 
-			float fovY = glm::radians(camera.fovY);
+			float fovY = toRadians(camera.fovY);
 			float f = 1.0f / tanf(fovY / 2.0f);
-			float divider = glm::max(1.0e-9f, glm::min(1.0f, f));
-			float cosAngle = glm::dot(glm::vec3(0.0f, 0.0f, 1.0f), glm::normalize(glm::vec3(1.0f / divider, 1.0f, 1.0f)));
+			float divider = std::max(1.0e-9f, std::min(1.0f, f));
+			float cosAngle = dot(Vec3(0.0f, 0.0f, 1.0f), normalize(Vec3(1.0f / divider, 1.0f, 1.0f)));
 			uniformValues.cameraPerspectionAdding.x = cosAngle;
-			uniformValues.cameraPerspectionAdding.y = glm::acos(cosAngle);
+			uniformValues.cameraPerspectionAdding.y = std::acos(cosAngle);
 			uniformValues.someValues[0] = drawCount;
 			//printf("Cos angle: %f\n", glm::degrees(glm::acos(cosAngle)));
 			for(u32 i = 0; i < drawCount; ++i)
 			{
 				Transform &transform = meshTransforms[i];
 
-				transform.pos += dirs[i] * deltaTime * 10.0f;
+				transform.pos = transform.pos + (dirs[i] * deltaTime * 10.0f);
 				
-				glm::mat4 modelMatrix = glm::transpose(getModelMatrix(transform));
+				Matrix modelMatrix = transpose(getModelMatrix(transform));
 				memcpy(&uniformValues.transforms[i * 12], (float*)(&modelMatrix), sizeof(float) * 12);
 
 				if(transform.pos.x > 20.0f|| transform.pos.x < -20.0f)
 				{
-					transform.pos.x = glm::clamp(transform.pos.x, -20.0f, 20.0f);
+					transform.pos.x = clamp(transform.pos.x, -20.0f, 20.0f);
 					dirs[i].x = -dirs[i].x;
 				}
 				if(transform.pos.y > 20.0f|| transform.pos.y < -20.0f)
 				{
-					transform.pos.y = glm::clamp(transform.pos.y, -20.0f, 20.0f);
+					transform.pos.y = clamp(transform.pos.y, -20.0f, 20.0f);
 					dirs[i].y = -dirs[i].y;
 				}
 				if(transform.pos.z > 80.0f|| transform.pos.z < 10.0f)
 				{
-					transform.pos.z = glm::clamp(transform.pos.z, 10.0f, 80.0f);
+					transform.pos.z = clamp(transform.pos.z, 10.0f, 80.0f);
 					dirs[i].z = -dirs[i].z;
 				}
 			}
@@ -958,8 +956,8 @@ void VulkanTest::run()
 		//
 		////////////////////////
 
-		beginDebugRegion(commandBuffer, "Render scene", glm::vec4(0.5f, 0.76f, 0.34f, 1.0f));
-		insertDebugRegion(commandBuffer, "Compute", glm::vec4(0.0f));
+		beginDebugRegion(commandBuffer, "Render scene", Vec4(0.5f, 0.76f, 0.34f, 1.0f));
+		insertDebugRegion(commandBuffer, "Compute", Vec4(0.0f));
 		{
 			bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinesWithDescriptors[PIPELINE_COMPUTE_RESET]);
 			vkCmdDispatch(commandBuffer, 1, 1, 1);
@@ -1062,7 +1060,7 @@ void VulkanTest::run()
 			VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };
 			VkRect2D scissors = { { 0, 0 }, { u32(swapchain.width), u32(swapchain.height) } };
 
-			insertDebugRegion(commandBuffer, "Render", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+			insertDebugRegion(commandBuffer, "Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissors);
 
@@ -1151,7 +1149,7 @@ void VulkanTest::run()
 				VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(copyBeginBarriers), copyBeginBarriers);
 
 
-			insertDebugRegion(commandBuffer, "Copy to swapchain", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+			insertDebugRegion(commandBuffer, "Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
 /*
 			VkImageCopy imageCopyRegion = {};
 

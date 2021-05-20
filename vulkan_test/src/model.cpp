@@ -3,8 +3,6 @@
 
 
 #include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
 
 #include <core/mytypes.h>
 #include <core/timer.h>
@@ -15,7 +13,7 @@
 #include <meshoptimizer/src/meshoptimizer.h>
 
 
-
+/*
 // For hashmap
 namespace std 
 {
@@ -23,14 +21,14 @@ namespace std
 	{
 		size_t operator()(Vertex const& vertex) const
 		{
-			glm::vec3 pos(vertex.pos);
-			glm::vec3 norm(vertex.normal);
-			glm::vec2 tc(vertex.texCoord);
-			return ((hash<glm::vec3>()(pos) ^ (hash<glm::vec3>()(norm) << 1)) >> 1) ^ (hash<glm::vec2>()(tc) << 1);
+			Vec3 pos(vertex.pos);
+			Vec3 norm(vertex.normal);
+			Vec2 tc(vertex.texCoord);
+			return ((hash<Vec3>()(pos) ^ (hash<Vec3>()(norm) << 1)) >> 1) ^ (hash<Vec2>()(tc) << 1);
 		}
 	};
 }
-
+*/
 
 
 
@@ -46,14 +44,14 @@ static void buildMeshlets(Mesh &mesh)
 
 	u32 meshletIndex = 0u;
 
-u32 kulmain = 0u;
+	u32 kulmain = 0u;
 
 	for(u32 i = 0; i < u32(mesh.indices.size()); i += 3 * trianglesPerPatch)
 	{
 		u32 maxAmount = std::min((u32(mesh.indices.size()) - i) / 3, trianglesPerPatch);
 		if(maxAmount < 3)
 			continue;
-		glm::vec3 dirs[trianglesPerPatch];
+		Vec3 dirs[trianglesPerPatch];
 
 
 		BoundingBox bbox(mesh.vertices[mesh.indices[i]].pos);
@@ -69,13 +67,13 @@ u32 kulmain = 0u;
 			bbox.addPoint(mesh.vertices[ind1].pos);
 			bbox.addPoint(mesh.vertices[ind2].pos);
 
-			glm::vec3 v1 = glm::normalize(mesh.vertices[ind1].pos - mesh.vertices[ind0].pos); 
-			glm::vec3 v2 = glm::normalize(mesh.vertices[ind2].pos - mesh.vertices[ind0].pos); 
-			dirs[j] = glm::normalize(glm::cross(v1, v2));
+			Vec3 v1 = normalize(mesh.vertices[ind1].pos - mesh.vertices[ind0].pos); 
+			Vec3 v2 = normalize(mesh.vertices[ind2].pos - mesh.vertices[ind0].pos); 
+			dirs[j] = normalize(cross(v1, v2));
 		}
 
 		
-		glm::vec3 normal = dirs[0];
+		Vec3 normal = dirs[0];
 
 		// 1.0f same direction
 		float biggestAngleCos = 1000.0f;
@@ -83,11 +81,11 @@ u32 kulmain = 0u;
 		{
 			for(u32 k = j + 1; k < maxAmount; ++k)
 			{
-				float newDot = glm::dot(dirs[j], dirs[k]);
+				float newDot = dot(dirs[j], dirs[k]);
 				if(newDot < biggestAngleCos)
 				{
 					biggestAngleCos = newDot;
-					normal = glm::normalize(dirs[j] + dirs[k]);
+					normal = normalize(dirs[j] + dirs[k]);
 				}
 			}
 		}
@@ -95,7 +93,7 @@ u32 kulmain = 0u;
 		float minAngleRadius = 100.0f;
 		for(u32 j = 0; j < maxAmount; ++j)
 		{
-			float d = glm::dot(dirs[j], normal);
+			float d = dot(dirs[j], normal);
 			maxAngle = std::max(maxAngle, d);
 			minAngleRadius = std::min(minAngleRadius, d);
 		}
@@ -105,7 +103,7 @@ u32 kulmain = 0u;
 		meshlet.normalAngleMax = std::acos(minAngleRadius);
 //		meshlet.normalAngleMax = minAngleRadius; // std::acos(minAngleRadius);
 		meshlet.pos = (bbox.min + bbox.max) * 0.5f;
-		meshlet.radius = (float)(((bbox.max - bbox.min) * 0.5f).length());
+		meshlet.radius = (float)(len(((bbox.max - bbox.min) * 0.5f)));
 	
 		float ang = std::acos(minAngleRadius);
 		if(ang / (2.0f * 3.14159f) *360.0f > 25.0f)
@@ -125,8 +123,8 @@ struct Triangle
 {
 	std::vector<u32> connectedTriangles;
 	u32 indices[3];
-	glm::vec3 normal;
-	glm::vec3 midPoint;
+	Vec3 normal;
+	Vec3 midPoint;
 };
 
 
@@ -178,14 +176,14 @@ void optimizeMeshGeometry(Mesh &mesh)
 		for(u32 j = 0; j < 3; ++j)
 			triangle.indices[j] = inds[j] = mesh.indices[i * 3 + j];
 
-		glm::vec3 v1 = glm::normalize(mesh.vertices[inds[1]].pos - mesh.vertices[inds[0]].pos); 
-		glm::vec3 v2 = glm::normalize(mesh.vertices[inds[2]].pos - mesh.vertices[inds[0]].pos); 
+		Vec3 v1 = normalize(mesh.vertices[inds[1]].pos - mesh.vertices[inds[0]].pos); 
+		Vec3 v2 = normalize(mesh.vertices[inds[2]].pos - mesh.vertices[inds[0]].pos); 
 		BoundingBox bb(mesh.vertices[inds[0]].pos);
 		bb.addPoint(mesh.vertices[inds[1]].pos);
 		bb.addPoint(mesh.vertices[inds[2]].pos);
-		triangle.midPoint = (bb.max + bb.min) / 2.0f;
+		triangle.midPoint = (bb.max + bb.min) * 0.5f;
 
-		triangle.normal = glm::normalize(glm::cross(v1, v2));
+		triangle.normal = normalize(cross(v1, v2));
 	}
 
 	std::vector<u32> newIndices;//(mesh.indices.size());
@@ -195,11 +193,11 @@ void optimizeMeshGeometry(Mesh &mesh)
 	while(triangles.size() > 0)
 	{
 		std::vector<Candidates> dotNormals;
-		glm::vec3 normal = triangles[0].normal;
-		glm::vec3 mp = triangles[0].midPoint;
+		Vec3 normal = triangles[0].normal;
+		Vec3 mp = triangles[0].midPoint;
 		for(u32 j = 1; j < triangles.size(); ++j)
 		{
-			float dotNormal = glm::dot(normal, triangles[j].normal) / (std::max(1.0e-12f, float((triangles[j].midPoint - mp).length())));
+			float dotNormal = dot(normal, triangles[j].normal) / (std::max(1.0e-12f, float(len(triangles[j].midPoint - mp))));
 			if(dotNormals.size() < tBatchSize - 1 || dotNormals[tBatchSize - 1].dotNormal < dotNormal)
 			{
 				std::vector<Candidates>::iterator iter = dotNormals.begin();

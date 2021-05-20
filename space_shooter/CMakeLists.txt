@@ -11,8 +11,8 @@ target_link_libraries(space_shooter PRIVATE MyGlad MyLibraries)
 target_link_libraries(space_shooter PUBLIC 
 	OpenGL::GL 
 	${CMAKE_DL_LIBS} 
-	${SDL2_LIBRARY}
-	-lSDL2
+	#${SDL2_LIBRARY}
+	#-lSDL2
 	glfw
 	)
 

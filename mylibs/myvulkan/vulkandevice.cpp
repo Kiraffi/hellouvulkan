@@ -1,14 +1,17 @@
 #include "vulkandevice.h"
 
 #include <GLFW/glfw3.h>
+#include <core/mytypes.h>
+#include "vulkanswapchain.h"
+#include <math/vector3.h>
+#include <vulkan/vulkan_core.h>
+
+#include <cstring>
 #include <set>
 #include <stdio.h>
 #include <vector>
-#include <vulkan/vulkan_core.h>
-#include <vulkan/vulkan_core.h>
-#include <cstring>
-#include <core/mytypes.h>
-#include "vulkanswapchain.h"
+
+
 
 
 static PFN_vkDebugMarkerSetObjectTagEXT pfnDebugMarkerSetObjectTag = nullptr;
@@ -178,7 +181,7 @@ void setObjectTag(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT o
 }
 
 // Start a new debug marker region
-void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, glm::vec4 color)
+void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, Vec4 color)
 {
 	// Check for valid function pointer (may not be present if not running in a debugging application)
 //	if (pfnCmdDebugMarkerBegin)
@@ -192,7 +195,7 @@ void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, glm::v
 }
 
 // Insert a new debug marker into the command buffer
-void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string markerName, glm::vec4 color)
+void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string markerName, Vec4 color)
 {
 	// Check for valid function pointer (may not be present if not running in a debugging application)
 //	if (pfnCmdDebugMarkerInsert)

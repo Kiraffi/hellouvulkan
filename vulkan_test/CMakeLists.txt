@@ -5,8 +5,8 @@ cmake_minimum_required (VERSION 3.15)
 
 file( GLOB LIB_SOURCES src/*.cpp )
 file( GLOB LIB_HEADERS src/*.h )
-file( GLOB LIB_SOURCES2 src/myvulkan/*.cpp )
-file( GLOB LIB_HEADERS2 src/myvulkan/*.h )
+#file( GLOB LIB_SOURCES2 src/myvulkan/*.cpp )
+#file( GLOB LIB_HEADERS2 src/myvulkan/*.h )
 
 # Add source to this project's executable.
 add_executable (vulkan_test ${LIB_SOURCES} ${LIB_HEADERS} ${LIB_SOURCES2} ${LIB_HEADERS2})

@@ -3,9 +3,8 @@
 #include <string>
 #include <vulkan/vulkan_core.h>
 
-#include <glm/vec4.hpp>
-
 #include <core/mytypes.h>
+#include <math/vector3.h>
 
 
 #ifdef NDEBUG
@@ -53,6 +52,6 @@ DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfa
 
 void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name);
 void setObjectTag(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
-void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, glm::vec4 color);
-void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string markerName, glm::vec4 color);
+void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, Vec4 color);
+void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string markerName, Vec4 color);
 void endDebugRegion(VkCommandBuffer cmdBuffer);

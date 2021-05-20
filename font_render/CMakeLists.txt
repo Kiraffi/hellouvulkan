@@ -15,5 +15,5 @@ target_link_libraries(font_render PUBLIC
 	OpenGL::GL 
 	${CMAKE_DL_LIBS} 
 	${SDL2_LIBRARY}
-	-lSDL2
+	#-lSDL2
 	)
