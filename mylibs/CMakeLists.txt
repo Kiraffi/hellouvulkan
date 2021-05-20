@@ -13,11 +13,9 @@ add_library(MyLibraries
 
 	myvulkan/vulkandevice.h
 	myvulkan/vulkandevice.cpp
-	myvulkan/vulkanresource.h
 	myvulkan/vulkanresource.cpp
 	myvulkan/vulkanshader.h
 	myvulkan/vulkanshader.cpp
-	myvulkan/vulkanswapchain.h
 	myvulkan/vulkanswapchain.cpp
 
 	"math/matrix.cpp"
@@ -37,5 +35,10 @@ target_include_directories(MyLibraries PUBLIC
 	"math/quaternion.h"
 	"math/matrix.h"
 	"math/plane.h"
+	"myvulkan/vulkanswapchain.h"
+	"myvulkan/vulkanresource.h"
 
+	${VULKAN_INCLUDE_DIR}
+	${VULKAN_INCLUDE_DIRS}
+	"C:/VulkanSDK/1.2.176.1/Include"
 	)

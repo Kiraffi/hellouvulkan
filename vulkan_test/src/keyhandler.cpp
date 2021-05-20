@@ -1,7 +1,8 @@
 #include "keyhandler.h"
 
 #include <GLFW/glfw3.h>
-
+#include <algorithm>
+//#include <>
 #include "camera.h"
 #include <core/mytypes.h>
 #include <math/general_math.h>
@@ -54,7 +55,7 @@ void checkKeypresses(float deltaTime, Camera &camera)
 	}
 
 	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
-	camera.yaw = std::fmod(camera.yaw, 2.0f * pii);
+	camera.yaw = fmod(camera.yaw, 2.0f * pii);
 
 
 	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);

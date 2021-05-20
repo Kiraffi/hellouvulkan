@@ -17,5 +17,5 @@ add_library(MyGlad
 target_include_directories(MyLibraries PUBLIC 
 	"${CMAKE_CURRENT_SOURCE_DIR}/"
 	glfw-3.3.4/include/
-	
+
 	)

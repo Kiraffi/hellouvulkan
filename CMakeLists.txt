@@ -33,7 +33,8 @@ if (UNIX)
     #do something
 endif (UNIX)
 
-
+include_directories(${VULKAN_INCLUDE_DIR})
+include_directories(${VULKAN_INCLUDE_DIRS})
 #find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Vulkan REQUIRED)

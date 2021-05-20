@@ -32,5 +32,9 @@ target_link_libraries(vulkan_test PUBLIC
 	meshoptimizer
 	MyGlad
 	MyLibraries
+	${VULKAN_INCLUDE_DIR}
+	${VULKAN_INCLUDE_DIRS}
+	"C:/VulkanSDK/1.2.176.1/Include"
+
 )
 

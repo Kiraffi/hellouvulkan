@@ -57,7 +57,7 @@ void printOutBuffer(const char *buffer);
 #define LOGDEBUG 1
 #if LOGDEBUG == 1
 #define LOG_LEN 1024
-#if _MSC_VER
+#if 0 // _MSC_VER
 #define HELPER_LOG(LOG_TYPE, LOG_TEXT_STRING, ...) \
 				do { \
 					char debugBuffer[LOG_LEN]; \

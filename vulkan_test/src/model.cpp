@@ -11,7 +11,7 @@
 
 #include <tiny_obj_loader.h>
 #include <meshoptimizer/src/meshoptimizer.h>
-
+#include <unordered_map>
 
 /*
 // For hashmap
