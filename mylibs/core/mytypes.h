@@ -21,6 +21,8 @@ using i64 = int64_t;
 
 const float pii = 3.1415926265359f;
 
+
+
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else

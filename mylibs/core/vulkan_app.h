@@ -8,8 +8,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "../myvulkan/vulkandevice.h"
-#include "../myvulkan/vulkanswapchain.h"
+#include <myvulkan/vulkandevice.h>
+#include <myvulkan/vulkanswapchain.h>
 
 constexpr u32 QUERY_COUNT = 128u;
 

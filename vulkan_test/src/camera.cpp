@@ -1,8 +1,11 @@
 
 #include "camera.h"
-
 #include <math/matrix.h>
 #include <math/general_math.h>
+
+
+#include <cmath>
+
 Matrix perspectiveProjection(const Camera &camera)
 {;
 	float fovY = toRadians(camera.fovY);

@@ -1,6 +1,4 @@
-#pragma once
-
-#include "math/quaternion.h"
+#include "quaternion.h"
 #include <algorithm>
 #include <math.h>
 #include <stdio.h>

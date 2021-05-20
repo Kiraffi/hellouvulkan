@@ -8,26 +8,21 @@ add_library(MyLibraries
 	core/timer.h
 	core/timer.cpp
 
-#	core/vulkan_app.h
-#	core/vulkan_app.cpp
-#
-#	myvulkan/vulkandevice.h
-#	myvulkan/vulkandevice.cpp
-#	myvulkan/vulkanresource.h
-#	myvulkan/vulkanresource.cpp
-#	myvulkan/vulkanshader.h
-#	myvulkan/vulkanshader.cpp
-#	myvulkan/vulkanswapchain.h
-#	myvulkan/vulkanswapchain.cpp
+	core/vulkan_app.h
+	core/vulkan_app.cpp
 
-	"math/matrix.h"
+	myvulkan/vulkandevice.h
+	myvulkan/vulkandevice.cpp
+	myvulkan/vulkanresource.h
+	myvulkan/vulkanresource.cpp
+	myvulkan/vulkanshader.h
+	myvulkan/vulkanshader.cpp
+	myvulkan/vulkanswapchain.h
+	myvulkan/vulkanswapchain.cpp
+
 	"math/matrix.cpp"
-	"math/plane.h"
 	"math/quaternion.cpp"
-	"math/quaternion.h"
 	"math/vector3.cpp"
-	"math/vector3.h"
-	"math/general_math.h"
 	 )
 
 target_include_directories(MyLibraries PUBLIC 
@@ -35,5 +30,12 @@ target_include_directories(MyLibraries PUBLIC
 	${CMAKE_DL_LIBS}
 	#${SDL2_LIBRARY}
 	#-lSDL2
+	Vulkan::Vulkan
+	glfw
+	"math/vector3.h"
+	"math/general_math.h"
+	"math/quaternion.h"
+	"math/matrix.h"
+	"math/plane.h"
 
 	)

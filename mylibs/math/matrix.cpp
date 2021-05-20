@@ -1,5 +1,3 @@
-#pragma once
-
 #include "matrix.h"
 #include "math/quaternion.h"
 #include <stdio.h>
@@ -109,6 +107,28 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 */
 	result._32 = -1.0f;
 	result._33 = 0.0f;
+	return result;
+}
+
+Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up)
+{
+	Vector3 forward = normalize(target - pos);
+	Vector3 right = cross(up, forward);
+	Vector3 realUp = cross(right, forward);
+
+	Matrix result;
+	result._00 = right.x;
+	result._01 = right.y;
+	result._02 = right.z;
+
+	result._10 = realUp.x;
+	result._11 = realUp.y;
+	result._12 = realUp.z;
+
+	result._20 = forward.x;
+	result._21 = forward.y;
+	result._22 = forward.z;
+
 	return result;
 }
 

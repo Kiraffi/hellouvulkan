@@ -871,7 +871,7 @@ void VulkanTest::run()
 			uniformValues.screenSize.z = (float)(frameIndex % 1024);
 			uniformValues.screenSize.w = (float)(frameIndex % 1024);
 
-			//uniformValues.camMat = glm::lookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
+			uniformValues.camMat = createMatrixFromLookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
 
 			camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
 			camera.fovY = 90.0f;
