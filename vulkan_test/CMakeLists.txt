@@ -7,10 +7,16 @@ cmake_minimum_required (VERSION 3.15)
 #add_executable (space_shooter "src/main_space_shooter.cpp")
 add_executable (vulkan_test 
 	"src/main_vulkan_test.cpp"
-	"src/model.cpp"
-	"src/keyhandler.cpp"
-	"src/fontsystem.cpp"
+
 	"src/camera.cpp"
+	"src/camera.h"
+	"src/fontsystem.cpp"
+	"src/fontsystem.h"
+	"src/keyhandler.cpp"
+	"src/keyhandler.h"
+	"src/model.cpp"
+	"src/model.h"
+	"src/transform.h"
 )
 
 
@@ -32,9 +38,7 @@ target_link_libraries(vulkan_test PUBLIC
 	meshoptimizer
 	MyGlad
 	MyLibraries
-	${VULKAN_INCLUDE_DIR}
-	${VULKAN_INCLUDE_DIRS}
-	"C:/VulkanSDK/1.2.176.1/Include"
-
+	#${VULKAN_INCLUDE_DIR}
+	#${VULKAN_INCLUDE_DIRS}
 )
 

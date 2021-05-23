@@ -1054,7 +1054,6 @@ void VulkanTest::run()
 			passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
 			passBeginInfo.pClearValues = clearValues;
 
-
 			vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };

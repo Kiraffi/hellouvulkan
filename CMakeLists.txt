@@ -33,12 +33,19 @@ if (UNIX)
     #do something
 endif (UNIX)
 
-include_directories(${VULKAN_INCLUDE_DIR})
-include_directories(${VULKAN_INCLUDE_DIRS})
 #find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Vulkan REQUIRED)
+include_directories(${Vulkan_INCLUDE_DIR})
+include_directories(${Vulkan_INCLUDE_DIRS})
 #include_directories(${SDL2_INCLUDE_DIRS})
+
+
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
 
 #add_subdirectory("externallibs")
 add_subdirectory("external/glfw-3.3.4")
