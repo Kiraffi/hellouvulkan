@@ -25,8 +25,11 @@ static void error_callback(int error, const char* description)
 static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
 	core::VulkanApp *data = reinterpret_cast<core::VulkanApp *>(glfwGetWindowUserPointer(window));
-	if(data) 
+	if(data)
+	{
+		data->resizeWindow(width, height);
 		data->needToResize = true;
+	}
 }
 
 
