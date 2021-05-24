@@ -55,5 +55,6 @@ add_subdirectory("external")
 add_subdirectory ("font_draw")
 add_subdirectory ("font_render")
 add_subdirectory ("space_shooter")
+add_subdirectory ("font_render_vulkan")
 add_subdirectory ("vulkan_test")
 

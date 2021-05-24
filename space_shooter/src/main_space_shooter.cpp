@@ -15,7 +15,7 @@
 #include <ogl/shader.h>
 #include <ogl/shaderbuffer.h>
 
-
+#include <core/mytypes.h>
 #include <chrono>
 #include <thread>
 #include <string>
@@ -375,7 +375,7 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 		vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 0.0f}); //, .posZ = 0.5f, .padding = 0.0f });
 		for (uint32_t i = 0; i < AsteroidCorners; ++i)
 		{
-			float angle = float(i) * float(2.0f * M_PI) / float(AsteroidCorners);
+			float angle = float(i) * float(2.0f * PI) / float(AsteroidCorners);
 			float x = cos(angle);
 			float y = sin(angle);
 			float r = 0.8f + 0.2f * (float(rand()) / float(RAND_MAX));
@@ -577,11 +577,11 @@ static void mainProgramLoop(core::App &app, std::vector<char> &data, std::string
 					rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
 					playerEntity.rotation -= rotSpeed * dddt;
 				}
-				playerEntity.rotation = std::fmod(playerEntity.rotation, M_PI * 2.0);
+				playerEntity.rotation = std::fmod(playerEntity.rotation, PI * 2.0);
 				if (keysDown[ 0 ])
 				{
-					playerEntity.speedX += cosf(playerEntity.rotation + float(M_PI) * 0.5f) * 5000.0f * dddt;
-					playerEntity.speedY += sinf(playerEntity.rotation + float(M_PI) * 0.5f) * 5000.0f * dddt;
+					playerEntity.speedX += cosf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
+					playerEntity.speedY += sinf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
 				}
 
 

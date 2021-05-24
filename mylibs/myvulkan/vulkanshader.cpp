@@ -114,7 +114,7 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 		u32 imageCount = 0u;
 		for(u32 i = 0; i < descriptors.size(); ++i)
 		{
-			if(descriptors[i].writeDescriptor && descriptors[i].descriptorType != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+			if(descriptors[i].writeDescriptor && descriptors[ i ].buffer)
 			{
 				bufferInfos[bufferCount] = {};
 				bufferInfos[bufferCount].buffer = descriptors[i].buffer->buffer;

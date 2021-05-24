@@ -1085,12 +1085,12 @@ void VulkanTest::run()
 					// With index buffer
 					//vkCmdDrawIndexed(commandBuffer, meshData.indiceCount * drawCount, 1, 0, 0, 0);
 
-					vkCmdDrawIndexedIndirect(commandBuffer, buffers[ATOMIC_BUFFER].buffer, 0, 1, sizeof(u32) * 8);
+					//vkCmdDrawIndexedIndirect(commandBuffer, buffers[ATOMIC_BUFFER].buffer, 0, 1, sizeof(u32) * 8);
 
 					//vkCmdPushConstants(commandBuffer, graphicsPipeline.pipelineLayout, graphicsPipeline.pushConstantStage, 0, sizeof(MeshDraw), &draws[0]);
 
 					// Use instanced rendering
-					//vkCmdDrawIndexed(commandBuffer, meshData.indiceCount, drawCount, 0, 0, 0);
+					vkCmdDrawIndexed(commandBuffer, meshData.indiceCount, drawCount, 0, 0, 0);
 				}
 
 				//vkCmdDraw(commandBuffer, 3, 1, 0, 0);
