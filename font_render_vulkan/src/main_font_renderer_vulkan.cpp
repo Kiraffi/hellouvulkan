@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <cstdlib>
-#include <stdint.h>
+#include <cstdint>
+// memcpy...
+#include <string.h>
 
 #include <core/app.h>
 
