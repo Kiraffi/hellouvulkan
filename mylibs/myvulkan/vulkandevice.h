@@ -13,6 +13,8 @@
 	const bool useVulkanDebugMarkersRenderDoc = true;
 #endif
 
+#define SHOW_INFO_MESSAGES 0
+
 #define VSYNC 0 // 0 = no vsync, 1 = fifo, 2 = mailbox
 #define DISCRETE_GPU 1
 

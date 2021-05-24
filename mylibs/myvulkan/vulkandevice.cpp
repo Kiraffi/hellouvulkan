@@ -64,6 +64,11 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugUtilsMessageSev
 {
 	bool errorMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0 || (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0; 
 	bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0 || (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
+
+#if !SHOW_INFO_MESSAGES	
+	if(!errorMsg && !warningMsg)
+		return VK_FALSE;
+#endif
 	const char *type = errorMsg ? "Error" : (warningMsg  ? "Warning" : "Info");
 	
 	printf("Type:%s, message: %s\n\n", type, pCallbackData->pMessage);
