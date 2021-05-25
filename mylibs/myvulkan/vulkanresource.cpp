@@ -25,6 +25,44 @@ static u32 selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProper
 }
 
 
+
+
+
+
+
+
+void beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer)
+{
+	VK_CHECK(vkResetCommandPool(device, commandPool, 0));
+
+	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+
+	return;
+}
+
+void endSingleTimeCommands(VkDevice device, VkCommandBuffer commandBuffer, VkQueue queue)
+{
+	VK_CHECK(vkEndCommandBuffer(commandBuffer));
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	VK_CHECK(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+	VK_CHECK(vkQueueWaitIdle(queue));
+}
+
+
+
+
+
+
+
+
 Image createImage(VkDevice device, u32 familyIndex, const VkPhysicalDeviceMemoryProperties &memoryProperties, u32 width, u32 height, VkFormat format,
 	VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char *imageName)
 {
@@ -79,6 +117,60 @@ Image createImage(VkDevice device, u32 familyIndex, const VkPhysicalDeviceMemory
 	result.imageName = imageName;
 
 	return result;
+}
+
+
+
+void updateImageWithData(VkDevice device, VkCommandBuffer commandBuffer, VkCommandPool commandPool, VkQueue queue,
+	u32 width, u32 height, u32 pixelSize,
+	Buffer& scratchBuffer, Image &targetImage,
+	u32 dataSize, void *data)
+{
+	ASSERT(data != nullptr || dataSize > 0u);
+	ASSERT(scratchBuffer.data);
+	ASSERT(scratchBuffer.size >= width * height * pixelSize);
+	ASSERT(targetImage.image);
+
+	uint32_t offset = 0u;
+	offset = uploadToScratchbuffer(scratchBuffer, data, dataSize, offset);
+	beginSingleTimeCommands(device, commandPool, commandBuffer);
+	{
+		VkImageMemoryBarrier imageBarriers[] =
+		{
+			imageBarrier(targetImage,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
+		};
+
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+								VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+	}
+
+	VkBufferImageCopy region{};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = { width, height, 1 };
+
+	vkCmdCopyBufferToImage(commandBuffer, scratchBuffer.buffer,	targetImage.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	{
+		VkImageMemoryBarrier imageBarriers[] =
+		{
+			imageBarrier(targetImage,
+						VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL),
+		};
+
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+								VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+	}
+	endSingleTimeCommands(device, commandBuffer, queue);
+
+	return;
 }
 
 void destroyImage(VkDevice device, Image &image)
@@ -149,48 +241,9 @@ void uploadBufferToImage(VkDevice device, VkCommandPool commandPool, VkCommandBu
 						 uint32_t width, uint32_t height, uint32_t bytesPerPixel, uint32_t bufferOffset)
 {
 
-	ASSERT(scratchBuffer.data);
-	ASSERT(scratchBuffer.size >= width * height * bytesPerPixel + bufferOffset);
-	ASSERT(gpuImage.image);
-
-	/*
-	VK_CHECK(vkResetCommandPool(device, commandPool, 0));
-
-
-	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-	*/
 	
-	VkBufferImageCopy region{};
-	region.bufferOffset = bufferOffset;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = {
-		width,
-		height,
-		1
-	};
-
-	vkCmdCopyBufferToImage(commandBuffer, scratchBuffer.buffer, gpuImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	//	endSingleTimeCommands(device, commandBuffer, queue);
 	
-	/*
-	VK_CHECK(vkEndCommandBuffer(commandBuffer));
-
-
-	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-	VK_CHECK(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
-
-	VK_CHECK(vkDeviceWaitIdle(device));
-	*/
 }
 
 
@@ -201,13 +254,7 @@ void uploadScratchBufferToGpuBuffer(VkDevice device, VkCommandPool commandPool, 
 	ASSERT(scratchBuffer.size >= size);
 	ASSERT(gpuBuffer.size >= size);
 
-	VK_CHECK(vkResetCommandPool(device, commandPool, 0));
-
-
-	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+	beginSingleTimeCommands(device, commandPool, commandBuffer);
 
 	VkBufferCopy region = { 0, 0, VkDeviceSize(size) };
 	vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, gpuBuffer.buffer, 1, &region);
@@ -216,15 +263,8 @@ void uploadScratchBufferToGpuBuffer(VkDevice device, VkCommandPool commandPool, 
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyBarrier, 0, nullptr);
 
-	VK_CHECK(vkEndCommandBuffer(commandBuffer));
+	endSingleTimeCommands(device, commandBuffer, queue);
 
-
-	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-	VK_CHECK(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
-
-	VK_CHECK(vkDeviceWaitIdle(device));
 }
 
 void destroyBuffer(VkDevice device, Buffer &buffer)

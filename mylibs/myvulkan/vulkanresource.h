@@ -26,8 +26,20 @@ struct Image
 	u32 height = 0u;
 };
 
-Image createImage(VkDevice device, u32 familyIndex, const VkPhysicalDeviceMemoryProperties &memoryProperties, u32 width, u32 height,
-	VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char *imageName);
+void beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer);
+void endSingleTimeCommands(VkDevice device, VkCommandBuffer commandBuffer, VkQueue queue);
+
+
+
+Image createImage(VkDevice device, u32 familyIndex, const VkPhysicalDeviceMemoryProperties &memoryProperties,
+	u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
+	VkMemoryPropertyFlags memoryFlags, const char *imageName);
+
+void updateImageWithData(VkDevice device, VkCommandBuffer commandBuffer, VkCommandPool commandPool, VkQueue queue,
+	u32 width, u32 height, u32 pixelSize,
+	Buffer& scratchBuffer, Image &targetImage,
+	u32 dataSize, void *data);
+
 void destroyImage(VkDevice device, Image &image);
 
 Buffer createBuffer(VkDevice device, const VkPhysicalDeviceMemoryProperties &memoryProperties, size_t size, 
@@ -37,9 +49,6 @@ void destroyBuffer(VkDevice device, Buffer &buffer);
 size_t uploadToScratchbuffer(Buffer& scratchBuffer, void* data, size_t size, size_t offset);
 void uploadScratchBufferToGpuBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkQueue queue, Buffer &gpuBuffer, Buffer &scratchBuffer, size_t sizes);
 
-
-void uploadBufferToImage(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkQueue queue, Image &gpuImage, Buffer &scratchBuffer,
-						 uint32_t width, uint32_t height, uint32_t bytesPerPixel, uint32_t bufferOffset);
 VkFramebuffer createFramebuffer(VkDevice device, VkRenderPass renderPass, VkImageView colorView, VkImageView depthView, u32 width, u32 height);
 
 VkImageView createImageView(VkDevice device, VkImage image, VkFormat format);

@@ -123,8 +123,6 @@ public:
 
 	bool createGraphics();
 	bool createPipelines();
-	void beginSingleTimeCommands(VkCommandBuffer commandBuffer);
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 public:
 
@@ -197,21 +195,21 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
 
-	buffers[ SCRATCH_BUFFER ] = ::createBuffer(device, memoryProperties, 64 * 1024 * 1024,
+	buffers[ SCRATCH_BUFFER ] = createBuffer(device, memoryProperties, 64 * 1024 * 1024,
 											   VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 											   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
-	buffers[ UNIFORM_BUFFER ] = ::createBuffer(device, memoryProperties, 64u * 1024,
+	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024,
 											   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 											   //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
 											   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
 
-	buffers[ UNIFORM_BUFFER2 ] = ::createBuffer(device, memoryProperties, 64u * 1024,
+	buffers[ UNIFORM_BUFFER2 ] = createBuffer(device, memoryProperties, 64u * 1024,
 												VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 												//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
 												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer2");
 
-	buffers[ INDEX_DATA_BUFFER ] = ::createBuffer(device, memoryProperties, 32 * 1024 * 1024,
+	buffers[ INDEX_DATA_BUFFER ] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
 												  VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 												  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
 
@@ -304,32 +302,6 @@ bool VulkanTest::createPipelines()
 
 
 
-void VulkanTest::beginSingleTimeCommands(VkCommandBuffer commandBuffer)
-{
-	VK_CHECK(vkResetCommandPool(deviceWithQueues.device, commandPool, 0));
-
-	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-
-	return;
-}
-
-void VulkanTest::endSingleTimeCommands(VkCommandBuffer commandBuffer)
-{
-	VkDevice device = deviceWithQueues.device;
-
-	vkEndCommandBuffer(commandBuffer);
-
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-
-	vkQueueSubmit(deviceWithQueues.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(deviceWithQueues.graphicsQueue);
-}
 
 bool VulkanTest::initApp(const std::string &fontFilename)
 {
@@ -370,66 +342,23 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 		VkPhysicalDeviceMemoryProperties memoryProperties;
 		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-		textImage = createImage(
-			device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
+
+		textImage = createImage(device,
+			deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
 			textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "TextImage");
+			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+			"TextImage");
+		
+		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
+			textureWidth, textureHeight, 4u,
+			buffers[ SCRATCH_BUFFER ], textImage,
+			 (u32)fontPic.size(), ( void * ) fontPic.data());
 
+		VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-		uint32_t offset = 0u;
-		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) fontPic.data(), fontPic.size(), offset);
-
-		beginSingleTimeCommands(commandBuffer);
-		{
-			VkImageMemoryBarrier imageBarriers[] =
-			{
-				imageBarrier(textImage,
-							VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-			};
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-								 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
-		}
-
-		uploadBufferToImage(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue, textImage, buffers[ SCRATCH_BUFFER ],
-							textureWidth, textureHeight, 4u, 0u);
-
-		{
-			VkImageMemoryBarrier imageBarriers[] =
-			{
-				imageBarrier(textImage,
-							VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL),
-			};
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-								 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
-		}
-		endSingleTimeCommands(commandBuffer);
-
-		{
-			VkPhysicalDeviceProperties properties{};
-			vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-
-			VkSamplerCreateInfo samplerInfo{};
-			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			samplerInfo.magFilter = VK_FILTER_LINEAR;
-			samplerInfo.minFilter = VK_FILTER_LINEAR;
-			samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.anisotropyEnable = VK_FALSE;
-			samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-			samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-			samplerInfo.unnormalizedCoordinates = VK_FALSE;
-			samplerInfo.compareEnable = VK_FALSE;
-			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-			if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
-			{
-				throw std::runtime_error("failed to create texture sampler!");
-			}
-		}
+		VK_CHECK(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
 	}
 
 	return true;
@@ -677,7 +606,7 @@ void VulkanTest::run()
 
 
 
-		vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+		VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
 		{
 			[[maybe_unused]] VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
 
@@ -712,12 +641,11 @@ void VulkanTest::run()
 		//
 		////////////////////////
 
-		beginSingleTimeCommands(commandBuffer);
+		beginSingleTimeCommands(device, commandPool, commandBuffer);
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
 
 		{
-
 			// Copy to uniform buffer
 			{
 				struct Buff
@@ -776,9 +704,9 @@ void VulkanTest::run()
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
 								 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
 		}
+
+		// Drawingg
 		{
-
-
 			VkClearValue clearValues[ 2 ] = {};
 			clearValues[ 0 ].color = VkClearColorValue{ {48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
 			clearValues[ 1 ].depthStencil = { 0.0f, 0 };
@@ -800,10 +728,6 @@ void VulkanTest::run()
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissors);
 
-
-
-
-
 			// draw calls here
 			// Render
 			{
@@ -817,7 +741,6 @@ void VulkanTest::run()
 
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
 
-	
 		renderTargetImages[ MAIN_COLOR_TARGET ].accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		renderTargetImages[ MAIN_COLOR_TARGET ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		present(renderTargetImages[ MAIN_COLOR_TARGET ]);
