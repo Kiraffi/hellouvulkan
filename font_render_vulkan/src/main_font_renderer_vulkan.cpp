@@ -598,7 +598,7 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 
 		// Note save order is a bit messed up!!! Since the file has one char 8x12 then next
 		uint32_t index = 0;
-		for (int y = 0; y < 12; ++y)
+		for (int y = 11; y >= 0; --y)
 		{
 			for (int charIndex = 0; charIndex < 128 - 32; ++charIndex)
 			{
@@ -982,9 +982,9 @@ void VulkanTest::run()
 				{
 					float windowWidth;
 					float windowHeight;
-					float tmp[6];
+					float tmp[6 + 8];
 				};
-				Buff buff{ float(windowWidth), float( windowHeight) };
+				Buff buff{ float(swapchain.width), float(swapchain.height) };
 				// use scratch buffer to unifrom buffer transfer
 				uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
 				uint32_t buffSize = uint32_t(sizeof(Buff));
@@ -1096,21 +1096,7 @@ void VulkanTest::run()
 
 
 			insertDebugRegion(commandBuffer, "Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-			/*
-						VkImageCopy imageCopyRegion = {};
 
-						imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-						imageCopyRegion.srcSubresource.layerCount = 1;
-						imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-						imageCopyRegion.dstSubresource.layerCount = 1;
-						imageCopyRegion.extent = { swapchain.width, swapchain.height, 1 };
-
-
-
-
-						vkCmdCopyImage(commandBuffer, renderTargetImages[MAIN_COLOR_TARGET].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-							swapchain.images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyRegion);
-			*/
 			VkImageBlit imageBlitRegion = {};
 
 			imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
