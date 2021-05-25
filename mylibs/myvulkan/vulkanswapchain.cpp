@@ -145,7 +145,7 @@ void destroySwapchain(SwapChain &swapchain, VkDevice device)
 }
 
 bool createSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice, 
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface, VkRenderPass renderPass)
+	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface)
 {
 	swapChain.swapchain = createSwapchain(window, device, physicalDevice, colorFormat, colorSpace, surface, swapChain.swapchain);
 
@@ -166,7 +166,7 @@ bool createSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, 
 }
 
 bool resizeSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice, 
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface, VkRenderPass renderPass)
+	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface)
 {
 	int width = 0;
 	int height = 0;
@@ -186,7 +186,7 @@ bool resizeSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, 
 	VK_CHECK(vkDeviceWaitIdle(device));
 
 	SwapChain oldSwapchain = swapChain;
-	createSwapchain(swapChain, window, device, physicalDevice, colorFormat, colorSpace, surface, renderPass);
+	createSwapchain(swapChain, window, device, physicalDevice, colorFormat, colorSpace, surface);
 
 	destroySwapchain(oldSwapchain, device);
 	return true;

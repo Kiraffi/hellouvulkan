@@ -158,7 +158,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 	}
 
 	[[maybe_unused]] bool scSuccess = createSwapchain(swapchain, window, device, physicalDevice, 
-		deviceWithQueues.colorFormat, deviceWithQueues.colorSpace, surface, renderPass);
+		deviceWithQueues.colorFormat, deviceWithQueues.colorSpace, surface);
 	ASSERT(scSuccess);
 	if(!scSuccess)
 	{
@@ -205,6 +205,19 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 		printf("Failed to create vulkan command pool!\n");
 		return false;
 	}
+
+	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	allocateInfo.commandPool = commandPool;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandBufferCount = 1;
+
+	VK_CHECK(vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer));
+	if(!commandBuffer)
+	{
+		printf("Failed to create vulkan command buffer!\n");
+		return false;
+	}
+
 
 
 
@@ -360,7 +373,7 @@ void VulkanApp::present(Image &presentImage)
 		{
 			needToResize = true;
 			if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
-				surface, renderPass))
+				surface))
 			{
 				recreateSwapchainData();
 			}

@@ -22,6 +22,7 @@
 #include <core/mytypes.h>
 
 #include <myvulkan/vulkandevice.h>
+#include <myvulkan/vulkanhelperfuncs.h>
 #include <myvulkan/vulkanresource.h>
 #include <myvulkan/vulkanshader.h>
 #include <myvulkan/vulkanswapchain.h>
@@ -158,12 +159,6 @@ enum RenderTargetImageIndexes
 };
 
 
-struct PipelineWithDescriptors
-{
-	Pipeline pipeline; // Maybe multiple?
-	Descriptor descriptor; // maybe needs more than one, possibly separated from each other?
-	std::vector<DescriptorSet> descriptorSet; // maybe needs more than one set?
-};
 
 
 
@@ -311,19 +306,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	ASSERT(shaderModules[SHADER_MODULE_COMPUTE_CARP_WRITE_NUMBER]);
 
 
-	
-
-
-
-
-
-
-	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	allocateInfo.commandPool = commandPool;
-	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandBufferCount = 1;
-
-	VK_CHECK(vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer));
 
 
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -643,13 +625,6 @@ void VulkanTest::recreateSwapchainData()
 
 
 
-void bindPipelineWithDecriptors(VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint, PipelineWithDescriptors &pipelineWithDescriptor)
-{
-	vkCmdBindPipeline(cmdBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelines[0]);
-	vkCmdBindDescriptorSets(cmdBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelineLayout,
-		0, 1, &pipelineWithDescriptor.descriptor.descriptorSet, 0, NULL);
-}
-
 
 
 struct UniformValues
@@ -894,7 +869,7 @@ void VulkanTest::run()
 			else
 			{
 				if(resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace, 
-					surface, renderPass))
+					surface))
 				{
 					recreateSwapchainData();
 					VK_CHECK(vkDeviceWaitIdle(device));
@@ -1199,116 +1174,6 @@ void VulkanTest::run()
 		
 		present(renderTargetImages[MAIN_COLOR_TARGET]);
 
-#if 0
-		// Copy final image to swap chain target
-		{
-			VkImageMemoryBarrier copyBeginBarriers[] =
-			{
-				imageBarrier(renderTargetImages[MAIN_COLOR_TARGET].image,
-					//			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-								VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL,
-								VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
-
-							imageBarrier(swapchain.images[imageIndex],
-								0, VK_IMAGE_LAYOUT_UNDEFINED,
-								VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			};
-
-			vkCmdPipelineBarrier(commandBuffer,  VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(copyBeginBarriers), copyBeginBarriers);
-
-
-			insertDebugRegion(commandBuffer, "Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-/*
-			VkImageCopy imageCopyRegion = {};
-
-			imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageCopyRegion.srcSubresource.layerCount = 1;
-			imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageCopyRegion.dstSubresource.layerCount = 1;
-			imageCopyRegion.extent = { swapchain.width, swapchain.height, 1 };
-
-
-
-
-			vkCmdCopyImage(commandBuffer, renderTargetImages[MAIN_COLOR_TARGET].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				swapchain.images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyRegion);
-*/
-			VkImageBlit imageBlitRegion = {};
-
-			imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageBlitRegion.srcSubresource.layerCount = 1;
-			imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageBlitRegion.dstSubresource.layerCount = 1;
-			imageBlitRegion.srcOffsets[0] = VkOffset3D{0, 0, 0};
-			imageBlitRegion.srcOffsets[1] = VkOffset3D{(i32)swapchain.width, (i32)swapchain.height, 1};
-			imageBlitRegion.dstOffsets[0] = VkOffset3D{0, 0, 0};
-			imageBlitRegion.dstOffsets[1] = VkOffset3D{(i32)swapchain.width, (i32)swapchain.height, 1};
-
-
-			vkCmdBlitImage(commandBuffer, renderTargetImages[MAIN_COLOR_TARGET].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				swapchain.images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
-		}
-
-		// Prepare image for presenting.
-		{
-			VkImageMemoryBarrier presentBarrier = imageBarrier(swapchain.images[imageIndex],
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &presentBarrier);
-		}
-
-		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::COPY_FINISHED);
-
-		endDebugRegion(commandBuffer);
-
-		VK_CHECK(vkEndCommandBuffer(commandBuffer));
-
-		// Submit
-		{
-			VkPipelineStageFlags submitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; //VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-			vkResetFences(device, 1, &fence);
-
-			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-			submitInfo.waitSemaphoreCount = 1;
-			submitInfo.pWaitSemaphores = &acquireSemaphore;
-			submitInfo.pWaitDstStageMask = &submitStageMask;
-			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &commandBuffer;
-			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores = &releaseSemaphore;
-			VK_CHECK(vkQueueSubmit(deviceWithQueues.graphicsQueue, 1, &submitInfo, fence));
-
-			VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores = &releaseSemaphore;
-			presentInfo.swapchainCount = 1;
-			presentInfo.pSwapchains = &swapchain.swapchain;
-			presentInfo.pImageIndices = &imageIndex;
-
-			VkResult res = (vkQueuePresentKHR(deviceWithQueues.presentQueue, &presentInfo));
-			if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR)
-			{
-				needToResize = true;
-				if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace, 
-					surface, renderPass))
-				{
-					recreateSwapchainData();
-				}
-				needToResize = false;
-			}
-			else
-			{
-				VK_CHECK(res);
-			}
-		}
-
-		VK_CHECK(vkDeviceWaitIdle(device));
-
-#endif
 		////////////////////////
 		//
 		// END PASS, COLLECT TIMINGS

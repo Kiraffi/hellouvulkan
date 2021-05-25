@@ -3,6 +3,23 @@
 #include <GLFW/glfw3.h>
 
 #include <core/mytypes.h>
+#include <myvulkan/vulkanshader.h>
+
+
+struct PipelineWithDescriptors
+{
+	Pipeline pipeline; // Maybe multiple?
+	Descriptor descriptor; // maybe needs more than one, possibly separated from each other?
+	std::vector<DescriptorSet> descriptorSet; // maybe needs more than one set?
+};
+
+//?
+static void bindPipelineWithDecriptors(VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint, PipelineWithDescriptors &pipelineWithDescriptor)
+{
+	vkCmdBindPipeline(cmdBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelines[0]);
+	vkCmdBindDescriptorSets(cmdBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelineLayout,
+		0, 1, &pipelineWithDescriptor.descriptor.descriptorSet, 0, NULL);
+}
 
 
 

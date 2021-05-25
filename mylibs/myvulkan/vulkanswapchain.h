@@ -45,7 +45,7 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, V
 void destroySwapchain(SwapChain &swapchain, VkDevice device);
 
 bool createSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice, 
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface, VkRenderPass renderPass);
+	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface);
 
 bool resizeSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice, 
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface, VkRenderPass renderPass);
+	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface);

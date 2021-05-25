@@ -17,6 +17,7 @@
 #include <core/mytypes.h>
 
 #include <myvulkan/vulkandevice.h>
+#include <myvulkan/vulkanhelperfuncs.h>
 #include <myvulkan/vulkanresource.h>
 #include <myvulkan/vulkanshader.h>
 #include <myvulkan/vulkanswapchain.h>
@@ -109,20 +110,6 @@ enum BufferIndexes
 	NUM_BUFFERS
 };
 
-struct PipelineWithDescriptors
-{
-	Pipeline pipeline; // Maybe multiple?
-	Descriptor descriptor; // maybe needs more than one, possibly separated from each other?
-	std::vector<DescriptorSet> descriptorSet; // maybe needs more than one set?
-};
-
-static void bindPipelineWithDecriptors(VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint, PipelineWithDescriptors &pipelineWithDescriptor)
-{
-	vkCmdBindPipeline(cmdBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelines[ 0 ]);
-	vkCmdBindDescriptorSets(cmdBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelineLayout,
-							0, 1, &pipelineWithDescriptor.descriptor.descriptorSet, 0, NULL);
-}
-
 
 class VulkanTest : core::VulkanApp
 {
@@ -206,14 +193,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 
 
-	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	allocateInfo.commandPool = commandPool;
-	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandBufferCount = 1;
-
-	VK_CHECK(vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer));
-
-
 	VkPhysicalDeviceMemoryProperties memoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
@@ -283,7 +262,7 @@ bool VulkanTest::createGraphics()
 						  //| VK_IMAGE_USAGE_STORAGE_BIT
 						  , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 						  "Main color target image");
-		renderTargetImages[ MAIN_DEPTH_TARGET ] = ::createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
+		renderTargetImages[ MAIN_DEPTH_TARGET ] = createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
 															  swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
 															  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 															  "Main depth target image");
@@ -391,7 +370,7 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 		VkPhysicalDeviceMemoryProperties memoryProperties;
 		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-		textImage = ::createImage(
+		textImage = createImage(
 			device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
 			textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
 			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "TextImage");
@@ -600,15 +579,6 @@ void VulkanTest::recreateSwapchainData()
 
 	createGraphics();
 	needToResize = false;
-
-	/*
-	// Should probably handle descriptor pool reseting instead of actually destroying it.
-	{
-		pipelineWithDescriptors.descriptorSet[ PIPELINE_GRAPHICS_PIPELINE ].image = renderTargetImages[ MAIN_COLOR_TARGET ].image;
-		pipelineWithDescriptors.descriptorSet[ PIPELINE_GRAPHICS_PIPELINE ].imageView = renderTargetImages[ MAIN_COLOR_TARGET ].imageView;
-		pipelineWithDescriptors.descriptor = createDescriptor(device, pipelineWithDescriptors.descriptorSet, pipelineWithDescriptors.pipeline.descriptorSetLayout);
-	}
-	*/
 }
 
 
@@ -619,8 +589,9 @@ void VulkanTest::recreateSwapchainData()
 
 void VulkanTest::run()
 {
-	std::vector<GPUVertexData> vertData;
 	glfwSetKeyCallback(window, key_callback);
+
+	std::vector<GPUVertexData> vertData;
 	
 	std::string txt = "Testing";
 	Cursor cursor;
@@ -699,8 +670,14 @@ void VulkanTest::run()
 			keyStates.charsWritten = 0;
 			keyStates.resize = false;
 		}
-		vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 
+
+
+
+
+
+
+		vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 		{
 			[[maybe_unused]] VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
 
@@ -712,7 +689,7 @@ void VulkanTest::run()
 			else
 			{
 				if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
-					surface, renderPass))
+					surface))
 				{
 					recreateSwapchainData();
 					VK_CHECK(vkDeviceWaitIdle(device));
