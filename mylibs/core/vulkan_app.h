@@ -13,6 +13,8 @@
 
 constexpr u32 QUERY_COUNT = 128u;
 
+struct Image;
+
 namespace core
 {
 struct MouseState;
@@ -28,7 +30,8 @@ public:
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight);
 	virtual void run() {}
 	virtual void resized() {}
-	virtual void present();
+	virtual void present(Image &presentImage);
+	virtual void recreateSwapchainData() {}
 
 	void resizeWindow(int w, int h);
 	void setVsyncEnabled(bool enable);
@@ -47,9 +50,12 @@ public:
 	bool inited = false;
 	bool needToResize = false;
 
+	bool keyDowns[512] = {};
+
 public:
 	Timer timer;
 	double dt = 0.0;
+	uint32_t imageIndex = 0u;
 
 	VkDebugUtilsMessengerEXT debugCallBack = nullptr;
 

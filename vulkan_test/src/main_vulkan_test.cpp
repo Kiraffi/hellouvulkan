@@ -36,7 +36,6 @@
 #include "model.h"
 #include "camera.h"
 #include "fontsystem.h"
-#include "keyhandler.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -176,8 +175,11 @@ public:
 	virtual ~VulkanTest() override;
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
+
+	void checkKeypresses(float deltaTime, Camera &camera);
+
 public:
-	void recreateSwapchainData();
+	void recreateSwapchainData() override;
 
 	VkShaderModule shaderModules[NUM_SHADER_MODULES] = {};
 	Buffer buffers[NUM_BUFFERS];
@@ -260,7 +262,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-	glfwSetKeyCallback(window, keyboardHandlerCallback);
 
 
 	// Threaded loads?
@@ -701,6 +702,73 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+
+void VulkanTest::checkKeypresses(float deltaTime, Camera &camera)
+{
+	//printf("deltatime: %f\n", deltaTime);
+	float moveBooster = keyDowns[GLFW_KEY_LEFT_SHIFT] ? 5.0f : 1.0f;
+	float rotationBooster = keyDowns[GLFW_KEY_LEFT_SHIFT] ? 2.0f : 1.0f;
+
+	float moveSpeed = deltaTime * 2.0f * moveBooster;
+	float rotationSpeed = deltaTime * 1.0f * rotationBooster;
+
+ 	if(keyDowns[GLFW_KEY_I])
+	{
+		camera.pitch -= rotationSpeed;
+	}
+	if(keyDowns[GLFW_KEY_K])
+	{
+		camera.pitch += rotationSpeed;
+	}
+	if(keyDowns[GLFW_KEY_J])
+	{
+		camera.yaw -= rotationSpeed;
+	}
+	if(keyDowns[GLFW_KEY_L])
+	{
+		camera.yaw += rotationSpeed;
+	}
+
+	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
+	camera.yaw = fmod(camera.yaw, 2.0f * pii);
+
+
+	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);
+	cameraRotation = cameraRotation * getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), camera.pitch);
+	camera.forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
+	camera.upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
+
+	Vec3 cameraRight = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
+
+	if(keyDowns[GLFW_KEY_W])
+	{
+		camera.position = camera.position + camera.forwardDir * moveSpeed;
+	}
+	if(keyDowns[GLFW_KEY_S])
+	{
+		camera.position = camera.position - camera.forwardDir * moveSpeed;
+	}
+	if(keyDowns[GLFW_KEY_A])
+	{
+		camera.position = camera.position - cameraRight * moveSpeed;
+	}
+	if(keyDowns[GLFW_KEY_D])
+	{
+		camera.position = camera.position + cameraRight * moveSpeed;
+
+	}
+	if(keyDowns[GLFW_KEY_Q])
+	{
+		camera.position = camera.position + camera.upDir * moveSpeed;
+	}
+	if(keyDowns[GLFW_KEY_E])
+	{
+		camera.position = camera.position - camera.upDir * moveSpeed;
+	}
+}
+
+
+
 void VulkanTest::run()
 {
 	u32 frameIndex = 0u;
@@ -815,7 +883,6 @@ void VulkanTest::run()
 
 		vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 
-		u32 imageIndex = 0;
 		{
 			[[maybe_unused]]VkResult res = (vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
 
@@ -1127,9 +1194,12 @@ void VulkanTest::run()
 			vkCmdDispatch(commandBuffer, 10, 2, 1);
 		}
 		
+		renderTargetImages[MAIN_COLOR_TARGET].accessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		renderTargetImages[MAIN_COLOR_TARGET].layout = VK_IMAGE_LAYOUT_GENERAL;
+		
+		present(renderTargetImages[MAIN_COLOR_TARGET]);
 
-
-
+#if 0
 		// Copy final image to swap chain target
 		{
 			VkImageMemoryBarrier copyBeginBarriers[] =
@@ -1238,7 +1308,7 @@ void VulkanTest::run()
 
 		VK_CHECK(vkDeviceWaitIdle(device));
 
-
+#endif
 		////////////////////////
 		//
 		// END PASS, COLLECT TIMINGS

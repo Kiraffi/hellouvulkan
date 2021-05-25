@@ -12,8 +12,6 @@ add_executable (vulkan_test
 	"src/camera.h"
 	"src/fontsystem.cpp"
 	"src/fontsystem.h"
-	"src/keyhandler.cpp"
-	"src/keyhandler.h"
 	"src/model.cpp"
 	"src/model.h"
 	"src/transform.h"

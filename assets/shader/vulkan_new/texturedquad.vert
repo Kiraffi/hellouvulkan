@@ -32,13 +32,13 @@ void main()
 	vec2 p = vec2(-0.5f, -0.5f);
 	p.x = (vertId + 1) % 4 < 2 ? -0.5f : 0.5f;
 	p.y = vertId < 2 ? -0.5f : 0.5f;
-
+	
 	uvOut = p + 0.5f;
 	uvOut.y = uvOut.y;
-
+ 
 	uvOut.x = (uvOut.x) / (128.0f - 32.0f) + values[quadId].vUv.x;
 	p += 0.5f;
-
+  
 	vec2 vSize = vec2(float(values[quadId].vSizes & 0xffffu),
 		float((values[quadId].vSizes >> 16) & 0xffffu)); 
 	p *= vSize;

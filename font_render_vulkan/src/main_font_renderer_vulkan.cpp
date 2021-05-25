@@ -70,7 +70,6 @@ enum TIME_POINTS
 {
 	START_POINT,
 	DRAW_FINISHED,
-	COPY_FINISHED,
 
 	NUM_TIME_POINTS
 };
@@ -133,13 +132,14 @@ public:
 	bool initApp(const std::string &fontFilename);
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
+	virtual void recreateSwapchainData() override;
 
 	bool createGraphics();
+	bool createPipelines();
 	void beginSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 public:
-	void recreateSwapchainData();
 
 	VkShaderModule shaderModules[ NUM_SHADER_MODULES ] = {};
 	Buffer buffers[ NUM_BUFFERS ];
@@ -152,9 +152,7 @@ public:
 
 	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
 
-	VkSampler mainImageComputeWriteSampler = nullptr; // can write without sampler?
-
-	VkSampler textureSampler;
+	VkSampler textureSampler = nullptr;
 };
 
 
@@ -181,7 +179,6 @@ VulkanTest::~VulkanTest()
 
 	
 	vkDestroySampler(device, textureSampler, nullptr);
-	vkDestroySampler(device, mainImageComputeWriteSampler, nullptr);
 
 	for (auto &buffer : buffers)
 		destroyBuffer(device, buffer);
@@ -201,10 +198,10 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	VkDevice device = deviceWithQueues.device;
 
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/texturedquad_vert.spv");
+	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.vert.spv");
 	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ]);
 
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/texturedquad_frag.spv");
+	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.frag.spv");
 	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ]);
 
 
@@ -276,10 +273,16 @@ bool VulkanTest::createGraphics()
 	
 	// create color and depth images
 	{
-		renderTargetImages[ MAIN_COLOR_TARGET ] = ::createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-															  swapchain.width, swapchain.height, deviceWithQueues.computeColorFormat,
-															  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-															  "Main color target image");
+		renderTargetImages[ MAIN_COLOR_TARGET ] = 
+			createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
+						  swapchain.width, swapchain.height, 
+						  //deviceWithQueues.computeColorFormat,
+						  deviceWithQueues.colorFormat,
+						  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+						  | VK_IMAGE_USAGE_TRANSFER_SRC_BIT 
+						  //| VK_IMAGE_USAGE_STORAGE_BIT
+						  , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						  "Main color target image");
 		renderTargetImages[ MAIN_DEPTH_TARGET ] = ::createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
 															  swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
 															  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -288,49 +291,33 @@ bool VulkanTest::createGraphics()
 									 renderTargetImages[ MAIN_COLOR_TARGET ].imageView, renderTargetImages[ MAIN_DEPTH_TARGET ].imageView,
 									 swapchain.width, swapchain.height);
 	}
-	
-	{
-		PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE ];
+	return true;
+}
 
-		pipeline.descriptorSet = std::vector<DescriptorSet>(
-			{
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &buffers[ UNIFORM_BUFFER2 ] },
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u, true, nullptr,
-					textImage.image, textImage.imageView, textureSampler, VK_IMAGE_LAYOUT_GENERAL},
-			});
-		VertexInput vertexInput;
-		pipeline.pipeline = createGraphicsPipeline(device, renderPass, pipelineCache,
-												   shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ], shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ],
-												   vertexInput, pipeline.descriptorSet,
-												   0u, VK_SHADER_STAGE_ALL_GRAPHICS);
-		pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
-	}
-	{
-		VkSamplerCreateInfo samplerInfo = {};
-		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.anisotropyEnable = VK_FALSE; //VK_TRUE;
-		samplerInfo.maxAnisotropy = 1;
-		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-		samplerInfo.unnormalizedCoordinates = VK_FALSE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		samplerInfo.minLod = 0;
-		samplerInfo.maxLod = 1.0f;
-		samplerInfo.mipLodBias = 0;
+bool VulkanTest::createPipelines()
+{
+	VkDevice device = deviceWithQueues.device;
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+	//recreateSwapchainData();
 
-		VK_CHECK(vkCreateSampler(device, &samplerInfo, nullptr, &mainImageComputeWriteSampler));
-	}
+	PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE ];
 
-
-
-
+	pipeline.descriptorSet = std::vector<DescriptorSet>(
+		{
+			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
+			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &buffers[ UNIFORM_BUFFER2 ] },
+			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u, true, nullptr,
+				textImage.image, textImage.imageView, textureSampler, VK_IMAGE_LAYOUT_GENERAL},
+		});
+	VertexInput vertexInput;
+	pipeline.pipeline = createGraphicsPipeline(
+		device, renderPass, pipelineCache,
+		shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ],
+		shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ],
+		vertexInput, pipeline.descriptorSet,
+		0u, VK_SHADER_STAGE_ALL_GRAPHICS);
+	pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
 
 	return true;
 }
@@ -340,6 +327,8 @@ bool VulkanTest::createGraphics()
 
 void VulkanTest::beginSingleTimeCommands(VkCommandBuffer commandBuffer)
 {
+	VK_CHECK(vkResetCommandPool(deviceWithQueues.device, commandPool, 0));
+
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
@@ -405,18 +394,17 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 		textImage = ::createImage(
 			device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
 			textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_TILING_OPTIMAL | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "TextImage");
+			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "TextImage");
 
 
 		uint32_t offset = 0u;
 		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) fontPic.data(), fontPic.size(), offset);
-		VK_CHECK(vkResetCommandPool(device, commandPool, 0));
+
 		beginSingleTimeCommands(commandBuffer);
 		{
 			VkImageMemoryBarrier imageBarriers[] =
 			{
-				imageBarrier(textImage.image,
-							0, VK_IMAGE_LAYOUT_UNDEFINED,
+				imageBarrier(textImage,
 							VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
 			};
 
@@ -430,8 +418,7 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 		{
 			VkImageMemoryBarrier imageBarriers[] =
 			{
-				imageBarrier(textImage.image,
-							VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				imageBarrier(textImage,
 							VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL),
 			};
 
@@ -611,16 +598,7 @@ void VulkanTest::recreateSwapchainData()
 	deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
 	ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
 
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-	renderTargetImages[ MAIN_COLOR_TARGET ] = ::createImage(device, queueFamilyIndices.graphicsFamily, memoryProperties,
-														  swapchain.width, swapchain.height, deviceWithQueues.colorFormat,
-														  VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Main color target image");
-	renderTargetImages[ MAIN_DEPTH_TARGET ] = ::createImage(device, queueFamilyIndices.graphicsFamily, memoryProperties,
-														  swapchain.width, swapchain.height, deviceWithQueues.depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Main depth target image");
-	targetFB = createFramebuffer(device, renderPass,
-								 renderTargetImages[ MAIN_COLOR_TARGET ].imageView, renderTargetImages[ MAIN_DEPTH_TARGET ].imageView, swapchain.width, swapchain.height);
+	createGraphics();
 	needToResize = false;
 
 	/*
@@ -723,7 +701,6 @@ void VulkanTest::run()
 		}
 		vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 
-		u32 imageIndex = 0;
 		{
 			[[maybe_unused]] VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
 
@@ -745,7 +722,6 @@ void VulkanTest::run()
 			}
 		}
 
-		VK_CHECK(vkResetCommandPool(device, commandPool, 0));
 
 
 		assert(vertData.size() < 2048);
@@ -762,8 +738,6 @@ void VulkanTest::run()
 		beginSingleTimeCommands(commandBuffer);
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
-	#if 1
-
 
 		{
 
@@ -867,112 +841,9 @@ void VulkanTest::run()
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
 
 	
-		// Copy final image to swap chain target
-		{
-			VkImageMemoryBarrier copyBeginBarriers[] =
-			{
-				imageBarrier(renderTargetImages[ MAIN_COLOR_TARGET ].image,
-							//0, VK_IMAGE_LAYOUT_UNDEFINED,
-							VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				//			VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL,
-							VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
-
-						imageBarrier(swapchain.images[ imageIndex ],
-							0, VK_IMAGE_LAYOUT_UNDEFINED,
-							VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			};
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-								 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(copyBeginBarriers), copyBeginBarriers);
-
-
-			insertDebugRegion(commandBuffer, "Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-
-			VkImageBlit imageBlitRegion = {};
-
-			imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageBlitRegion.srcSubresource.layerCount = 1;
-			imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageBlitRegion.dstSubresource.layerCount = 1;
-			imageBlitRegion.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-			imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) swapchain.width, ( i32 ) swapchain.height, 1 };
-			imageBlitRegion.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-			imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) swapchain.width, ( i32 ) swapchain.height, 1 };
-
-
-			vkCmdBlitImage(commandBuffer, renderTargetImages[ MAIN_COLOR_TARGET ].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						   swapchain.images[ imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
-		}
-		
-		// Prepare image for presenting.
-		{
-			VkImageMemoryBarrier presentBarrier = imageBarrier(swapchain.images[ imageIndex ],
-															   VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-															   0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-								 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &presentBarrier);
-		}
-	#else
-	
-		// Prepare image for presenting.
-		{
-			VkImageMemoryBarrier presentBarrier = imageBarrier(swapchain.images[ imageIndex ],
-															   0, VK_IMAGE_LAYOUT_UNDEFINED,
-															   0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-								 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &presentBarrier);
-		}
-	#endif
-		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::COPY_FINISHED);
-
-		endDebugRegion(commandBuffer);
-
-		VK_CHECK(vkEndCommandBuffer(commandBuffer));
-
-		// Submit
-		{
-			VkPipelineStageFlags submitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; //VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-			vkResetFences(device, 1, &fence);
-
-			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-			submitInfo.waitSemaphoreCount = 1;
-			submitInfo.pWaitSemaphores = &acquireSemaphore;
-			submitInfo.pWaitDstStageMask = &submitStageMask;
-			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &commandBuffer;
-			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores = &releaseSemaphore;
-			VK_CHECK(vkQueueSubmit(deviceWithQueues.graphicsQueue, 1, &submitInfo, fence));
-
-			VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores = &releaseSemaphore;
-			presentInfo.swapchainCount = 1;
-			presentInfo.pSwapchains = &swapchain.swapchain;
-			presentInfo.pImageIndices = &imageIndex;
-
-			VkResult res = ( vkQueuePresentKHR(deviceWithQueues.presentQueue, &presentInfo) );
-			if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR)
-			{
-				needToResize = true;
-				if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
-					surface, renderPass))
-				{
-					recreateSwapchainData();
-				}
-				needToResize = false;
-			}
-			else
-			{
-				VK_CHECK(res);
-			}
-		}
-
-		VK_CHECK(vkDeviceWaitIdle(device));
-
+		renderTargetImages[ MAIN_COLOR_TARGET ].accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		renderTargetImages[ MAIN_COLOR_TARGET ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		present(renderTargetImages[ MAIN_COLOR_TARGET ]);
 
 		////////////////////////
 		//
@@ -1020,7 +891,7 @@ void VulkanTest::run()
 			gpuTime = 0.0;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 	}
 
@@ -1046,7 +917,8 @@ int main(int argCount, char **argv)
 	}
 	
 	VulkanTest app;
-	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) && app.initApp(filename) && app.createGraphics())
+	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) 
+		&& app.initApp(filename) && app.createGraphics() && app.createPipelines())
 	{
 		app.run();
 	}

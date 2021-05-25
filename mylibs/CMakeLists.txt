@@ -8,11 +8,15 @@ add_library(MyLibraries
 	core/timer.h
 	core/timer.cpp
 
+
+
 	core/vulkan_app.h
 	core/vulkan_app.cpp
 
+	
 	myvulkan/vulkandevice.h
 	myvulkan/vulkandevice.cpp
+	myvulkan/vulkanhelperfuncs.h
 	myvulkan/vulkanresource.cpp
 	myvulkan/vulkanshader.h
 	myvulkan/vulkanshader.cpp

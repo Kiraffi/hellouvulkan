@@ -20,6 +20,8 @@ struct Image
 	VkImageView imageView = nullptr;
 	VkDeviceMemory deviceMemory = nullptr;
 	const char *imageName;
+	VkAccessFlags accessMask = 0;
+	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	u32 width = 0u;
 	u32 height = 0u;
 };
@@ -41,6 +43,11 @@ void uploadBufferToImage(VkDevice device, VkCommandPool commandPool, VkCommandBu
 VkFramebuffer createFramebuffer(VkDevice device, VkRenderPass renderPass, VkImageView colorView, VkImageView depthView, u32 width, u32 height);
 
 VkImageView createImageView(VkDevice device, VkImage image, VkFormat format);
+
+
+VkImageMemoryBarrier imageBarrier(Image &image,
+	VkAccessFlags dstAccessMask, VkImageLayout newLayout,
+	VkImageAspectFlags aspectMask  = VK_IMAGE_ASPECT_COLOR_BIT);
 
 VkImageMemoryBarrier imageBarrier(VkImage image,
 	VkAccessFlags srcAccessMask, VkImageLayout oldLayout,

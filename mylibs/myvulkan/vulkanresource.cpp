@@ -291,6 +291,29 @@ VkImageView createImageView(VkDevice device, VkImage image, VkFormat format)
 }
 
 
+VkImageMemoryBarrier imageBarrier(Image &image,
+	VkAccessFlags dstAccessMask, VkImageLayout newLayout,
+	VkImageAspectFlags aspectMask)
+{
+	VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	barrier.srcAccessMask = image.accessMask;
+	barrier.dstAccessMask = dstAccessMask;
+	barrier.oldLayout = image.layout;
+	barrier.newLayout = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image.image;
+	barrier.subresourceRange.aspectMask = aspectMask;
+	// Andoird error?
+	barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+	
+
+	image.accessMask = dstAccessMask;
+	image.layout = newLayout;
+	return barrier;
+}
+
 
 VkImageMemoryBarrier imageBarrier(VkImage image,
 	VkAccessFlags srcAccessMask, VkImageLayout oldLayout,

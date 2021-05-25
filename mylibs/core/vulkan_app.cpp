@@ -8,6 +8,7 @@
 
 
 #include <myvulkan/vulkandevice.h>
+#include <myvulkan/vulkanhelperfuncs.h>
 #include <myvulkan/vulkanresource.h>
 #include <myvulkan/vulkanshader.h>
 #include <myvulkan/vulkanswapchain.h>
@@ -32,103 +33,24 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 	}
 }
 
-
-static VkSemaphore createSemaphore(VkDevice device)
+static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-	VkSemaphore semaphore = nullptr;
-	VkSemaphoreCreateInfo semaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-
-	VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphore));
-	return semaphore;
+	core::VulkanApp *data = reinterpret_cast<core::VulkanApp *>(glfwGetWindowUserPointer(window));
+	if(data)
+	{
+		if(action == GLFW_PRESS)
+		{
+			if(key == GLFW_KEY_ESCAPE)
+				glfwSetWindowShouldClose( window, 1 );
+			else if(key >= 0 && key < 512)
+				data->keyDowns[key] = true;
+		}
+		else if(action == GLFW_RELEASE && key >= 0 && key < 512)
+		{
+			data->keyDowns[key] = false;
+		}
+	}
 }
-
-static VkCommandPool createCommandPool(VkDevice device, u32 familyIndex)
-{
-	VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-	poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-	poolCreateInfo.queueFamilyIndex = familyIndex;
-
-	VkCommandPool commandPool = nullptr;
-	VK_CHECK(vkCreateCommandPool(device, &poolCreateInfo, nullptr, &commandPool));
-
-	return commandPool;
-}
-
-
-static VkRenderPass createRenderPass(VkDevice device, VkFormat colorFormat, VkFormat depthFormat)
-{
-	VkAttachmentDescription attachments[2] = {};
-	attachments[0].format = colorFormat;
-	attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-	attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	attachments[1].format = depthFormat;
-	attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-	attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; //VK_ATTACHMENT_STORE_OP_STORE;
-	attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	// attachment index
-	VkAttachmentReference colorAttachments = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-	VkAttachmentReference depthAttachments = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachments;
-	subpass.pDepthStencilAttachment = &depthAttachments;
-
-	VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-	createInfo.attachmentCount = ARRAYSIZE(attachments);
-	createInfo.pAttachments = attachments;
-	createInfo.subpassCount = 1;
-	createInfo.pSubpasses = &subpass;
-
-	VkRenderPass renderPass = nullptr;
-
-	VK_CHECK(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass));
-	return renderPass;
-}
-
-
-
-static VkQueryPool createQueryPool(VkDevice device, u32 queryCount)
-{
-	VkQueryPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
-
-	createInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-	createInfo.queryCount = queryCount;
-
-	VkQueryPool pool = nullptr;
-	VK_CHECK(vkCreateQueryPool(device, &createInfo, nullptr, &pool));
-
-	ASSERT(pool);
-	return pool;
-}
-
-
-static VkFence createFence(VkDevice device)
-{
-	VkFenceCreateInfo createInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-	createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-	VkFence result = nullptr;
-	VK_CHECK(vkCreateFence(device, &createInfo, nullptr, &result));
-	ASSERT(result);
-	return result;
-}
-
-
-
-
 
 
 
@@ -170,6 +92,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 	glfwGetFramebufferSize(window, &w, &h);
 	resizeWindow(w, h);
 
+	glfwSetKeyCallback(window, keyboardHandlerCallback);
 
 	debugCallBack = registerDebugCallback(instance);
 
@@ -355,9 +278,103 @@ void VulkanApp::setClearColor(float r, float g, float b, float a)
 {
 }
 
-void VulkanApp::present()
+void VulkanApp::present(Image &presentImage)
 {
-	glfwSwapBuffers(window);
+
+	VkDevice device = deviceWithQueues.device;
+	// Copy final image to swap chain target
+	{
+		VkImageMemoryBarrier copyBeginBarriers[] =
+		{
+			imageBarrier(presentImage.image,
+						presentImage.accessMask, presentImage.layout,
+						VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
+
+					imageBarrier(swapchain.images[ imageIndex ],
+						0, VK_IMAGE_LAYOUT_UNDEFINED,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+		};
+
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+								VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(copyBeginBarriers), copyBeginBarriers);
+
+
+		insertDebugRegion(commandBuffer, "Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+
+		VkImageBlit imageBlitRegion = {};
+
+		imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageBlitRegion.srcSubresource.layerCount = 1;
+		imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageBlitRegion.dstSubresource.layerCount = 1;
+		imageBlitRegion.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
+		imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) swapchain.width, ( i32 ) swapchain.height, 1 };
+		imageBlitRegion.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
+		imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) swapchain.width, ( i32 ) swapchain.height, 1 };
+
+
+		vkCmdBlitImage(commandBuffer, presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						swapchain.images[ imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
+	}
+
+	// Prepare image for presenting.
+	{
+		VkImageMemoryBarrier presentBarrier = imageBarrier(swapchain.images[ imageIndex ],
+															VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+															0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+	}
+
+
+	endDebugRegion(commandBuffer);
+
+	VK_CHECK(vkEndCommandBuffer(commandBuffer));
+
+	// Submit
+	{
+		VkPipelineStageFlags submitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; //VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+		vkResetFences(device, 1, &fence);
+
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = &acquireSemaphore;
+		submitInfo.pWaitDstStageMask = &submitStageMask;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = &releaseSemaphore;
+		VK_CHECK(vkQueueSubmit(deviceWithQueues.graphicsQueue, 1, &submitInfo, fence));
+
+		VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = &releaseSemaphore;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = &swapchain.swapchain;
+		presentInfo.pImageIndices = &imageIndex;
+
+		VkResult res = ( vkQueuePresentKHR(deviceWithQueues.presentQueue, &presentInfo) );
+		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR)
+		{
+			needToResize = true;
+			if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
+				surface, renderPass))
+			{
+				recreateSwapchainData();
+			}
+			needToResize = false;
+		}
+		else
+		{
+			VK_CHECK(res);
+		}
+	}
+
+	VK_CHECK(vkDeviceWaitIdle(device));
+
+
 	dt = timer.getLapDuration();
 }
 void VulkanApp::setTitle(const char *str)

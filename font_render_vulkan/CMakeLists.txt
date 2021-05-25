@@ -3,10 +3,12 @@
 #
 cmake_minimum_required (VERSION 3.15)
 
+
 # Add source to this project's executable.
 add_executable (font_render_vulkan "src/main_font_renderer_vulkan.cpp")
 
 
+add_dependencies(font_render_vulkan shaders)
 
 target_link_libraries(font_render_vulkan PRIVATE MyGlad MyLibraries)
 # TODO: Add tests and install targets if needed.

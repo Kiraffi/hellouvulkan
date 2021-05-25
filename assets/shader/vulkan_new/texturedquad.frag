@@ -12,10 +12,10 @@ layout (binding = 2) uniform sampler2D ourTexture;
 void main()
 {
 	outColor = texture(ourTexture, uvIn);
-	outColor.a = clamp(outColor.a / 0.5f, 0.0f, 1.0f);
+	//outColor.a = clamp(outColor.a / 0.5f, 0.0f, 1.0f);
 	if(outColor.a < 0.5f)
 		discard;
 	outColor.rgb = colIn.rgb;
 
-	//outColor.a = 1.0f;
+	outColor.a = 1.0f;
 }
