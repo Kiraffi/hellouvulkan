@@ -145,6 +145,56 @@ size_t uploadToScratchbuffer(Buffer& scratchBuffer, void* data, size_t size, siz
 	return offset;
 }
 
+void uploadBufferToImage(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkQueue queue, Image &gpuImage, Buffer &scratchBuffer, 
+						 uint32_t width, uint32_t height, uint32_t bytesPerPixel, uint32_t bufferOffset)
+{
+
+	ASSERT(scratchBuffer.data);
+	ASSERT(scratchBuffer.size >= width * height * bytesPerPixel + bufferOffset);
+	ASSERT(gpuImage.image);
+
+	/*
+	VK_CHECK(vkResetCommandPool(device, commandPool, 0));
+
+
+	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+	*/
+	
+	VkBufferImageCopy region{};
+	region.bufferOffset = bufferOffset;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = {
+		width,
+		height,
+		1
+	};
+
+	vkCmdCopyBufferToImage(commandBuffer, scratchBuffer.buffer, gpuImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	
+	/*
+	VK_CHECK(vkEndCommandBuffer(commandBuffer));
+
+
+	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+	VK_CHECK(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+
+	VK_CHECK(vkDeviceWaitIdle(device));
+	*/
+}
+
+
+
 void uploadScratchBufferToGpuBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkQueue queue, Buffer &gpuBuffer, Buffer &scratchBuffer, size_t size)
 {
 	ASSERT(scratchBuffer.data);

@@ -13,7 +13,9 @@ void main()
 {
 	outColor = texture(ourTexture, uvIn);
 	outColor.a = clamp(outColor.a / 0.5f, 0.0f, 1.0f);
-	outColor.rgb *= colIn.rgb;
+	if(outColor.a < 0.5f)
+		discard;
+	outColor.rgb = colIn.rgb;
 
 	//outColor.a = 1.0f;
 }

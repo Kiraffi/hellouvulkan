@@ -31,20 +31,22 @@ void main()
 
 	vec2 p = vec2(-0.5f, -0.5f);
 	p.x = (vertId + 1) % 4 < 2 ? -0.5f : 0.5f;
-	p.y = vertId < 2 ? 0.5f : -0.5f;
+	p.y = vertId < 2 ? -0.5f : 0.5f;
 
 	uvOut = p + 0.5f;
-	uvOut.y = 1.0f - uvOut.y;
+	uvOut.y = uvOut.y;
 
 	uvOut.x = (uvOut.x) / (128.0f - 32.0f) + values[quadId].vUv.x;
+	p += 0.5f;
 
 	vec2 vSize = vec2(float(values[quadId].vSizes & 0xffffu),
 		float((values[quadId].vSizes >> 16) & 0xffffu)); 
 	p *= vSize;
 	p += values[quadId].vpos;
+	p.y = windowSize.y - p.y;
 	p /= windowSize * 0.5f;
 	p -= 1.0f;
-		
+	//p.y = 1.0f - p.y;
 	gl_Position = vec4(p.xy, 0.5, 1.0);
 	vec4 c = vec4(0, 0, 0, 0);
 	c.r = float((values[quadId].vColor >> 0u) & 255u) / 255.0f;
