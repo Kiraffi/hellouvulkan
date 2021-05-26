@@ -35,6 +35,7 @@
 #include <filesystem>
 #include <fstream>
 
+
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
@@ -45,21 +46,28 @@ struct GPUVertexData
 	uint16_t pixelSizeX;
 	uint16_t pixelSizeY;
 	uint32_t color;
-
-	float uvX;
-	float uvY;
-
-	float padding[2];
 };
 
-struct Cursor
+
+
+bool saveFontData(const std::string &filename, const std::vector<char> &data)
 {
-	float xPos = 0.0f;
-	float yPos = 0.0f;
+	//
+	if(std::filesystem::exists(filename))
+	{
+		std::filesystem::path p(filename);
 
-	int charWidth = 8;
-	int charHeight = 12;
-};
+
+		std::ofstream f(p, std::ios::out | std::ios::binary);
+
+
+		f.write(data.data(), data.size());
+
+		printf("filesize: %u\n", uint32_t(data.size()));
+		return true;
+	}
+	return false;
+}
 
 
 
@@ -99,7 +107,7 @@ enum BufferIndexes
 {
 	SCRATCH_BUFFER,
 	UNIFORM_BUFFER,
-	UNIFORM_BUFFER2,
+	QUAD_BUFFER,
 
 	INDEX_DATA_BUFFER,
 
@@ -112,7 +120,7 @@ class VulkanTest : core::VulkanApp
 public:
 	VulkanTest() {}
 	virtual ~VulkanTest() override;
-	bool initApp(const std::string &fontFilename);
+	//bool initApp(const std::string &fontFilename);
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
 	virtual void recreateSwapchainData() override;
@@ -134,6 +142,8 @@ public:
 	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
 
 	VkSampler textureSampler = nullptr;
+
+	std::string fontFilename;
 };
 
 
@@ -179,10 +189,10 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	VkDevice device = deviceWithQueues.device;
 
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.vert.spv");
+	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/coloredquad.vert.spv");
 	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ]);
 
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.frag.spv");
+	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/coloredquad.frag.spv");
 	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ]);
 
 
@@ -200,8 +210,8 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 											   //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
 											   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
 
-	buffers[ UNIFORM_BUFFER2 ] = createBuffer(device, memoryProperties, 64u * 1024,
-												VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+	buffers[ QUAD_BUFFER ] = createBuffer(device, memoryProperties, 8u * 1024u * 1024u,
+												VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 												//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
 												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer2");
 
@@ -279,9 +289,7 @@ bool VulkanTest::createPipelines()
 	pipeline.descriptorSet = std::vector<DescriptorSet>(
 		{
 			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
-			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &buffers[ UNIFORM_BUFFER2 ] },
-			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u, true, nullptr,
-				textImage.image, textImage.imageView, textureSampler, VK_IMAGE_LAYOUT_GENERAL},
+			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, true, &buffers[ QUAD_BUFFER ] },
 		});
 	VertexInput vertexInput;
 	pipeline.pipeline = createGraphicsPipeline(
@@ -298,7 +306,7 @@ bool VulkanTest::createPipelines()
 
 
 
-
+/*
 bool VulkanTest::initApp(const std::string &fontFilename)
 {
 	std::vector<char> data;
@@ -359,46 +367,8 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 
 	return true;
 }
+*/
 
-
-
-static void addText(std::string &str, std::vector<GPUVertexData> &vertData, Cursor &cursor)
-{
-	for(int i = 0; i < int(str.length()); ++i)
-	{
-		GPUVertexData vdata;
-		vdata.color = core::getColor(0.0f, 1.0f, 0.0f, 1.0f);
-		vdata.pixelSizeX = cursor.charWidth;
-		vdata.pixelSizeY = cursor.charHeight;
-		vdata.posX = cursor.xPos;
-		vdata.posY = cursor.yPos;
-
-		uint32_t letter = str[i] - 32;
-
-		vdata.uvX = float(letter) / float(128-32);
-		vdata.uvY = 0.0f;
-
-		vertData.emplace_back(vdata);
-
-		cursor.xPos += cursor.charWidth;
-	}
-
-}
-static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, Cursor &cursor)
-{
-	cursor.xPos = 100.0f;
-	cursor.yPos = 400.0f;
-	std::string tmpStr = "w";
-	tmpStr += std::to_string(cursor.charWidth);
-	tmpStr += ",h";
-	tmpStr += std::to_string(cursor.charHeight);
-	vertData.clear();
-	addText(tmpStr, vertData, cursor);
-
-	cursor.xPos = 100.0f;
-	cursor.yPos = 100.0f;
-	addText(str, vertData, cursor);
-}
 
 
 
@@ -428,13 +398,81 @@ void VulkanTest::recreateSwapchainData()
 
 void VulkanTest::run()
 {
+	const u32 charCount = 128 - 32;
+	std::vector<char> data;
+	if (!core::loadFontData(fontFilename, data))
+	{
+		printf("Failed to load file: %s\n", fontFilename.c_str());
+		return;
+	}
+
 	//glfwSetKeyCallback(window, key_callback);
 
-	std::vector<GPUVertexData> vertData;
+	int32_t chosenLetter = 'a';
 	
-	std::string txt = "Testing";
-	Cursor cursor;
-	updateText(txt, vertData, cursor);
+	std::vector<GPUVertexData> vertData;
+	vertData.resize(12 * 8 * ( charCount + 1 ) + 1);
+
+
+	static constexpr float buttonSize = 20.0f;
+	static constexpr float smallButtonSize = 2.0f;
+	static constexpr float borderSizes = 2.0f;
+
+	{
+		float offX = ( borderSizes + buttonSize ) + windowWidth * 0.5f;
+		float offY = ( borderSizes + buttonSize ) + windowHeight * 0.5f;
+
+		GPUVertexData &vdata = vertData[ 0 ];
+		vdata.color = core::getColor(1.0f, 0.0f, 0.0f, 1.0f);
+		vdata.pixelSizeX = uint16_t(smallButtonSize) * 8 + 4;
+		vdata.pixelSizeY = uint16_t(smallButtonSize) * 12 + 4;
+		vdata.posX = offX;
+		vdata.posY = offY;
+	}
+
+	for (int j = 0; j < 12; ++j)
+	{
+		for (int i = 0; i < 8; ++i)
+		{
+			float offX = float(( i - 4 ) * ( borderSizes + buttonSize )) + windowWidth * 0.5f;// -buttonSize * 0.5f;
+			float offY = float(( j - 6 ) * ( borderSizes + buttonSize )) + windowHeight * 0.5f;// -buttonSize * 0.5f;
+
+			GPUVertexData &vdata = vertData[ i + size_t(j) * 8 + 1 ];
+			vdata.color = 0;
+			vdata.pixelSizeX = vdata.pixelSizeY = buttonSize;
+			vdata.posX = offX;
+			vdata.posY = offY;
+		}
+	}
+
+	for (int k = 0; k < charCount; ++k)
+	{
+		int x = k % 8;
+		int y = k / 8;
+		for (int j = 0; j < 12; ++j)
+		{
+			for (int i = 0; i < 8; ++i)
+			{
+				GPUVertexData &vdata = vertData[ i + size_t(j) * 8 + ( size_t(k) + 1 ) * 8 * 12 + 1 ];
+
+				float smallOffX = float(i * ( smallButtonSize )) + 10.0f + float(x * 8) * smallButtonSize + x * 2;
+				float smallOffY = float(j * ( smallButtonSize )) + 10.0f + float(y * 12) * smallButtonSize + y * 2;
+
+				uint32_t indx = k * 12 + j;
+				bool isVisible = ( ( data[ indx ] >> i ) & 1 ) == 1;
+
+				vdata.color = isVisible ? ~0u : 0u;
+				vdata.pixelSizeX = vdata.pixelSizeY = smallButtonSize;
+				vdata.posX = smallOffX;
+				vdata.posY = smallOffY;
+
+			}
+		}
+	}
+
+	char buffData[ 12 ] = {};
+
+
 
 	////////////////////////
 	//
@@ -465,45 +503,104 @@ void VulkanTest::run()
 		}
 
 		glfwPollEvents();
+		core::MouseState mouseState = getMouseState();
 		{
-			bool textNeedsUpdate = false;
+
+
+			if (isPressed(GLFW_KEY_LEFT))
+				--chosenLetter;
+
+			if (isPressed(GLFW_KEY_RIGHT))
+				++chosenLetter;
+
+			if (isPressed(GLFW_KEY_DOWN))
+				chosenLetter += 8;
+
+			if (isPressed(GLFW_KEY_UP))
+				chosenLetter -= 8;
+
+			
+
+			bool isControlDown = keyDowns[ GLFW_KEY_LEFT_CONTROL ].isDown || keyDowns[ GLFW_KEY_RIGHT_CONTROL ].isDown;
+
 			for (int i = 0; i < bufferedPressesCount; ++i)
 			{
-				txt += char( bufferedPresses[i] );
-				textNeedsUpdate = true;
+				if (!isControlDown && bufferedPresses[ i ] >= 32 && bufferedPresses[ i ] < 128)
+				{
+					chosenLetter = ( int ) bufferedPresses[ i ];
+				}
 			}
 
-			if (keyDowns[ GLFW_KEY_LEFT ].isDown)
+			if (keyDowns[ GLFW_KEY_S ].isDown && keyDowns[ GLFW_KEY_S ].pressCount > 0u && isControlDown)
+				saveFontData(fontFilename, data);
+
+			if (keyDowns[ GLFW_KEY_L ].isDown && keyDowns[ GLFW_KEY_L ].pressCount > 0u && isControlDown)
+				core::loadFontData(fontFilename, data);
+
+			if (keyDowns[ GLFW_KEY_C ].isDown && keyDowns[ GLFW_KEY_C ].pressCount > 0u && isControlDown)
 			{
-				cursor.charWidth--;
-				if (cursor.charWidth < 2)
-					++cursor.charWidth;
-				textNeedsUpdate = true;
-			}
-			if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
-			{
-				cursor.charWidth++;
-				textNeedsUpdate = true;
-			}
-			if (keyDowns[ GLFW_KEY_UP ].isDown)
-			{
-				cursor.charHeight++;
-				textNeedsUpdate = true;
-			}
-			if (keyDowns[ GLFW_KEY_DOWN ].isDown)
-			{
-				cursor.charHeight--;
-				if (cursor.charHeight < 2)
-					++cursor.charHeight;
-				textNeedsUpdate = true;
+				for (int i = 0; i < 12; ++i)
+				{
+					uint32_t ind = ( chosenLetter - 32 ) * 12 + i;
+					buffData[ i ] = data[ ind ];
+				}
 			}
 
-			if (textNeedsUpdate)
-				updateText(txt, vertData, cursor);
+			if (keyDowns[ GLFW_KEY_V ].isDown && keyDowns[ GLFW_KEY_V ].pressCount > 0u && isControlDown)
+			{
+				for (int i = 0; i < 12; ++i)
+				{
+					uint32_t ind = ( chosenLetter - 32 ) * 12 + i;
+					data[ ind ] = char(buffData[ i ]);
+				}
+			}
+
+			if (chosenLetter < 32)
+				chosenLetter = 32;
+			if (chosenLetter > 127)
+				chosenLetter = 127;
+
+			for (int j = 0; j < 12; ++j)
+			{
+
+				for (int i = 0; i < 8; ++i)
+				{
+					float offX = float(( i - 4 ) * ( borderSizes + buttonSize )) + windowWidth * 0.5f;
+					float offY = float(( j - 6 ) * ( borderSizes + buttonSize )) + windowHeight * 0.5f;
+
+					bool insideRect = mouseState.x > offX - ( borderSizes + buttonSize ) * 0.5f &&
+						mouseState.x < offX + ( borderSizes + buttonSize ) * 0.5f &&
+						mouseState.y > offY - ( borderSizes + buttonSize ) * 0.5f &&
+						mouseState.y < offY + ( borderSizes + buttonSize ) * 0.5f;
+
+					offX -= 0.5f * buttonSize;
+					offY -= 0.5f * buttonSize;
+
+					uint32_t indx = ( chosenLetter - 32 ) * 12 + j;
+
+					if (mouseState.leftButtonDown && insideRect)
+						data[ indx ] |= ( 1 << i );
+					else if (mouseState.rightButtonDown && insideRect)
+						data[ indx ] &= ~( char(1 << i) );
+
+					bool isVisible = ( ( data[ indx ] >> i ) & 1 ) == 1;
+
+					vertData[ i + size_t(j) * 8 + 1 ].color = isVisible ? ~0u : 0u;
+					vertData[ i + size_t(j) * 8 + 1 ].posX = uint16_t(offX);
+					vertData[ i + size_t(j) * 8 + 1 ].posY = uint16_t(offY);
+					vertData[ ( size_t(indx) + 12 ) * 8 + i + 1 ].color = isVisible ? ~0u : 0u;
+
+				}
+
+			}
+			uint32_t xOff = ( chosenLetter - 32 ) % 8;
+			uint32_t yOff = ( chosenLetter - 32 ) / 8;
+
+			vertData[ 0 ].posX = 10.0f + ( xOff * 8 ) * smallButtonSize + xOff * 2 - 2;
+			vertData[ 0 ].posY = 10.0f + ( yOff * 12 ) * smallButtonSize + yOff * 2 - 2;
 		}
 
-
-		assert(vertData.size() < 2048);
+		ASSERT(vertData.size() * sizeof(GPUVertexData) < buffers[QUAD_BUFFER].size);
 
 
 		////////////////////////
@@ -528,14 +625,14 @@ void VulkanTest::run()
 				{
 					float windowWidth;
 					float windowHeight;
-					float tmp[6 + 8];
+					float tmp[ 6 + 8 ];
 				};
 				Buff buff{ float(swapchain.width), float(swapchain.height) };
 				// use scratch buffer to unifrom buffer transfer
 				uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
 				uint32_t buffSize = uint32_t(sizeof(Buff));
 				memcpy(buffers[ SCRATCH_BUFFER ].data, &buff, buffSize);
-				memcpy((void *)((char *)buffers[ SCRATCH_BUFFER ].data + buffSize), vertData.data(), vertDataSize);
+				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + buffSize ), vertData.data(), vertDataSize);
 
 				{
 					VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
@@ -543,13 +640,13 @@ void VulkanTest::run()
 				}
 				{
 					VkBufferCopy region = { buffSize, 0, VkDeviceSize(vertDataSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ UNIFORM_BUFFER2 ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
 				}
 
 				VkBufferMemoryBarrier bar[]
 				{
 					bufferBarrier(buffers[ UNIFORM_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-					bufferBarrier(buffers[ UNIFORM_BUFFER2 ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
+					bufferBarrier(buffers[ QUAD_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
 				};
 
 				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -584,7 +681,7 @@ void VulkanTest::run()
 		// Drawingg
 		{
 			VkClearValue clearValues[ 2 ] = {};
-			clearValues[ 0 ].color = VkClearColorValue{ {48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
+			clearValues[ 0 ].color = VkClearColorValue{ {0.0f, 0.5f, 1.0f, 1.0f } };
 			clearValues[ 1 ].depthStencil = { 0.0f, 0 };
 
 			VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -667,6 +764,17 @@ void VulkanTest::run()
 			gpuTime = 0.0;
 		}
 
+
+		char str[ 100 ];
+		char renderLetter = chosenLetter != 127 ? char(chosenLetter) : ' ';
+		float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
+		sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i, Letter: %c",
+				float(dt * 1000.0), fps,
+				mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown,
+				renderLetter);
+		setTitle(str);
+
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 	}
@@ -679,25 +787,25 @@ void VulkanTest::run()
 
 
 
-int main(int argCount, char **argv) 
+int main(int argCount, char **argv)
 {
 	std::vector<char> data;
 	std::string filename;
-	if(argCount < 2)
+	if (argCount < 2)
 	{
 		filename = "assets/font/new_font.dat";
 	}
 	else
 	{
-		filename = argv[1];
+		filename = argv[ 1 ];
 	}
-	
 	VulkanTest app;
-	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) 
-		&& app.initApp(filename) && app.createGraphics() && app.createPipelines())
+	app.fontFilename = filename;
+	if (app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT)
+		&& app.createGraphics() && app.createPipelines())
 	{
 		app.run();
 	}
-	
+
 	return 0;
 }

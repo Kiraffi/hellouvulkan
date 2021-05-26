@@ -12,46 +12,28 @@ set(CMAKE_CXX_EXTENSIONS FALSE)
 set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
 
-
-
-#if (MSVC)
-#	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-#
-#	set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/external/sdl2/include")
-#
-#	# Support both 32 and 64 bit builds
-#	if (${CMAKE_SIZEOF_VOID_P} MATCHES 8)
-#		set(SDL2_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/external/sdl2/lib/x64/SDL2.lib;${CMAKE_CURRENT_LIST_DIR}/external/sdl2/lib/x64/SDL2main.lib")
-#	else ()
-#		set(SDL2_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/external/sdl2/lib/x86/SDL2.lib;${CMAKE_CURRENT_LIST_DIR}/external/sdl2/lib/x86/SDL2main.lib")
-#	endif ()
-#	string(STRIP "${SDL2_LIBRARY}" SDL2_LIBRARY)
-#endif (MSVC)
-
-
 if (UNIX)
     #do something
 endif (UNIX)
 
-#find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Vulkan REQUIRED)
 include_directories(${Vulkan_INCLUDE_DIR})
 include_directories(${Vulkan_INCLUDE_DIRS})
-#include_directories(${SDL2_INCLUDE_DIRS})
 
 
 
 set(GLSLC_EXECUTABLE glslc)
 
-
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/vulkan_new)
 
-set(SPV_SHADERS 
-	${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag 
-	#${SHADER_DIR}/*.comp
-)
-#file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp ${SHADER_DIR}/*.geom ${SHADER_DIR}/*.tesc ${SHADER_DIR}/*.tese ${SHADER_DIR}/*.mesh ${SHADER_DIR}/*.task ${SHADER_DIR}/*.rgen ${SHADER_DIR}/*.rchit ${SHADER_DIR}/*.rmiss)
+#set(SPV_SHADERS 
+#	${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag 
+#	#${SHADER_DIR}/*.comp
+#)
+file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp
+    #${SHADER_DIR}/*.geom ${SHADER_DIR}/*.tesc ${SHADER_DIR}/*.tese ${SHADER_DIR}/*.mesh ${SHADER_DIR}/*.task ${SHADER_DIR}/*.rgen ${SHADER_DIR}/*.rchit ${SHADER_DIR}/*.rmiss
+    )
 
 find_package(Vulkan)
 
@@ -89,6 +71,7 @@ add_subdirectory("external")
 add_subdirectory ("font_draw")
 add_subdirectory ("font_render")
 add_subdirectory ("space_shooter")
+add_subdirectory ("font_draw_vulkan")
 add_subdirectory ("font_render_vulkan")
 add_subdirectory ("vulkan_test")
 

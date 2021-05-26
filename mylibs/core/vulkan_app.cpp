@@ -45,7 +45,7 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 			else if (key >= 0 && key < 512)
 			{
 				data->keyDowns[ key ].isDown = true;
-				++data->keyDowns->pressCount;
+				++data->keyDowns[ key ].pressCount;
 
 				if (key >= 32 && key < 128)
 				{
@@ -302,12 +302,33 @@ void VulkanApp::setVsyncEnabled(bool enable)
 	vSync = enable;
 	// Use v-sync
 }
-
-
-
-void VulkanApp::setClearColor(float r, float g, float b, float a)
+bool VulkanApp::isPressed(int keyCode)
 {
+	if (keyCode >= 0 && keyCode < 512)
+		return keyDowns[ keyCode ].isDown && keyDowns[ keyCode ].pressCount > 0;
+	return false;
 }
+bool VulkanApp::isReleased(int keyCode)
+{
+	if (keyCode >= 0 && keyCode < 512)
+		return !keyDowns[ keyCode ].isDown && keyDowns[ keyCode ].pressCount > 0;
+	return false;
+}
+
+bool VulkanApp::isDown(int keyCode)
+{
+	if (keyCode >= 0 && keyCode < 512)
+		return keyDowns[ keyCode ].isDown;
+	return false;
+}
+
+bool VulkanApp::isUp(int keyCode)
+{
+	if (keyCode >= 0 && keyCode < 512)
+		return !keyDowns[ keyCode ].isDown;
+	return false;
+}
+
 
 bool VulkanApp::startRender()
 {
@@ -458,7 +479,7 @@ MouseState VulkanApp::getMouseState()
 	glfwGetCursorPos(window, &xpos, &ypos);
 	mouseState.x = xpos;
 	mouseState.y = ypos;
-	mouseState.y = windowHeight - mouseState.y;
+	mouseState.y = mouseState.y;
 
 	mouseState.leftButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 	mouseState.rightButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;

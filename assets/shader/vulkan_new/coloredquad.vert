@@ -5,9 +5,6 @@ struct VData
 	vec2 vpos;
 	uint vSizes;
 	uint vColor;
-
-	vec2 vUv;
-	vec2 tmp;
 };
 
 layout (binding = 0) uniform ConstantDataStructBlock
@@ -16,14 +13,14 @@ layout (binding = 0) uniform ConstantDataStructBlock
 	vec2 padding;
 };
 
-layout (binding = 1) uniform ValueBlock
+
+layout (std430, binding=1) buffer shader_data
 {
-	VData values[2048];
+	VData values[];
 };
 
 
 layout (location = 0) out vec4 colOut;
-layout (location = 1) out vec2 uvOut;
 void main()
 {
 	int quadId = gl_VertexIndex / 4;
@@ -33,10 +30,6 @@ void main()
 	p.x = (vertId + 1) % 4 < 2 ? -0.5f : 0.5f;
 	p.y = vertId < 2 ? -0.5f : 0.5f;
 	
-	uvOut = p + 0.5f;
-	uvOut.y = 1.0f - uvOut.y;
- 
-	uvOut.x = (uvOut.x) / (128.0f - 32.0f) + values[quadId].vUv.x;
 	p += 0.5f;
   
 	vec2 vSize = vec2(float(values[quadId].vSizes & 0xffffu),
@@ -46,7 +39,7 @@ void main()
 	p.y = windowSize.y - p.y;
 	p /= windowSize * 0.5f;
 	p -= 1.0f;
-	//p.y = 1.0f - p.y;
+	//p.y = -p.y;
 	gl_Position = vec4(p.xy, 0.5, 1.0);
 	vec4 c = vec4(0, 0, 0, 0);
 	c.r = float((values[quadId].vColor >> 0u) & 255u) / 255.0f;

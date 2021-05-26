@@ -460,7 +460,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 			u32 pushConstantSize = 0u, VkShaderStageFlagBits pushConstantStageUsage = VK_SHADER_STAGE_ALL_GRAPHICS)
 		{
 			pipelineWithDescriptors.pipeline = createGraphicsPipeline(device, test->renderPass, test->pipelineCache,
-				test->shaderModules[vertShaderIndex], test->shaderModules[fragShaderIndex], vertexInput, pipelineWithDescriptors.descriptorSet,
+				test->shaderModules[vertShaderIndex], test->shaderModules[fragShaderIndex], vertexInput, pipelineWithDescriptors.descriptorSet, true,
 				pushConstantSize, pushConstantStageUsage);
 			pipelineWithDescriptors.descriptor = createDescriptor(device, pipelineWithDescriptors.descriptorSet, pipelineWithDescriptors.pipeline.descriptorSetLayout);
 		}

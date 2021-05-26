@@ -46,6 +46,11 @@ public:
 	double getDeltaTime();
 	MouseState getMouseState();
 
+	bool isPressed(int keyCode);
+	bool isReleased(int keyCode);
+	bool isDown(int keyCode);
+	bool isUp(int keyCode);
+
 public:
 
 	GLFWwindow *window = nullptr;

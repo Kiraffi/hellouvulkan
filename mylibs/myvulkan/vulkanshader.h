@@ -76,7 +76,7 @@ struct DescriptorInfo
 VkShaderModule loadShader(VkDevice device, const char *path);
 
 Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipelineCache cache, VkShaderModule vs, VkShaderModule fs, const VertexInput &vertexInput, 
-	const std::vector<DescriptorSet> &descriptors, size_t pushConstantSize = 0, VkShaderStageFlagBits pushConstantStage  = VK_SHADER_STAGE_ALL);
+	const std::vector<DescriptorSet> &descriptors, bool depthTest, size_t pushConstantSize = 0, VkShaderStageFlagBits pushConstantStage  = VK_SHADER_STAGE_ALL);
 Pipeline createComputePipeline(VkDevice device, VkPipelineCache cache, VkShaderModule cs, 
 	const std::vector<DescriptorSet> &descriptors, size_t pushConstantSize = 0, VkShaderStageFlagBits pushConstantStage  = VK_SHADER_STAGE_ALL);
 

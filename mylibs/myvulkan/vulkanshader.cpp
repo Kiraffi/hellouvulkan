@@ -173,7 +173,7 @@ void destroyDescriptor(VkDevice device, Descriptor &descriptor)
 
 
 Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipelineCache cache, VkShaderModule vs, VkShaderModule fs, const VertexInput &vertexInput, 
-	const std::vector<DescriptorSet> &descriptors, size_t pushConstantSize, VkShaderStageFlagBits pushConstantStage)
+	const std::vector<DescriptorSet> &descriptors, bool depthTest, size_t pushConstantSize, VkShaderStageFlagBits pushConstantStage)
 {
 	Pipeline result = createPipelineLayout(device, descriptors, pushConstantSize, pushConstantStage);
 	ASSERT(result.pipelineLayout);
@@ -376,8 +376,11 @@ Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipe
 	multiSampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 	VkPipelineDepthStencilStateCreateInfo depthInfo = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-	depthInfo.depthTestEnable = VK_TRUE;
-	depthInfo.depthWriteEnable = VK_TRUE;
+	if (depthTest)
+	{
+		depthInfo.depthTestEnable = VK_TRUE;
+		depthInfo.depthWriteEnable = VK_TRUE;
+	}
 	depthInfo.depthCompareOp = VK_COMPARE_OP_GREATER;
 
 	VkPipelineColorBlendAttachmentState colorAttachmentState = {};

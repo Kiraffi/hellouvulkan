@@ -1,0 +1,49 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "font_draw.exe (font_draw\\font_draw.exe)",
+      "name": "font_draw.exe (font_draw\\font_draw.exe)",
+      "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "space_shooter.exe (space_shooter\\space_shooter.exe)",
+      "name": "space_shooter.exe (space_shooter\\space_shooter.exe)",
+      "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "font_render.exe (font_render\\font_render.exe)",
+      "name": "font_render.exe (font_render\\font_render.exe)",
+      "currentDir": "${workspaceRoot}"
+    },
+
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "vulkan_test.exe (vulkan_test\\vulkan_test.exe)",
+      "name": "vulkan_test.exe (vulkan_test\\vulkan_test.exe)",
+      "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "font_render_vulkan.exe (font_render_vulkan\\font_render_vulkan.exe)",
+      "name": "font_render_vulkan.exe (font_render_vulkan\\font_render_vulkan.exe)",
+      "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "font_draw.exe (font_draw_vulkan\\font_draw_vulkan.exe)",
+      "name": "font_draw_vulkan.exe (font_draw\\font_draw_vulkan.exe)",
+      "currentDir": "${workspaceRoot}"
+    }
+  ]
+}

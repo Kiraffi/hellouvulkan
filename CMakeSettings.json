@@ -12,19 +12,29 @@
       "ctestCommandArgs": "",
       "variables": [
         {
-          "name": "SDL2_DIR",
-          "value": "C:/Programming/cpp/hellouvulkan/external/sdl2",
-          "type": "PATH"
-        },
-        {
-          "name": "SDL2MAIN_LIBRARY",
-          "value": "C:/Programming/cpp/hellouvulkan/external/sdl2/external/sdl2/lib/x64/SDL2main.lib",
-          "type": "FILEPATH"
-        },
+          "name": "GLFW_INSTALL",
+          "value": "True",
+          "type": "BOOL",
+          "currentDir": "${workspaceRoot}"
+        }
+      ]
+    },
+    {
+      "name": "x64-Release",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
         {
           "name": "GLFW_INSTALL",
           "value": "True",
-          "type": "BOOL"
+          "type": "BOOL",
+          "currentDir": "${workspaceRoot}"
         }
       ]
     }
