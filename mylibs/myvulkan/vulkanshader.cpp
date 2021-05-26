@@ -71,15 +71,12 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 		return result;
 
 	std::vector<VkDescriptorPoolSize> poolSizes(descriptors.size());
-	u32 writeDescriptorCount = 0u;
+	u32 writeDescriptorCount = (u32)descriptors.size();
 
 	for(u32 i = 0; i < descriptors.size(); ++i)
 	{
 		poolSizes[i].type = descriptors[i].descriptorType;
 		poolSizes[i].descriptorCount = 1;
-
-		if(descriptors[i].writeDescriptor)
-			++writeDescriptorCount;
 	}
 	
 	VkDescriptorPoolCreateInfo poolInfo = {};
@@ -114,8 +111,10 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 		u32 imageCount = 0u;
 		for(u32 i = 0; i < descriptors.size(); ++i)
 		{
-			if(descriptors[i].writeDescriptor && descriptors[ i ].buffer)
+			if(descriptors[ i ].buffer)
 			{
+				ASSERT(descriptors[ i ].buffer);
+				ASSERT(descriptors[ i ].buffer->size > 0);
 				bufferInfos[bufferCount] = {};
 				bufferInfos[bufferCount].buffer = descriptors[i].buffer->buffer;
 				bufferInfos[bufferCount].offset = 0;
@@ -132,8 +131,12 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 				++bufferCount;
 				++writeIndex;
 			}
-			else if(descriptors[i].writeDescriptor)
+			else
 			{
+				ASSERT(descriptors[ i ].sampler);
+				ASSERT(descriptors[ i ].imageView);
+				ASSERT(descriptors[ i ].layout);
+
 				imageInfos[imageCount] = {};
 				imageInfos[imageCount].sampler = descriptors[i].sampler;
 				imageInfos[imageCount].imageView = descriptors[i].imageView;

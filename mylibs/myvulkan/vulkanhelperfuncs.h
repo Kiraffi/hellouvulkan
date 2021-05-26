@@ -9,6 +9,7 @@
 struct PipelineWithDescriptors
 {
 	Pipeline pipeline; // Maybe multiple?
+	
 	Descriptor descriptor; // maybe needs more than one, possibly separated from each other?
 	std::vector<DescriptorSet> descriptorSet; // maybe needs more than one set?
 };

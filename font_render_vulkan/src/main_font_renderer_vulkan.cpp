@@ -28,10 +28,6 @@
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
-
-#include <ogl/shader.h>
-#include <ogl/shaderbuffer.h>
-
 #include <chrono>
 #include <string>
 #include <thread>
@@ -404,92 +400,6 @@ static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, C
 	addText(str, vertData, cursor);
 }
 
-struct MyKeyStates
-{
-	char writeBuffer[20] = {};
-	int charsWritten = 0;
-	int newWindowWidth = 0;
-	int newWindowHeight = 0;
-
-	bool quit = false;
-	bool resize = false;
-
-	bool upPress = false;
-	bool downPress = false;
-	bool leftPress = false;
-	bool rightPress = false;
-};
-
-static MyKeyStates keyStates;
-
-
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if(action == GLFW_PRESS)
-	{
-		switch(key)
-		{
-			case GLFW_KEY_ESCAPE: 
-				keyStates.quit = true;
-				glfwSetWindowShouldClose(window, GLFW_TRUE);
-				break;
-			case GLFW_KEY_LEFT:
-				keyStates.leftPress = true;
-				break;
-			case GLFW_KEY_RIGHT:
-				keyStates.rightPress = true;
-				break;
-			case GLFW_KEY_UP:
-				keyStates.upPress = true;
-				break;
-			case GLFW_KEY_DOWN:
-				keyStates.downPress = true;
-				break;
-
-			default:
-				if(key >= 32 && key < 128)
-				{
-					char letter = (char)key;
-					if(key >= 65 && key <= 90)
-					{
-						int adder = 32;
-						if((mods & (GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK)) != 0)
-							adder = 0;
-						letter += adder;
-					}
-					keyStates.writeBuffer[keyStates.charsWritten] = letter; 
-					++keyStates.charsWritten;
-				}
-				break;
-		}
-
-	}
-	if(action == GLFW_RELEASE)
-	{
-		switch(key)
-		{
-			case GLFW_KEY_LEFT:
-				keyStates.leftPress = false;
-				break;
-			case GLFW_KEY_RIGHT:
-				keyStates.rightPress = false;
-				break;
-			case GLFW_KEY_UP:
-				keyStates.upPress = false;
-				break;
-			case GLFW_KEY_DOWN:
-				keyStates.downPress = false;
-				break;
-
-			default:
-				break;
-		}
-
-	}
-}
-
-
-
 
 
 
@@ -518,16 +428,13 @@ void VulkanTest::recreateSwapchainData()
 
 void VulkanTest::run()
 {
-	glfwSetKeyCallback(window, key_callback);
+	//glfwSetKeyCallback(window, key_callback);
 
 	std::vector<GPUVertexData> vertData;
 	
 	std::string txt = "Testing";
 	Cursor cursor;
 	updateText(txt, vertData, cursor);
-
-	bool quit = false;
-
 
 	////////////////////////
 	//
@@ -547,7 +454,7 @@ void VulkanTest::run()
 
 	VkDevice device = deviceWithQueues.device;
 
-	while (!glfwWindowShouldClose(window) && !quit)
+	while (!glfwWindowShouldClose(window))
 	{
 		if (++framesSinceLastDelta > 10)
 		{
@@ -559,75 +466,41 @@ void VulkanTest::run()
 
 		glfwPollEvents();
 		{
-			if (keyStates.quit)
-				quit = true;
-
-			if (quit)
-				break;
-
-			for (int i = 0; i < keyStates.charsWritten; ++i)
+			bool textNeedsUpdate = false;
+			for (int i = 0; i < bufferedPressesCount; ++i)
 			{
-				txt += keyStates.writeBuffer[ i ];
+				txt += char( bufferedPresses[i] );
+				textNeedsUpdate = true;
 			}
 
-			if (keyStates.leftPress)
+			if (keyDowns[ GLFW_KEY_LEFT ].isDown)
 			{
 				cursor.charWidth--;
 				if (cursor.charWidth < 2)
 					++cursor.charWidth;
-
+				textNeedsUpdate = true;
 			}
-			if (keyStates.rightPress)
+			if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
 			{
 				cursor.charWidth++;
+				textNeedsUpdate = true;
 			}
-			if (keyStates.upPress)
+			if (keyDowns[ GLFW_KEY_UP ].isDown)
 			{
 				cursor.charHeight++;
+				textNeedsUpdate = true;
 			}
-			if (keyStates.downPress)
+			if (keyDowns[ GLFW_KEY_DOWN ].isDown)
 			{
 				cursor.charHeight--;
 				if (cursor.charHeight < 2)
 					++cursor.charHeight;
+				textNeedsUpdate = true;
 			}
 
-			if (keyStates.charsWritten > 0 || keyStates.downPress ||
-				keyStates.upPress || keyStates.leftPress || keyStates.rightPress)
+			if (textNeedsUpdate)
 				updateText(txt, vertData, cursor);
-
-			keyStates.charsWritten = 0;
-			keyStates.resize = false;
 		}
-
-
-
-
-
-
-
-		VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
-		{
-			[[maybe_unused]] VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
-
-
-			if (res != VK_ERROR_OUT_OF_DATE_KHR)
-			{
-				VK_CHECK(res);
-			}
-			else
-			{
-				if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
-					surface))
-				{
-					recreateSwapchainData();
-					VK_CHECK(vkDeviceWaitIdle(device));
-
-				}
-				continue;
-			}
-		}
-
 
 
 		assert(vertData.size() < 2048);
@@ -640,6 +513,9 @@ void VulkanTest::run()
 		// "CONSTANT BUFFEERS"
 		//
 		////////////////////////
+
+		if (!startRender())
+			continue;
 
 		beginSingleTimeCommands(device, commandPool, commandBuffer);
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);

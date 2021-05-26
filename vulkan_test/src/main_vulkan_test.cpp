@@ -681,25 +681,25 @@ int main(int argc, char **argv)
 void VulkanTest::checkKeypresses(float deltaTime, Camera &camera)
 {
 	//printf("deltatime: %f\n", deltaTime);
-	float moveBooster = keyDowns[GLFW_KEY_LEFT_SHIFT] ? 5.0f : 1.0f;
-	float rotationBooster = keyDowns[GLFW_KEY_LEFT_SHIFT] ? 2.0f : 1.0f;
+	float moveBooster = keyDowns[GLFW_KEY_LEFT_SHIFT].isDown ? 5.0f : 1.0f;
+	float rotationBooster = keyDowns[GLFW_KEY_LEFT_SHIFT].isDown ? 2.0f : 1.0f;
 
 	float moveSpeed = deltaTime * 2.0f * moveBooster;
 	float rotationSpeed = deltaTime * 1.0f * rotationBooster;
 
- 	if(keyDowns[GLFW_KEY_I])
+ 	if(keyDowns[GLFW_KEY_I].isDown)
 	{
 		camera.pitch -= rotationSpeed;
 	}
-	if(keyDowns[GLFW_KEY_K])
+	if(keyDowns[GLFW_KEY_K].isDown)
 	{
 		camera.pitch += rotationSpeed;
 	}
-	if(keyDowns[GLFW_KEY_J])
+	if(keyDowns[GLFW_KEY_J].isDown)
 	{
 		camera.yaw -= rotationSpeed;
 	}
-	if(keyDowns[GLFW_KEY_L])
+	if(keyDowns[GLFW_KEY_L].isDown)
 	{
 		camera.yaw += rotationSpeed;
 	}
@@ -715,28 +715,28 @@ void VulkanTest::checkKeypresses(float deltaTime, Camera &camera)
 
 	Vec3 cameraRight = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
 
-	if(keyDowns[GLFW_KEY_W])
+	if(keyDowns[GLFW_KEY_W].isDown)
 	{
 		camera.position = camera.position + camera.forwardDir * moveSpeed;
 	}
-	if(keyDowns[GLFW_KEY_S])
+	if(keyDowns[GLFW_KEY_S].isDown)
 	{
 		camera.position = camera.position - camera.forwardDir * moveSpeed;
 	}
-	if(keyDowns[GLFW_KEY_A])
+	if(keyDowns[GLFW_KEY_A].isDown)
 	{
 		camera.position = camera.position - cameraRight * moveSpeed;
 	}
-	if(keyDowns[GLFW_KEY_D])
+	if(keyDowns[GLFW_KEY_D].isDown)
 	{
 		camera.position = camera.position + cameraRight * moveSpeed;
 
 	}
-	if(keyDowns[GLFW_KEY_Q])
+	if(keyDowns[GLFW_KEY_Q].isDown)
 	{
 		camera.position = camera.position + camera.upDir * moveSpeed;
 	}
-	if(keyDowns[GLFW_KEY_E])
+	if(keyDowns[GLFW_KEY_E].isDown)
 	{
 		camera.position = camera.position - camera.upDir * moveSpeed;
 	}
@@ -856,30 +856,9 @@ void VulkanTest::run()
 		glfwPollEvents();
 		checkKeypresses(deltaTime, camera);
 
-		vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+		if (!startRender())
+			continue;
 
-		{
-			[[maybe_unused]]VkResult res = (vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
-
-
-			if (res != VK_ERROR_OUT_OF_DATE_KHR)
-			{
-				VK_CHECK(res);
-			}	
-			else
-			{
-				if(resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace, 
-					surface))
-				{
-					recreateSwapchainData();
-					VK_CHECK(vkDeviceWaitIdle(device));
-
-				}
-				continue;
-			}
-		}
-
-		VK_CHECK(vkResetCommandPool(device, commandPool, 0));
 
 
 
@@ -894,11 +873,7 @@ void VulkanTest::run()
 		////////////////////////
 
 
-		VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-
+		beginSingleTimeCommands(device, commandPool, commandBuffer);
 		
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);

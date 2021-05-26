@@ -19,7 +19,11 @@ namespace core
 {
 struct MouseState;
 
-
+struct KeyState
+{
+	bool isDown = false;
+	uint32_t pressCount = 0u;
+};
 
 class VulkanApp
 {
@@ -30,6 +34,7 @@ public:
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight);
 	virtual void run() {}
 	virtual void resized() {}
+	virtual bool startRender();
 	virtual void present(Image &presentImage);
 	virtual void recreateSwapchainData() {}
 
@@ -50,7 +55,9 @@ public:
 	bool inited = false;
 	bool needToResize = false;
 
-	bool keyDowns[512] = {};
+	KeyState keyDowns[512] = {};
+	uint32_t bufferedPresses[ 128 ] = {};
+	uint32_t bufferedPressesCount = 0u;
 
 public:
 	Timer timer;

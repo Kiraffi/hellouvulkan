@@ -42,12 +42,30 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 		{
 			if(key == GLFW_KEY_ESCAPE)
 				glfwSetWindowShouldClose( window, 1 );
-			else if(key >= 0 && key < 512)
-				data->keyDowns[key] = true;
+			else if (key >= 0 && key < 512)
+			{
+				data->keyDowns[ key ].isDown = true;
+				++data->keyDowns->pressCount;
+
+				if (key >= 32 && key < 128)
+				{
+					char letter = ( char ) key;
+					if (key >= 65 && key <= 90)
+					{
+						int adder = 32;
+						if (( mods & ( GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK ) ) != 0)
+							adder = 0;
+						letter += adder;
+					}
+					data->bufferedPresses[ data->bufferedPressesCount ] = letter;
+					++data->bufferedPressesCount;
+				}
+			}
 		}
 		else if(action == GLFW_RELEASE && key >= 0 && key < 512)
 		{
-			data->keyDowns[key] = false;
+			data->keyDowns[ key ].isDown = false;
+			++data->keyDowns[ key ].pressCount;
 		}
 	}
 }
@@ -291,6 +309,28 @@ void VulkanApp::setClearColor(float r, float g, float b, float a)
 {
 }
 
+bool VulkanApp::startRender()
+{
+	VkDevice device = deviceWithQueues.device;
+	VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+	[[maybe_unused]] VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
+
+	if (res == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
+			surface))
+		{
+			recreateSwapchainData();
+			VK_CHECK(vkDeviceWaitIdle(device));
+
+		}
+		return false;
+	}
+	VK_CHECK(res);
+	return true;
+}
+
+
 void VulkanApp::present(Image &presentImage)
 {
 
@@ -388,8 +428,18 @@ void VulkanApp::present(Image &presentImage)
 	VK_CHECK(vkDeviceWaitIdle(device));
 
 
+
+
+	for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
+	{
+		keyDowns[ i ].pressCount = 0u;
+	}
+	bufferedPressesCount = 0u;
 	dt = timer.getLapDuration();
 }
+
+
+
 void VulkanApp::setTitle(const char *str)
 {
 	glfwSetWindowTitle(window, str);

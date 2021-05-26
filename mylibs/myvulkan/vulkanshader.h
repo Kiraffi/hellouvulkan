@@ -19,7 +19,6 @@ struct Pipeline
 	std::vector<VkPipeline> pipelines;
 	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSet> descriptorSets;
 	VkShaderStageFlags pushConstantStage;
 };
 
