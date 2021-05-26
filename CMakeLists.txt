@@ -69,6 +69,7 @@ add_subdirectory ("font_render")
 add_subdirectory ("space_shooter")
 add_subdirectory ("font_draw_vulkan")
 add_subdirectory ("font_render_vulkan")
+add_subdirectory ("space_shooter_vulkan")
 add_subdirectory ("vulkan_test")
 
 

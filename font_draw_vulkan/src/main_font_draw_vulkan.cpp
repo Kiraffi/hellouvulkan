@@ -115,11 +115,11 @@ enum BufferIndexes
 };
 
 
-class VulkanTest : core::VulkanApp
+class VulkanFontDraw : core::VulkanApp
 {
 public:
-	VulkanTest() {}
-	virtual ~VulkanTest() override;
+	VulkanFontDraw() {}
+	virtual ~VulkanFontDraw() override;
 	//bool initApp(const std::string &fontFilename);
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
@@ -153,7 +153,7 @@ public:
 //
 ////////////////////////
 
-VulkanTest::~VulkanTest()
+VulkanFontDraw::~VulkanFontDraw()
 {
 	VkDevice device = deviceWithQueues.device;
 
@@ -179,7 +179,7 @@ VulkanTest::~VulkanTest()
 
 }
 
-bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight)
 {
 	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
@@ -213,7 +213,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	buffers[ QUAD_BUFFER ] = createBuffer(device, memoryProperties, 8u * 1024u * 1024u,
 												VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 												//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer2");
+												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
 
 	buffers[ INDEX_DATA_BUFFER ] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
 												  VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -247,7 +247,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	return true;
 }
 
-bool VulkanTest::createGraphics()
+bool VulkanFontDraw::createGraphics()
 {
 	VkDevice device = deviceWithQueues.device;
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -277,7 +277,7 @@ bool VulkanTest::createGraphics()
 	return true;
 }
 
-bool VulkanTest::createPipelines()
+bool VulkanFontDraw::createPipelines()
 {
 	VkDevice device = deviceWithQueues.device;
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -304,76 +304,7 @@ bool VulkanTest::createPipelines()
 }
 
 
-
-
-/*
-bool VulkanTest::initApp(const std::string &fontFilename)
-{
-	std::vector<char> data;
-	if (!core::loadFontData(fontFilename, data))
-	{
-		printf("Failed to load file: %s\n", fontFilename.c_str());
-		return false;
-	}
-
-	{
-		std::vector<uint8_t> fontPic;
-		fontPic.resize(( 128 - 32 ) * 8 * 12 * 4);
-
-		// Note save order is a bit messed up!!! Since the file has one char 8x12 then next
-		uint32_t index = 0;
-		for (int y = 11; y >= 0; --y)
-		{
-			for (int charIndex = 0; charIndex < 128 - 32; ++charIndex)
-			{
-				uint8_t p = data[ y + size_t(charIndex) * 12 ];
-				for (int x = 0; x < 8; ++x)
-				{
-					uint8_t bitColor = uint8_t(( p >> x ) & 1) * 255;
-					fontPic[ size_t(index) * 4 + 0 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 1 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 2 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 3 ] = bitColor;
-
-					++index;
-				}
-			}
-		}
-		const int textureWidth = 8 * ( 128 - 32 );
-		const int textureHeight = 12;
-
-		VkDevice device = deviceWithQueues.device;
-		VkPhysicalDeviceMemoryProperties memoryProperties;
-		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-
-		textImage = createImage(device,
-			deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-			textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-			"TextImage");
-		
-		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
-			textureWidth, textureHeight, 4u,
-			buffers[ SCRATCH_BUFFER ], textImage,
-			 (u32)fontPic.size(), ( void * ) fontPic.data());
-
-		VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-
-		VK_CHECK(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
-	}
-
-	return true;
-}
-*/
-
-
-
-
-
-void VulkanTest::recreateSwapchainData()
+void VulkanFontDraw::recreateSwapchainData()
 {
 	VkDevice device = deviceWithQueues.device;
 
@@ -396,7 +327,7 @@ void VulkanTest::recreateSwapchainData()
 
 
 
-void VulkanTest::run()
+void VulkanFontDraw::run()
 {
 	const u32 charCount = 128 - 32;
 	std::vector<char> data;
@@ -797,7 +728,7 @@ int main(int argCount, char **argv)
 	{
 		filename = argv[ 1 ];
 	}
-	VulkanTest app;
+	VulkanFontDraw app;
 	app.fontFilename = filename;
 	if (app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT)
 		&& app.createGraphics() && app.createPipelines())

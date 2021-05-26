@@ -107,11 +107,11 @@ enum BufferIndexes
 };
 
 
-class VulkanTest : core::VulkanApp
+class VulkanFontRender : core::VulkanApp
 {
 public:
-	VulkanTest() {}
-	virtual ~VulkanTest() override;
+	VulkanFontRender() {}
+	virtual ~VulkanFontRender() override;
 	bool initApp(const std::string &fontFilename);
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
@@ -143,7 +143,7 @@ public:
 //
 ////////////////////////
 
-VulkanTest::~VulkanTest()
+VulkanFontRender::~VulkanFontRender()
 {
 	VkDevice device = deviceWithQueues.device;
 
@@ -169,7 +169,7 @@ VulkanTest::~VulkanTest()
 
 }
 
-bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight)
 {
 	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
@@ -237,7 +237,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	return true;
 }
 
-bool VulkanTest::createGraphics()
+bool VulkanFontRender::createGraphics()
 {
 	VkDevice device = deviceWithQueues.device;
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -267,7 +267,7 @@ bool VulkanTest::createGraphics()
 	return true;
 }
 
-bool VulkanTest::createPipelines()
+bool VulkanFontRender::createPipelines()
 {
 	VkDevice device = deviceWithQueues.device;
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -299,7 +299,7 @@ bool VulkanTest::createPipelines()
 
 
 
-bool VulkanTest::initApp(const std::string &fontFilename)
+bool VulkanFontRender::initApp(const std::string &fontFilename)
 {
 	std::vector<char> data;
 	if (!core::loadFontData(fontFilename, data))
@@ -403,7 +403,7 @@ static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, C
 
 
 
-void VulkanTest::recreateSwapchainData()
+void VulkanFontRender::recreateSwapchainData()
 {
 	VkDevice device = deviceWithQueues.device;
 
@@ -426,7 +426,7 @@ void VulkanTest::recreateSwapchainData()
 
 
 
-void VulkanTest::run()
+void VulkanFontRender::run()
 {
 	//glfwSetKeyCallback(window, key_callback);
 
@@ -692,7 +692,7 @@ int main(int argCount, char **argv)
 		filename = argv[1];
 	}
 	
-	VulkanTest app;
+	VulkanFontRender app;
 	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) 
 		&& app.initApp(filename) && app.createGraphics() && app.createPipelines())
 	{
