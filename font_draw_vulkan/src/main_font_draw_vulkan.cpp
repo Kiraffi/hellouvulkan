@@ -406,8 +406,6 @@ void VulkanTest::run()
 		return;
 	}
 
-	//glfwSetKeyCallback(window, key_callback);
-
 	int32_t chosenLetter = 'a';
 	
 	std::vector<GPUVertexData> vertData;

@@ -46,10 +46,6 @@ endForeach()
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
 
-
-
-
-
 #set(SHOW_VARIABLES true)
 if (SHOW_VARIABLES)
 get_cmake_property(_variableNames VARIABLES)

@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.15)
 
 # Add source to this project's executable.
-add_executable (font_draw_vulkan "src/main_font_draw_vulkan.cpp")
+add_executable (font_draw_vulkan "src/main_font_draw_vulkan.cpp" ${SPV_SHADERS})
 
 
 add_dependencies(font_draw_vulkan shaders)
