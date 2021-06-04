@@ -14,7 +14,7 @@ layout (binding = 0) uniform ConstantDataStructBlock
 };
 
 
-layout (std430, binding=1) buffer shader_data
+layout (std430, binding=1) restrict readonly buffer shader_data
 {
 	VData values[];
 };

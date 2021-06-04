@@ -39,7 +39,7 @@ layout (std430, binding=2) restrict readonly buffer vertex_data
 	VData vertexValues[];
 };
 
-layout (std430, binding=3) buffer instance_data
+layout (std430, binding=3) restrict readonly buffer instance_data
 {
 	IData instanceValues[];
 };
