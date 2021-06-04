@@ -1,10 +1,6 @@
 #include "vulkan_app.h"
-#include "app.h"
 
 #include <stdio.h>
-#include <filesystem>
-#include <fstream>
-#include <cmath>
 
 
 #include <myvulkan/vulkandevice.h>

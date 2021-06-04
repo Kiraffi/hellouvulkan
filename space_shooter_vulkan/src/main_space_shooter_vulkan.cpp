@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <core/timer.h>
-#include <core/app.h>
+#include <core/general.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>

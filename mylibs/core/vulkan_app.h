@@ -17,7 +17,14 @@ struct Image;
 
 namespace core
 {
-struct MouseState;
+struct MouseState
+{
+	int x;
+	int y;
+	bool leftButtonDown;
+	bool rightButtonDown;
+	bool middleButtonDown;
+};
 
 struct KeyState
 {

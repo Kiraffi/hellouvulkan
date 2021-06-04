@@ -1,13 +1,14 @@
 add_library(MyLibraries
-	core/app.h
-	core/app.cpp
+#	core/app.h
+#	core/app.cpp
 	core/mytypes.h
-	ogl/shaderbuffer.h
-	ogl/shaderbuffer.cpp
-	ogl/shader.cpp
+#	ogl/shaderbuffer.h
+#	ogl/shaderbuffer.cpp
+#	ogl/shader.cpp
+	core/general.h
+	core/general.cpp
 	core/timer.h
 	core/timer.cpp
-
 
 
 	core/vulkan_app.h
