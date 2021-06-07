@@ -70,7 +70,7 @@ void main()
 	vec2 posOffset = vec2(float(instanceValues[modelInstance].iPos & 0xffffu),
 		float(instanceValues[modelInstance].iPos >> 16));
 	posOffset /= 65535.0f;
-	posOffset *= 8192.0f;   
+	posOffset *= 32768.0f;
 	p += posOffset;
 	
 	

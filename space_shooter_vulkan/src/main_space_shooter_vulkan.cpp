@@ -41,6 +41,7 @@ static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
 
 
+
 struct Entity
 {
 	float posX;
@@ -518,7 +519,25 @@ void VulkanTest::recreateSwapchainData()
 
 
 
+static uint32_t getPackedPosition(float x, float y)
+{
+	static constexpr float POSITION_SCALER = 32768.0f;
+	uint32_t result = uint32_t(( x / POSITION_SCALER ) * 65535.0f);
+	result += uint32_t(( y / POSITION_SCALER ) * 65535.0f) << 16u;
 
+	return result;
+}
+
+static uint32_t getPackedSizeRot(float sz, float rotInRad)
+{
+	uint32_t result = uint32_t(( sz / 64.0f ) * 1023.0f);
+	float sinv = sinf(rotInRad);
+	float cosv = cosf(rotInRad);
+	result += uint32_t(( sinv * 0.5f + 0.5f ) * 1023.0f) << 10u;
+	result += uint32_t(( cosv * 0.5f + 0.5f ) * 1023.0f) << 20u;
+
+	return result;
+}
 
 
 void VulkanTest::run()
@@ -532,7 +551,7 @@ void VulkanTest::run()
 	std::vector< uint32_t > modelIndices;
 
 	std::vector < GpuModelVertex > vertices;
-	constexpr uint32_t AsteroidMaxTypes = 10'000u;
+	constexpr uint32_t AsteroidMaxTypes = 1000u;
 
 	std::string txt = "abb";
 
@@ -547,11 +566,11 @@ void VulkanTest::run()
 
 		for (uint32_t asteroidTypes = 0u; asteroidTypes < AsteroidMaxTypes; ++asteroidTypes)
 		{
-			static constexpr uint32_t AsteroidCorners = 256u;
+			static constexpr uint32_t AsteroidCorners = 16u;
 
 			float xPos = float(rand()) / float(RAND_MAX) * 4096.0f;
 			float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
-			float size = 1.0f + 1.0f * float(rand()) / float(RAND_MAX);
+			float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
 			entities.emplace_back(Entity{ .posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f, .speedX = 0.0f, .speedY = 0.0f, .size = size, .padding = 0.0f });
 
 			/*
@@ -562,12 +581,9 @@ void VulkanTest::run()
 						.modelVertexStartIndex = uint32_t(vertices.size()), .modelIndiceCount = AsteroidCorners });
 			*/
 			// Notice this quantatization doesnt work too well with high high resolutions....
-			uint32_t pos = uint32_t(( xPos / 8192.0f ) * 65535.0f);
-			pos += uint32_t(( yPos / 8192.0f ) * 65535.0f) << 16u;
-			uint32_t sincossize = uint32_t(( size / 64.0f ) * 1023.0f);
-			modelInstances.emplace_back(GpuModelInstance{ .pos = pos,
-					.sinCosRotSize = sincossize,
-					.color = core::getColor(0.5, 0.5, 0.5, 1.0f),
+			modelInstances.emplace_back(GpuModelInstance{ .pos = getPackedPosition(xPos, yPos),
+				.sinCosRotSize = getPackedSizeRot(size, 0.0f),
+				.color = core::getColor(0.5, 0.5, 0.5, 1.0f),
 				.modelVertexStartIndex = uint32_t(vertices.size()) });
 
 
@@ -596,10 +612,6 @@ void VulkanTest::run()
 			float size = 10.0f;
 			entities.emplace_back(Entity{ .posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f, .speedX = 0.0f, .speedY = 0.0f, .size = size, .padding = 0.0f });
 
-			uint32_t pos = uint32_t(( xPos / 2048.0f ) * 65535.0f);
-			pos += uint32_t(( yPos / 2048.0f ) * 65535.0f) << 16u;
-			uint32_t sincossize = uint32_t(( size / 64.0f ) * 1023.0f);
-
 			/*
 					modelInstances.emplace_back(GpuModelInstance{ .posX = xPos, .posY = yPos,
 						//.posZ = 0.0f, .rotation = 0.0f,
@@ -607,9 +619,9 @@ void VulkanTest::run()
 						.color = core::getColor(1.0f, 1.0f, 0.0f, 1.0f), .size = size,
 						.modelVertexStartIndex = uint32_t(vertices.size()), .modelIndiceCount = 3 });
 			*/
-			modelInstances.emplace_back(GpuModelInstance{ .pos = pos,
-					.sinCosRotSize = sincossize,
-					.color = core::getColor(1.0, 1.0, 0.0, 1.0f),
+			modelInstances.emplace_back(GpuModelInstance{ .pos = getPackedPosition(xPos, yPos),
+				.sinCosRotSize = getPackedSizeRot(size, 0.0f),
+				.color = core::getColor(1.0, 1.0, 0.0, 1.0f),
 				.modelVertexStartIndex = uint32_t(vertices.size()) });
 
 			vertices.emplace_back(GpuModelVertex{ .posX = -1.0f, .posY = -1.0f }); //, .posZ = 0.5f, .padding = 0.0f });
@@ -629,6 +641,9 @@ void VulkanTest::run()
 	}
 
 
+	{
+
+	}
 
 
 	////////////////////////
@@ -676,13 +691,13 @@ void VulkanTest::run()
 					if (isDown(GLFW_KEY_LEFT) || isDown(GLFW_KEY_A))
 					{
 						float rotSpeed = 1.0f; // fminf(origSpeed, 1.00f);
-						rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
+						rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005f;
 						playerEntity.rotation += rotSpeed * dddt;
 					}
 					if (isDown(GLFW_KEY_RIGHT) || isDown(GLFW_KEY_D))
 					{
 						float rotSpeed = 1.0f; //fminf(origSpeed, 1.0f);
-						rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005;
+						rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005f;
 						playerEntity.rotation -= rotSpeed * dddt;
 					}
 					playerEntity.rotation = std::fmod(playerEntity.rotation, PI * 2.0);
@@ -730,25 +745,8 @@ void VulkanTest::run()
 
 				for (uint32_t i = 0; i < modelInstances.size(); ++i)
 				{
-					uint32_t pos = uint32_t(( entities[ i ].posX / 8192.0f ) * 65535.0f);
-					pos += uint32_t(( entities[ i ].posY / 8192.0f ) * 65535.0f) << 16u;
-					uint32_t sincossize = uint32_t(( entities[ i ].size / 64.0f ) * 1023.0f);
-					float sinv = sinf(entities[ i ].rotation);
-					float cosv = cosf(entities[ i ].rotation);
-					sincossize += uint32_t(( sinv * 0.5f + 0.5f ) * 1023.0f) << 10u;
-					sincossize += uint32_t(( cosv * 0.5f + 0.5f ) * 1023.0f) << 20u;
-
-
-					modelInstances[ i ].pos = pos;
-					modelInstances[ i ].sinCosRotSize = sincossize;
-					/*
-					modelInstances[ i ].posX = entities[ i ].posX;
-					modelInstances[ i ].posY = entities[ i ].posY;
-					modelInstances[ i ].sinRotation = sinf(entities[ i ].rotation);
-					modelInstances[ i ].cosRotation = cosf(entities[ i ].rotation);
-					//modelInstances[ i ].posZ = entities[ i ].posZ;
-					//modelInstances[ i ].rotation = entities[ i ].rotation;
-					*/
+					modelInstances[ i ].pos = getPackedPosition(entities[ i ].posX, entities[ i ].posY);
+					modelInstances[ i ].sinCosRotSize = getPackedSizeRot(entities[ i ].size, entities[ i ].rotation);
 				}
 			}
 			float updateDur = float(updateDurTimer.getDuration());
