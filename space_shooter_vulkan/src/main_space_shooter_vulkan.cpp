@@ -642,7 +642,7 @@ void VulkanTest::run()
 
 
 	{
-
+		// Bullets?
 	}
 
 
