@@ -345,17 +345,10 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	VkDevice device = deviceWithQueues.device;
 
 	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.vert.spv");
-	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ]);
-
 	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.frag.spv");
-	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ]);
-
 
 	shaderModules[ SHADER_MODULE_RENDER_SHIP_VERT ] = loadShader(device, "assets/shader/vulkan_new/space_ship_2d_model.vert.spv");
-	ASSERT(shaderModules[ SHADER_MODULE_RENDER_SHIP_VERT ]);
-
 	shaderModules[ SHADER_MODULE_RENDER_SHIP_FRAG ] = loadShader(device, "assets/shader/vulkan_new/space_ship_2d_model.frag.spv");
-	ASSERT(shaderModules[ SHADER_MODULE_RENDER_SHIP_FRAG ]);
 	
 
 	VkPhysicalDeviceMemoryProperties memoryProperties;

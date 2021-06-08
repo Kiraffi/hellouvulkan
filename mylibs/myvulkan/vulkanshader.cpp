@@ -490,5 +490,7 @@ VkShaderModule loadShader(VkDevice device, const char *path)
 	vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
 
 	delete[] buffer;
+
+	ASSERT(shaderModule);
 	return shaderModule;
 }
