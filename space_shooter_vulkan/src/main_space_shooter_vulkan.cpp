@@ -750,12 +750,12 @@ void VulkanTest::run()
 
 		{
 			Timer updateDurTimer;
-			float dtSplit = dt;
+			double dtSplit = dt;
 			{
 				// Update position, definitely not accurate physics, if dt is big this doesn't work properly, trying to split it into several updates.
 				while (dtSplit > 0.0f)
 				{
-					float dddt = fminf(dtSplit, 0.005f);
+					double dddt = fminf(dtSplit, 0.005f);
 					float origSpeed = 1.0f * sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
 
 					double timeHere = currentTime + dddt;
@@ -822,6 +822,8 @@ void VulkanTest::run()
 						Entity &ent = bulletEntities[ bullInd - 1];
 						ent.posX += ent.speedX * dddt;
 						ent.posY += ent.speedY * dddt;
+
+
 
 						if (timeHere - ent.spawnTime > BULLET_ALIVE_TIME)
 						{
