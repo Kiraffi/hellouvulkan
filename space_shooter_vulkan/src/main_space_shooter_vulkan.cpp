@@ -40,6 +40,16 @@
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
 
+static constexpr float POSITION_SCALER = 32768.0f;
+
+static constexpr double SHOT_INTERVAL = 0.1;
+static constexpr double BULLET_ALIVE_TIME = 1.0;
+static constexpr double ASTEROID_SPAWN_INTERVAL = 5.0;
+
+static constexpr uint32_t AsteroidMaxTypes = 10u;
+
+static constexpr uint32_t AsteroidCorners = 9u;
+static constexpr uint32_t BulletCorners = 16u;
 
 
 enum class EntityModelType : uint32_t
@@ -71,9 +81,8 @@ struct Entity
 	float size;
 	uint32_t entityModelIndex;
 
+	double spawnTime;
 	uint32_t color;
-	uint32_t pad1;
-	uint32_t pad2;
 	uint32_t pad3;
 };
 
@@ -90,23 +99,6 @@ struct GPUTextVertexData
 
 	float padding[ 2 ];
 };
-
-/*
-struct GpuModelInstance
-{
-	float posX;
-	float posY;
-	//float posZ;
-	float sinRotation;
-	float cosRotation;
-	//float rotation;
-
-	uint32_t color;
-	float size;
-	uint32_t modelVertexStartIndex;
-	uint32_t modelIndiceCount;
-};
-*/
 
 struct GpuModelInstance
 {
@@ -532,7 +524,6 @@ void VulkanTest::recreateSwapchainData()
 
 static uint32_t getPackedPosition(float x, float y)
 {
-	static constexpr float POSITION_SCALER = 32768.0f;
 	uint32_t result = uint32_t(( x / POSITION_SCALER ) * 65535.0f);
 	result += uint32_t(( y / POSITION_SCALER ) * 65535.0f) << 16u;
 
@@ -581,6 +572,21 @@ static void updateGpuEntities(const std::vector<Entity> &entities, const std::ve
 	}
 }
 
+static Entity spawnAsteroidEntity(double spawnTime)
+{
+	float xPos = float(rand()) / float(RAND_MAX) * 4096.0f;
+	float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
+	float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
+
+	uint32_t modelIndex = ( std::abs(rand()) % AsteroidMaxTypes ) + 1u;
+
+	return Entity{
+		.posX = xPos, .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
+		.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
+		.spawnTime = spawnTime,
+		.color = core::getColor(0.5, 0.5, 0.5, 1.0f) };
+}
+
 
 void VulkanTest::run()
 {
@@ -600,8 +606,7 @@ void VulkanTest::run()
 	gpuModelIndices.reserve(1u << 20u);
 
 
-	constexpr uint32_t AsteroidMaxTypes = 10u;
-
+	
 
 
 
@@ -629,7 +634,6 @@ void VulkanTest::run()
 		// Asteroid models
 		for (uint32_t asteroidTypes = 0u; asteroidTypes < AsteroidMaxTypes; ++asteroidTypes)
 		{
-			static constexpr uint32_t AsteroidCorners = 9u;
 
 			uint32_t startVertex = uint32_t(vertices.size());
 			entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
@@ -653,7 +657,6 @@ void VulkanTest::run()
 
 		// Bullets
 		{
-			static constexpr uint32_t BulletCorners = 16u;
 
 			uint32_t startVertex = uint32_t(vertices.size());
 			entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
@@ -686,6 +689,7 @@ void VulkanTest::run()
 
 	// Create instances.
 	{
+		double spawnTime = glfwGetTime();
 		// Player instance.
 		{
 			float xPos = 200.0f;
@@ -696,26 +700,14 @@ void VulkanTest::run()
 			playerEntity = ( Entity{
 				.posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
 				.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
+				.spawnTime = spawnTime,
 				.color = core::getColor(1.0, 1.0, 0.0, 1.0f) } );
 		}
 		// Asteroid instances.
 		for (uint32_t asteroidInstances = 0u; asteroidInstances < 256; ++asteroidInstances)
 		{
-			float xPos = float(rand()) / float(RAND_MAX) * 4096.0f;
-			float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
-			float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
-
-			uint32_t modelIndex = ( std::abs(rand()) % AsteroidMaxTypes ) + 1u;
-			
-			asteroidEntities.emplace_back(Entity{
-				.posX = xPos, .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
-				.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
-				.color = core::getColor(0.5, 0.5, 0.5, 1.0f) });
+			asteroidEntities.emplace_back( spawnAsteroidEntity(spawnTime) );
 		}
-		{
-			// Bullets?
-		}
-
 	}
 
 
@@ -734,18 +726,22 @@ void VulkanTest::run()
 
 	u32 gpuframeCount = 0u;
 	double gpuTime = 0.0;
-	double cpuTimeStamp = glfwGetTime();
+	double cpuTimeStamp = previousFrameTime;
 
+
+	double lastShot = previousFrameTime;
+	double lastAsteroidSpawn = previousFrameTime;
+	double currentTime = previousFrameTime;
 
 	VkDevice device = deviceWithQueues.device;
 
 	while (!glfwWindowShouldClose(window))
 	{
+		currentTime = glfwGetTime();
 		if (++framesSinceLastDelta > 10)
 		{
-			double newTime = glfwGetTime();
-			deltaTime = ( newTime - previousFrameTime ) / framesSinceLastDelta;
-			previousFrameTime = newTime;
+			deltaTime = ( currentTime - previousFrameTime ) / framesSinceLastDelta;
+			previousFrameTime = currentTime;
 			framesSinceLastDelta = 0u;
 		}
 
@@ -761,6 +757,8 @@ void VulkanTest::run()
 				{
 					float dddt = fminf(dtSplit, 0.005f);
 					float origSpeed = 1.0f * sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+
+					double timeHere = currentTime + dddt;
 
 					if (isDown(GLFW_KEY_LEFT) || isDown(GLFW_KEY_A))
 					{
@@ -782,7 +780,28 @@ void VulkanTest::run()
 					}
 
 
+					if (isDown(GLFW_KEY_SPACE) && ( timeHere - lastShot ) >= SHOT_INTERVAL)
+					{
+						if (bulletEntities.size() < ( 1 << 15 ))
+						{
+							float rotX = cosf(playerEntity.rotation + float(PI) * 0.5f);
+							float rotY = sinf(playerEntity.rotation + float(PI) * 0.5f);
 
+							float speedX = rotX * 1000.0f;
+							float speedY = rotY * 1000.0f;
+
+							float posX = playerEntity.posX + rotX * 10.0f;
+							float posY = playerEntity.posY + rotY * 10.0f;
+
+							bulletEntities.emplace_back(Entity{
+								.posX = posX, .posY = posY, .posZ = 0.5f, .rotation = 0.0f,
+								.speedX = speedX, .speedY = speedY, .size = 4.0f, .entityModelIndex = 1 + AsteroidMaxTypes,
+								.spawnTime = glfwGetTime(),
+								.color = core::getColor(0.0, 0.5, 1.0, 1.0f) });
+
+							lastShot = timeHere;
+						}
+					}
 
 					{
 						float origSpeed = sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
@@ -794,6 +813,41 @@ void VulkanTest::run()
 
 						playerEntity.posX += playerEntity.speedX * dddt;
 						playerEntity.posY += playerEntity.speedY * dddt;
+					}
+
+
+					// Threading for updating bullets and asteroids?
+					for (int32_t bullInd = bulletEntities.size(); bullInd > 0; --bullInd)
+					{
+						Entity &ent = bulletEntities[ bullInd - 1];
+						ent.posX += ent.speedX * dddt;
+						ent.posY += ent.speedY * dddt;
+
+						if (timeHere - ent.spawnTime > BULLET_ALIVE_TIME)
+						{
+							bulletEntities[ bullInd - 1 ] = bulletEntities.back();
+							bulletEntities.resize(bulletEntities.size() - 1);
+						}
+						
+						else
+						{
+							for (int32_t astInd = asteroidEntities.size(); astInd > 0; --astInd)
+							{
+								Entity &asteroidEnt = asteroidEntities[ astInd - 1 ];
+
+								double minSize = ( ent.size + asteroidEnt.size ) * 0.8f;
+
+								if (abs(ent.posX - asteroidEnt.posX) < minSize && abs(ent.posY - asteroidEnt.posY) < minSize)
+								{
+									asteroidEntities[ astInd - 1 ] = asteroidEntities.back();
+									asteroidEntities.resize(asteroidEntities.size() - 1);
+
+									bulletEntities[ bullInd - 1 ] = bulletEntities.back();
+									bulletEntities.resize(bulletEntities.size() - 1);
+									break;
+								}
+							}
+						}
 					}
 
 
@@ -816,6 +870,19 @@ void VulkanTest::run()
 				{
 					playerEntity.posY += windowHeight;
 				}
+
+
+				if (currentTime - lastAsteroidSpawn > ASTEROID_SPAWN_INTERVAL)
+				{
+					lastAsteroidSpawn = currentTime;
+					uint32_t spawnAmount = 256u - asteroidEntities.size();
+					spawnAmount = spawnAmount > 10u ? 10u : spawnAmount;
+					for(; spawnAmount > 0; --spawnAmount)
+					{
+						asteroidEntities.emplace_back(spawnAsteroidEntity(currentTime));
+					}
+				}
+
 			}
 			float updateDur = float(updateDurTimer.getDuration());
 		}
@@ -831,7 +898,8 @@ void VulkanTest::run()
 
 			updateGpuEntity(playerEntity, entityModels, gpuModelInstances, gpuModelIndices);
 			updateGpuEntities(asteroidEntities, entityModels, gpuModelInstances, gpuModelIndices);
-
+			updateGpuEntities(bulletEntities, entityModels, gpuModelInstances, gpuModelIndices);
+			
 			ASSERT(gpuModelInstances.size() < ( 1 << 16u ));
 		}
 
