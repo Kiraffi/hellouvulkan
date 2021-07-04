@@ -20,20 +20,6 @@ struct IData
 	uint iModelVertexStartIndex;
 };
 
-/*
-struct IData
-{
-	vec2 iPos;
-	float iSinRotation;
-	float iCosRotation;
-
-	uint iColor;
-	float iSize;
-	uint iModelVertexStartIndex;
-	float iPadding;
-};
-*/
-
 layout (std430, binding=2) restrict readonly buffer vertex_data
 {
 	VData vertexValues[];
@@ -49,15 +35,10 @@ layout (location = 0) out flat vec4 colOut;
 void main()
 {
 		
-	uint modelInstance = (gl_VertexIndex >> 8);
-	int indice = (gl_VertexIndex & 0xff);
-	//IData iData = instanceValues[modelInstance];
-	//VData vData = vertexValues[instanceValues[modelInstance].iModelVertexStartIndex + indice];
+	uint modelInstance = (gl_VertexIndex >> 16);
+	int indice = (gl_VertexIndex & 0xffff);
 		
 	vec2 p = vertexValues[instanceValues[modelInstance].iModelVertexStartIndex + indice].vpos.xy;
-	//p *= instanceValues[modelInstance].iSize;
-	//float sv = instanceValues[modelInstance].iSinRotation; //sin(iData.iRotation);
-	//float cv = instanceValues[modelInstance].iCosRotation; //cos(iData.iRotation);
 	
 	uint posrotsize = instanceValues[modelInstance].iSinCosRotationSize;
 	p *= float((posrotsize & ((1u << 10u) - 1u))) / 1023.0f * 64.0f;
@@ -83,15 +64,7 @@ void main()
 	gl_Position = vec4(p.xy, 0.5, 1.0);
 	vec4 c = vec4(0, 0, 0, 0);
 	uint iColor = instanceValues[modelInstance].iColor; 
-	/*
-	uvec4 cu;
-	cu.r = (iColor >> 0u);
-	cu.g = (iColor >> 8u);
-	cu.b = (iColor >> 16u);
-	cu.a = (iColor >> 24u);
-	cu = cu & 255u;	
-	c = vec4(cu) / 255.0f;
-*/
+
 	c.r = float((iColor >> 0u) & 255u);
 	c.g = float((iColor >> 8u) & 255u);
 	c.b = float((iColor >> 16u) & 255u);

@@ -42,6 +42,23 @@ static constexpr int SCREEN_HEIGHT = 600;
 
 
 
+enum class EntityModelType : uint32_t
+{
+	ASTEROID,
+	SHIP,
+	BULLET
+};
+
+struct EntityModel
+{
+	uint32_t startVertex;
+	EntityModelType entityModelType;
+
+	std::vector< uint32_t > modelIndices;
+};
+
+
+
 struct Entity
 {
 	float posX;
@@ -52,10 +69,15 @@ struct Entity
 	float speedX;
 	float speedY;
 	float size;
-	float padding;
+	uint32_t entityModelIndex;
+
+	uint32_t color;
+	uint32_t pad1;
+	uint32_t pad2;
+	uint32_t pad3;
 };
 
-struct GPUVertexData
+struct GPUTextVertexData
 {
 	float posX;
 	float posY;
@@ -70,7 +92,6 @@ struct GPUVertexData
 };
 
 /*
-
 struct GpuModelInstance
 {
 	float posX;
@@ -99,9 +120,6 @@ struct GpuModelVertex
 {
 	float posX;
 	float posY;
-	//float posZ;
-
-	//float padding;
 };
 
 
@@ -114,11 +132,11 @@ struct Cursor
 	int charHeight = 12;
 };
 
-static void addText(std::string &str, std::vector<GPUVertexData> &vertData, Cursor &cursor)
+static void addText(std::string &str, std::vector<GPUTextVertexData> &textVertDataOut, Cursor &cursor)
 {
 	for (int i = 0; i < int(str.length()); ++i)
 	{
-		GPUVertexData vdata;
+		GPUTextVertexData vdata;
 		vdata.color = core::getColor(0.0f, 1.0f, 0, 1.0f);
 		vdata.pixelSizeX = cursor.charWidth;
 		vdata.pixelSizeY = cursor.charHeight;
@@ -130,13 +148,13 @@ static void addText(std::string &str, std::vector<GPUVertexData> &vertData, Curs
 		vdata.uvX = float(letter) / float(128 - 32);
 		vdata.uvY = 0.0f;
 
-		vertData.emplace_back(vdata);
+		textVertDataOut.emplace_back(vdata);
 
 		cursor.xPos += cursor.charWidth;
 	}
 
 }
-static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, Cursor &cursor)
+static void updateText(std::string &str, std::vector<GPUTextVertexData> &textVertDataOut, Cursor &cursor)
 {
 	cursor.xPos = 100.0f;
 	cursor.yPos = 400.0f;
@@ -144,12 +162,12 @@ static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, C
 	tmpStr += std::to_string(cursor.charWidth);
 	tmpStr += ",h";
 	tmpStr += std::to_string(cursor.charHeight);
-	vertData.clear();
-	addText(tmpStr, vertData, cursor);
+	textVertDataOut.clear();
+	addText(tmpStr, textVertDataOut, cursor);
 
 	cursor.xPos = 100.0f;
 	cursor.yPos = 100.0f;
-	addText(str, vertData, cursor);
+	addText(str, textVertDataOut, cursor);
 }
 
 
@@ -359,7 +377,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 											 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 											 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
-	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024,
+	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024u,
 											 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 											 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
 
@@ -367,7 +385,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 										  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 										  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
 
-	buffers[ MODEL_VERTICES_BUFFER ] = createBuffer(device, memoryProperties, 1024u * 1024u * 64u,
+	buffers[ MODEL_VERTICES_BUFFER ] = createBuffer(device, memoryProperties, 1024u * 1024u * 16u,
 											VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 											VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Model Vercies data buffer");
 
@@ -533,110 +551,174 @@ static uint32_t getPackedSizeRot(float sz, float rotInRad)
 }
 
 
+static void updateGpuEntity(const Entity &ent, const std::vector<EntityModel> &entityModels,
+	std::vector< GpuModelInstance > &gpuModelInstances, std::vector< uint32_t > &gpuModelIndices)
+{
+	const EntityModel &model = entityModels[ ent.entityModelIndex ];
+	uint32_t entityIndex = uint32_t(gpuModelInstances.size());
+
+	// Notice this quantatization doesnt work too well with high high resolutions....
+	gpuModelInstances.emplace_back(GpuModelInstance{ .pos = getPackedPosition(ent.posX, ent.posY),
+		.sinCosRotSize = getPackedSizeRot(ent.size, ent.rotation),
+		.color = ent.color,
+		.modelVertexStartIndex = model.startVertex });
+
+
+	for (uint32_t indice = 0u; indice < uint32_t(model.modelIndices.size()); ++indice)
+	{
+		uint32_t ind = model.modelIndices[ indice ];
+		ind = ind + ( entityIndex << 16u );
+		gpuModelIndices.push_back(ind);
+	}
+}
+
+static void updateGpuEntities(const std::vector<Entity> &entities, const std::vector<EntityModel> &entityModels,
+	std::vector< GpuModelInstance > &gpuModelInstances, std::vector< uint32_t > &gpuModelIndices)
+{
+	for (uint32_t entityIndex = 0u; entityIndex < entities.size(); ++entityIndex)
+	{
+		updateGpuEntity(entities[entityIndex], entityModels, gpuModelInstances, gpuModelIndices);
+	}
+}
+
+
 void VulkanTest::run()
 {
-	std::vector<GPUVertexData> vertData;
+	std::vector<GPUTextVertexData> textVertData;
 
-	std::vector < Entity > entities;
-	std::vector< GpuModelInstance > modelInstances;
-	std::vector< uint32_t > freeModelInstanceIndices;
+	Entity playerEntity;
+	std::vector < Entity > asteroidEntities;
+	std::vector < Entity > bulletEntities;
 
-	std::vector< uint32_t > modelIndices;
+	std::vector< GpuModelInstance > gpuModelInstances;
+	gpuModelInstances.reserve(1u << 16u);
 
 	std::vector < GpuModelVertex > vertices;
-	constexpr uint32_t AsteroidMaxTypes = 1000u;
+	std::vector< EntityModel > entityModels;
+
+	std::vector< uint32_t > gpuModelIndices;
+	gpuModelIndices.reserve(1u << 20u);
+
+
+	constexpr uint32_t AsteroidMaxTypes = 10u;
+
+
+
 
 	std::string txt = "abb";
 
 	Cursor cursor;
-	updateText(txt, vertData, cursor);
+	updateText(txt, textVertData, cursor);
 
+	// Building models.
 	{
+		// Building ship model
+		{
+			uint32_t startVertex = uint32_t(vertices.size());
+			entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
+			EntityModel &model = entityModels.back();
 
-		modelInstances.reserve(100);
+			vertices.emplace_back(GpuModelVertex{ .posX = -1.0f, .posY = -1.0f });
+			vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 1.5f });
+			vertices.emplace_back(GpuModelVertex{ .posX = 1.0f, .posY = -1.0f });
+			model.modelIndices.emplace_back(0);
+			model.modelIndices.emplace_back(1);
+			model.modelIndices.emplace_back(2);
+		}
 
-	
-
+		// Asteroid models
 		for (uint32_t asteroidTypes = 0u; asteroidTypes < AsteroidMaxTypes; ++asteroidTypes)
 		{
-			static constexpr uint32_t AsteroidCorners = 16u;
+			static constexpr uint32_t AsteroidCorners = 9u;
 
-			float xPos = float(rand()) / float(RAND_MAX) * 4096.0f;
-			float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
-			float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
-			entities.emplace_back(Entity{ .posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f, .speedX = 0.0f, .speedY = 0.0f, .size = size, .padding = 0.0f });
+			uint32_t startVertex = uint32_t(vertices.size());
+			entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
+			EntityModel &model = entityModels.back();
 
-			/*
-					modelInstances.emplace_back(GpuModelInstance{ .posX = xPos, .posY = yPos,
-							//.posZ = 0.0f, .rotation = 0.0f,
-							.sinRotation = 0.0f, .cosRotation = 1.0f,
-							.color = core::getColor(0.5, 0.5, 0.5, 1.0f), .size = size,
-						.modelVertexStartIndex = uint32_t(vertices.size()), .modelIndiceCount = AsteroidCorners });
-			*/
-			// Notice this quantatization doesnt work too well with high high resolutions....
-			modelInstances.emplace_back(GpuModelInstance{ .pos = getPackedPosition(xPos, yPos),
-				.sinCosRotSize = getPackedSizeRot(size, 0.0f),
-				.color = core::getColor(0.5, 0.5, 0.5, 1.0f),
-				.modelVertexStartIndex = uint32_t(vertices.size()) });
-
-
-			uint32_t startIndex = uint32_t(asteroidTypes << 8u);
-			vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 0.0f }); //, .posZ = 0.5f, .padding = 0.0f });
+			vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 0.0f });
 			for (uint32_t i = 0; i < AsteroidCorners; ++i)
 			{
 				float angle = -float(i) * float(2.0f * PI) / float(AsteroidCorners);
 				float x = cos(angle);
 				float y = sin(angle);
-				float r = 0.8f + 0.2f * ( float(rand()) / float(RAND_MAX) );
-				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r }); //, .posZ = 0.5f, .padding = 0.0f });
-				modelIndices.emplace_back(startIndex);
-				modelIndices.emplace_back(( i + 1 ) % AsteroidCorners + startIndex);
-				modelIndices.emplace_back(( i + 2 ) % AsteroidCorners + startIndex);
-			}
+				float r = 0.5f + 0.5f * ( float(rand()) / float(RAND_MAX) );
 
-			modelIndices.emplace_back(startIndex);
-			modelIndices.emplace_back(AsteroidCorners - 1u + startIndex);
-			modelIndices.emplace_back(1u + startIndex);
+				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
+
+				model.modelIndices.emplace_back(0u);
+				model.modelIndices.emplace_back(( i + 0 ) % AsteroidCorners + 1);
+				model.modelIndices.emplace_back(( i + 1 ) % AsteroidCorners + 1);
+			}
 		}
 
+		// Bullets
+		{
+			static constexpr uint32_t BulletCorners = 16u;
+
+			uint32_t startVertex = uint32_t(vertices.size());
+			entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
+			EntityModel &model = entityModels.back();
+
+			vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 0.0f });
+			for (uint32_t i = 0; i < BulletCorners; ++i)
+			{
+				float angle = -float(i) * float(2.0f * PI) / float(BulletCorners);
+				float x = cos(angle);
+				float y = sin(angle);
+				float r = 1.0f;
+
+				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
+
+				model.modelIndices.emplace_back(0u);
+				model.modelIndices.emplace_back(( i + 0 ) % BulletCorners + 1);
+				model.modelIndices.emplace_back(( i + 1 ) % BulletCorners + 1);
+			}
+		}
+
+
+		u32 offset = 0u;
+		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) vertices.data(), size_t(sizeof(GpuModelVertex) * vertices.size()), offset);
+		uploadScratchBufferToGpuBuffer(deviceWithQueues.device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
+			buffers[ MODEL_VERTICES_BUFFER ], buffers[ SCRATCH_BUFFER ], offset);
+
+	}
+
+
+	// Create instances.
+	{
+		// Player instance.
 		{
 			float xPos = 200.0f;
 			float yPos = 200.0f;
 			float size = 10.0f;
-			entities.emplace_back(Entity{ .posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f, .speedX = 0.0f, .speedY = 0.0f, .size = size, .padding = 0.0f });
+			uint32_t modelIndex = 0u;
 
-			/*
-					modelInstances.emplace_back(GpuModelInstance{ .posX = xPos, .posY = yPos,
-						//.posZ = 0.0f, .rotation = 0.0f,
-						.sinRotation = 0.0f, .cosRotation = 0.0f,
-						.color = core::getColor(1.0f, 1.0f, 0.0f, 1.0f), .size = size,
-						.modelVertexStartIndex = uint32_t(vertices.size()), .modelIndiceCount = 3 });
-			*/
-			modelInstances.emplace_back(GpuModelInstance{ .pos = getPackedPosition(xPos, yPos),
-				.sinCosRotSize = getPackedSizeRot(size, 0.0f),
-				.color = core::getColor(1.0, 1.0, 0.0, 1.0f),
-				.modelVertexStartIndex = uint32_t(vertices.size()) });
+			playerEntity = ( Entity{
+				.posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
+				.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
+				.color = core::getColor(1.0, 1.0, 0.0, 1.0f) } );
+		}
+		// Asteroid instances.
+		for (uint32_t asteroidInstances = 0u; asteroidInstances < 256; ++asteroidInstances)
+		{
+			float xPos = float(rand()) / float(RAND_MAX) * 4096.0f;
+			float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
+			float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
 
-			vertices.emplace_back(GpuModelVertex{ .posX = -1.0f, .posY = -1.0f }); //, .posZ = 0.5f, .padding = 0.0f });
-			vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 1.5f });//, .posZ = 0.5f, .padding = 0.0f });
-			vertices.emplace_back(GpuModelVertex{ .posX = 1.0f, .posY = -1.0f });//, .posZ = 0.5f, .padding = 0.0f });
-			uint32_t startIndex = AsteroidMaxTypes << 8u;
-			modelIndices.emplace_back(0 + startIndex);
-			modelIndices.emplace_back(1 + startIndex);
-			modelIndices.emplace_back(2 + startIndex);
+			uint32_t modelIndex = ( std::abs(rand()) % AsteroidMaxTypes ) + 1u;
+			
+			asteroidEntities.emplace_back(Entity{
+				.posX = xPos, .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
+				.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
+				.color = core::getColor(0.5, 0.5, 0.5, 1.0f) });
+		}
+		{
+			// Bullets?
 		}
 
-		u32 offset = 0u;
-		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) modelIndices.data(), size_t(sizeof(uint32_t) * modelIndices.size()), offset);
-		uploadScratchBufferToGpuBuffer(deviceWithQueues.device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-									   buffers[ INDEX_DATA_BUFFER_MODELS ], buffers[ SCRATCH_BUFFER ], offset);
-
 	}
 
 
-	{
-		// Bullets?
-	}
 
 
 	////////////////////////
@@ -671,7 +753,6 @@ void VulkanTest::run()
 		core::MouseState mouseState = getMouseState();
 
 		{
-			Entity &playerEntity = entities[ AsteroidMaxTypes ];
 			Timer updateDurTimer;
 			float dtSplit = dt;
 			{
@@ -735,18 +816,24 @@ void VulkanTest::run()
 				{
 					playerEntity.posY += windowHeight;
 				}
-
-				for (uint32_t i = 0; i < modelInstances.size(); ++i)
-				{
-					modelInstances[ i ].pos = getPackedPosition(entities[ i ].posX, entities[ i ].posY);
-					modelInstances[ i ].sinCosRotSize = getPackedSizeRot(entities[ i ].size, entities[ i ].rotation);
-				}
 			}
 			float updateDur = float(updateDurTimer.getDuration());
 		}
 
-		ASSERT(vertData.size() * sizeof(GPUVertexData) < buffers[ QUAD_BUFFER ].size);
+		ASSERT(textVertData.size() * sizeof(GPUTextVertexData) < buffers[ QUAD_BUFFER ].size);
 
+		// This could be moved to be done in gpu compute shader (and probably should be, could also include culling). Then using indirect drawing to render the stuff out, instead of
+		// building the index buffer every frame on cpu then copying it on gpu. The instance buffer could be used to update the data more smartly perhaps? But just easy way out.
+
+		{
+			gpuModelIndices.clear();
+			gpuModelInstances.clear();
+
+			updateGpuEntity(playerEntity, entityModels, gpuModelInstances, gpuModelIndices);
+			updateGpuEntities(asteroidEntities, entityModels, gpuModelInstances, gpuModelIndices);
+
+			ASSERT(gpuModelInstances.size() < ( 1 << 16u ));
+		}
 
 		////////////////////////
 		//
@@ -774,17 +861,17 @@ void VulkanTest::run()
 				};
 				Buff buff{ float(swapchain.width), float(swapchain.height) };
 				// use scratch buffer to unifrom buffer transfer
-				uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
+				uint32_t textVertDataSize = uint32_t(textVertData.size() * sizeof(GPUTextVertexData));
 				uint32_t buffSize = uint32_t(sizeof(Buff));
-				uint32_t instanceBuffserSize = uint32_t(modelInstances.size() * sizeof(GpuModelInstance));
-				uint32_t modelVertexSize = uint32_t(vertices.size() * sizeof(GpuModelVertex));
+				uint32_t instanceBuffserSize = uint32_t(gpuModelInstances.size() * sizeof(GpuModelInstance));
+				uint32_t modelIndicesSize = uint32_t(gpuModelIndices.size() * sizeof(uint32_t));
 
-				u32 memOffsets[] = { buffSize, buffSize + vertDataSize, buffSize + vertDataSize + instanceBuffserSize, modelVertexSize };
+				u32 memOffsets[] = { buffSize, buffSize + textVertDataSize, buffSize + textVertDataSize + instanceBuffserSize, modelIndicesSize };
 
 				memcpy(buffers[ SCRATCH_BUFFER ].data, &buff, buffSize);
-				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[0] ), vertData.data(), vertDataSize);
-				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[1] ), modelInstances.data(), instanceBuffserSize);
-				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[2] ), vertices.data(), modelVertexSize);
+				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[0] ), textVertData.data(), textVertDataSize);
+				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[1] ), gpuModelInstances.data(), instanceBuffserSize);
+				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[2] ), gpuModelIndices.data(), modelIndicesSize);
 
 
 				{
@@ -793,7 +880,7 @@ void VulkanTest::run()
 				}
 				
 				{
-					VkBufferCopy region = { memOffsets[0], 0, VkDeviceSize(vertDataSize) };
+					VkBufferCopy region = { memOffsets[0], 0, VkDeviceSize(textVertDataSize) };
 					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
 				}
 				{
@@ -801,16 +888,16 @@ void VulkanTest::run()
 					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ INSTANCE_BUFFER ].buffer, 1, &region);
 				}
 				{
-					VkBufferCopy region = { memOffsets[ 2 ], 0, VkDeviceSize(modelVertexSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ MODEL_VERTICES_BUFFER ].buffer, 1, &region);
+					VkBufferCopy region = { memOffsets[ 2 ], 0, VkDeviceSize( modelIndicesSize) };
+					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, 1, &region);
 				}
 
 				VkBufferMemoryBarrier bar[]
 				{
 					bufferBarrier(buffers[ UNIFORM_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-					bufferBarrier(buffers[ QUAD_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
+					bufferBarrier(buffers[ QUAD_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, textVertDataSize),
 					bufferBarrier(buffers[ INSTANCE_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, instanceBuffserSize),
-					bufferBarrier(buffers[ MODEL_VERTICES_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, modelVertexSize),
+					bufferBarrier(buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, modelIndicesSize),
 				};
 
 				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -870,13 +957,13 @@ void VulkanTest::run()
 			{
 				bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE_MODELS ]);
 				vkCmdBindIndexBuffer(commandBuffer, buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, uint32_t(modelIndices.size()), 1, 0, 0, 0);
+				vkCmdDrawIndexed(commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
 			
 			}
 			{
 				bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE_QUADS ]);
 				vkCmdBindIndexBuffer(commandBuffer, buffers[ INDEX_DATA_BUFFER ].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
+				vkCmdDrawIndexed(commandBuffer, uint32_t(textVertData.size() * 6), 1, 0, 0, 0);
 
 			}
 			vkCmdEndRenderPass(commandBuffer);
