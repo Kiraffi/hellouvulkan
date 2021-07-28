@@ -2,6 +2,27 @@
   "configurations": [
     {
       "name": "x64-Debug",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "ctestCommandArgs": "",
+      "cwd": "$(ProjectDir)/../../../../",
+      "currentDir": "$(ProjectDir)/../../../../",
+      "variables": [
+        {
+          "name": "GLFW_INSTALL",
+          "value": "True",
+          "type": "BOOL",
+          "cwd": "$(ProjectDir)/../../../../",
+          "currentDir": "$(ProjectDir)/../../../../"
+        }
+      ]
+    },
+    {
+      "name": "x64-Debug-ninja",
       "generator": "Ninja",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
@@ -10,12 +31,15 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
+      "cwd": "${projectDir}",
+      "currentDir": "${projectDir}",
       "variables": [
         {
           "name": "GLFW_INSTALL",
           "value": "True",
           "type": "BOOL",
-          "currentDir": "${workspaceRoot}"
+          "cwd": "${projectDir}",
+          "currentDir": "${projectDir}"
         }
       ]
     },
@@ -29,12 +53,15 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
+      "cwd": "${projectDir}",
+      "currentDir": "${projectDir}",
       "variables": [
         {
           "name": "GLFW_INSTALL",
           "value": "True",
           "type": "BOOL",
-          "currentDir": "${workspaceRoot}"
+          "cwd": "${projectDir}",
+          "currentDir": "${projectDir}"
         }
       ]
     }

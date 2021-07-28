@@ -272,9 +272,9 @@ void destroyBuffer(VkDevice device, Buffer &buffer)
 	vkDestroyBuffer(device, buffer.buffer, nullptr);
 	vkFreeMemory(device, buffer.deviceMemory, nullptr);
 
-	buffer.buffer = nullptr;
+	buffer.buffer = 0;
 	buffer.data = nullptr;
-	buffer.deviceMemory = nullptr;
+	buffer.deviceMemory = 0;
 	buffer.size = 0ll;
 }
 
@@ -291,7 +291,7 @@ VkFramebuffer createFramebuffer(VkDevice device, VkRenderPass renderPass,
 	createInfo.width = width;
 	createInfo.height = height;
 
-	VkFramebuffer framebuffer = nullptr;
+	VkFramebuffer framebuffer = 0;
 	VK_CHECK(vkCreateFramebuffer(device, &createInfo, nullptr, &framebuffer));
 	return framebuffer;
 }
@@ -323,7 +323,7 @@ VkImageView createImageView(VkDevice device, VkImage image, VkFormat format)
 	createInfo.subresourceRange.layerCount = 1;
 
 
-	VkImageView view = nullptr;
+	VkImageView view = 0;
 	VK_CHECK(vkCreateImageView(device, &createInfo, nullptr, &view));
 
 	ASSERT(view);

@@ -185,7 +185,7 @@ public:
 
 	PipelineWithDescriptors pipelinesWithDescriptors[NUM_PIPELINE];
 
-	VkSampler mainImageComputeWriteSampler = nullptr; // can write without sampler?
+	VkSampler mainImageComputeWriteSampler = 0; // can write without sampler?
 
 	MeshDatas meshData;
 	MeshTypeData meshTypeData[NUM_MESH_TYPES];

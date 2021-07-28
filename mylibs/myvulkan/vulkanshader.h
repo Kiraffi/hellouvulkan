@@ -24,21 +24,21 @@ struct Pipeline
 
 struct DescriptorSet
 {
-	VkShaderStageFlags stage;
+	VkShaderStageFlags stage = 0;
 	VkDescriptorType descriptorType;
-	u32 bindingIndex;
-	bool writeDescriptor;
-	Buffer *buffer;
-	VkImage image;
-	VkImageView imageView;
-	VkSampler sampler;
+	u32 bindingIndex = ~0u;
+	bool writeDescriptor = true;
+	Buffer *buffer = nullptr;
+	VkImage image = 0;
+	VkImageView imageView = 0;
+	VkSampler sampler = 0;
 	VkImageLayout layout;
 };
 
 struct Descriptor
 {
-	VkDescriptorSet descriptorSet = nullptr;
-	VkDescriptorPool pool = nullptr;
+	VkDescriptorSet descriptorSet = 0;
+	VkDescriptorPool pool = 0;
 };
 
 struct DescriptorInfo

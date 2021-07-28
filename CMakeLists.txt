@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
 
-set(OpenGL_GL_PREFERENCE "GLVND")
+#set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
 
 if (UNIX)
@@ -35,8 +35,6 @@ file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DI
     #${SHADER_DIR}/*.geom ${SHADER_DIR}/*.tesc ${SHADER_DIR}/*.tese ${SHADER_DIR}/*.mesh ${SHADER_DIR}/*.task ${SHADER_DIR}/*.rgen ${SHADER_DIR}/*.rchit ${SHADER_DIR}/*.rmiss
     )
 
-find_package(Vulkan)
-
 foreach(SHADER IN LISTS SPV_SHADERS)
     get_filename_component(FILENAME ${SHADER} NAME)
 	message(STATUS "Compiling ${SHADER}")
@@ -44,7 +42,6 @@ foreach(SHADER IN LISTS SPV_SHADERS)
 endForeach() 
  
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
-
 
 #set(SHOW_VARIABLES true)
 if (SHOW_VARIABLES)
@@ -59,17 +56,20 @@ endif (SHOW_VARIABLES)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs")
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "Build the GLFW test programs")
 
+ADD_DEFINITIONS(-DSHOW_INFO_MESSAGES=0)
+ADD_DEFINITIONS(-DVSYNC=1)
+ADD_DEFINITIONS(-DDISCRETE_GPU=0)
+
 #add_subdirectory("externallibs")
 add_subdirectory("external/glfw-3.3.4")
 add_subdirectory("external/meshoptimizer")
 add_subdirectory("mylibs")
 add_subdirectory("external")
-#add_subdirectory ("font_draw")
-#add_subdirectory ("font_render")
-#add_subdirectory ("space_shooter")
+
 add_subdirectory ("font_draw_vulkan")
 add_subdirectory ("font_render_vulkan")
 add_subdirectory ("space_shooter_vulkan")
 add_subdirectory ("vulkan_test")
+add_subdirectory ("draw_stuff_vulkan")
 
-
+ 

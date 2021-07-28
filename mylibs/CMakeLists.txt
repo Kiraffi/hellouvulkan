@@ -30,11 +30,9 @@ add_library(MyLibraries
 
 target_include_directories(MyLibraries PUBLIC 
 	"${CMAKE_CURRENT_SOURCE_DIR}/"	
-	${CMAKE_DL_LIBS}
-	#${SDL2_LIBRARY}
-	#-lSDL2
-	Vulkan::Vulkan
-	glfw
+	"${CMAKE_DL_LIBS}"
+	"Vulkan::Vulkan"
+	"glfw"
 	"math/vector3.h"
 	"math/general_math.h"
 	"math/quaternion.h"
@@ -45,5 +43,4 @@ target_include_directories(MyLibraries PUBLIC
 
 	${VULKAN_INCLUDE_DIR}
 	${VULKAN_INCLUDE_DIRS}
-	"C:/VulkanSDK/1.2.176.1/Include"
 	)

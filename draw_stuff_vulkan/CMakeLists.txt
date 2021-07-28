@@ -5,16 +5,16 @@ cmake_minimum_required (VERSION 3.15)
 
 
 # Add source to this project's executable.
-add_executable (space_shooter_vulkan "src/main_space_shooter_vulkan.cpp")
-	
-add_dependencies(space_shooter_vulkan shaders)
+add_executable (draw_stuff_vulkan "src/main_draw_stuff_vulkan.cpp" ${SPV_SHADERS})
 
-target_link_libraries(space_shooter_vulkan PUBLIC 
-	glfw
+add_dependencies(draw_stuff_vulkan shaders)
+
+target_link_libraries(draw_stuff_vulkan PUBLIC 
+	glfw 
+	MyGlad 
+	MyLibraries
 	${CMAKE_DL_LIBS} 
 	${GLFW_LIBRARIES} 
-	MyGlad
-	MyLibraries
 	Vulkan::Vulkan
 	meshoptimizer
 	MyGlad

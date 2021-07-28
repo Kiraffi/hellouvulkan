@@ -9,10 +9,10 @@ add_executable (font_render_vulkan "src/main_font_renderer_vulkan.cpp")
 
 add_dependencies(font_render_vulkan shaders)
 
-target_link_libraries(font_render_vulkan PRIVATE MyGlad MyLibraries)
-# TODO: Add tests and install targets if needed.
 target_link_libraries(font_render_vulkan PUBLIC 
 	glfw 
+	MyGlad 
+	MyLibraries
 	${CMAKE_DL_LIBS} 
 	${GLFW_LIBRARIES} 
 	Vulkan::Vulkan

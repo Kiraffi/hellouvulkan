@@ -9,16 +9,16 @@ struct Buffer
 	// cpu mapped memory for cpu accessbuffers
 	void *data = nullptr;
 	const char *bufferName;
-	VkDeviceMemory deviceMemory = nullptr;
-	VkBuffer buffer = nullptr;
+	VkDeviceMemory deviceMemory = 0;
+	VkBuffer buffer = 0;
 	size_t size = 0ull;
 };
 
 struct Image
 {
-	VkImage image = nullptr;
-	VkImageView imageView = nullptr;
-	VkDeviceMemory deviceMemory = nullptr;
+	VkImage image = 0;
+	VkImageView imageView = 0;
+	VkDeviceMemory deviceMemory = 0;
 	const char *imageName;
 	VkAccessFlags accessMask = 0;
 	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;

@@ -5,6 +5,10 @@
 #include <vector>
 
 #include <core/mytypes.h>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 #include "vulkanresource.h"
 
 static VkDescriptorSetLayout createSetLayout(VkDevice device, const std::vector<DescriptorSet> &descriptors)
@@ -24,7 +28,7 @@ static VkDescriptorSetLayout createSetLayout(VkDevice device, const std::vector<
 	createInfo.bindingCount = u32(setBindings.size());
 	createInfo.pBindings = setBindings.data();
 
-	VkDescriptorSetLayout setLayout = nullptr;
+	VkDescriptorSetLayout setLayout = 0;
 	VK_CHECK(vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &setLayout));
 	ASSERT(setLayout);
 	return setLayout;
@@ -32,7 +36,7 @@ static VkDescriptorSetLayout createSetLayout(VkDevice device, const std::vector<
 
 static Pipeline createPipelineLayout(VkDevice device, const std::vector<DescriptorSet> &descriptors, size_t pushConstantSize, VkShaderStageFlagBits pushConstantStage)
 {
-	VkDescriptorSetLayout setLayout = nullptr;
+	VkDescriptorSetLayout setLayout = 0;
 	VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
 	if(descriptors.size() > 0)
@@ -52,7 +56,7 @@ static Pipeline createPipelineLayout(VkDevice device, const std::vector<Descript
 		createInfo.pPushConstantRanges = &pushConstantRange;
 	}
 
-	VkPipelineLayout layout = nullptr;
+	VkPipelineLayout layout = 0;
 	VK_CHECK(vkCreatePipelineLayout(device, &createInfo, nullptr, &layout));
 	ASSERT(layout);
 
@@ -93,7 +97,7 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 	allocInfo.descriptorSetCount = 1u;
 	allocInfo.pSetLayouts = &descriptorSetLayout;
 
-	VkDescriptorSet descriptorSet = nullptr;
+	VkDescriptorSet descriptorSet = 0;
 	VK_CHECK(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
 	ASSERT(descriptorSet);
 
@@ -167,8 +171,8 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 void destroyDescriptor(VkDevice device, Descriptor &descriptor)
 {
 	vkDestroyDescriptorPool(device, descriptor.pool, nullptr);
-	descriptor.pool = nullptr;
-	descriptor.descriptorSet = nullptr;
+	descriptor.pool = 0;
+	descriptor.descriptorSet = 0;
 }
 
 
@@ -410,7 +414,7 @@ Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipe
 	createInfo.layout = result.pipelineLayout;
 	createInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	VkPipeline pipeline = nullptr;
+	VkPipeline pipeline = 0;
  	VK_CHECK(vkCreateGraphicsPipelines(device, cache, 1, &createInfo, nullptr, &pipeline));
 	ASSERT(pipeline);
 
@@ -435,7 +439,7 @@ Pipeline createComputePipeline(VkDevice device, VkPipelineCache cache, VkShaderM
 	createInfo.stage = stageInfo;
 	createInfo.layout = result.pipelineLayout;
 
-	VkPipeline pipeline = nullptr;
+	VkPipeline pipeline = 0;
 	VK_CHECK(vkCreateComputePipelines(device, cache, 1, &createInfo, nullptr, &pipeline ));
 	ASSERT(pipeline);
 
@@ -462,6 +466,9 @@ void destroyPipeline(VkDevice device, Pipeline &pipeline)
 VkShaderModule loadShader(VkDevice device, const char *path)
 {
 #ifdef _WIN32
+	char buf[1024] = {};
+	GetCurrentDirectory(1024, buf);
+	LOG("Buf: %s\n", buf);
 	FILE* file = nullptr;
 	fopen_s(&file, path, "rb");
 #else
@@ -486,7 +493,7 @@ VkShaderModule loadShader(VkDevice device, const char *path)
 	VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 	createInfo.codeSize = length;
 	createInfo.pCode = reinterpret_cast<u32 *>(buffer);
-	VkShaderModule shaderModule = nullptr;
+	VkShaderModule shaderModule = 0;
 	vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
 
 	delete[] buffer;

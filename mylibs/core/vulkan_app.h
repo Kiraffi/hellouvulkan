@@ -76,32 +76,32 @@ public:
 	double dt = 0.0;
 	uint32_t imageIndex = 0u;
 
-	VkDebugUtilsMessengerEXT debugCallBack = nullptr;
+	VkDebugUtilsMessengerEXT debugCallBack = 0;
 
-	VkInstance instance = nullptr;
-	VkSurfaceKHR surface = nullptr;
-	VkPhysicalDevice physicalDevice = nullptr;
+	VkInstance instance = 0;
+	VkSurfaceKHR surface = 0;
+	VkPhysicalDevice physicalDevice = 0;
 
 	DeviceWithQueues deviceWithQueues;
 
-	VkRenderPass renderPass = nullptr;
+	VkRenderPass renderPass = 0;
 
 	SwapChain swapchain;
 
-	VkQueryPool queryPool = nullptr;
+	VkQueryPool queryPool = 0;
 
-	VkSemaphore acquireSemaphore = nullptr;
-	VkSemaphore releaseSemaphore = nullptr;
+	VkSemaphore acquireSemaphore = 0;
+	VkSemaphore releaseSemaphore = 0;
 
-	VkFence fence = nullptr;
+	VkFence fence = 0;
 
-	VkCommandPool commandPool = nullptr;
+	VkCommandPool commandPool = 0;
 
-	VkCommandBuffer commandBuffer = nullptr;
-	VkFramebuffer targetFB = nullptr;
+	VkCommandBuffer commandBuffer = 0;
+	VkFramebuffer targetFB = 0;
 
 
-	VkPipelineCache pipelineCache = nullptr;
+	VkPipelineCache pipelineCache = 0;
 };
 
 };

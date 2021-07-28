@@ -99,7 +99,7 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
 
-	VkSwapchainKHR swapChain = nullptr;
+	VkSwapchainKHR swapChain = 0;
 	VK_CHECK(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain));
 
 	return swapChain;

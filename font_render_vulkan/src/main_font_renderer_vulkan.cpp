@@ -4,6 +4,7 @@
 // memcpy...
 #include <string.h>
 
+#include <core/timer.h>
 #include <core/general.h>
 
 #define GLFW_INCLUDE_VULKAN
@@ -133,7 +134,7 @@ public:
 
 	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
 
-	VkSampler textureSampler = nullptr;
+	VkSampler textureSampler = 0;
 };
 
 

@@ -26,7 +26,7 @@ static void bindPipelineWithDecriptors(VkCommandBuffer cmdBuffer, VkPipelineBind
 
 static VkSemaphore createSemaphore(VkDevice device)
 {
-	VkSemaphore semaphore = nullptr;
+	VkSemaphore semaphore = 0;
 	VkSemaphoreCreateInfo semaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
 	VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphore));
@@ -39,7 +39,7 @@ static VkCommandPool createCommandPool(VkDevice device, u32 familyIndex)
 	poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 	poolCreateInfo.queueFamilyIndex = familyIndex;
 
-	VkCommandPool commandPool = nullptr;
+	VkCommandPool commandPool = 0;
 	VK_CHECK(vkCreateCommandPool(device, &poolCreateInfo, nullptr, &commandPool));
 
 	return commandPool;
@@ -83,7 +83,7 @@ static VkRenderPass createRenderPass(VkDevice device, VkFormat colorFormat, VkFo
 	createInfo.subpassCount = 1;
 	createInfo.pSubpasses = &subpass;
 
-	VkRenderPass renderPass = nullptr;
+	VkRenderPass renderPass = 0;
 
 	VK_CHECK(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass));
 	return renderPass;
@@ -98,7 +98,7 @@ static VkQueryPool createQueryPool(VkDevice device, u32 queryCount)
 	createInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 	createInfo.queryCount = queryCount;
 
-	VkQueryPool pool = nullptr;
+	VkQueryPool pool = 0;
 	VK_CHECK(vkCreateQueryPool(device, &createInfo, nullptr, &pool));
 
 	ASSERT(pool);
@@ -111,7 +111,7 @@ static VkFence createFence(VkDevice device)
 	VkFenceCreateInfo createInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 	createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	VkFence result = nullptr;
+	VkFence result = 0;
 	VK_CHECK(vkCreateFence(device, &createInfo, nullptr, &result));
 	ASSERT(result);
 	return result;

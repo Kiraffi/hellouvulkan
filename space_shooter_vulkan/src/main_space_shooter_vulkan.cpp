@@ -244,7 +244,7 @@ public:
 
 	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
 
-	VkSampler textureSampler = nullptr;
+	VkSampler textureSampler = 0;
 
 	std::string fontFilename;
 };
@@ -1091,7 +1091,7 @@ void VulkanTest::run()
 			gpuTime = 0.0;
 		}
 
-
+		// causes 16ms frames at times?
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 	}
