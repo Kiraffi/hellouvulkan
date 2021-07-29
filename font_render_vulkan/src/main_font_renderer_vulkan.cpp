@@ -98,7 +98,6 @@ enum RenderTargetImageIndexes
 
 enum BufferIndexes
 {
-	SCRATCH_BUFFER,
 	UNIFORM_BUFFER,
 	UNIFORM_BUFFER2,
 
@@ -191,11 +190,6 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 	VkPhysicalDeviceMemoryProperties memoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-
-	buffers[ SCRATCH_BUFFER ] = createBuffer(device, memoryProperties, 64 * 1024 * 1024,
-											   VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-											   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
-
 	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024,
 											   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 											   //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
@@ -209,8 +203,6 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 	buffers[ INDEX_DATA_BUFFER ] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
 												  VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 												  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
-
-	setObjectName(device, ( uint64_t ) commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
 
 	// Random tag data
 	//struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
@@ -231,9 +223,9 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 			indices[ size_t(i) * 6 + 4 ] = i * 4 + 2;
 			indices[ size_t(i) * 6 + 5 ] = i * 4 + 3;
 		}
-		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
+		offset = uploadToScratchbuffer(scratchBuffer, ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-									   buffers[ INDEX_DATA_BUFFER ], buffers[ SCRATCH_BUFFER ], offset);
+									   buffers[ INDEX_DATA_BUFFER ], scratchBuffer, offset);
 	}
 	return true;
 }
@@ -348,7 +340,7 @@ bool VulkanFontRender::initApp(const std::string &fontFilename)
 		
 		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
 			textureWidth, textureHeight, 4u,
-			buffers[ SCRATCH_BUFFER ], textImage,
+			scratchBuffer, textImage,
 			 (u32)fontPic.size(), ( void * ) fontPic.data());
 
 		VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -535,16 +527,16 @@ void VulkanFontRender::run()
 				// use scratch buffer to unifrom buffer transfer
 				uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
 				uint32_t buffSize = uint32_t(sizeof(Buff));
-				memcpy(buffers[ SCRATCH_BUFFER ].data, &buff, buffSize);
-				memcpy((void *)((char *)buffers[ SCRATCH_BUFFER ].data + buffSize), vertData.data(), vertDataSize);
+				memcpy(scratchBuffer.data, &buff, buffSize);
+				memcpy((void *)((char *)scratchBuffer.data + buffSize), vertData.data(), vertDataSize);
 
 				{
 					VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
 				}
 				{
 					VkBufferCopy region = { buffSize, 0, VkDeviceSize(vertDataSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ UNIFORM_BUFFER2 ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER2 ].buffer, 1, &region);
 				}
 
 				VkBufferMemoryBarrier bar[]

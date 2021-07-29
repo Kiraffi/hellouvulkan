@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 
 #include <myvulkan/vulkandevice.h>
+#include <myvulkan/vulkanresource.h>
 #include <myvulkan/vulkanswapchain.h>
 
 constexpr u32 QUERY_COUNT = 128u;
@@ -71,7 +72,7 @@ public:
 	uint32_t bufferedPresses[ 128 ] = {};
 	uint32_t bufferedPressesCount = 0u;
 
-public:
+protected:
 	Timer timer;
 	double dt = 0.0;
 	uint32_t imageIndex = 0u;
@@ -83,6 +84,8 @@ public:
 	VkPhysicalDevice physicalDevice = 0;
 
 	DeviceWithQueues deviceWithQueues;
+
+	Buffer scratchBuffer;
 
 	VkRenderPass renderPass = 0;
 

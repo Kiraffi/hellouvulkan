@@ -203,7 +203,6 @@ enum RenderTargetImageIndexes
 
 enum BufferIndexes
 {
-	SCRATCH_BUFFER,
 	UNIFORM_BUFFER,
 	QUAD_BUFFER,
 
@@ -299,7 +298,7 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 
 		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
 							textureWidth, textureHeight, 4u,
-							buffers[ SCRATCH_BUFFER ], textImage,
+							scratchBuffer, textImage,
 							( u32 ) fontPic.size(), ( void * ) fontPic.data());
 
 		VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -365,10 +364,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
 
-	buffers[ SCRATCH_BUFFER ] = createBuffer(device, memoryProperties, 64 * 1024 * 1024,
-											 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-											 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
-
 	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024u,
 											 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 											 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
@@ -397,7 +392,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	
 
-	setObjectName(device, ( uint64_t ) commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
 
 	// Random tag data
 	//struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
@@ -418,9 +412,9 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 			indices[ size_t(i) * 6 + 4 ] = i * 4 + 2;
 			indices[ size_t(i) * 6 + 5 ] = i * 4 + 3;
 		}
-		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
+		offset = uploadToScratchbuffer(scratchBuffer, ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-									   buffers[ INDEX_DATA_BUFFER ], buffers[ SCRATCH_BUFFER ], offset);
+									   buffers[ INDEX_DATA_BUFFER ], scratchBuffer, offset);
 	}
 	return true;
 }
@@ -680,9 +674,9 @@ void VulkanTest::run()
 
 
 		u32 offset = 0u;
-		offset = uploadToScratchbuffer(buffers[ SCRATCH_BUFFER ], ( void * ) vertices.data(), size_t(sizeof(GpuModelVertex) * vertices.size()), offset);
+		offset = uploadToScratchbuffer(scratchBuffer, ( void * ) vertices.data(), size_t(sizeof(GpuModelVertex) * vertices.size()), offset);
 		uploadScratchBufferToGpuBuffer(deviceWithQueues.device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers[ MODEL_VERTICES_BUFFER ], buffers[ SCRATCH_BUFFER ], offset);
+			buffers[ MODEL_VERTICES_BUFFER ], scratchBuffer, offset);
 
 	}
 
@@ -938,28 +932,28 @@ void VulkanTest::run()
 
 				u32 memOffsets[] = { buffSize, buffSize + textVertDataSize, buffSize + textVertDataSize + instanceBuffserSize, modelIndicesSize };
 
-				memcpy(buffers[ SCRATCH_BUFFER ].data, &buff, buffSize);
-				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[0] ), textVertData.data(), textVertDataSize);
-				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[1] ), gpuModelInstances.data(), instanceBuffserSize);
-				memcpy(( void * ) ( ( char * ) buffers[ SCRATCH_BUFFER ].data + memOffsets[2] ), gpuModelIndices.data(), modelIndicesSize);
+				memcpy(scratchBuffer.data, &buff, buffSize);
+				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[0] ), textVertData.data(), textVertDataSize);
+				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[1] ), gpuModelInstances.data(), instanceBuffserSize);
+				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[2] ), gpuModelIndices.data(), modelIndicesSize);
 
 
 				{
 					VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
 				}
 				
 				{
 					VkBufferCopy region = { memOffsets[0], 0, VkDeviceSize(textVertDataSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
 				}
 				{
 					VkBufferCopy region = { memOffsets[ 1 ], 0, VkDeviceSize(instanceBuffserSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ INSTANCE_BUFFER ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ INSTANCE_BUFFER ].buffer, 1, &region);
 				}
 				{
 					VkBufferCopy region = { memOffsets[ 2 ], 0, VkDeviceSize( modelIndicesSize) };
-					vkCmdCopyBuffer(commandBuffer, buffers[ SCRATCH_BUFFER ].buffer, buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, 1, &region);
+					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, 1, &region);
 				}
 
 				VkBufferMemoryBarrier bar[]

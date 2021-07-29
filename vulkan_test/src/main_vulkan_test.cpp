@@ -131,7 +131,6 @@ enum PipelineWithDescriptorsIndexes
 
 enum BufferIndexes
 {
-	SCRATCH_BUFFER,
 	UNIFORM_BUFFER,
 
 	VERTEX_DATA_BUFFER,
@@ -312,10 +311,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
 
-	buffers[SCRATCH_BUFFER] = createBuffer(device, memoryProperties, 64 * 1024 * 1024,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
-
 	buffers[UNIFORM_BUFFER] = createBuffer(device, memoryProperties, 64u * 1024,
 		//VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
@@ -364,9 +359,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 
 
-
-	setObjectName(device, (uint64_t)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
-
 	// Random tag data
 	//struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
 	//setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
@@ -381,34 +373,34 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 		{
 			const Mesh& mesh = meshes[i];
 			meshTypeData[i].vertexStartIndex = u32(offset);
-			offset = uploadToScratchbuffer(buffers[SCRATCH_BUFFER], (void*)mesh.vertices.data(), size_t(sizeof(mesh.vertices[0]) * mesh.vertices.size()), offset);
+			offset = uploadToScratchbuffer(scratchBuffer, (void*)mesh.vertices.data(), size_t(sizeof(mesh.vertices[0]) * mesh.vertices.size()), offset);
 			meshTypeData[i].vertexAmount = u32(mesh.vertices.size());
 		}
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers[VERTEX_DATA_BUFFER], buffers[SCRATCH_BUFFER], offset);
+			buffers[VERTEX_DATA_BUFFER], scratchBuffer, offset);
 
 		offset = 0;
 		for (u32 i = 0; i < NUM_MESH_TYPES; ++i)
 		{
 			const Mesh& mesh = meshes[i];
 			meshTypeData[i].indiceStartIndex = u32(offset);
-			offset = uploadToScratchbuffer(buffers[SCRATCH_BUFFER], (void*)mesh.indices.data(), size_t(sizeof(mesh.indices[0]) * mesh.indices.size()), offset);
+			offset = uploadToScratchbuffer(scratchBuffer, (void*)mesh.indices.data(), size_t(sizeof(mesh.indices[0]) * mesh.indices.size()), offset);
 			meshTypeData[i].indiceAmount = u32(mesh.indices.size());
 		}
 
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers[INDEX_DATA_BUFFER], buffers[SCRATCH_BUFFER], offset);
+			buffers[INDEX_DATA_BUFFER], scratchBuffer, offset);
 
 		offset = 0;
 		for (u32 i = 0; i < NUM_MESH_TYPES; ++i)
 		{
 			const Mesh& mesh = meshes[i];
 			meshTypeData[i].meshletStartIndex = u32(offset);
-			offset = uploadToScratchbuffer(buffers[SCRATCH_BUFFER], (void*)mesh.meshlets.data(), size_t(sizeof(mesh.meshlets[0]) * mesh.meshlets.size()), offset);
+			offset = uploadToScratchbuffer(scratchBuffer, (void*)mesh.meshlets.data(), size_t(sizeof(mesh.meshlets[0]) * mesh.meshlets.size()), offset);
 			meshTypeData[i].meshletAmount = u32(mesh.meshlets.size());
 		}
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers[MESHLET_DATA_BUFFER], buffers[SCRATCH_BUFFER], offset);
+			buffers[MESHLET_DATA_BUFFER], scratchBuffer, offset);
 	}
 
 
@@ -421,11 +413,11 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 			meshTypeIndexes[i] = u32(rand()) % NUM_MESH_TYPES;
 		}
 
-		offset = uploadToScratchbuffer(buffers[SCRATCH_BUFFER], (void*)meshTypeData, size_t(sizeof(meshTypeData)), 0);
-		offset = uploadToScratchbuffer(buffers[SCRATCH_BUFFER], (void*)meshTypeIndexes.data(), u32(meshTypeIndexes.size() * sizeof(u32)), offset);
+		offset = uploadToScratchbuffer(scratchBuffer, (void*)meshTypeData, size_t(sizeof(meshTypeData)), 0);
+		offset = uploadToScratchbuffer(scratchBuffer, (void*)meshTypeIndexes.data(), u32(meshTypeIndexes.size() * sizeof(u32)), offset);
 
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers[MESH_INSTANCE_DATA_BUFFER], buffers[SCRATCH_BUFFER], offset);
+			buffers[MESH_INSTANCE_DATA_BUFFER], scratchBuffer, offset);
 	}
 
 
@@ -937,10 +929,10 @@ void VulkanTest::run()
 			// Copy to uniform buffer
 			{
 				// use scratch buffer to unifrom buffer transfer
-				memcpy(buffers[SCRATCH_BUFFER].data, &uniformValues, sizeof(UniformValues));
+				memcpy(scratchBuffer.data, &uniformValues, sizeof(UniformValues));
 
 				VkBufferCopy region = { 0, 0, VkDeviceSize(sizeof(UniformValues)) };
-				vkCmdCopyBuffer(commandBuffer, buffers[SCRATCH_BUFFER].buffer, buffers[UNIFORM_BUFFER].buffer, 1, &region);
+				vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[UNIFORM_BUFFER].buffer, 1, &region);
 
 				VkBufferMemoryBarrier copyBarrier = bufferBarrier(buffers[UNIFORM_BUFFER].buffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, sizeof(UniformValues));
 				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,

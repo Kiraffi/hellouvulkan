@@ -237,10 +237,23 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
+	{
+		VkPhysicalDeviceMemoryProperties memoryProperties;
+		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+
+		scratchBuffer = createBuffer(device, memoryProperties, 64 * 1024 * 1024,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
+
+	}
+	setObjectName(device, (uint64_t)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
 
 	// rdoc....
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 	//glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
+
+
 
 	return true;
 
@@ -251,6 +264,8 @@ VulkanApp::~VulkanApp()
 	VkDevice device = deviceWithQueues.device;
 	if(device)
 	{
+		destroyBuffer(device, scratchBuffer);
+
 		vkDestroyFramebuffer(device, targetFB, nullptr);
 
 		vkDestroyCommandPool(device, commandPool, nullptr);
