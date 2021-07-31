@@ -29,6 +29,8 @@
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
+#include "render/font_render.h"
+
 #include <chrono>
 #include <string>
 #include <thread>
@@ -39,27 +41,10 @@
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
-struct GPUVertexData
-{
-	float posX;
-	float posY;
-	uint16_t pixelSizeX;
-	uint16_t pixelSizeY;
-	uint32_t color;
-
-	float uvX;
-	float uvY;
-
-	float padding[2];
-};
-
 struct Cursor
 {
-	float xPos = 0.0f;
-	float yPos = 0.0f;
-
-	int charWidth = 8;
-	int charHeight = 12;
+	Vector2 pos{ 0.0f, 0.0f };
+	Vector2 charSize{ 8.0f, 12.0f };
 };
 
 
@@ -73,21 +58,6 @@ enum TIME_POINTS
 };
 
 
-// Probably not good in long run?
-enum PipelineWithDescriptorsIndexes
-{
-	PIPELINE_GRAPHICS_PIPELINE,
-	NUM_PIPELINE
-};
-
-enum ShaderModuleIndexes
-{
-	SHADER_MODULE_RENDER_QUAD_VERT,
-	SHADER_MODULE_RENDER_QUAD_FRAG,
-
-	NUM_SHADER_MODULES
-};
-
 enum RenderTargetImageIndexes
 {
 	MAIN_COLOR_TARGET,
@@ -95,17 +65,6 @@ enum RenderTargetImageIndexes
 
 	NUM_TARGET_IMAGES
 };
-
-enum BufferIndexes
-{
-	UNIFORM_BUFFER,
-	UNIFORM_BUFFER2,
-
-	INDEX_DATA_BUFFER,
-
-	NUM_BUFFERS
-};
-
 
 class VulkanFontRender : core::VulkanApp
 {
@@ -118,22 +77,10 @@ public:
 	virtual void recreateSwapchainData() override;
 
 	bool createGraphics();
-	bool createPipelines();
-
+	void updateText(std::string& str, Cursor& cursor);
 public:
-
-	VkShaderModule shaderModules[ NUM_SHADER_MODULES ] = {};
-	Buffer buffers[ NUM_BUFFERS ];
-
-	Image renderTargetImages[ NUM_TARGET_IMAGES ];
-
-	Image textImage;
-	std::vector<DescriptorSet> descriptorSets[ NUM_SHADER_MODULES ];
-
-
-	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
-
-	VkSampler textureSampler = 0;
+	FontRenderSystem fontSystem;
+	Image renderTargetImages[NUM_TARGET_IMAGES];
 };
 
 
@@ -147,26 +94,10 @@ VulkanFontRender::~VulkanFontRender()
 {
 	VkDevice device = deviceWithQueues.device;
 
+	fontSystem.deInit(device);
+
 	for (auto &image : renderTargetImages)
 		destroyImage(device, image);
-
-	destroyImage(device, textImage);
-
-	for (auto &pipeline : pipelinesWithDescriptors)
-	{
-		destroyDescriptor(device, pipeline.descriptor);
-		destroyPipeline(device, pipeline.pipeline);
-	}
-
-	
-	vkDestroySampler(device, textureSampler, nullptr);
-
-	for (auto &buffer : buffers)
-		destroyBuffer(device, buffer);
-
-	for (auto &shaderModule : shaderModules)
-		vkDestroyShaderModule(device, shaderModule, nullptr);
-
 }
 
 bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight)
@@ -175,58 +106,6 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-
-
-	VkDevice device = deviceWithQueues.device;
-
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.vert.spv");
-	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ]);
-
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.frag.spv");
-	ASSERT(shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ]);
-
-
-
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024,
-											   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-											   //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
-											   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
-
-	buffers[ UNIFORM_BUFFER2 ] = createBuffer(device, memoryProperties, 64u * 1024,
-												VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-												//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer2");
-
-	buffers[ INDEX_DATA_BUFFER ] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
-												  VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-												  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
-
-	// Random tag data
-	//struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
-	//setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
-
-
-	{
-		uint32_t offset = 0;
-		std::vector<uint32_t> indices;
-		indices.resize(6 * 10240);
-		for (int i = 0; i < 10240; ++i)
-		{
-			indices[ size_t(i) * 6 + 0 ] = i * 4 + 0;
-			indices[ size_t(i) * 6 + 1 ] = i * 4 + 1;
-			indices[ size_t(i) * 6 + 2 ] = i * 4 + 2;
-
-			indices[ size_t(i) * 6 + 3 ] = i * 4 + 0;
-			indices[ size_t(i) * 6 + 4 ] = i * 4 + 2;
-			indices[ size_t(i) * 6 + 5 ] = i * 4 + 3;
-		}
-		offset = uploadToScratchbuffer(scratchBuffer, ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
-		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-									   buffers[ INDEX_DATA_BUFFER ], scratchBuffer, offset);
-	}
 	return true;
 }
 
@@ -260,137 +139,31 @@ bool VulkanFontRender::createGraphics()
 	return true;
 }
 
-bool VulkanFontRender::createPipelines()
-{
-	VkDevice device = deviceWithQueues.device;
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-	//recreateSwapchainData();
-
-	PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE ];
-
-	pipeline.descriptorSet = std::vector<DescriptorSet>(
-		{
-			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
-			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &buffers[ UNIFORM_BUFFER2 ] },
-			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u, true, nullptr,
-				textImage.image, textImage.imageView, textureSampler, VK_IMAGE_LAYOUT_GENERAL},
-		});
-	VertexInput vertexInput;
-	pipeline.pipeline = createGraphicsPipeline(
-		device, renderPass, pipelineCache,
-		shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ],
-		shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ],
-		vertexInput, pipeline.descriptorSet, false,
-		0u, VK_SHADER_STAGE_ALL_GRAPHICS);
-	pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
-
-	return true;
-}
-
-
-
-
-
 bool VulkanFontRender::initApp(const std::string &fontFilename)
 {
-	std::vector<char> data;
-	if (!core::loadFontData(fontFilename, data))
-	{
-		printf("Failed to load file: %s\n", fontFilename.c_str());
-		return false;
-	}
+	VkDevice device = deviceWithQueues.device;
 
-	{
-		std::vector<uint8_t> fontPic;
-		fontPic.resize(( 128 - 32 ) * 8 * 12 * 4);
-
-		// Note save order is a bit messed up!!! Since the file has one char 8x12 then next
-		uint32_t index = 0;
-		for (int y = 11; y >= 0; --y)
-		{
-			for (int charIndex = 0; charIndex < 128 - 32; ++charIndex)
-			{
-				uint8_t p = data[ y + size_t(charIndex) * 12 ];
-				for (int x = 0; x < 8; ++x)
-				{
-					uint8_t bitColor = uint8_t(( p >> x ) & 1) * 255;
-					fontPic[ size_t(index) * 4 + 0 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 1 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 2 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 3 ] = bitColor;
-
-					++index;
-				}
-			}
-		}
-		const int textureWidth = 8 * ( 128 - 32 );
-		const int textureHeight = 12;
-
-		VkDevice device = deviceWithQueues.device;
-		VkPhysicalDeviceMemoryProperties memoryProperties;
-		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-
-		textImage = createImage(device,
-			deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-			textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-			"TextImage");
-		
-		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
-			textureWidth, textureHeight, 4u,
-			scratchBuffer, textImage,
-			 (u32)fontPic.size(), ( void * ) fontPic.data());
-
-		VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-
-		VK_CHECK(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
-	}
+	return fontSystem.init(fontFilename, device, physicalDevice, commandPool, commandBuffer, renderPass, pipelineCache,
+		deviceWithQueues, scratchBuffer);
 
 	return true;
 }
 
 
-
-static void addText(std::string &str, std::vector<GPUVertexData> &vertData, Cursor &cursor)
+void VulkanFontRender::updateText(std::string &str, Cursor &cursor)
 {
-	for(int i = 0; i < int(str.length()); ++i)
-	{
-		GPUVertexData vdata;
-		vdata.color = core::getColor(0.0f, 1.0f, 0.0f, 1.0f);
-		vdata.pixelSizeX = cursor.charWidth;
-		vdata.pixelSizeY = cursor.charHeight;
-		vdata.posX = cursor.xPos;
-		vdata.posY = cursor.yPos;
-
-		uint32_t letter = str[i] - 32;
-
-		vdata.uvX = float(letter) / float(128-32);
-		vdata.uvY = 0.0f;
-
-		vertData.emplace_back(vdata);
-
-		cursor.xPos += cursor.charWidth;
-	}
-
-}
-static void updateText(std::string &str, std::vector<GPUVertexData> &vertData, Cursor &cursor)
-{
-	cursor.xPos = 100.0f;
-	cursor.yPos = 400.0f;
+	cursor.pos.x = 100.0f;
+	cursor.pos.y = 400.0f;
 	std::string tmpStr = "w";
-	tmpStr += std::to_string(cursor.charWidth);
+	tmpStr += std::to_string(int32_t(cursor.charSize.x));
 	tmpStr += ",h";
-	tmpStr += std::to_string(cursor.charHeight);
-	vertData.clear();
-	addText(tmpStr, vertData, cursor);
+	tmpStr += std::to_string(int32_t(cursor.charSize.y));
 
-	cursor.xPos = 100.0f;
-	cursor.yPos = 100.0f;
-	addText(str, vertData, cursor);
+	fontSystem.addText(tmpStr, cursor.pos, cursor.charSize);
+
+	cursor.pos.x = 100.0f;
+	cursor.pos.y = 100.0f;
+	fontSystem.addText(str, cursor.pos, cursor.charSize);
 }
 
 
@@ -423,11 +196,10 @@ void VulkanFontRender::run()
 {
 	//glfwSetKeyCallback(window, key_callback);
 
-	std::vector<GPUVertexData> vertData;
 	
-	std::string txt = "Testing";
+	
+	std::string txt = "Test";
 	Cursor cursor;
-	updateText(txt, vertData, cursor);
 
 	////////////////////////
 	//
@@ -468,35 +240,31 @@ void VulkanFontRender::run()
 
 			if (keyDowns[ GLFW_KEY_LEFT ].isDown)
 			{
-				cursor.charWidth--;
-				if (cursor.charWidth < 2)
-					++cursor.charWidth;
+				cursor.charSize.x--;
+				if (cursor.charSize.x < 2)
+					++cursor.charSize.x;
 				textNeedsUpdate = true;
 			}
 			if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
 			{
-				cursor.charWidth++;
-				textNeedsUpdate = true;
-			}
-			if (keyDowns[ GLFW_KEY_UP ].isDown)
-			{
-				cursor.charHeight++;
+				cursor.charSize.x++;
 				textNeedsUpdate = true;
 			}
 			if (keyDowns[ GLFW_KEY_DOWN ].isDown)
 			{
-				cursor.charHeight--;
-				if (cursor.charHeight < 2)
-					++cursor.charHeight;
+				cursor.charSize.y++;
+				textNeedsUpdate = true;
+			}
+			if (keyDowns[ GLFW_KEY_UP ].isDown)
+			{
+				cursor.charSize.y--;
+				if (cursor.charSize.y < 2)
+					++cursor.charSize.y;
 				textNeedsUpdate = true;
 			}
 
-			if (textNeedsUpdate)
-				updateText(txt, vertData, cursor);
+			updateText(txt, cursor);
 		}
-
-
-		assert(vertData.size() < 2048);
 
 
 		////////////////////////
@@ -514,43 +282,7 @@ void VulkanFontRender::run()
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
 
-		{
-			// Copy to uniform buffer
-			{
-				struct Buff
-				{
-					float windowWidth;
-					float windowHeight;
-					float tmp[6 + 8];
-				};
-				Buff buff{ float(swapchain.width), float(swapchain.height) };
-				// use scratch buffer to unifrom buffer transfer
-				uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
-				uint32_t buffSize = uint32_t(sizeof(Buff));
-				memcpy(scratchBuffer.data, &buff, buffSize);
-				memcpy((void *)((char *)scratchBuffer.data + buffSize), vertData.data(), vertDataSize);
-
-				{
-					VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
-				}
-				{
-					VkBufferCopy region = { buffSize, 0, VkDeviceSize(vertDataSize) };
-					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER2 ].buffer, 1, &region);
-				}
-
-				VkBufferMemoryBarrier bar[]
-				{
-					bufferBarrier(buffers[ UNIFORM_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-					bufferBarrier(buffers[ UNIFORM_BUFFER2 ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
-				};
-
-				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-									 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, bar, 0, nullptr);
-			}
-		}
-
-
+		fontSystem.update(device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer);
 
 		////////////////////////
 		//
@@ -597,13 +329,11 @@ void VulkanFontRender::run()
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissors);
 
+
+			fontSystem.render(commandBuffer);
 			// draw calls here
 			// Render
 			{
-				bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE ]);
-				vkCmdBindIndexBuffer(commandBuffer, buffers[ INDEX_DATA_BUFFER ].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
-
 			}
 			vkCmdEndRenderPass(commandBuffer);
 		}
@@ -687,7 +417,7 @@ int main(int argCount, char **argv)
 	
 	VulkanFontRender app;
 	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) 
-		&& app.initApp(filename) && app.createGraphics() && app.createPipelines())
+		&& app.initApp(filename) && app.createGraphics())
 	{
 		app.run();
 	}

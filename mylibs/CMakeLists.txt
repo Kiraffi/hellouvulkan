@@ -1,10 +1,5 @@
 add_library(MyLibraries
-#	core/app.h
-#	core/app.cpp
 	core/mytypes.h
-#	ogl/shaderbuffer.h
-#	ogl/shaderbuffer.cpp
-#	ogl/shader.cpp
 	core/general.h
 	core/general.cpp
 	core/timer.h
@@ -26,6 +21,9 @@ add_library(MyLibraries
 	"math/matrix.cpp"
 	"math/quaternion.cpp"
 	"math/vector3.cpp"
+
+	"render/font_render.cpp"
+	"render/font_render.h"
 	 )
 
 target_include_directories(MyLibraries PUBLIC 
@@ -40,6 +38,8 @@ target_include_directories(MyLibraries PUBLIC
 	"math/plane.h"
 	"myvulkan/vulkanswapchain.h"
 	"myvulkan/vulkanresource.h"
+
+	"render/font_render.h"
 
 	${VULKAN_INCLUDE_DIR}
 	${VULKAN_INCLUDE_DIRS}
