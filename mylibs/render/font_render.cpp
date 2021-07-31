@@ -31,6 +31,7 @@
 #include <filesystem>
 #include <fstream>
 
+
 ////////////////////////
 //
 // DEINIT
@@ -178,7 +179,7 @@ bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, Vk
 
 
 
-void FontRenderSystem::addText(const std::string& text, Vector2 pos, Vec2 charSize)
+void FontRenderSystem::addText(const std::string& text, Vector2 pos, Vec2 charSize, const Vector4& color)
 {
 	ASSERT(vertData.size() + text.length() < MAX_LETTERS);
 	uint16_t charWidth = uint16_t(charSize.x);
@@ -187,7 +188,7 @@ void FontRenderSystem::addText(const std::string& text, Vector2 pos, Vec2 charSi
 	for(const char c : text)
 	{
 		GPUVertexData vdata;
-		vdata.color = core::getColor(0.0f, 1.0f, 0.0f, 1.0f);
+		vdata.color = core::getColor(color.x, color.y, color.z, color.w);
 		vdata.pixelSizeX = charWidth;
 		vdata.pixelSizeY = charHeight;
 		vdata.posX = pos.x;

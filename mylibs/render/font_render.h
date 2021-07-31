@@ -1,3 +1,5 @@
+#pragma once
+
 #include "math/vector3.h"
 #include "myvulkan/vulkandevice.h"
 #include "myvulkan/vulkanhelperfuncs.h"
@@ -9,7 +11,7 @@ class FontRenderSystem
 {
 public:
 	FontRenderSystem() {}
-	~FontRenderSystem() {};
+	~FontRenderSystem() {}
 	bool init(const std::string& fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
 		VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass, 
 		VkPipelineCache pipelineCache, DeviceWithQueues& deviceWithQueues, 
@@ -23,7 +25,8 @@ public:
 		uint32_t offset);
 	void render(VkCommandBuffer commandBuffer);
 
-	void addText(const std::string& text, Vector2 pos, Vec2 charSize);
+	void addText(const std::string& text, Vector2 pos, 
+		Vector2 charSize = Vector2(8.0f, 12.0f), const Vector4 &color = Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
 private:
 	struct GPUVertexData

@@ -264,6 +264,14 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	}
 
+	if (!fontSystem.init("assets/font/new_font.dat", deviceWithQueues.device, physicalDevice, commandPool, commandBuffer, renderPass, pipelineCache,
+		deviceWithQueues, scratchBuffer, renderFrameBuffer))
+
+	{
+		printf("Failed to initialize the font system!\n");
+		return false;
+	}
+
 	return true;
 
 }
@@ -273,10 +281,13 @@ VulkanApp::~VulkanApp()
 	VkDevice device = deviceWithQueues.device;
 	if(device)
 	{
+		fontSystem.deInit(device);
+
+
 		destroyBuffer(device, scratchBuffer);
 		destroyBuffer(device, renderFrameBuffer);
 
-		vkDestroyFramebuffer(device, targetFB, nullptr);
+		deleteFrameTargets();
 
 		vkDestroyCommandPool(device, commandPool, nullptr);
 
@@ -400,7 +411,9 @@ uint32_t VulkanApp::updateRenderFrameBuffer()
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
 
-	return buffSize;
+	uint32_t offset = fontSystem.update(deviceWithQueues.device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer, buffSize);
+
+	return offset;
 }
 
 void VulkanApp::present(Image &presentImage)
@@ -499,9 +512,6 @@ void VulkanApp::present(Image &presentImage)
 
 	VK_CHECK(vkDeviceWaitIdle(device));
 
-
-
-
 	for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
 	{
 		keyDowns[ i ].pressCount = 0u;
@@ -509,6 +519,60 @@ void VulkanApp::present(Image &presentImage)
 	bufferedPressesCount = 0u;
 	dt = timer.getLapDuration();
 }
+
+bool VulkanApp::createGraphics()
+{
+	VkDevice device = deviceWithQueues.device;
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+	//recreateSwapchainData();
+
+	// create color and depth images
+	{
+		mainColorRenderTarget =
+			createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
+				swapchain.width, swapchain.height,
+				//deviceWithQueues.computeColorFormat,
+				deviceWithQueues.colorFormat,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+				| VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+				//| VK_IMAGE_USAGE_STORAGE_BIT
+				, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				"Main color target image");
+		
+		mainDepthRenderTarget = createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
+			swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			"Main depth target image");
+
+		targetFB = createFramebuffer(device, renderPass,
+			mainColorRenderTarget.imageView, mainDepthRenderTarget.imageView,
+			swapchain.width, swapchain.height);
+	}
+	return true;
+}
+
+void VulkanApp::deleteFrameTargets()
+{
+	VkDevice device = deviceWithQueues.device;
+
+	vkDestroyFramebuffer(device, targetFB, nullptr);
+	destroyImage(device, mainColorRenderTarget);
+	destroyImage(device, mainDepthRenderTarget);
+
+	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
+	deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
+	ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
+
+}
+
+void VulkanApp::recreateSwapchainData()
+{
+	deleteFrameTargets();
+	createGraphics();
+	needToResize = false;
+}
+
 
 
 

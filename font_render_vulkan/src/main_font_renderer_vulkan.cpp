@@ -41,14 +41,6 @@
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
-struct Cursor
-{
-	Vector2 pos{ 0.0f, 0.0f };
-	Vector2 charSize{ 8.0f, 12.0f };
-};
-
-
-
 enum TIME_POINTS
 {
 	START_POINT,
@@ -58,29 +50,19 @@ enum TIME_POINTS
 };
 
 
-enum RenderTargetImageIndexes
-{
-	MAIN_COLOR_TARGET,
-	MAIN_DEPTH_TARGET,
 
-	NUM_TARGET_IMAGES
-};
-
-class VulkanFontRender : core::VulkanApp
+class VulkanFontRender : public core::VulkanApp
 {
 public:
 	VulkanFontRender() {}
 	virtual ~VulkanFontRender() override;
-	bool initApp(const std::string &fontFilename);
+
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
-	virtual void recreateSwapchainData() override;
 
-	bool createGraphics();
-	void updateText(std::string& str, Cursor& cursor);
-public:
-	FontRenderSystem fontSystem;
-	Image renderTargetImages[NUM_TARGET_IMAGES];
+	void updateText(std::string& str);
+private:
+	Vector2 fontSize = Vector2(8.0f, 12.0f);
 };
 
 
@@ -93,11 +75,6 @@ public:
 VulkanFontRender::~VulkanFontRender()
 {
 	VkDevice device = deviceWithQueues.device;
-
-	fontSystem.deInit(device);
-
-	for (auto &image : renderTargetImages)
-		destroyImage(device, image);
 }
 
 bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight)
@@ -109,97 +86,22 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 	return true;
 }
 
-bool VulkanFontRender::createGraphics()
+
+void VulkanFontRender::updateText(std::string &str)
 {
-	VkDevice device = deviceWithQueues.device;
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-	//recreateSwapchainData();
-	
-	// create color and depth images
-	{
-		renderTargetImages[ MAIN_COLOR_TARGET ] = 
-			createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-						  swapchain.width, swapchain.height, 
-						  //deviceWithQueues.computeColorFormat,
-						  deviceWithQueues.colorFormat,
-						  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-						  | VK_IMAGE_USAGE_TRANSFER_SRC_BIT 
-						  //| VK_IMAGE_USAGE_STORAGE_BIT
-						  , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-						  "Main color target image");
-		renderTargetImages[ MAIN_DEPTH_TARGET ] = createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-															  swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
-															  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-															  "Main depth target image");
-		targetFB = createFramebuffer(device, renderPass,
-									 renderTargetImages[ MAIN_COLOR_TARGET ].imageView, renderTargetImages[ MAIN_DEPTH_TARGET ].imageView,
-									 swapchain.width, swapchain.height);
-	}
-	return true;
-}
-
-bool VulkanFontRender::initApp(const std::string &fontFilename)
-{
-	VkDevice device = deviceWithQueues.device;
-
-	return fontSystem.init(fontFilename, device, physicalDevice, commandPool, commandBuffer, renderPass, pipelineCache,
-		deviceWithQueues, scratchBuffer, renderFrameBuffer);
-
-	return true;
-}
-
-
-void VulkanFontRender::updateText(std::string &str, Cursor &cursor)
-{
-	cursor.pos.x = 100.0f;
-	cursor.pos.y = 400.0f;
 	std::string tmpStr = "w";
-	tmpStr += std::to_string(int32_t(cursor.charSize.x));
+	tmpStr += std::to_string(int32_t(fontSize.x));
 	tmpStr += ",h";
-	tmpStr += std::to_string(int32_t(cursor.charSize.y));
+	tmpStr += std::to_string(int32_t(fontSize.y));
 
-	fontSystem.addText(tmpStr, cursor.pos, cursor.charSize);
-
-	cursor.pos.x = 100.0f;
-	cursor.pos.y = 100.0f;
-	fontSystem.addText(str, cursor.pos, cursor.charSize);
+	fontSystem.addText(tmpStr, Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	fontSystem.addText(str, Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 }
-
-
-
-
-void VulkanFontRender::recreateSwapchainData()
-{
-	VkDevice device = deviceWithQueues.device;
-
-
-	vkDestroyFramebuffer(device, targetFB, nullptr);
-	destroyImage(device, renderTargetImages[ MAIN_COLOR_TARGET ]);
-	destroyImage(device, renderTargetImages[ MAIN_DEPTH_TARGET ]);
-
-	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-	deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
-	ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
-
-	createGraphics();
-	needToResize = false;
-}
-
-
-
-
-
 
 
 void VulkanFontRender::run()
 {
-	//glfwSetKeyCallback(window, key_callback);
-
-	
-	
 	std::string txt = "Test";
-	Cursor cursor;
 
 	////////////////////////
 	//
@@ -240,30 +142,30 @@ void VulkanFontRender::run()
 
 			if (keyDowns[ GLFW_KEY_LEFT ].isDown)
 			{
-				cursor.charSize.x--;
-				if (cursor.charSize.x < 2)
-					++cursor.charSize.x;
+				fontSize.x--;
+				if (fontSize.x < 2)
+					++fontSize.x;
 				textNeedsUpdate = true;
 			}
 			if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
 			{
-				cursor.charSize.x++;
+				fontSize.x++;
 				textNeedsUpdate = true;
 			}
 			if (keyDowns[ GLFW_KEY_DOWN ].isDown)
 			{
-				cursor.charSize.y++;
+				fontSize.y++;
 				textNeedsUpdate = true;
 			}
 			if (keyDowns[ GLFW_KEY_UP ].isDown)
 			{
-				cursor.charSize.y--;
-				if (cursor.charSize.y < 2)
-					++cursor.charSize.y;
+				fontSize.y--;
+				if (fontSize.y < 2)
+					++fontSize.y;
 				textNeedsUpdate = true;
 			}
 
-			updateText(txt, cursor);
+			updateText(txt);
 		}
 
 
@@ -281,8 +183,9 @@ void VulkanFontRender::run()
 		beginSingleTimeCommands(device, commandPool, commandBuffer);
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
+		
 		uint32_t offset = updateRenderFrameBuffer();
-		offset = fontSystem.update(device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer, offset);
+	
 
 		////////////////////////
 		//
@@ -292,11 +195,11 @@ void VulkanFontRender::run()
 		{
 			VkImageMemoryBarrier imageBarriers[] =
 			{
-				imageBarrier(renderTargetImages[ MAIN_COLOR_TARGET ].image,
+				imageBarrier(mainColorRenderTarget.image,
 							0, VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
 
-				imageBarrier(renderTargetImages[ MAIN_DEPTH_TARGET ].image,
+				imageBarrier(mainDepthRenderTarget.image,
 							0, VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 							VK_IMAGE_ASPECT_DEPTH_BIT),
@@ -340,9 +243,9 @@ void VulkanFontRender::run()
 
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
 
-		renderTargetImages[ MAIN_COLOR_TARGET ].accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		renderTargetImages[ MAIN_COLOR_TARGET ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		present(renderTargetImages[ MAIN_COLOR_TARGET ]);
+		mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		present(mainColorRenderTarget);
 
 		////////////////////////
 		//
@@ -394,26 +297,11 @@ void VulkanFontRender::run()
 
 }
 
-
-
-
-
 int main(int argCount, char **argv) 
 {
-	std::vector<char> data;
-	std::string filename;
-	if(argCount < 2)
-	{
-		filename = "assets/font/new_font.dat";
-	}
-	else
-	{
-		filename = argv[1];
-	}
-	
 	VulkanFontRender app;
 	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) 
-		&& app.initApp(filename) && app.createGraphics())
+		&& app.createGraphics())
 	{
 		app.run();
 	}

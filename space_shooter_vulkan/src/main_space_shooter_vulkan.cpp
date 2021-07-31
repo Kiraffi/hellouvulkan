@@ -23,6 +23,8 @@
 #include <myvulkan/vulkanshader.h>
 #include <myvulkan/vulkanswapchain.h>
 
+#include "render/font_render.h"
+
 #include <math/general_math.h>
 #include <math/matrix.h>
 #include <math/plane.h>
@@ -86,20 +88,6 @@ struct Entity
 	uint32_t pad3;
 };
 
-struct GPUTextVertexData
-{
-	float posX;
-	float posY;
-	uint16_t pixelSizeX;
-	uint16_t pixelSizeY;
-	uint32_t color;
-
-	float uvX;
-	float uvY;
-
-	float padding[ 2 ];
-};
-
 struct GpuModelInstance
 {
 	uint32_t pos;
@@ -113,56 +101,6 @@ struct GpuModelVertex
 	float posX;
 	float posY;
 };
-
-
-struct Cursor
-{
-	float xPos = 0.0f;
-	float yPos = 0.0f;
-
-	int charWidth = 8;
-	int charHeight = 12;
-};
-
-static void addText(std::string &str, std::vector<GPUTextVertexData> &textVertDataOut, Cursor &cursor)
-{
-	for (int i = 0; i < int(str.length()); ++i)
-	{
-		GPUTextVertexData vdata;
-		vdata.color = core::getColor(0.0f, 1.0f, 0, 1.0f);
-		vdata.pixelSizeX = cursor.charWidth;
-		vdata.pixelSizeY = cursor.charHeight;
-		vdata.posX = cursor.xPos;
-		vdata.posY = cursor.yPos;
-
-		uint32_t letter = str[ i ] - 32;
-
-		vdata.uvX = float(letter) / float(128 - 32);
-		vdata.uvY = 0.0f;
-
-		textVertDataOut.emplace_back(vdata);
-
-		cursor.xPos += cursor.charWidth;
-	}
-
-}
-static void updateText(std::string &str, std::vector<GPUTextVertexData> &textVertDataOut, Cursor &cursor)
-{
-	cursor.xPos = 100.0f;
-	cursor.yPos = 400.0f;
-	std::string tmpStr = "w";
-	tmpStr += std::to_string(cursor.charWidth);
-	tmpStr += ",h";
-	tmpStr += std::to_string(cursor.charHeight);
-	textVertDataOut.clear();
-	addText(tmpStr, textVertDataOut, cursor);
-
-	cursor.xPos = 100.0f;
-	cursor.yPos = 100.0f;
-	addText(str, textVertDataOut, cursor);
-}
-
-
 
 
 enum TIME_POINTS
@@ -189,123 +127,37 @@ enum ShaderModuleIndexes
 	NUM_SHADER_MODULES
 };
 
-enum RenderTargetImageIndexes
-{
-	MAIN_COLOR_TARGET,
-	MAIN_DEPTH_TARGET,
-
-	NUM_TARGET_IMAGES
-};
 
 enum BufferIndexes
 {
-	UNIFORM_BUFFER,
-	QUAD_BUFFER,
-
 	MODEL_VERTICES_BUFFER,
 	INSTANCE_BUFFER,
 
-	INDEX_DATA_BUFFER,
 	INDEX_DATA_BUFFER_MODELS,
-
 	NUM_BUFFERS
 };
 
 
-class VulkanTest : core::VulkanApp
+class SpaceShooter : public core::VulkanApp
 {
 public:
-	VulkanTest() {}
-	virtual ~VulkanTest() override;
-	//bool initApp(const std::string &fontFilename);
+	SpaceShooter() {}
+	virtual ~SpaceShooter() override;
+
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
-	virtual void recreateSwapchainData() override;
-	bool initApp(const std::string &fontFilename);
 
-	bool createGraphics();
 	bool createPipelines();
 
 public:
-
 	VkShaderModule shaderModules[ NUM_SHADER_MODULES ] = {};
 	Buffer buffers[ NUM_BUFFERS ];
 
-	Image renderTargetImages[ NUM_TARGET_IMAGES ];
-
-	Image textImage;
 	std::vector<DescriptorSet> descriptorSets[ NUM_SHADER_MODULES ];
-
-
 	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
-
-	VkSampler textureSampler = 0;
-
-	std::string fontFilename;
 };
 
 
-
-bool VulkanTest::initApp(const std::string &fontFilename)
-{
-	std::vector<char> data;
-	if (!core::loadFontData(fontFilename, data))
-	{
-		printf("Failed to load file: %s\n", fontFilename.c_str());
-		return false;
-	}
-
-	{
-		std::vector<uint8_t> fontPic;
-		fontPic.resize(( 128 - 32 ) * 8 * 12 * 4);
-
-		// Note save order is a bit messed up!!! Since the file has one char 8x12 then next
-		uint32_t index = 0;
-		for (int y = 11; y >= 0; --y)
-		{
-			for (int charIndex = 0; charIndex < 128 - 32; ++charIndex)
-			{
-				uint8_t p = data[ y + size_t(charIndex) * 12 ];
-				for (int x = 0; x < 8; ++x)
-				{
-					uint8_t bitColor = uint8_t(( p >> x ) & 1) * 255;
-					fontPic[ size_t(index) * 4 + 0 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 1 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 2 ] = bitColor;
-					fontPic[ size_t(index) * 4 + 3 ] = bitColor;
-
-					++index;
-				}
-			}
-		}
-		const int textureWidth = 8 * ( 128 - 32 );
-		const int textureHeight = 12;
-
-		VkDevice device = deviceWithQueues.device;
-		VkPhysicalDeviceMemoryProperties memoryProperties;
-		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-
-		textImage = createImage(device,
-								deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-								textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
-								VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-								"TextImage");
-
-		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
-							textureWidth, textureHeight, 4u,
-							scratchBuffer, textImage,
-							( u32 ) fontPic.size(), ( void * ) fontPic.data());
-
-		VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-
-		VK_CHECK(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
-	}
-
-	return true;
-}
 
 ////////////////////////
 //
@@ -313,23 +165,15 @@ bool VulkanTest::initApp(const std::string &fontFilename)
 //
 ////////////////////////
 
-VulkanTest::~VulkanTest()
+SpaceShooter::~SpaceShooter()
 {
 	VkDevice device = deviceWithQueues.device;
-
-	for (auto &image : renderTargetImages)
-		destroyImage(device, image);
-
-	destroyImage(device, textImage);
 
 	for (auto &pipeline : pipelinesWithDescriptors)
 	{
 		destroyDescriptor(device, pipeline.descriptor);
 		destroyPipeline(device, pipeline.pipeline);
 	}
-
-
-	vkDestroySampler(device, textureSampler, nullptr);
 
 	for (auto &buffer : buffers)
 		destroyBuffer(device, buffer);
@@ -339,13 +183,12 @@ VulkanTest::~VulkanTest()
 
 }
 
-bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
+bool SpaceShooter::init(const char *windowStr, int screenWidth, int screenHeight)
 {
 	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-
 
 	VkDevice device = deviceWithQueues.device;
 
@@ -357,14 +200,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
 
-	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024u,
-											 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-											 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
-
-	buffers[ QUAD_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024u,
-										  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-										  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
-
 	buffers[ MODEL_VERTICES_BUFFER ] = createBuffer(device, memoryProperties, 1024u * 1024u * 16u,
 											VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 											VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Model Vercies data buffer");
@@ -374,74 +209,18 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 											  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Model Instance data buffer");
 
 
-
-	buffers[ INDEX_DATA_BUFFER ] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
-												VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
-
 	buffers[ INDEX_DATA_BUFFER_MODELS ] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
 												VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 												VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer for models");
 
-	
-
-
 	// Random tag data
 	//struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
 	//setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
-
-
-	{
-		uint32_t offset = 0;
-		std::vector<uint32_t> indices;
-		indices.resize(6 * 10240);
-		for (int i = 0; i < 10240; ++i)
-		{
-			indices[ size_t(i) * 6 + 0 ] = i * 4 + 0;
-			indices[ size_t(i) * 6 + 1 ] = i * 4 + 1;
-			indices[ size_t(i) * 6 + 2 ] = i * 4 + 2;
-
-			indices[ size_t(i) * 6 + 3 ] = i * 4 + 0;
-			indices[ size_t(i) * 6 + 4 ] = i * 4 + 2;
-			indices[ size_t(i) * 6 + 5 ] = i * 4 + 3;
-		}
-		offset = uploadToScratchbuffer(scratchBuffer, ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
-		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-									   buffers[ INDEX_DATA_BUFFER ], scratchBuffer, offset);
-	}
 	return true;
 }
 
-bool VulkanTest::createGraphics()
-{
-	VkDevice device = deviceWithQueues.device;
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-	//recreateSwapchainData();
 
-	// create color and depth images
-	{
-		renderTargetImages[ MAIN_COLOR_TARGET ] =
-			createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-						swapchain.width, swapchain.height,
-						deviceWithQueues.colorFormat,
-						VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-						| VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-						//| VK_IMAGE_USAGE_STORAGE_BIT
-						, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-						"Main color target image");
-		renderTargetImages[ MAIN_DEPTH_TARGET ] = createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-															  swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
-															  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-															  "Main depth target image");
-		targetFB = createFramebuffer(device, renderPass,
-									 renderTargetImages[ MAIN_COLOR_TARGET ].imageView, renderTargetImages[ MAIN_DEPTH_TARGET ].imageView,
-									 swapchain.width, swapchain.height);
-	}
-	return true;
-}
-
-bool VulkanTest::createPipelines()
+bool SpaceShooter::createPipelines()
 {
 	VkDevice device = deviceWithQueues.device;
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -452,7 +231,7 @@ bool VulkanTest::createPipelines()
 
 		pipeline.descriptorSet = std::vector<DescriptorSet>(
 			{
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
+				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &renderFrameBuffer },
 				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u, true, &buffers[ MODEL_VERTICES_BUFFER ] },
 				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3u, true, &buffers[ INSTANCE_BUFFER ] },
 			});
@@ -468,27 +247,6 @@ bool VulkanTest::createPipelines()
 
 	return true;
 }
-
-
-void VulkanTest::recreateSwapchainData()
-{
-	VkDevice device = deviceWithQueues.device;
-
-
-	vkDestroyFramebuffer(device, targetFB, nullptr);
-	destroyImage(device, renderTargetImages[ MAIN_COLOR_TARGET ]);
-	destroyImage(device, renderTargetImages[ MAIN_DEPTH_TARGET ]);
-
-	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-	deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
-	ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
-
-	createGraphics();
-	needToResize = false;
-}
-
-
-
 
 static uint32_t getPackedPosition(float x, float y)
 {
@@ -556,10 +314,8 @@ static Entity spawnAsteroidEntity(double spawnTime)
 }
 
 
-void VulkanTest::run()
+void SpaceShooter::run()
 {
-	std::vector<GPUTextVertexData> textVertData;
-
 	Entity playerEntity;
 	std::vector < Entity > asteroidEntities;
 	std::vector < Entity > bulletEntities;
@@ -578,10 +334,7 @@ void VulkanTest::run()
 
 
 
-	std::string txt = "abb";
-
-	Cursor cursor;
-	updateText(txt, textVertData, cursor);
+	std::string text = "Space shooter!";
 
 	// Building models.
 	{
@@ -857,8 +610,6 @@ void VulkanTest::run()
 			float updateDur = float(updateDurTimer.getDuration());
 		}
 
-		ASSERT(textVertData.size() * sizeof(GPUTextVertexData) < buffers[ QUAD_BUFFER ].size);
-
 		// This could be moved to be done in gpu compute shader (and probably should be, could also include culling). Then using indirect drawing to render the stuff out, instead of
 		// building the index buffer every frame on cpu then copying it on gpu. The instance buffer could be used to update the data more smartly perhaps? But just easy way out.
 
@@ -872,6 +623,8 @@ void VulkanTest::run()
 			
 			ASSERT(gpuModelInstances.size() < ( 1 << 16u ));
 		}
+
+		fontSystem.addText(text, Vector2(100.0f, 10.0f), Vec2(8.0f, 12.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
 
 		////////////////////////
 		//
@@ -888,58 +641,41 @@ void VulkanTest::run()
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
 
+
 		{
-			// Copy to uniform buffer
+			uint32_t offset = updateRenderFrameBuffer();
+			offset = fontSystem.update(device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer, offset);
+
+			// Copy to uniform buffers
 			{
-				struct Buff
-				{
-					float windowWidth;
-					float windowHeight;
-					float tmp[ 6 + 8 ];
-				};
-				Buff buff{ float(swapchain.width), float(swapchain.height) };
-				// use scratch buffer to unifrom buffer transfer
-				uint32_t textVertDataSize = uint32_t(textVertData.size() * sizeof(GPUTextVertexData));
-				uint32_t buffSize = uint32_t(sizeof(Buff));
+				// use scratch buffer to unifrom buffer transfer				
 				uint32_t instanceBuffserSize = uint32_t(gpuModelInstances.size() * sizeof(GpuModelInstance));
 				uint32_t modelIndicesSize = uint32_t(gpuModelIndices.size() * sizeof(uint32_t));
 
-				u32 memOffsets[] = { buffSize, buffSize + textVertDataSize, buffSize + textVertDataSize + instanceBuffserSize, modelIndicesSize };
+				u32 memOffsets[] = { offset, offset + instanceBuffserSize };
 
-				memcpy(scratchBuffer.data, &buff, buffSize);
-				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[0] ), textVertData.data(), textVertDataSize);
-				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[1] ), gpuModelInstances.data(), instanceBuffserSize);
-				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[2] ), gpuModelIndices.data(), modelIndicesSize);
-
+				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[0] ), gpuModelInstances.data(), instanceBuffserSize);
+				memcpy(( void * ) ( ( char * ) scratchBuffer.data + memOffsets[1] ), gpuModelIndices.data(), modelIndicesSize);
 
 				{
-					VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
-				}
-				
-				{
-					VkBufferCopy region = { memOffsets[0], 0, VkDeviceSize(textVertDataSize) };
-					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
-				}
-				{
-					VkBufferCopy region = { memOffsets[ 1 ], 0, VkDeviceSize(instanceBuffserSize) };
+					VkBufferCopy region = { memOffsets[ 0 ], 0, VkDeviceSize(instanceBuffserSize) };
 					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ INSTANCE_BUFFER ].buffer, 1, &region);
 				}
 				{
-					VkBufferCopy region = { memOffsets[ 2 ], 0, VkDeviceSize( modelIndicesSize) };
+					VkBufferCopy region = { memOffsets[ 1 ], 0, VkDeviceSize( modelIndicesSize) };
 					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, 1, &region);
 				}
 
 				VkBufferMemoryBarrier bar[]
 				{
-					bufferBarrier(buffers[ UNIFORM_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-					bufferBarrier(buffers[ QUAD_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, textVertDataSize),
 					bufferBarrier(buffers[ INSTANCE_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, instanceBuffserSize),
 					bufferBarrier(buffers[ INDEX_DATA_BUFFER_MODELS ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, modelIndicesSize),
 				};
 
 				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 									 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+
+				offset += memOffsets[ARRAYSIZE(memOffsets) - 1];
 			}
 		}
 
@@ -953,11 +689,11 @@ void VulkanTest::run()
 		{
 			VkImageMemoryBarrier imageBarriers[] =
 			{
-				imageBarrier(renderTargetImages[ MAIN_COLOR_TARGET ].image,
+				imageBarrier(mainColorRenderTarget.image,
 							0, VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
 
-				imageBarrier(renderTargetImages[ MAIN_DEPTH_TARGET ].image,
+				imageBarrier(mainDepthRenderTarget.image,
 							0, VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 							VK_IMAGE_ASPECT_DEPTH_BIT),
@@ -998,15 +734,16 @@ void VulkanTest::run()
 				vkCmdDrawIndexed(commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
 			
 			}
+			fontSystem.render(commandBuffer);
 
 			vkCmdEndRenderPass(commandBuffer);
 		}
 
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
 
-		renderTargetImages[ MAIN_COLOR_TARGET ].accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		renderTargetImages[ MAIN_COLOR_TARGET ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		present(renderTargetImages[ MAIN_COLOR_TARGET ]);
+		mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		present(mainColorRenderTarget);
 
 		////////////////////////
 		//
@@ -1069,20 +806,9 @@ void VulkanTest::run()
 
 int main(int argCount, char **argv)
 {
-	std::vector<char> data;
-	std::string filename;
-	if (argCount < 2)
-	{
-		filename = "assets/font/new_font.dat";
-	}
-	else
-	{
-		filename = argv[ 1 ];
-	}
-	VulkanTest app;
-	app.fontFilename = filename;
+	SpaceShooter app;
 	if (app.init("Vulkan, asteroid", SCREEN_WIDTH, SCREEN_HEIGHT)
-		&& app.initApp(filename) && app.createGraphics() && app.createPipelines())
+		&& app.createGraphics() && app.createPipelines())
 	{
 		app.run();
 	}

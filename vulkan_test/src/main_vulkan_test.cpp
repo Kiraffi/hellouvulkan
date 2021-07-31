@@ -162,7 +162,7 @@ enum RenderTargetImageIndexes
 
 
 
-class VulkanTest : core::VulkanApp
+class VulkanTest : public core::VulkanApp
 {
 public:
 	VulkanTest() {}

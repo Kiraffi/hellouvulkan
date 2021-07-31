@@ -95,17 +95,8 @@ enum ShaderModuleIndexes
 	NUM_SHADER_MODULES
 };
 
-enum RenderTargetImageIndexes
-{
-	MAIN_COLOR_TARGET,
-	MAIN_DEPTH_TARGET,
-
-	NUM_TARGET_IMAGES
-};
-
 enum BufferIndexes
 {
-	UNIFORM_BUFFER,
 	QUAD_BUFFER,
 
 	INDEX_DATA_BUFFER,
@@ -114,7 +105,7 @@ enum BufferIndexes
 };
 
 
-class VulkanFontDraw : core::VulkanApp
+class VulkanFontDraw : public core::VulkanApp
 {
 public:
 	VulkanFontDraw() {}
@@ -122,9 +113,7 @@ public:
 	//bool initApp(const std::string &fontFilename);
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
-	virtual void recreateSwapchainData() override;
 
-	bool createGraphics();
 	bool createPipelines();
 
 public:
@@ -132,15 +121,8 @@ public:
 	VkShaderModule shaderModules[ NUM_SHADER_MODULES ] = {};
 	Buffer buffers[ NUM_BUFFERS ];
 
-	Image renderTargetImages[ NUM_TARGET_IMAGES ];
-
-	Image textImage;
 	std::vector<DescriptorSet> descriptorSets[ NUM_SHADER_MODULES ];
-
-
 	PipelineWithDescriptors pipelinesWithDescriptors[ NUM_PIPELINE ];
-
-	VkSampler textureSampler = 0;
 
 	std::string fontFilename;
 };
@@ -156,20 +138,12 @@ VulkanFontDraw::~VulkanFontDraw()
 {
 	VkDevice device = deviceWithQueues.device;
 
-	for (auto &image : renderTargetImages)
-		destroyImage(device, image);
-
-	destroyImage(device, textImage);
-
 	for (auto &pipeline : pipelinesWithDescriptors)
 	{
 		destroyDescriptor(device, pipeline.descriptor);
 		destroyPipeline(device, pipeline.pipeline);
 	}
-
 	
-	vkDestroySampler(device, textureSampler, nullptr);
-
 	for (auto &buffer : buffers)
 		destroyBuffer(device, buffer);
 
@@ -198,11 +172,6 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
 	VkPhysicalDeviceMemoryProperties memoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-	buffers[ UNIFORM_BUFFER ] = createBuffer(device, memoryProperties, 64u * 1024,
-											   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-											   //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
-											   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
 
 	buffers[ QUAD_BUFFER ] = createBuffer(device, memoryProperties, 8u * 1024u * 1024u,
 												VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -239,35 +208,6 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 	return true;
 }
 
-bool VulkanFontDraw::createGraphics()
-{
-	VkDevice device = deviceWithQueues.device;
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-	//recreateSwapchainData();
-	
-	// create color and depth images
-	{
-		renderTargetImages[ MAIN_COLOR_TARGET ] = 
-			createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-						  swapchain.width, swapchain.height, 
-						  //deviceWithQueues.computeColorFormat,
-						  deviceWithQueues.colorFormat,
-						  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-						  | VK_IMAGE_USAGE_TRANSFER_SRC_BIT 
-						  //| VK_IMAGE_USAGE_STORAGE_BIT
-						  , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-						  "Main color target image");
-		renderTargetImages[ MAIN_DEPTH_TARGET ] = createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-															  swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
-															  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-															  "Main depth target image");
-		targetFB = createFramebuffer(device, renderPass,
-									 renderTargetImages[ MAIN_COLOR_TARGET ].imageView, renderTargetImages[ MAIN_DEPTH_TARGET ].imageView,
-									 swapchain.width, swapchain.height);
-	}
-	return true;
-}
 
 bool VulkanFontDraw::createPipelines()
 {
@@ -280,7 +220,7 @@ bool VulkanFontDraw::createPipelines()
 
 	pipeline.descriptorSet = std::vector<DescriptorSet>(
 		{
-			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
+			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &renderFrameBuffer},
 			DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, true, &buffers[ QUAD_BUFFER ] },
 		});
 	VertexInput vertexInput;
@@ -294,29 +234,6 @@ bool VulkanFontDraw::createPipelines()
 
 	return true;
 }
-
-
-void VulkanFontDraw::recreateSwapchainData()
-{
-	VkDevice device = deviceWithQueues.device;
-
-
-	vkDestroyFramebuffer(device, targetFB, nullptr);
-	destroyImage(device, renderTargetImages[ MAIN_COLOR_TARGET ]);
-	destroyImage(device, renderTargetImages[ MAIN_DEPTH_TARGET ]);
-
-	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-	deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
-	ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
-
-	createGraphics();
-	needToResize = false;
-}
-
-
-
-
-
 
 
 void VulkanFontDraw::run()
@@ -540,39 +457,23 @@ void VulkanFontDraw::run()
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
 
 		{
-			// Copy to uniform buffer
+			uint32_t offset = updateRenderFrameBuffer();
+			// use scratch buffer to unifrom buffer transfer
+			uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
+			memcpy(( void * ) ( ( char * ) scratchBuffer.data + offset), vertData.data(), vertDataSize);
+
 			{
-				struct Buff
-				{
-					float windowWidth;
-					float windowHeight;
-					float tmp[ 6 + 8 ];
-				};
-				Buff buff{ float(swapchain.width), float(swapchain.height) };
-				// use scratch buffer to unifrom buffer transfer
-				uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
-				uint32_t buffSize = uint32_t(sizeof(Buff));
-				memcpy(scratchBuffer.data, &buff, buffSize);
-				memcpy(( void * ) ( ( char * ) scratchBuffer.data + buffSize ), vertData.data(), vertDataSize);
-
-				{
-					VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ UNIFORM_BUFFER ].buffer, 1, &region);
-				}
-				{
-					VkBufferCopy region = { buffSize, 0, VkDeviceSize(vertDataSize) };
-					vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
-				}
-
-				VkBufferMemoryBarrier bar[]
-				{
-					bufferBarrier(buffers[ UNIFORM_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-					bufferBarrier(buffers[ QUAD_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
-				};
-
-				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-									 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, bar, 0, nullptr);
+				VkBufferCopy region = { offset, 0, VkDeviceSize(vertDataSize) };
+				vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[ QUAD_BUFFER ].buffer, 1, &region);
 			}
+
+			VkBufferMemoryBarrier bar[]
+			{
+				bufferBarrier(buffers[ QUAD_BUFFER ].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
+			};
+
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+									VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
 		}
 
 
@@ -585,11 +486,11 @@ void VulkanFontDraw::run()
 		{
 			VkImageMemoryBarrier imageBarriers[] =
 			{
-				imageBarrier(renderTargetImages[ MAIN_COLOR_TARGET ].image,
+				imageBarrier(mainColorRenderTarget.image,
 							0, VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
 
-				imageBarrier(renderTargetImages[ MAIN_DEPTH_TARGET ].image,
+				imageBarrier(mainDepthRenderTarget.image,
 							0, VK_IMAGE_LAYOUT_UNDEFINED,
 							VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 							VK_IMAGE_ASPECT_DEPTH_BIT),
@@ -635,9 +536,9 @@ void VulkanFontDraw::run()
 
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
 
-		renderTargetImages[ MAIN_COLOR_TARGET ].accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		renderTargetImages[ MAIN_COLOR_TARGET ].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		present(renderTargetImages[ MAIN_COLOR_TARGET ]);
+		mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		present(mainColorRenderTarget);
 
 		////////////////////////
 		//

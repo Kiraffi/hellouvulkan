@@ -11,6 +11,7 @@
 #include <myvulkan/vulkandevice.h>
 #include <myvulkan/vulkanresource.h>
 #include <myvulkan/vulkanswapchain.h>
+#include "render/font_render.h"
 
 constexpr u32 QUERY_COUNT = 128u;
 
@@ -47,7 +48,9 @@ public:
 	// Returns offset to scratch buffer
 	uint32_t updateRenderFrameBuffer();
 	virtual void present(Image &presentImage);
-	virtual void recreateSwapchainData() {}
+	virtual void recreateSwapchainData();
+	virtual bool createGraphics();
+	virtual void deleteFrameTargets();
 
 	void resizeWindow(int w, int h);
 	void setVsyncEnabled(bool enable);
@@ -76,6 +79,13 @@ public:
 	uint32_t bufferedPressesCount = 0u;
 
 protected:
+
+	Image mainColorRenderTarget;
+	Image mainDepthRenderTarget;
+
+
+	FontRenderSystem fontSystem;
+
 	Timer timer;
 	double dt = 0.0;
 	uint32_t imageIndex = 0u;
