@@ -43,6 +43,9 @@ public:
 	virtual void run() {}
 	virtual void resized() {}
 	virtual bool startRender();
+	
+	// Returns offset to scratch buffer
+	uint32_t updateRenderFrameBuffer();
 	virtual void present(Image &presentImage);
 	virtual void recreateSwapchainData() {}
 
@@ -86,6 +89,7 @@ protected:
 	DeviceWithQueues deviceWithQueues;
 
 	Buffer scratchBuffer;
+	Buffer renderFrameBuffer;
 
 	VkRenderPass renderPass = 0;
 
@@ -97,7 +101,7 @@ protected:
 	VkSemaphore releaseSemaphore = 0;
 
 	VkFence fence = 0;
-
+	bool waitForFence = true;
 	VkCommandPool commandPool = 0;
 
 	VkCommandBuffer commandBuffer = 0;

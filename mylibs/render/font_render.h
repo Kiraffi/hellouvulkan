@@ -12,10 +12,15 @@ public:
 	~FontRenderSystem() {};
 	bool init(const std::string& fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
 		VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass, 
-		VkPipelineCache pipelineCache, DeviceWithQueues& deviceWithQueues, Buffer& scratchBuffer);
+		VkPipelineCache pipelineCache, DeviceWithQueues& deviceWithQueues, 
+		Buffer& scratchBuffer, const Buffer& renderFrameBuffer);
 	void deInit(VkDevice device);
-	void update(VkDevice device, VkCommandBuffer commandBuffer,
-		VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer);
+	//void update(VkDevice device, VkCommandBuffer commandBuffer,
+	//	VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer);
+	// return offset to scratch buffer
+	uint32_t update(VkDevice device, VkCommandBuffer commandBuffer,
+		VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer,
+		uint32_t offset);
 	void render(VkCommandBuffer commandBuffer);
 
 	void addText(const std::string& text, Vector2 pos, Vec2 charSize);
@@ -40,7 +45,6 @@ private:
 	VkShaderModule vertexShader;
 	VkShaderModule fragShader;
 
-	Buffer frameDataBuffer;
 	Buffer letterDataBuffer;
 	Buffer letterIndexBuffer;
 

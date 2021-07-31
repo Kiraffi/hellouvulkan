@@ -28,7 +28,7 @@ struct DescriptorSet
 	VkDescriptorType descriptorType;
 	u32 bindingIndex = ~0u;
 	bool writeDescriptor = true;
-	Buffer *buffer = nullptr;
+	const Buffer *buffer = nullptr;
 	VkImage image = 0;
 	VkImageView imageView = 0;
 	VkSampler sampler = 0;

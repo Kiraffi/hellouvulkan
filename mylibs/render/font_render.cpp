@@ -45,7 +45,6 @@ void FontRenderSystem::deInit(VkDevice device)
 	
 	vkDestroySampler(device, textureSampler, nullptr);
 
-	destroyBuffer(device, frameDataBuffer);
 	destroyBuffer(device, letterDataBuffer);
 	destroyBuffer(device, letterIndexBuffer);
 
@@ -57,7 +56,8 @@ void FontRenderSystem::deInit(VkDevice device)
 
 bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
 	VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass,
-	VkPipelineCache pipelineCache, DeviceWithQueues &deviceWithQueues, Buffer &scratchBuffer)
+	VkPipelineCache pipelineCache, DeviceWithQueues &deviceWithQueues,
+	Buffer &scratchBuffer, const Buffer &renderFrameBuffer)
 {
 	std::vector<char> data;
 	if (!core::loadFontData(fontFilename, data))
@@ -75,11 +75,6 @@ bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, Vk
 
 		fragShader = loadShader(device, "assets/shader/vulkan_new/texturedquad.frag.spv");
 		ASSERT(fragShader);
-
-		frameDataBuffer = createBuffer(device, memoryProperties, 64u * 1024,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer");
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer");
 
 		letterDataBuffer = createBuffer(device, memoryProperties, 64u * 1024,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -161,7 +156,7 @@ bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, Vk
 
 		pipeline.descriptorSet = std::vector<DescriptorSet>(
 			{
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &frameDataBuffer },
+				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &renderFrameBuffer },
 				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &letterDataBuffer },
 				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u, true, nullptr,
 					textImage.image, textImage.imageView, textureSampler, VK_IMAGE_LAYOUT_GENERAL},
@@ -210,44 +205,31 @@ void FontRenderSystem::addText(const std::string& text, Vector2 pos, Vec2 charSi
 }
 
 
-void FontRenderSystem::update(VkDevice device, VkCommandBuffer commandBuffer,
-	VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer)
+uint32_t FontRenderSystem::update(VkDevice device, VkCommandBuffer commandBuffer,
+	VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer,
+	uint32_t offset)
 {
 	if (vertData.size() == 0)
-		return;
+		return offset;
 
-	struct Buff
-	{
-		Vector2 areaSize;
-		float tmp[6 + 8];
-	};
-
-	Buff buff{ renderAreaSize };
 	// use scratch buffer to unifrom buffer transfer
 	uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
-	uint32_t buffSize = uint32_t(sizeof(Buff));
-	memcpy(scratchBuffer.data, &buff, buffSize);
-	memcpy((void*)((char*)scratchBuffer.data + buffSize), vertData.data(), vertDataSize);
 
-	{
-		VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-		vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, frameDataBuffer.buffer, 1, &region);
-	}
-	{
-		VkBufferCopy region = { buffSize, 0, VkDeviceSize(vertDataSize) };
-		vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, letterDataBuffer.buffer, 1, &region);
-	}
+	memcpy((void*)((char*)scratchBuffer.data + offset), vertData.data(), vertDataSize);
+
+	VkBufferCopy region = { offset, 0, VkDeviceSize(vertDataSize) };
+	vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, letterDataBuffer.buffer, 1, &region);
+	
 
 	VkBufferMemoryBarrier bar[]
 	{
-		bufferBarrier(frameDataBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-		bufferBarrier(letterDataBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
+		bufferBarrier(letterDataBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize)
 	};
 
 	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, bar, 0, nullptr);
+		VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
 
-
+	return offset + vertDataSize;
 }
 
 

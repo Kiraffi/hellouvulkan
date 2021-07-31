@@ -144,7 +144,7 @@ bool VulkanFontRender::initApp(const std::string &fontFilename)
 	VkDevice device = deviceWithQueues.device;
 
 	return fontSystem.init(fontFilename, device, physicalDevice, commandPool, commandBuffer, renderPass, pipelineCache,
-		deviceWithQueues, scratchBuffer);
+		deviceWithQueues, scratchBuffer, renderFrameBuffer);
 
 	return true;
 }
@@ -274,15 +274,15 @@ void VulkanFontRender::run()
 		// "CONSTANT BUFFEERS"
 		//
 		////////////////////////
-
+	
 		if (!startRender())
 			continue;
 
 		beginSingleTimeCommands(device, commandPool, commandBuffer);
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
-
-		fontSystem.update(device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer);
+		uint32_t offset = updateRenderFrameBuffer();
+		offset = fontSystem.update(device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer, offset);
 
 		////////////////////////
 		//
@@ -355,17 +355,13 @@ void VulkanFontRender::run()
 		vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
 
 
-		struct TimeValues
-		{
-			double timeDuration[ TIME_POINTS::NUM_TIME_POINTS ];
-		};
+		static double timeDuration[TIME_POINTS::NUM_TIME_POINTS] = {};
 
 		VkPhysicalDeviceProperties props = {};
 		vkGetPhysicalDeviceProperties(physicalDevice, &props);
 
-		static TimeValues timeValues = {};
 		for (u32 i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
-			timeValues.timeDuration[ i ] += ( double(queryResults[ i ]) - double(queryResults[ i - 1 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
+			timeDuration[ i ] += ( double(queryResults[ i ]) - double(queryResults[ i - 1 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
 
 		gpuTime += ( double(queryResults[ TIME_POINTS::NUM_TIME_POINTS - 1 ]) - double(queryResults[ 0 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
 
@@ -380,12 +376,12 @@ void VulkanFontRender::run()
 
 			printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
 				   ( float ) ( gpuTime * d ), ( float ) ( cpuTime * d ),
-				   ( float ) ( timeValues.timeDuration[ DRAW_FINISHED ] * d ),
+				   ( float ) ( timeDuration[ DRAW_FINISHED ] * d ),
 				   e / gpuTime, e / cpuTime);
 			gpuframeCount = 0u;
 
 			for (u32 i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
-				timeValues.timeDuration[ i ] = 0.0;
+				timeDuration[ i ] = 0.0;
 
 			gpuTime = 0.0;
 		}

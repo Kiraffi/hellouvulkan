@@ -253,7 +253,16 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 	//glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
 
+	{
+		VkPhysicalDeviceMemoryProperties memoryProperties;
+		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
+		// Create buffers
+		renderFrameBuffer = createBuffer(device, memoryProperties, 64u * 1024,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
+
+	}
 
 	return true;
 
@@ -265,6 +274,7 @@ VulkanApp::~VulkanApp()
 	if(device)
 	{
 		destroyBuffer(device, scratchBuffer);
+		destroyBuffer(device, renderFrameBuffer);
 
 		vkDestroyFramebuffer(device, targetFB, nullptr);
 
@@ -273,9 +283,6 @@ VulkanApp::~VulkanApp()
 		vkDestroyQueryPool(device, queryPool, nullptr);
 
 		destroySwapchain(swapchain, device);
-
-
-
 
 		vkDestroyRenderPass(device, renderPass, nullptr);
 		vkDestroyFence(device, fence, nullptr);
@@ -303,6 +310,7 @@ VulkanApp::~VulkanApp()
 
 void VulkanApp::resizeWindow(int w, int h)
 {
+
 	windowWidth = w;
 	windowHeight = h;
 	printf("Window size: %i: %i\n", w, h);
@@ -345,8 +353,9 @@ bool VulkanApp::startRender()
 {
 	VkDevice device = deviceWithQueues.device;
 	VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
-	[[maybe_unused]] VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
-
+	if (acquireSemaphore == VK_NULL_HANDLE)
+		return false;
+	VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
 	if (res == VK_ERROR_OUT_OF_DATE_KHR)
 	{
 		if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
@@ -354,14 +363,45 @@ bool VulkanApp::startRender()
 		{
 			recreateSwapchainData();
 			VK_CHECK(vkDeviceWaitIdle(device));
-
+			needToResize = false;
 		}
 		return false;
 	}
+	else if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
+		return true;
+
 	VK_CHECK(res);
-	return true;
+	return false;
 }
 
+uint32_t VulkanApp::updateRenderFrameBuffer()
+{
+	struct Buff
+	{
+		Vector2 areaSize;
+		float tmp[6 + 8];
+	};
+
+	Buff buff{ Vector2(windowWidth, windowHeight) };
+
+	// use scratch buffer to unifrom buffer transfer
+	uint32_t buffSize = uint32_t(sizeof(Buff));
+	memcpy(scratchBuffer.data, &buff, buffSize);
+	{
+		VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
+		vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, renderFrameBuffer.buffer, 1, &region);
+	}
+
+	VkBufferMemoryBarrier bar[]
+	{
+		bufferBarrier(renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
+	};
+
+	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
+
+	return buffSize;
+}
 
 void VulkanApp::present(Image &presentImage)
 {
@@ -441,7 +481,7 @@ void VulkanApp::present(Image &presentImage)
 		presentInfo.pImageIndices = &imageIndex;
 
 		VkResult res = ( vkQueuePresentKHR(deviceWithQueues.presentQueue, &presentInfo) );
-		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR)
+		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || needToResize)
 		{
 			needToResize = true;
 			if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,

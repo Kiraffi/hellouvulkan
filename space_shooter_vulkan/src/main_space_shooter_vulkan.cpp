@@ -177,16 +177,12 @@ enum TIME_POINTS
 // Probably not good in long run?
 enum PipelineWithDescriptorsIndexes
 {
-	PIPELINE_GRAPHICS_PIPELINE_QUADS,
 	PIPELINE_GRAPHICS_PIPELINE_MODELS,
 	NUM_PIPELINE
 };
 
 enum ShaderModuleIndexes
 {
-	SHADER_MODULE_RENDER_QUAD_VERT,
-	SHADER_MODULE_RENDER_QUAD_FRAG,
-
 	SHADER_MODULE_RENDER_SHIP_VERT,
 	SHADER_MODULE_RENDER_SHIP_FRAG,
 
@@ -353,9 +349,6 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	VkDevice device = deviceWithQueues.device;
 
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.vert.spv");
-	shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ] = loadShader(device, "assets/shader/vulkan_new/texturedquad.frag.spv");
-
 	shaderModules[ SHADER_MODULE_RENDER_SHIP_VERT ] = loadShader(device, "assets/shader/vulkan_new/space_ship_2d_model.vert.spv");
 	shaderModules[ SHADER_MODULE_RENDER_SHIP_FRAG ] = loadShader(device, "assets/shader/vulkan_new/space_ship_2d_model.frag.spv");
 	
@@ -454,25 +447,6 @@ bool VulkanTest::createPipelines()
 	VkPhysicalDeviceMemoryProperties memoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-	{
-		PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE_QUADS ];
-
-		pipeline.descriptorSet = std::vector<DescriptorSet>(
-			{
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[ UNIFORM_BUFFER ] },
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &buffers[ QUAD_BUFFER ] },
-				DescriptorSet{ VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u, true, nullptr,
-				textImage.image, textImage.imageView, textureSampler, VK_IMAGE_LAYOUT_GENERAL},
-			});
-		VertexInput vertexInput;
-		pipeline.pipeline = createGraphicsPipeline(
-			device, renderPass, pipelineCache,
-			shaderModules[ SHADER_MODULE_RENDER_QUAD_VERT ],
-			shaderModules[ SHADER_MODULE_RENDER_QUAD_FRAG ],
-			vertexInput, pipeline.descriptorSet, false,
-			0u, VK_SHADER_STAGE_ALL_GRAPHICS);
-		pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
-	}
 	{
 		PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE_MODELS ];
 
@@ -1024,12 +998,7 @@ void VulkanTest::run()
 				vkCmdDrawIndexed(commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
 			
 			}
-			{
-				bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors[ PIPELINE_GRAPHICS_PIPELINE_QUADS ]);
-				vkCmdBindIndexBuffer(commandBuffer, buffers[ INDEX_DATA_BUFFER ].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, uint32_t(textVertData.size() * 6), 1, 0, 0, 0);
 
-			}
 			vkCmdEndRenderPass(commandBuffer);
 		}
 

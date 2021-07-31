@@ -63,5 +63,5 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
 	VkAccessFlags dstAccessMask, VkImageLayout newLayout,
 	VkImageAspectFlags aspectMask  = VK_IMAGE_ASPECT_COLOR_BIT);
 
-VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size);
+VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size, size_t offset = 0);
 VkBufferMemoryBarrier bufferBarrier(const Buffer &buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask);

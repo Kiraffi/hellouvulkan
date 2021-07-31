@@ -271,7 +271,6 @@ void destroyBuffer(VkDevice device, Buffer &buffer)
 {
 	vkDestroyBuffer(device, buffer.buffer, nullptr);
 	vkFreeMemory(device, buffer.deviceMemory, nullptr);
-
 	buffer.buffer = 0;
 	buffer.data = nullptr;
 	buffer.deviceMemory = 0;
@@ -376,15 +375,16 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
 	return barrier;
 }
 
-VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size)
+VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size, size_t offset)
 {
+	ASSERT(size > 0);
 	VkBufferMemoryBarrier copyBarrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
 	copyBarrier.srcAccessMask = srcAccessMask;
 	copyBarrier.dstAccessMask = dstAccessMask;
 	copyBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	copyBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	copyBarrier.buffer = buffer;
-	copyBarrier.offset = 0;
+	copyBarrier.offset = offset;
 	copyBarrier.size = size;
 	return copyBarrier;
 }
