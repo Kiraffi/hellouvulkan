@@ -29,6 +29,8 @@ struct DescriptorSet
 	u32 bindingIndex = ~0u;
 	bool writeDescriptor = true;
 	const Buffer *buffer = nullptr;
+	VkDeviceSize offset = 0;
+	VkDeviceSize size = 0;
 	VkImage image = 0;
 	VkImageView imageView = 0;
 	VkSampler sampler = 0;

@@ -58,7 +58,7 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "Build the GLFW test programs")
 
 ADD_DEFINITIONS(-DSHOW_INFO_MESSAGES=0)
 ADD_DEFINITIONS(-DVSYNC=1)
-ADD_DEFINITIONS(-DDISCRETE_GPU=0)
+ADD_DEFINITIONS(-DDISCRETE_GPU=1)
 
 #add_subdirectory("externallibs")
 add_subdirectory("external/glfw-3.3.4")

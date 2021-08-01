@@ -258,7 +258,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
 		// Create buffers
-		renderFrameBuffer = createBuffer(device, memoryProperties, 64u * 1024,
+		renderFrameBuffer = createBuffer(device, memoryProperties, 64u * 1024 * 1024,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
 

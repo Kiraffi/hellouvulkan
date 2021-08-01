@@ -121,9 +121,11 @@ Descriptor createDescriptor(VkDevice device, const std::vector<DescriptorSet> &d
 				ASSERT(descriptors[ i ].buffer->size > 0);
 				bufferInfos[bufferCount] = {};
 				bufferInfos[bufferCount].buffer = descriptors[i].buffer->buffer;
-				bufferInfos[bufferCount].offset = 0;
-				bufferInfos[bufferCount].range = descriptors[i].buffer->size;
-
+				bufferInfos[bufferCount].offset = descriptors[i].offset;
+				if(descriptors[i].size == 0)
+					bufferInfos[bufferCount].range = descriptors[i].buffer->size;
+				else
+					bufferInfos[bufferCount].range = descriptors[i].size;
 				writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 				writeDescriptorSets[writeIndex].dstSet = descriptorSet;
 				writeDescriptorSets[writeIndex].dstArrayElement = 0;
