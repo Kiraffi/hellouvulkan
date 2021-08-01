@@ -30,22 +30,26 @@ add_library(MyLibraries
 
 	"render/font_render.cpp"
 	"render/font_render.h"
-	  "myvulkan/vulkanmemorymanager.cpp" "myvulkan/vulkanmemorymanager.h")
+	 "myvulkan/vulkanmemorymanager.cpp"
+	"myvulkan/vulkanmemorymanager.h")
 
 target_include_directories(MyLibraries PUBLIC 
 	"${CMAKE_CURRENT_SOURCE_DIR}/"	
 	"${CMAKE_DL_LIBS}"
 	"Vulkan::Vulkan"
 	"glfw"
-	"math/vector3.h"
-	"math/general_math.h"
-	"math/quaternion.h"
-	"math/matrix.h"
-	"math/plane.h"
-	"myvulkan/vulkanswapchain.h"
-	"myvulkan/vulkanresource.h"
+	"math"
+	"myvulkan"
+	"render"
+	#"math/vector3.h"
+	#"math/general_math.h"
+	#"math/quaternion.h"
+	#"math/matrix.h"
+	#"math/plane.h"
+	#"myvulkan/vulkanswapchain.h"
+	#"myvulkan/vulkanresource.h"
 
-	"render/font_render.h"
+	#"render/font_render.h"
 
 	${VULKAN_INCLUDE_DIR}
 	${VULKAN_INCLUDE_DIRS}

@@ -15,23 +15,23 @@
 
 //#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 
-#include <core/vulkan_app.h>
+#include "core/vulkan_app.h"
 
-#include <core/timer.h>
+#include "core/timer.h"
 #include "transform.h"
-#include <core/mytypes.h>
+#include "core/mytypes.h"
 
-#include <myvulkan/vulkandevice.h>
-#include <myvulkan/vulkanhelperfuncs.h>
-#include <myvulkan/vulkanresource.h>
-#include <myvulkan/vulkanshader.h>
-#include <myvulkan/vulkanswapchain.h>
+#include "myvulkan/vulkandevice.h"
+#include "myvulkan/vulkanhelperfuncs.h"
+#include "myvulkan/vulkanresource.h"
+#include "myvulkan/vulkanshader.h"
+#include "myvulkan/vulkanswapchain.h"
 
-#include <math/general_math.h>
-#include <math/matrix.h>
-#include <math/plane.h>
-#include <math/quaternion.h>
-#include <math/vector3.h>
+#include "math/general_math.h"
+#include "math/matrix.h"
+#include "math/plane.h"
+#include "math/quaternion.h"
+#include "math/vector3.h"
 
 
 #include "model.h"
@@ -552,7 +552,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 			DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[UNIFORM_BUFFER] },
 			DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u, true, &buffers[INDEX_WRITE_BUFFER] },
 			DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4u, true, &buffers[ATOMIC_BUFFER] },
-			DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 6u, true, nullptr,
+			DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 6u, true, nullptr, 0u, 0u,
 				renderTargetImages[MAIN_COLOR_TARGET].image, renderTargetImages[MAIN_COLOR_TARGET].imageView, mainImageComputeWriteSampler, VK_IMAGE_LAYOUT_GENERAL},
 		});
 		HelperStruct::setComputePipeline(device, pipeline, this, SHADER_MODULE_COMPUTE_CARP_WRITE_NUMBER); 

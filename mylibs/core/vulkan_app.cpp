@@ -1,13 +1,13 @@
 #include "vulkan_app.h"
 
 #include <stdio.h>
+#include <string.h>
 
-
-#include <myvulkan/vulkandevice.h>
-#include <myvulkan/vulkanhelperfuncs.h>
-#include <myvulkan/vulkanresource.h>
-#include <myvulkan/vulkanshader.h>
-#include <myvulkan/vulkanswapchain.h>
+#include "myvulkan/vulkandevice.h"
+#include "myvulkan/vulkanhelperfuncs.h"
+#include "myvulkan/vulkanresource.h"
+#include "myvulkan/vulkanshader.h"
+#include "myvulkan/vulkanswapchain.h"
 
 static double timer_frequency = 0.0;
 
