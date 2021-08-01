@@ -434,8 +434,8 @@ DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfa
 	{
 		VkFormatProperties formatProperties;
 		vkGetPhysicalDeviceFormatProperties(physicalDevice, defaultFormat[j], &formatProperties);
-			if((formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) != 0u &&
-				 (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0u)
+		if((formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) != 0u &&
+			 (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0u)
 		{
 			deviceWithQueues.computeColorFormat = defaultFormat[j];
 			break;

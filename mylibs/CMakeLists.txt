@@ -1,22 +1,28 @@
+# Whenever this glob's value changes, cmake will rerun and update the build with the
+# new/removed files.
+#file(GLOB_RECURSE sources CONFIGURE_DEPENDS "*.cpp")
+
 add_library(MyLibraries
-	core/mytypes.h
-	core/general.h
-	core/general.cpp
-	core/timer.h
-	core/timer.cpp
+	"core/mytypes.h"
+	"core/general.h"
+	"core/general.cpp"
+	"core/timer.h"
+	"core/timer.cpp"
 
 
-	core/vulkan_app.h
-	core/vulkan_app.cpp
-
+	"core/vulkan_app.h"
+	"core/vulkan_app.cpp"
 	
-	myvulkan/vulkandevice.h
-	myvulkan/vulkandevice.cpp
-	myvulkan/vulkanhelperfuncs.h
-	myvulkan/vulkanresource.cpp
-	myvulkan/vulkanshader.h
-	myvulkan/vulkanshader.cpp
-	myvulkan/vulkanswapchain.cpp
+	
+	"myvulkan/vulkandevice.h"
+	"myvulkan/vulkandevice.cpp"
+	"myvulkan/vulkanhelperfuncs.h"
+	"myvulkan/vulkanmemorymanager.cpp"
+	"myvulkan/vulkanmemorymanager.h"
+	"myvulkan/vulkanresource.cpp"
+	"myvulkan/vulkanshader.h"
+	"myvulkan/vulkanshader.cpp"
+	"myvulkan/vulkanswapchain.cpp"
 
 	"math/matrix.cpp"
 	"math/quaternion.cpp"
@@ -24,7 +30,7 @@ add_library(MyLibraries
 
 	"render/font_render.cpp"
 	"render/font_render.h"
-	 )
+	  "myvulkan/vulkanmemorymanager.cpp" "myvulkan/vulkanmemorymanager.h")
 
 target_include_directories(MyLibraries PUBLIC 
 	"${CMAKE_CURRENT_SOURCE_DIR}/"	
