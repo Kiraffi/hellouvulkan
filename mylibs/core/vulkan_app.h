@@ -3,14 +3,14 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <core/timer.h>
+#include "core/timer.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <myvulkan/vulkandevice.h>
-#include <myvulkan/vulkanresource.h>
-#include <myvulkan/vulkanswapchain.h>
+#include "myvulkan/vulkandevice.h"
+#include "myvulkan/vulkanresource.h"
+#include "myvulkan/vulkanswapchain.h"
 #include "render/font_render.h"
 
 constexpr u32 QUERY_COUNT = 128u;

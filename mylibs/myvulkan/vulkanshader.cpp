@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include <core/mytypes.h>
+#include "core/mytypes.h"
 
 #ifdef _WIN32
 #include <Windows.h>

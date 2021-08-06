@@ -23,10 +23,10 @@ const float pii = 3.1415926265359f;
 
 
 
-#ifdef NDEBUG
-	const bool enableValidationLayers = false;
-#else
+#if USE_GPU_DEBUG_VALIDATION
 	const bool enableValidationLayers = true;
+#else
+	const bool enableValidationLayers = false;
 #endif
 
 #ifdef NDEBUG

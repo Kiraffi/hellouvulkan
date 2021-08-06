@@ -57,8 +57,10 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs")
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "Build the GLFW test programs")
 
 ADD_DEFINITIONS(-DSHOW_INFO_MESSAGES=0)
-ADD_DEFINITIONS(-DVSYNC=1)
-ADD_DEFINITIONS(-DDISCRETE_GPU=1)
+ADD_DEFINITIONS(-DVSYNC=2)
+ADD_DEFINITIONS(-DDISCRETE_GPU=0)
+ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
+ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
 #add_subdirectory("externallibs")
 add_subdirectory("external/glfw-3.3.4")
@@ -73,5 +75,3 @@ add_subdirectory ("font_render_vulkan")
 add_subdirectory ("space_shooter_vulkan")
 add_subdirectory ("vulkan_test")
 add_subdirectory ("draw_stuff_vulkan")
-
- 

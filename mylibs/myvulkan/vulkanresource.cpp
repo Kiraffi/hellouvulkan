@@ -4,7 +4,7 @@
 #include <memory.h>
 
 #include "vulkandevice.h"
-#include <core/mytypes.h>
+#include "core/mytypes.h"
 
 
 static u32 selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProperties, u32 memoryTypeBits, VkMemoryPropertyFlags flags)

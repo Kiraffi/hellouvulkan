@@ -3,14 +3,14 @@
 #include <string>
 #include <vulkan/vulkan_core.h>
 
-#include <core/mytypes.h>
-#include <math/vector3.h>
+#include "core/mytypes.h"
+#include "math/vector3.h"
 
 
-#ifdef NDEBUG
-	const bool useVulkanDebugMarkersRenderDoc = false;
-#else
+#if USE_RENDERDOC_MARKERS
 	const bool useVulkanDebugMarkersRenderDoc = true;
+#else
+	const bool useVulkanDebugMarkersRenderDoc = false;
 #endif
 
 // #define SHOW_INFO_MESSAGES 0

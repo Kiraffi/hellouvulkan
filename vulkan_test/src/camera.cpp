@@ -1,7 +1,7 @@
 
 #include "camera.h"
-#include <math/matrix.h>
-#include <math/general_math.h>
+#include "math/matrix.h"
+#include "math/general_math.h"
 
 
 #include <cmath>

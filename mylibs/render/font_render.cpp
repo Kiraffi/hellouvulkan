@@ -4,8 +4,8 @@
 // memcpy...
 #include <string.h>
 
-#include <core/timer.h>
-#include <core/general.h>
+#include "core/timer.h"
+#include "core/general.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -13,16 +13,16 @@
 //#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 #include "font_render.h"
 
-#include <core/vulkan_app.h>
+#include "core/vulkan_app.h"
 
-#include <core/timer.h>
-#include <core/mytypes.h>
+#include "core/timer.h"
+#include "core/mytypes.h"
 
-#include <myvulkan/vulkandevice.h>
-#include <myvulkan/vulkanhelperfuncs.h>
-#include <myvulkan/vulkanresource.h>
-#include <myvulkan/vulkanshader.h>
-#include <myvulkan/vulkanswapchain.h>
+#include "myvulkan/vulkandevice.h"
+#include "myvulkan/vulkanhelperfuncs.h"
+#include "myvulkan/vulkanresource.h"
+#include "myvulkan/vulkanshader.h"
+#include "myvulkan/vulkanswapchain.h"
 
 
 #include <string>

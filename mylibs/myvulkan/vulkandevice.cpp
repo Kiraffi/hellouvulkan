@@ -1,9 +1,9 @@
 #include "vulkandevice.h"
 
 #include <GLFW/glfw3.h>
-#include <core/mytypes.h>
+#include "core/mytypes.h"
 #include "vulkanswapchain.h"
-#include <math/vector3.h>
+#include "math/vector3.h"
 #include <vulkan/vulkan_core.h>
 
 #include <cstring>
@@ -471,7 +471,7 @@ DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfa
 
 
 	std::vector<const char *> deviceExts = deviceExtensions;
-
+	
 	VulkanDeviceOptionals optionals = getDeviceOptionals(physicalDevice);
 	if(optionals.canUseVulkanRenderdocExtensionMarker)
 	{

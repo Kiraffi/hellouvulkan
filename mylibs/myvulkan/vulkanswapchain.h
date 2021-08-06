@@ -3,7 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#include <core/mytypes.h>
+#include "core/mytypes.h"
 
 // Intel?
 //const VkFormat defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
