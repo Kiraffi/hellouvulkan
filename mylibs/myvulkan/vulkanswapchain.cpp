@@ -5,7 +5,8 @@
 #include <vulkan/vulkan_core.h>
 
 #include "vulkandevice.h"
-#include <core/mytypes.h>
+#include "core/mytypes.h"
+
 
 
 static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice,
@@ -90,8 +91,8 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 	} 
 	else
 	{
-		createInfo.queueFamilyIndexCount = 1;
-		createInfo.pQueueFamilyIndices = &indices.graphicsFamily;
+		// SETTING THIS TO 1 + giving queuefamilyindices pointer CAUSED CRASH WITH VKKHRSWAPCHAINCREATION WITH AMD
+		createInfo.queueFamilyIndexCount = 0;
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 	createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
@@ -100,7 +101,13 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 	createInfo.clipped = VK_TRUE;
 
 	VkSwapchainKHR swapChain = 0;
-	VK_CHECK(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain));
+//	PreCallValidateCreateSwapchainKHR()
+	[[maybe_unused]] VkResult res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
+	if (res != VK_SUCCESS)
+	{
+		LOG("Failed to initialize swapchain\n");
+	}
+	VK_CHECK(res);
 
 	return swapChain;
 }
