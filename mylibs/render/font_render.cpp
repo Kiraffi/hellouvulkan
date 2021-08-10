@@ -61,7 +61,7 @@ bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, Vk
 	Buffer &scratchBuffer, const Buffer &renderFrameBuffer)
 {
 	std::vector<char> data;
-	if (!core::loadFontData(fontFilename, data))
+	if (!loadBytes(fontFilename, data))
 	{
 		printf("Failed to load file: %s\n", fontFilename.c_str());
 		return false;
@@ -188,7 +188,7 @@ void FontRenderSystem::addText(const std::string& text, Vector2 pos, Vec2 charSi
 	for(const char c : text)
 	{
 		GPUVertexData vdata;
-		vdata.color = core::getColor(color.x, color.y, color.z, color.w);
+		vdata.color = getColor(color.x, color.y, color.z, color.w);
 		vdata.pixelSizeX = charWidth;
 		vdata.pixelSizeY = charHeight;
 		vdata.posX = pos.x;

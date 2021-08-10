@@ -51,7 +51,7 @@ enum TIME_POINTS
 
 
 
-class VulkanFontRender : public core::VulkanApp
+class VulkanFontRender : public VulkanApp
 {
 public:
 	VulkanFontRender() {}
@@ -79,7 +79,7 @@ VulkanFontRender::~VulkanFontRender()
 
 bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
+	if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);

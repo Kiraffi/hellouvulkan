@@ -163,7 +163,7 @@ enum RenderTargetImageIndexes
 
 
 
-class VulkanTest : public core::VulkanApp
+class VulkanTest : public VulkanApp
 {
 public:
 	VulkanTest() {}
@@ -253,7 +253,7 @@ VulkanTest::~VulkanTest()
 
 bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-	if(!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
+	if(!VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);

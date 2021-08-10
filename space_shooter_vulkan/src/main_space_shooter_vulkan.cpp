@@ -138,7 +138,7 @@ enum BufferIndexes
 };
 
 
-class SpaceShooter : public core::VulkanApp
+class SpaceShooter : public VulkanApp
 {
 public:
 	SpaceShooter() {}
@@ -185,7 +185,7 @@ SpaceShooter::~SpaceShooter()
 
 bool SpaceShooter::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
+	if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
@@ -310,7 +310,7 @@ static Entity spawnAsteroidEntity(double spawnTime)
 		.posX = xPos, .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
 		.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
 		.spawnTime = spawnTime,
-		.color = core::getColor(0.5, 0.5, 0.5, 1.0f) };
+		.color = getColor(0.5, 0.5, 0.5, 1.0f) };
 }
 
 
@@ -422,7 +422,7 @@ void SpaceShooter::run()
 				.posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
 				.speedX = 0.0f, .speedY = 0.0f, .size = size, .entityModelIndex = modelIndex,
 				.spawnTime = spawnTime,
-				.color = core::getColor(1.0, 1.0, 0.0, 1.0f) } );
+				.color = getColor(1.0, 1.0, 0.0, 1.0f) } );
 		}
 		// Asteroid instances.
 		for (uint32_t asteroidInstances = 0u; asteroidInstances < 256; ++asteroidInstances)
@@ -467,7 +467,7 @@ void SpaceShooter::run()
 		}
 
 		glfwPollEvents();
-		core::MouseState mouseState = getMouseState();
+		MouseState mouseState = getMouseState();
 
 		{
 			Timer updateDurTimer;
@@ -518,7 +518,7 @@ void SpaceShooter::run()
 								.posX = posX, .posY = posY, .posZ = 0.5f, .rotation = 0.0f,
 								.speedX = speedX, .speedY = speedY, .size = 4.0f, .entityModelIndex = 1 + AsteroidMaxTypes,
 								.spawnTime = glfwGetTime(),
-								.color = core::getColor(0.0, 0.5, 1.0, 1.0f) });
+								.color = getColor(0.0, 0.5, 1.0, 1.0f) });
 
 							lastShot = timeHere;
 						}

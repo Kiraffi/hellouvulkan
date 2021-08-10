@@ -17,8 +17,6 @@ constexpr u32 QUERY_COUNT = 128u;
 
 struct Image;
 
-namespace core
-{
 struct MouseState
 {
 	int x;
@@ -119,6 +117,4 @@ protected:
 
 
 	VkPipelineCache pipelineCache = 0;
-};
-
 };

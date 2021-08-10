@@ -105,7 +105,7 @@ enum BufferIndexes
 };
 
 
-class VulkanFontDraw : public core::VulkanApp
+class VulkanFontDraw : public VulkanApp
 {
 public:
 	VulkanFontDraw() {}
@@ -154,7 +154,7 @@ VulkanFontDraw::~VulkanFontDraw()
 
 bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
+	if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
@@ -240,7 +240,7 @@ void VulkanFontDraw::run()
 {
 	const u32 charCount = 128 - 32;
 	std::vector<char> data;
-	if (!core::loadFontData(fontFilename, data))
+	if (!loadBytes(fontFilename, data))
 	{
 		printf("Failed to load file: %s\n", fontFilename.c_str());
 		return;
@@ -261,7 +261,7 @@ void VulkanFontDraw::run()
 		float offY = ( borderSizes + buttonSize ) + windowHeight * 0.5f;
 
 		GPUVertexData &vdata = vertData[ 0 ];
-		vdata.color = core::getColor(1.0f, 0.0f, 0.0f, 1.0f);
+		vdata.color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
 		vdata.pixelSizeX = uint16_t(smallButtonSize) * 8 + 4;
 		vdata.pixelSizeY = uint16_t(smallButtonSize) * 12 + 4;
 		vdata.posX = offX;
@@ -341,7 +341,7 @@ void VulkanFontDraw::run()
 		}
 
 		glfwPollEvents();
-		core::MouseState mouseState = getMouseState();
+		MouseState mouseState = getMouseState();
 		{
 
 
@@ -373,7 +373,7 @@ void VulkanFontDraw::run()
 				saveFontData(fontFilename, data);
 
 			if (keyDowns[ GLFW_KEY_L ].isDown && keyDowns[ GLFW_KEY_L ].pressCount > 0u && isControlDown)
-				core::loadFontData(fontFilename, data);
+				loadBytes(fontFilename, data);
 
 			if (keyDowns[ GLFW_KEY_C ].isDown && keyDowns[ GLFW_KEY_C ].pressCount > 0u && isControlDown)
 			{

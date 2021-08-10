@@ -4,11 +4,20 @@
 #include <fstream>
 #include <cmath>
 
-namespace core
+#ifdef _WIN32
+	#include <Windows.h>
+#endif
+
+#include "mytypes.h"
+
+bool loadBytes(const std::string& fileName, std::vector<char>& dataOut)
 {
-bool loadFontData(const std::string &fileName, std::vector<char> &dataOut)
-{
-	//
+	#ifdef _WIN32
+		char buf[1024] = {};
+		GetCurrentDirectory(1024, buf);
+		LOG("Buf: %s\n", buf);
+	#endif
+
 	if (std::filesystem::exists(fileName))
 	{
 		std::filesystem::path p(fileName);
@@ -29,6 +38,7 @@ bool loadFontData(const std::string &fileName, std::vector<char> &dataOut)
 
 
 
+
 // color values r,g,h,a between [0..1]
 uint32_t getColor(float r, float g, float b, float a)
 {
@@ -45,5 +55,3 @@ uint32_t getColor(float r, float g, float b, float a)
 	
 	return c;
 }
-
-}; // end of core namespace.

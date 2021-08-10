@@ -4,11 +4,9 @@
 #include <stdio.h>
 #include <vector>
 
+#include "core/general.h"
 #include "core/mytypes.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 #include "vulkanresource.h"
 
 static VkDescriptorSetLayout createSetLayout(VkDevice device, const std::vector<DescriptorSet> &descriptors)
@@ -467,39 +465,19 @@ void destroyPipeline(VkDevice device, Pipeline &pipeline)
 
 VkShaderModule loadShader(VkDevice device, const char *path)
 {
-#ifdef _WIN32
-	char buf[1024] = {};
-	GetCurrentDirectory(1024, buf);
-	LOG("Buf: %s\n", buf);
-	FILE* file = nullptr;
-	fopen_s(&file, path, "rb");
-#else
-	FILE *file = fopen(path, "rb");
-#endif
-	ASSERT(file);
-
-	fseek(file, 0, SEEK_END);
-	long length = ftell(file);
-	rewind(file);
-	ASSERT(length > 0);
-
-	char *buffer = new char[length];
-	ASSERT(buffer);
-
-	[[maybe_unused]] long rc = (long)fread(buffer, 1, length, file); 
-	ASSERT(rc  == length);
-	fclose(file);
-
-	ASSERT(length % 4 == 0);
-
-	VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-	createInfo.codeSize = length;
-	createInfo.pCode = reinterpret_cast<u32 *>(buffer);
+	std::string filename = std::string(path);
+	std::vector<char> buffer;
 	VkShaderModule shaderModule = 0;
-	vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
 
-	delete[] buffer;
+	if (loadBytes(filename, buffer))
+	{
+		ASSERT(buffer.size() % 4 == 0);
 
+		VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		createInfo.codeSize = buffer.size();
+		createInfo.pCode = reinterpret_cast<u32*>(buffer.data());
+		vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
+	}
 	ASSERT(shaderModule);
 	return shaderModule;
 }

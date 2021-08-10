@@ -105,7 +105,7 @@ enum BufferIndexes
 };
 
 
-class VulkanFontDraw : public core::VulkanApp
+class VulkanFontDraw : public VulkanApp
 {
 public:
 	VulkanFontDraw() {}
@@ -152,13 +152,284 @@ VulkanFontDraw::~VulkanFontDraw()
 
 }
 
+int skipWord(const std::vector<char>& buffer, int bufferIndex)
+{
+	int sz = (int)buffer.size();
+	while (bufferIndex < sz && !isspace(buffer[bufferIndex]))
+		++bufferIndex;
+
+	return bufferIndex;
+}
+
+
+int skipWhiteSpace(const std::vector<char> &buffer, int bufferIndex)
+{
+	int sz = (int)buffer.size();
+	while (bufferIndex < sz && isspace(buffer[bufferIndex]))
+		++bufferIndex;
+
+	return bufferIndex;
+}
+
+bool getTypeContent(const std::vector<char>& buffer, bool squareBracket, int &startIndex, int &endIndex)
+{
+	char findOpen = squareBracket ? '[' : '{';
+	char findClosed = squareBracket ? ']' : '}';
+
+	bool found = false;
+	int bracketCount = 0;
+
+	int sz = (int)buffer.size();
+	int ind = startIndex;
+	endIndex = -1;
+	while (ind < sz)
+	{
+		char c = buffer[ind];
+		if (c == findOpen)
+		{
+			if (bracketCount == 0)
+			{
+				startIndex = ind;
+			}
+			found = true;
+			++bracketCount;
+		}
+		else if(c == findClosed)
+		{
+			endIndex = ind;
+			--bracketCount;
+			if (bracketCount <= 0)
+				break;
+		}
+		++ind;
+	}
+
+	return found && bracketCount == 0;
+}
+
+bool subStrCmp(std::vector<char>& buffer, const char* cmpStr, int startPos)
+{
+	int l = strlen(cmpStr);
+
+	return startPos + l < (int)buffer.size() && strncmp(buffer.data() + startPos, cmpStr, l) == 0;
+}
+
+bool readGLTF(const char *filename)
+{
+	std::string fName = std::string(filename);
+	std::vector<char> buffer;
+
+	if (!loadBytes(fName, buffer))
+		return false;
+
+	int bufferIndex = 0;
+
+	struct Vertex
+	{
+		Vec3 pos;
+		Vec3 norm;
+		Vec4 color;
+	};
+
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+
+	struct ScneNode
+	{
+		std::string name;
+		Quat rot;
+		Vec3 trans;
+	};
+
+	struct BufferType
+	{
+		uint32_t dataCount;
+		uint32_t componentType;
+		// scalar = 1, vec2 = 2....
+		uint32_t componentCount;
+
+		Vec3 minValue;
+		Vec3 maxValue;
+	
+		uint32_t bufferViewIndex;
+		uint32_t bufferIndex;
+		uint32_t len;
+		uint32_t off;
+	};
+
+
+	std::vector<ScneNode> nodes;
+	std::vector<BufferType> bufferTypes;
+	std::vector<std::vector<uint8_t>> buffers;
+
+	uint32_t positionIndex = ~0u;
+	uint32_t normalIndex = ~0u;
+	uint32_t colorIndex = ~0u;
+	uint32_t indicesIndex = ~0u;
+
+
+	int sz = (int)buffer.size();
+
+
+	while (bufferIndex < sz)
+	{
+		bufferIndex = skipWhiteSpace(buffer, bufferIndex);
+		if (bufferIndex == -1)
+			break;
+
+		if (subStrCmp(buffer, "\"scenes\"", bufferIndex))
+		{
+			LOG("Scenes\n");
+			int startIndex = bufferIndex;
+			int endIndex = bufferIndex;
+			if (getTypeContent(buffer, true, startIndex, endIndex))
+				bufferIndex = endIndex;
+		}
+
+		else if (subStrCmp(buffer, "\"nodes\"", bufferIndex))
+		{
+			LOG("Nodes\n");
+			int startIndex = bufferIndex;
+			int endIndex = bufferIndex;
+			if (getTypeContent(buffer, true, startIndex, endIndex))
+			{ 
+				bufferIndex = endIndex;
+
+				int nodeStartIndex = startIndex;
+				int nodeEndIndex = startIndex;
+
+				// take all the nodes....
+
+			}
+		}
+		else if (subStrCmp(buffer, "\"meshes\"", bufferIndex))
+		{
+			LOG("Meshes\n");
+
+		}
+		else if (subStrCmp(buffer, "\"buffers\"", bufferIndex))
+		{
+			LOG("Buffers\n");
+			while (bufferIndex < sz && !subStrCmp(buffer, "\"uri\" : \"data:application/octet-stream;base64,", bufferIndex))
+				++bufferIndex;
+
+
+
+			if (bufferIndex < sz)
+			{
+				std::vector<uint8_t> byteData;
+				byteData.reserve(1024);
+				int byteOffset = 0;
+				uint8_t currentByte = 0u;
+				bufferIndex += 46;
+				while (bufferIndex < sz)
+				{
+					char c = buffer[bufferIndex];
+					uint8_t readByte = 0u;
+
+					if (c >= 'A' && c <= 'Z') readByte = (c - 'A');
+					if (c >= 'a' && c <= 'z') readByte = (c - 'a') + 26;
+					if (c >= '0' && c <= '9') readByte = (c - '0') + 52;
+					if (c == '+') readByte = 62;
+					if (c == '/') readByte = 63;
+					if (c == '\"')
+						break;
+
+					if (byteOffset == 0)
+					{
+						currentByte = readByte << 2;
+					}
+					else if (byteOffset == 1)
+					{
+						currentByte |= (readByte >> 4);
+						byteData.push_back(currentByte);
+						currentByte = (readByte & 15) << 4;
+					}
+					else if (byteOffset == 2)
+					{
+						currentByte |= (readByte >> 2);
+						byteData.push_back(currentByte);
+						currentByte = (readByte & 3) << 6;
+					}
+					else if (byteOffset == 3)
+					{
+						currentByte |= (readByte);
+						byteData.push_back(currentByte);
+						currentByte = 0;
+					}
+					byteOffset = (byteOffset + 1) % 4;
+					++bufferIndex;
+				}
+				if (currentByte != 0)
+					byteData.push_back(currentByte);
+				int index = 0;
+				int rowC = 0;
+				for (; index < 288; index += 12)
+				{
+					Vec3 v;
+					memcpy(&v.x, byteData.data() + index, 12);
+					printf("pos %i: x: %f, y: %f, z: %f\n", rowC, v.x, v.y, v.z);
+					++rowC;
+				}
+				rowC = 0;
+				for (; index < 288 + 288; index += 12)
+				{
+					Vec3 v;
+					memcpy(&v.x, byteData.data() + index, 12);
+					printf("norm %i: x: %f, y: %f, z: %f\n", rowC, v.x, v.y, v.z);
+					++rowC;
+				}
+				rowC = 0;
+				for (; index < 576 + 192; index += 8)
+				{
+					Vec2 v;
+					memcpy(&v.x, byteData.data() + index, 8);
+					printf("tx0 %i: x: %f, y: %f\n", rowC, v.x, v.y);
+					++rowC;
+				}
+				rowC = 0;
+				for (; index < 768 + 192; index += 8)
+				{
+					//09B6FF
+					// normalized
+					Vec4 v;
+
+					for (int i = 0; i < 4; ++i)
+					{
+						uint32_t t = 0;
+						memcpy(&t, byteData.data() + index + i * 2, 2);
+						
+						float f = float(t) / 65535.0f;
+						v[i] = f;
+					}
+					printf("col %i: x: %f, y: %f, z: %f, w: %f\n", rowC, v.x, v.y, v.z, v.w);
+					++rowC;
+				}
+				rowC = 0;
+				for (; index < 960 + 72; index += 2)
+				{
+					uint16_t v;
+					memcpy(&v, byteData.data() + index, 2);
+					printf("ind %i: x: %i\n", rowC, v);
+					++rowC;
+				}
+			}
+		}
+
+		bufferIndex = skipWord(buffer, bufferIndex);
+	}
+
+
+	return true;
+}
+
 bool VulkanFontDraw::init(const char* windowStr, int screenWidth, int screenHeight)
 {
-	if (!core::VulkanApp::init(windowStr, screenWidth, screenHeight))
+	if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-
+	readGLTF("assets/models/test_gltf.gltf");
 
 	VkDevice device = deviceWithQueues.device;
 
@@ -240,7 +511,7 @@ void VulkanFontDraw::run()
 {
 	const u32 charCount = 128 - 32;
 	std::vector<char> data;
-	if (!core::loadFontData(fontFilename, data))
+	if (!loadBytes(fontFilename, data))
 	{
 		printf("Failed to load file: %s\n", fontFilename.c_str());
 		return;
@@ -261,7 +532,7 @@ void VulkanFontDraw::run()
 		float offY = (borderSizes + buttonSize) + windowHeight * 0.5f;
 
 		GPUVertexData& vdata = vertData[0];
-		vdata.color = core::getColor(1.0f, 0.0f, 0.0f, 1.0f);
+		vdata.color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
 		vdata.pixelSizeX = uint16_t(smallButtonSize) * 8 + 4;
 		vdata.pixelSizeY = uint16_t(smallButtonSize) * 12 + 4;
 		vdata.posX = offX;
@@ -341,7 +612,7 @@ void VulkanFontDraw::run()
 		}
 
 		glfwPollEvents();
-		core::MouseState mouseState = getMouseState();
+		MouseState mouseState = getMouseState();
 		{
 
 
@@ -373,7 +644,7 @@ void VulkanFontDraw::run()
 				saveFontData(fontFilename, data);
 
 			if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
-				core::loadFontData(fontFilename, data);
+				loadBytes(fontFilename, data);
 
 			if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
 			{

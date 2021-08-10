@@ -21,7 +21,7 @@ static void error_callback(int error, const char* description)
 
 static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
-	core::VulkanApp *data = reinterpret_cast<core::VulkanApp *>(glfwGetWindowUserPointer(window));
+	VulkanApp *data = reinterpret_cast<VulkanApp *>(glfwGetWindowUserPointer(window));
 	if(data)
 	{
 		data->resizeWindow(width, height);
@@ -31,7 +31,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 
 static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-	core::VulkanApp *data = reinterpret_cast<core::VulkanApp *>(glfwGetWindowUserPointer(window));
+	VulkanApp *data = reinterpret_cast<VulkanApp *>(glfwGetWindowUserPointer(window));
 	if(data)
 	{
 		if(action == GLFW_PRESS)
@@ -67,8 +67,6 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 }
 
 
-
-namespace core {
 
 bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 {
@@ -601,6 +599,3 @@ MouseState VulkanApp::getMouseState()
 	mouseState.middleButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
 	return mouseState;
 }
-
-
-}; // end of core namespace.
