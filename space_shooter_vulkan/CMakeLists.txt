@@ -10,13 +10,10 @@ add_executable (space_shooter_vulkan "src/main_space_shooter_vulkan.cpp")
 add_dependencies(space_shooter_vulkan shaders)
 
 target_link_libraries(space_shooter_vulkan PUBLIC 
-	glfw
+	glfw 
 	${CMAKE_DL_LIBS} 
-	${GLFW_LIBRARIES} 
-	MyGlad
-	MyLibraries
+	${GLFW_LIBRARIES}
 	Vulkan::Vulkan
 	meshoptimizer
-	MyGlad
 	MyLibraries
 	)

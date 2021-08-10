@@ -36,6 +36,6 @@
       "projectTarget": "draw_stuff_vulkan.exe (draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
       "name": "draw_stuff_vulkan.exe (draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
       "currentDir": "${workspaceRoot}"
-    },
+    }
   ]
 }

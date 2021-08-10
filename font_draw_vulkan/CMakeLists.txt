@@ -13,10 +13,7 @@ target_link_libraries(font_draw_vulkan PUBLIC
 	glfw 
 	${CMAKE_DL_LIBS} 
 	${GLFW_LIBRARIES}
-	MyGlad
-	MyLibraries
 	Vulkan::Vulkan
 	meshoptimizer
-	MyGlad
 	MyLibraries
 	)

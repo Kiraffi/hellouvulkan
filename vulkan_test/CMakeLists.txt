@@ -31,10 +31,9 @@ add_executable (vulkan_test
 target_link_libraries(vulkan_test PUBLIC 
 	glfw 
 	${CMAKE_DL_LIBS} 
-	${GLFW_LIBRARIES} 
+	${GLFW_LIBRARIES}
 	Vulkan::Vulkan
 	meshoptimizer
-	MyGlad
 	MyLibraries
 	#${VULKAN_INCLUDE_DIR}
 	#${VULKAN_INCLUDE_DIRS}

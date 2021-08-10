@@ -11,12 +11,9 @@ add_dependencies(font_render_vulkan shaders)
 
 target_link_libraries(font_render_vulkan PUBLIC 
 	glfw 
-	MyGlad 
-	MyLibraries
 	${CMAKE_DL_LIBS} 
 	${GLFW_LIBRARIES} 
 	Vulkan::Vulkan
 	meshoptimizer
-	MyGlad
 	MyLibraries
 	)

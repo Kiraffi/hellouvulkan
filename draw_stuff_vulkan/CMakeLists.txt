@@ -11,12 +11,9 @@ add_dependencies(draw_stuff_vulkan shaders)
 
 target_link_libraries(draw_stuff_vulkan PUBLIC 
 	glfw 
-	MyGlad 
-	MyLibraries
 	${CMAKE_DL_LIBS} 
-	${GLFW_LIBRARIES} 
+	${GLFW_LIBRARIES}
 	Vulkan::Vulkan
 	meshoptimizer
-	MyGlad
 	MyLibraries
 	)
