@@ -70,6 +70,23 @@ bool saveFontData(const std::string& filename, const std::vector<char>& data)
 }
 
 
+struct JSONBlock
+{
+	JSONBlock(int start) { startIndex = start; }
+	JSONBlock(int start, int end) : startIndex(start), endIndex(end) {}
+
+	bool isBracket() { return vvalid && !varray && vbracket; }
+	bool isArray() { return vvalid && varray && !vbracket; }
+	bool isValid() { return vvalid && !(varray && vbracket); }
+
+	int startIndex = 0;
+	int endIndex = 0;
+	int currentIndex = 0;
+	bool varray = false;
+	bool vbracket = false;
+	bool vvalid = false;
+};
+
 
 enum TIME_POINTS
 {
@@ -152,59 +169,86 @@ VulkanFontDraw::~VulkanFontDraw()
 
 }
 
-int skipWord(const std::vector<char>& buffer, int bufferIndex)
+bool skipWord(const std::vector<char>& buffer, JSONBlock &block)
 {
-	int sz = (int)buffer.size();
-	while (bufferIndex < sz && !isspace(buffer[bufferIndex]))
-		++bufferIndex;
+	int& index = block.currentIndex;
+	int sz = block.endIndex;
+	while (index < sz && !isspace(buffer[index]))
+		++index;
 
-	return bufferIndex;
+	return index < sz;
 }
 
 
-int skipWhiteSpace(const std::vector<char> &buffer, int bufferIndex)
+bool skipWhiteSpace(const std::vector<char>& buffer, JSONBlock& block)
 {
-	int sz = (int)buffer.size();
-	while (bufferIndex < sz && isspace(buffer[bufferIndex]))
-		++bufferIndex;
+	int& index = block.currentIndex;
+	int sz = block.endIndex;
+	while (index < sz && isspace(buffer[index]))
+		++index;
 
-	return bufferIndex;
+	return index < sz;
 }
 
-bool getTypeContent(const std::vector<char>& buffer, bool squareBracket, int &startIndex, int &endIndex)
+JSONBlock getTypeContent(const std::vector<char>& buffer, JSONBlock &block)
 {
-	char findOpen = squareBracket ? '[' : '{';
-	char findClosed = squareBracket ? ']' : '}';
+	JSONBlock result(0);
+	int &index = block.currentIndex;
+	int endIndex = block.endIndex;
 
-	bool found = false;
-	int bracketCount = 0;
+	if(!skipWhiteSpace(buffer, block))
+		return result;
 
-	int sz = (int)buffer.size();
-	int ind = startIndex;
-	endIndex = -1;
-	while (ind < sz)
+	char findOpen = '[';
+	char findClosed = ']';
+
+	if (buffer[index] == '[')
 	{
-		char c = buffer[ind];
-		if (c == findOpen)
-		{
-			if (bracketCount == 0)
-			{
-				startIndex = ind;
-			}
-			found = true;
-			++bracketCount;
-		}
-		else if(c == findClosed)
-		{
-			endIndex = ind;
-			--bracketCount;
-			if (bracketCount <= 0)
-				break;
-		}
-		++ind;
+		findOpen = '[';
+		findClosed = ']';
+		result.vbracket = true;
+	}
+	else if (buffer[index] == '{')
+	{
+		findOpen = '{';
+		findClosed = '}';
+		result.varray = true;
+	}
+	else
+	{
+		result.vvalid = true;
+		return result;
 	}
 
-	return found && bracketCount == 0;
+	int bracketCount = 1;
+
+	result.startIndex = index;
+
+	++index;
+	result.currentIndex = index;
+	while (index < endIndex)
+	{
+		char c = buffer[index];
+		if (c == findOpen)
+		{
+			++bracketCount;
+		}
+		else if (c == findClosed)
+		{
+			--bracketCount;
+			if (bracketCount == 0)
+			{
+				result.endIndex = index;
+				++index;
+				break;
+			}
+		}
+		++index;
+	}
+	if (skipWhiteSpace(buffer, block) && buffer[index] == ',')
+		++index;
+	result.vvalid = result.endIndex > result.startIndex;
+	return result;
 }
 
 bool subStrCmp(std::vector<char>& buffer, const char* cmpStr, int startPos)
@@ -212,6 +256,135 @@ bool subStrCmp(std::vector<char>& buffer, const char* cmpStr, int startPos)
 	int l = strlen(cmpStr);
 
 	return startPos + l < (int)buffer.size() && strncmp(buffer.data() + startPos, cmpStr, l) == 0;
+}
+bool parseInt(std::vector<char>& buffer, JSONBlock &block, int64_t& outResult)
+{
+	int& index = block.currentIndex;
+	int sz = block.endIndex;
+	if(!skipWhiteSpace(buffer, block))
+		return false;
+
+	bool neg = false;
+	if (buffer[index] == '-')
+	{
+		neg = true;
+		index++;
+	}
+	outResult = 0;
+	int numCount = 0;
+	while (index < sz)
+	{
+		char c = buffer[index];
+		if (c >= '0' && c <= '9')
+		{
+			++numCount;
+			if (numCount > 18)
+				return false;
+			outResult = outResult * 10 + int(c - '0');
+		}
+		else
+			break;
+
+		++index;
+	}
+	if (neg)
+		outResult = -outResult;
+	return numCount > 0;
+}
+
+bool parseFloat(std::vector<char>& buffer, JSONBlock &block, float &outResult)
+{
+	int& index = block.currentIndex;
+	outResult = 0.0f;
+	int64_t num = 0;
+	int sz = block.endIndex;
+	bool neg = false;
+	if (!skipWhiteSpace(buffer, block))
+		return false;
+	if (buffer[index] == '-')
+	{
+		++index;
+		neg = true;
+	}
+
+	if (!parseInt(buffer, block, num))
+		return false;
+	outResult = num;
+	if (isspace(buffer[index]))
+		return true;
+	
+	if (index >= sz)
+		return false;
+
+	if(buffer[index] != '.')
+		return false;
+	++index;
+	int tmpStartIndex = index;
+	if (!parseInt(buffer, block, num))
+		return false;
+	
+	if (num < 0)
+		return false;
+	float div = 1.0f;
+	while(tmpStartIndex < index)
+	{
+		div *= 10.0f;
+		++tmpStartIndex;
+	}
+	outResult += num / div;
+	if (neg)
+		outResult = -outResult;
+	if (buffer[index] == ',')
+		++index;
+
+	return index < sz;
+}
+
+bool parseStringQuotas(std::vector<char>& buffer, JSONBlock& block, std::string& outStr)
+{
+	int& index = block.currentIndex;
+	int sz = block.endIndex;
+	if (!skipWhiteSpace(buffer, block))
+		return false;
+
+	if (buffer[index] != '"')
+		return false;
+
+	++index;
+
+	int startIndex = index;
+	while (index < sz && buffer[index] != '"')
+		++index;
+
+	if (index >= sz || startIndex == index)
+		return false;
+
+	int letters = index - startIndex;
+	outStr.resize(letters);
+	for (int i = 0; i < letters; ++i)
+	{
+		outStr[i] = buffer[index - letters + i];
+	}
+	++index;
+	if (index < sz && buffer[index] == ',')
+		++index;
+
+	return index < sz;
+}
+
+bool parseVariableName(std::vector<char>& buffer, JSONBlock &block, std::string &outStr)
+{
+	if (!parseStringQuotas(buffer, block, outStr))
+		return false;
+
+	if (!skipWhiteSpace(buffer, block))
+		return false;
+
+	if (buffer[block.currentIndex] != ':')
+		return false;
+
+	++block.currentIndex;
+	return skipWhiteSpace(buffer, block);
 }
 
 bool readGLTF(const char *filename)
@@ -221,8 +394,6 @@ bool readGLTF(const char *filename)
 
 	if (!loadBytes(fName, buffer))
 		return false;
-
-	int bufferIndex = 0;
 
 	struct Vertex
 	{
@@ -234,11 +405,12 @@ bool readGLTF(const char *filename)
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 
-	struct ScneNode
+	struct SceneNode
 	{
 		std::string name;
 		Quat rot;
 		Vec3 trans;
+		uint32_t meshIndex = ~0u;
 	};
 
 	struct BufferType
@@ -258,7 +430,7 @@ bool readGLTF(const char *filename)
 	};
 
 
-	std::vector<ScneNode> nodes;
+	std::vector<SceneNode> nodes;
 	std::vector<BufferType> bufferTypes;
 	std::vector<std::vector<uint8_t>> buffers;
 
@@ -270,61 +442,120 @@ bool readGLTF(const char *filename)
 
 	int sz = (int)buffer.size();
 
+	std::string s;
+	s.reserve(256);
+	JSONBlock tmp(0, sz);
+	JSONBlock b1 = getTypeContent(buffer, tmp);
+	if (!b1.isArray())
+		return false;
 
-	while (bufferIndex < sz)
+
+
+	while (parseVariableName(buffer, b1, s))
 	{
-		bufferIndex = skipWhiteSpace(buffer, bufferIndex);
-		if (bufferIndex == -1)
-			break;
+		char cc = buffer[b1.currentIndex];
+		JSONBlock b2 = getTypeContent(buffer, b1);
+		if (!b2.isValid())
+			return false;
 
-		if (subStrCmp(buffer, "\"scenes\"", bufferIndex))
+		if (s == "scene")
+			skipWord(buffer, b1);
+		else if (!(b2.isBracket() || b2.isArray()))
+			return false;
+
+		if (s == "scenes")
 		{
 			LOG("Scenes\n");
-			int startIndex = bufferIndex;
-			int endIndex = bufferIndex;
-			if (getTypeContent(buffer, true, startIndex, endIndex))
-				bufferIndex = endIndex;
+
 		}
 
-		else if (subStrCmp(buffer, "\"nodes\"", bufferIndex))
+		else if (s == "nodes" && b2.isBracket())
 		{
 			LOG("Nodes\n");
-			int startIndex = bufferIndex;
-			int endIndex = bufferIndex;
-			if (getTypeContent(buffer, true, startIndex, endIndex))
-			{ 
-				bufferIndex = endIndex;
+			
+			int nodeIndex = 0;
 
-				int nodeStartIndex = startIndex;
-				int nodeEndIndex = startIndex;
+			JSONBlock b3 = getTypeContent(buffer, b2);
+			while (b3.isArray())
+			{
+				while (nodeIndex >= nodes.size())
+					nodes.emplace_back(SceneNode());
+					
+				SceneNode& node = nodes[nodeIndex];
+				++nodeIndex;
 
-				// take all the nodes....
+				while (parseVariableName(buffer, b3, s))
+				{
+					JSONBlock b4 = getTypeContent(buffer, b3);
+					if (!b4.isValid())
+						return false;
 
+					if (s == "mesh")
+					{
+						int64_t ind = -1;
+						if (!parseInt(buffer, b3, ind))
+							return false;
+						node.meshIndex = (int)ind;
+					}
+					else if (s == "name")
+					{
+						if(!parseStringQuotas(buffer, b3, node.name))
+							return false;
+					}
+					else if (s == "rotation")
+					{
+						if (!parseFloat(buffer, b4, node.rot.v.x))
+							return false;
+						if (!parseFloat(buffer, b4, node.rot.v.y))
+							return false;
+						if (!parseFloat(buffer, b4, node.rot.v.z))
+							return false;
+						if (!parseFloat(buffer, b4, node.rot.w))
+							return false;
+					}
+					else if (s == "translation")
+					{
+						if (!parseFloat(buffer, b4, node.trans.x))
+							return false;
+						if (!parseFloat(buffer, b4, node.trans.y))
+							return false;
+						if (!parseFloat(buffer, b4, node.trans.z))
+							return false;
+
+					}
+
+					if (buffer[b3.currentIndex] == ',')
+						++b3.currentIndex;
+				}
+				b3 = getTypeContent(buffer, b2);
 			}
+			// take all the nodes....
+
 		}
-		else if (subStrCmp(buffer, "\"meshes\"", bufferIndex))
+		else if (s == "meshes")
 		{
 			LOG("Meshes\n");
 
 		}
-		else if (subStrCmp(buffer, "\"buffers\"", bufferIndex))
+		else if (s == "buffers")
 		{
 			LOG("Buffers\n");
-			while (bufferIndex < sz && !subStrCmp(buffer, "\"uri\" : \"data:application/octet-stream;base64,", bufferIndex))
-				++bufferIndex;
+			while (b1.currentIndex < b1.endIndex && 
+				!subStrCmp(buffer, "\"uri\" : \"data:application/octet-stream;base64,", b1.currentIndex))
+				++b1.currentIndex;
 
 
 
-			if (bufferIndex < sz)
+			if (b1.currentIndex < sz)
 			{
 				std::vector<uint8_t> byteData;
 				byteData.reserve(1024);
 				int byteOffset = 0;
 				uint8_t currentByte = 0u;
-				bufferIndex += 46;
-				while (bufferIndex < sz)
+				b1.currentIndex += 46;
+				while (b1.currentIndex < sz)
 				{
-					char c = buffer[bufferIndex];
+					char c = buffer[b1.currentIndex];
 					uint8_t readByte = 0u;
 
 					if (c >= 'A' && c <= 'Z') readByte = (c - 'A');
@@ -358,7 +589,7 @@ bool readGLTF(const char *filename)
 						currentByte = 0;
 					}
 					byteOffset = (byteOffset + 1) % 4;
-					++bufferIndex;
+					++b1.currentIndex;
 				}
 				if (currentByte != 0)
 					byteData.push_back(currentByte);
@@ -415,8 +646,6 @@ bool readGLTF(const char *filename)
 				}
 			}
 		}
-
-		bufferIndex = skipWord(buffer, bufferIndex);
 	}
 
 
@@ -429,7 +658,7 @@ bool VulkanFontDraw::init(const char* windowStr, int screenWidth, int screenHeig
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-	readGLTF("assets/models/test_gltf.gltf");
+	printf("gltf read success: %i\n", readGLTF("assets/models/test_gltf.gltf"));
 
 	VkDevice device = deviceWithQueues.device;
 
