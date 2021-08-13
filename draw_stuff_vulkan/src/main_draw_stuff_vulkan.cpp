@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "core/general.h"
+#include "core/json.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -28,13 +29,14 @@
 #include "math/quaternion.h"
 #include "math/vector3.h"
 
+#include "nlohmann_json_cmake_fetchcontent/include/nlohmann/json.hpp"
+
 #include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
 #include <filesystem>
 #include <fstream>
-
 
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
@@ -70,10 +72,10 @@ bool saveFontData(const std::string &filename, const std::vector<char> &data)
 }
 
 
-struct JSONBlock
+struct JSONBlockz
 {
-	JSONBlock(int start) { startIndex = start; }
-	JSONBlock(int start, int end): startIndex(start), endIndex(end) { }
+	JSONBlockz(int start) { startIndex = start; }
+	JSONBlockz(int start, int end): startIndex(start), endIndex(end) { }
 
 	bool isBracket() { return vvalid && !varray && vbracket; }
 	bool isArray() { return vvalid && varray && !vbracket; }
@@ -169,7 +171,7 @@ VulkanFontDraw::~VulkanFontDraw()
 
 }
 
-bool skipWord(const std::vector<char> &buffer, JSONBlock &block)
+bool skipWord(const std::vector<char> &buffer, JSONBlockz &block)
 {
 	int &index = block.currentIndex;
 	int sz = block.endIndex;
@@ -180,7 +182,7 @@ bool skipWord(const std::vector<char> &buffer, JSONBlock &block)
 }
 
 
-bool skipWhiteSpace(const std::vector<char> &buffer, JSONBlock &block)
+bool skipWhiteSpace(const std::vector<char> &buffer, JSONBlockz &block)
 {
 	int &index = block.currentIndex;
 	int sz = block.endIndex;
@@ -190,9 +192,9 @@ bool skipWhiteSpace(const std::vector<char> &buffer, JSONBlock &block)
 	return index < sz;
 }
 
-JSONBlock getTypeContent(const std::vector<char> &buffer, JSONBlock &block)
+JSONBlockz getTypeContent(const std::vector<char> &buffer, JSONBlockz &block)
 {
-	JSONBlock result(0);
+	JSONBlockz result(0);
 	int &index = block.currentIndex;
 	int endIndex = block.endIndex;
 
@@ -257,7 +259,7 @@ bool subStrCmp(std::vector<char> &buffer, const char *cmpStr, int startPos)
 
 	return startPos + l < ( int )buffer.size() && strncmp(buffer.data() + startPos, cmpStr, l) == 0;
 }
-bool parseInt(std::vector<char> &buffer, JSONBlock &block, int64_t &outResult)
+bool parseInt(std::vector<char> &buffer, JSONBlockz &block, int64_t &outResult)
 {
 	int &index = block.currentIndex;
 	int sz = block.endIndex;
@@ -289,10 +291,13 @@ bool parseInt(std::vector<char> &buffer, JSONBlock &block, int64_t &outResult)
 	}
 	if(neg)
 		outResult = -outResult;
+	if(buffer [index] == ',')
+		++index;
+
 	return numCount > 0;
 }
 
-bool parseFloat(std::vector<char> &buffer, JSONBlock &block, float &outResult)
+bool parseFloat(std::vector<char> &buffer, JSONBlockz &block, float &outResult)
 {
 	int &index = block.currentIndex;
 	outResult = 0.0f;
@@ -340,7 +345,7 @@ bool parseFloat(std::vector<char> &buffer, JSONBlock &block, float &outResult)
 	return index < sz;
 }
 
-bool parseStringQuotas(std::vector<char> &buffer, JSONBlock &block, std::string &outStr)
+bool parseStringQuotas(std::vector<char> &buffer, JSONBlockz &block, std::string &outStr)
 {
 	int &index = block.currentIndex;
 	int sz = block.endIndex;
@@ -372,7 +377,7 @@ bool parseStringQuotas(std::vector<char> &buffer, JSONBlock &block, std::string 
 	return index < sz;
 }
 
-bool parseVariableName(std::vector<char> &buffer, JSONBlock &block, std::string &outStr)
+bool parseVariableName(std::vector<char> &buffer, JSONBlockz &block, std::string &outStr)
 {
 	if(!parseStringQuotas(buffer, block, outStr))
 		return false;
@@ -395,6 +400,31 @@ bool readGLTF(const char *filename)
 	if(!loadBytes(fName, buffer))
 		return false;
 
+	JSONBlock bl;
+	printf("parsed: %i\n", bl.parseJSON(buffer));
+
+	nlohmann::json j;
+
+	std::ifstream i(filename);
+	i >> j;
+	for(auto p : j)
+	{
+		if(p.type_name())
+			printf("type: %s\n", p.type_name());
+		if(p.is_array() || p.is_object())
+		{
+			for(auto o : p)
+			{
+				if(o.is_string())
+				{
+				
+					printf("str2: %s\n", o.get<std::string>().c_str());
+
+				}
+
+			}
+		}
+	}
 	struct Vertex
 	{
 		Vec3 pos;
@@ -452,8 +482,8 @@ bool readGLTF(const char *filename)
 
 	std::string s;
 	s.reserve(256);
-	JSONBlock tmp(0, sz);
-	JSONBlock b1 = getTypeContent(buffer, tmp);
+	JSONBlockz tmp(0, sz);
+	JSONBlockz b1 = getTypeContent(buffer, tmp);
 	if(!b1.isArray())
 		return false;
 
@@ -462,7 +492,7 @@ bool readGLTF(const char *filename)
 	while(parseVariableName(buffer, b1, s))
 	{
 		char cc = buffer [b1.currentIndex];
-		JSONBlock b2 = getTypeContent(buffer, b1);
+		JSONBlockz b2 = getTypeContent(buffer, b1);
 		if(!b2.isValid())
 			return false;
 
@@ -483,7 +513,7 @@ bool readGLTF(const char *filename)
 
 			int nodeIndex = 0;
 
-			JSONBlock b3 = getTypeContent(buffer, b2);
+			JSONBlockz b3 = getTypeContent(buffer, b2);
 			while(b3.isArray())
 			{
 				while(nodeIndex >= nodes.size())
@@ -494,7 +524,7 @@ bool readGLTF(const char *filename)
 
 				while(parseVariableName(buffer, b3, s))
 				{
-					JSONBlock b4 = getTypeContent(buffer, b3);
+					JSONBlockz b4 = getTypeContent(buffer, b3);
 					if(!b4.isValid())
 						return false;
 
@@ -544,7 +574,7 @@ bool readGLTF(const char *filename)
 		{
 			LOG("Meshes\n");
 
-			JSONBlock b3 = getTypeContent(buffer, b2);
+			JSONBlockz b3 = getTypeContent(buffer, b2);
 			while(b3.isArray())
 			{
 				meshes.push_back(MeshNode());
@@ -559,30 +589,35 @@ bool readGLTF(const char *filename)
 
 					else if(s == "primitives")
 					{
-						JSONBlock b5 = getTypeContent(buffer, b3);
-						while(parseVariableName(buffer, b3, s))
-						{
-							if(s == "indices")
+						JSONBlockz b5 = getTypeContent(buffer, b3);
+						if(!b5.isBracket())
+							return false;
+						JSONBlockz b6 = getTypeContent(buffer, b5);
+						while(b6.isArray())
+						{ 
+							while(parseVariableName(buffer, b6, s))
 							{
-								int64_t ind = -1;
-								if(!parseInt(buffer, b3, ind))
-									return false;
-
-								mesh.indicesIndex = ind;
-							}
-							else if(s == "material")
-							{
-								int64_t ind = -1;
-								if(!parseInt(buffer, b3, ind))
-									return false;
-
-								mesh.materialIndex = ind;
-							}
-							else if(s == "attributes")
-							{
-								JSONBlock b4 = getTypeContent(buffer, b3);
-								while(b4.isBracket())
+								if(s == "indices")
 								{
+									int64_t ind = -1;
+									if(!parseInt(buffer, b6, ind))
+										return false;
+
+									mesh.indicesIndex = ind;
+								}
+								else if(s == "material")
+								{
+									int64_t ind = -1;
+									if(!parseInt(buffer, b6, ind))
+										return false;
+
+									mesh.materialIndex = ind;
+								}
+								else if(s == "attributes")
+								{
+									JSONBlockz b4 = getTypeContent(buffer, b6);
+									if(!b4.isArray())
+										return false;
 									while(parseVariableName(buffer, b4, s))
 									{
 										int64_t ind = -1;
@@ -596,12 +631,12 @@ bool readGLTF(const char *filename)
 										else if(s == "TEXCOORD_0")
 											mesh.uvIndex = ind;
 										else if(s == "COLOR_0")
-											mesh.uvIndex = ind;
+											mesh.colorIndex = ind;
 
 									}
 								}
 							}
-
+							b6 = getTypeContent(buffer, b5);
 						}
 					}
 
@@ -615,7 +650,7 @@ bool readGLTF(const char *filename)
 		else if(s == "buffers")
 		{
 			LOG("Buffers\n");
-			JSONBlock b3 = getTypeContent(buffer, b2);
+			JSONBlockz b3 = getTypeContent(buffer, b2);
 			while(b3.isArray())
 			{
 				while(parseVariableName(buffer, b3, s))
