@@ -65,7 +65,6 @@ ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 #add_subdirectory("externallibs")
 add_subdirectory("external/glfw-3.3.4")
 add_subdirectory("external/meshoptimizer")
-add_subdirectory("external/nlohmann_json_cmake_fetchcontent")
 
 add_subdirectory("mylibs")
 add_subdirectory("external")

@@ -29,8 +29,6 @@
 #include "math/quaternion.h"
 #include "math/vector3.h"
 
-#include "nlohmann_json_cmake_fetchcontent/include/nlohmann/json.hpp"
-
 #include <chrono>
 #include <string>
 #include <thread>
@@ -392,6 +390,56 @@ bool parseVariableName(std::vector<char> &buffer, JSONBlockz &block, std::string
 	return skipWhiteSpace(buffer, block);
 }
 
+void print(const JSONBlock &bl, int spaces = 0)
+{
+
+	for(int i = 0; i < spaces; ++i)
+		printf("  ");
+
+	if(!bl.blockName.empty())
+		printf("%s: ", bl.blockName.c_str());
+
+	if(!bl.isValid())
+	{
+		printf("INVALID!\n");
+		return;
+	}
+
+	if(bl.isObject())
+	{
+
+		printf("Object\n");
+		for(const JSONBlock &child : bl.children)
+		{
+			print(child, spaces + 1);
+		}
+	}
+	else if(bl.isArray())
+	{
+		printf("Array\n");
+		for(const JSONBlock &child : bl.children)
+		{
+			print(child, spaces + 1);
+		}
+	}
+	else if(bl.isBool())
+	{
+		printf("Bool %i\n", bl.valueBool);
+	}
+	else if(bl.isInt())
+	{
+		printf("Int %i\n", (int)bl.valueInt);
+	}
+	else if(bl.isDouble())
+	{
+		printf("Double %f\n", (float)bl.valueDbl);
+	}
+	else if(bl.isString())
+	{
+		printf("Str %s\n", bl.valueStr.c_str());
+	}
+}
+
 bool readGLTF(const char *filename)
 {
 	std::string fName = std::string(filename);
@@ -401,30 +449,14 @@ bool readGLTF(const char *filename)
 		return false;
 
 	JSONBlock bl;
-	printf("parsed: %i\n", bl.parseJSON(buffer));
+	bool parseSuccess = bl.parseJSON(buffer);
+	printf("parsed: %i\n", parseSuccess);
 
-	nlohmann::json j;
-
-	std::ifstream i(filename);
-	i >> j;
-	for(auto p : j)
+	if(parseSuccess)
 	{
-		if(p.type_name())
-			printf("type: %s\n", p.type_name());
-		if(p.is_array() || p.is_object())
-		{
-			for(auto o : p)
-			{
-				if(o.is_string())
-				{
-				
-					printf("str2: %s\n", o.get<std::string>().c_str());
-
-				}
-
-			}
-		}
+		print(bl);
 	}
+
 	struct Vertex
 	{
 		Vec3 pos;

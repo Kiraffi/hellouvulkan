@@ -20,23 +20,23 @@ struct JSONBlock
 
 	bool parseJSON(const std::vector<char> &data);
 
-	bool isValid() { return ( jType & VALID_TYPE ) == VALID_TYPE; }
-	bool isArray() { return jType == VALID_TYPE | ARRAY_TYPE; }
-	bool isObject() { return jType == VALID_TYPE | OBJECT_TYPE; }
-	bool isString() { return jType == VALID_TYPE | STRING_TYPE; }
-	bool isInt() { return jType == VALID_TYPE | INT_TYPE; }
-	bool isDouble() { return jType == VALID_TYPE | DOUBLE_TYPE; }
-	bool isBool() { return jType == VALID_TYPE | BOOL_TYPE; }
+	bool isValid() const { return ( jType & VALID_TYPE ) == VALID_TYPE; }
+	bool isArray() const { return jType == (VALID_TYPE | ARRAY_TYPE); }
+	bool isObject() const { return jType == (VALID_TYPE | OBJECT_TYPE); }
+	bool isString() const { return jType == (VALID_TYPE | STRING_TYPE); }
+	bool isInt() const { return jType == (VALID_TYPE | INT_TYPE); }
+	bool isDouble() const { return jType == (VALID_TYPE | DOUBLE_TYPE); }
+	bool isBool() const { return jType == (VALID_TYPE | BOOL_TYPE); }
 
-	bool parseString(std::string &outString);
-	bool parseDouble(double &outDouble);
-	bool parseInt(int64_t &outInt);
+	bool parseString(std::string &outString) const;
+	bool parseDouble(double &outDouble) const;
+	bool parseInt(int64_t &outInt) const;
 
-	bool hasChild(const std::string &childName);
+	bool hasChild(const std::string &childName) const;
 
-	int getChildCount() { return ( int )children.size(); }
-	const JSONBlock &getChild(int index);
-	const JSONBlock &getChild(const std::string &name);
+	int getChildCount() const { return ( int )children.size(); }
+	const JSONBlock &getChild(int index) const;
+	const JSONBlock &getChild(const std::string &name) const;
 
 	std::vector< JSONBlock > children;
 	std::string blockName;

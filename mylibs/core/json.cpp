@@ -11,6 +11,9 @@ struct JSONMarker
 	int currentIndex = 0;
 };
 
+static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
+static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
+
 static bool skipWord(const std::vector<char> &buffer, JSONMarker &marker)
 {
 	int &index = marker.currentIndex;
@@ -31,32 +34,55 @@ static bool skipWhiteSpace(const std::vector<char> &buffer, JSONMarker &marker)
 
 	return index < sz;
 }
+bool parseBetweenMarkers(const std::vector<char> &buffer, JSONMarker &marker, char beginChar, char endChar, bool ignoreBackSlashedChar = true)
+{
+	int &index = marker.currentIndex;
+	int endIndex = marker.endIndex;
+
+	if(buffer [index] != beginChar)
+		return false;
+	++index;
+
+	int openCount = 1;
+	bool backSlash = false;
+	while(index < endIndex)
+	{
+		char c = buffer [index];
+		if(!ignoreBackSlashedChar && c == '\\')
+		{
+			backSlash = !backSlash;
+		}
+		// in case end char and startchar are same, consider always checking end char first
+		else if(c == endChar && ( ignoreBackSlashedChar || !backSlash ))
+		{
+			--openCount;
+			if(openCount == 0)
+			{
+				return true;
+			}
+		}
+		else if(c == beginChar && ( ignoreBackSlashedChar || !backSlash ))
+		{
+			++openCount;
+		}
+		if(!ignoreBackSlashedChar && c != '\\')
+		{
+			backSlash = false;
+		}
+		++index;
+	}
+	return false;
+}
 
 static bool parseString(const std::vector<char> &buffer, JSONMarker &marker, std::string &outStr)
 {
 	int &index = marker.currentIndex;
-	if(index >= buffer.size() || buffer [index] != '"' || marker.endIndex > buffer.size() )
+
+	int startIndex = index + 1;
+	if(!parseBetweenMarkers(buffer, marker, '"', '"', false))
 		return false;
-	++index;
-	int startIndex = marker.currentIndex;
-	int endInd = -1;
-	bool prevBlackSlash = false;
-	for(; index < marker.endIndex; ++index)
-	{
-		char c = buffer [index];
-		if(c == '\\')
-			prevBlackSlash = !prevBlackSlash;
-		else
-		{
-			if(c == '"' && !prevBlackSlash)
-			{
-				endInd = index;
-				break;
-			}
-			prevBlackSlash = false;
-		}
-	}
-	int l = endInd - startIndex;
+
+	int l = marker.currentIndex - startIndex;
 
 	outStr.resize(l);
 	for(int i = 0; i < l; ++i)
@@ -107,8 +133,9 @@ static int parseInt(const std::vector<char> &buffer, JSONMarker &marker, int64_t
 	if(index < sz && buffer [index] == ',')
 		++index;
 
-	return numCount > 0;
+	return numCount;
 }
+
 
 bool isNumOrMinus(char c)
 {
@@ -126,6 +153,12 @@ bool getNumber(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &i
 	int endIndex = marker.endIndex;
 	if(index < endIndex && !isNumOrMinus(buffer [index]))
 		return false;
+	bool neg = false;
+	if(buffer [index] == '-')
+	{
+		neg = true;
+		++index;
+	}
 	int64_t v = -1;
 	int numCount = parseInt(buffer, marker, v);
 	if(numCount <= 0 || index > marker.endIndex)
@@ -169,12 +202,12 @@ bool getNumber(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &i
 		}
 
 		inOutBlock.jType |= JSONBlock::DOUBLE_TYPE | JSONBlock::VALID_TYPE;
-		inOutBlock.valueDbl = d;
+		inOutBlock.valueDbl = neg ? -d : d;
 	}
 	else
 	{
 		inOutBlock.jType |= JSONBlock::INT_TYPE | JSONBlock::VALID_TYPE;
-		inOutBlock.valueInt = v;
+		inOutBlock.valueInt = neg ? -v : v;
 	}
 	return true;
 }
@@ -183,23 +216,17 @@ bool tryParseBoolean(const std::vector<char> &buffer, JSONMarker &marker, JSONBl
 {
 	int &index = marker.currentIndex;
 	int endIndex = marker.endIndex;
-	bool isArray = inOutBlock.isArray();
-	if(index + 4 < endIndex && isArray && memcmp(&buffer [index], "true", 4) == 0)
-	{
-		inOutBlock.children.emplace_back(JSONBlock());
-		JSONBlock &child = inOutBlock.children.back();
-		child.valueBool = true;
 
-		child.jType |= JSONBlock::BOOL_TYPE | JSONBlock::VALID_TYPE;
+	if(index + 4 < endIndex && memcmp(&buffer [index], "true", 4) == 0)
+	{
+		inOutBlock.valueBool = true;
+		inOutBlock.jType |= JSONBlock::BOOL_TYPE | JSONBlock::VALID_TYPE;
 		index += 4;
 	}
-	else if(index + 5 < endIndex && isArray && memcmp(&buffer [index], "false", 5) == 0 && isArray)
+	else if(index + 5 < endIndex && memcmp(&buffer [index], "false", 5) == 0)
 	{
-		inOutBlock.children.emplace_back(JSONBlock());
-		JSONBlock &child = inOutBlock.children.back();
-		child.valueBool = false;
-
-		child.jType |= JSONBlock::BOOL_TYPE | JSONBlock::VALID_TYPE;
+		inOutBlock.valueBool = false;
+		inOutBlock.jType |= JSONBlock::BOOL_TYPE | JSONBlock::VALID_TYPE;
 		index += 5;
 	}
 	else
@@ -212,163 +239,125 @@ bool tryParseBoolean(const std::vector<char> &buffer, JSONMarker &marker, JSONBl
 	return true;
 }
 
-bool getJSONContent(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
+static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
 {
 	int &index = marker.currentIndex;
 	int endIndex = marker.endIndex;
 	bool isArray = inOutBlock.isArray();
+
+	JSONBlock *res = &inOutBlock;
+	if(isArray)
+	{
+		inOutBlock.children.emplace_back(JSONBlock());
+		res = &inOutBlock.children.back();
+	}
+
+	if(!skipWhiteSpace(buffer, marker))
+		return false;
+
+	char cc = buffer [index];
+	if(isNumOrMinus(cc))
+	{
+		if(!getNumber(buffer, marker, *res))
+			return false;
+	}
+	else if(tryParseBoolean(buffer, marker, *res))
+	{
+
+	}
+	else if(cc == '"')
+	{
+		if(!parseString(buffer, marker, res->valueStr))
+			return false;
+		res->jType |= JSONBlock::STRING_TYPE;
+	}
+	else if(cc == '{')
+	{
+		JSONMarker childMarker(index, -1);
+		childMarker.currentIndex = index;
+		if(!parseBetweenMarkers(buffer, marker, '{', '}', false))
+			return false;
+		childMarker.endIndex = index;
+		if(!parseObject(buffer, childMarker, *res))
+			return false;
+		++index;
+	}
+	else if(cc = '[')
+	{
+		res->jType |= JSONBlock::ARRAY_TYPE;
+		res->jType |= JSONBlock::VALID_TYPE;
+		JSONMarker childMarker(index, -1);
+		childMarker.currentIndex = index + 1;
+		if(!parseBetweenMarkers(buffer, marker, '[', ']', false))
+			return false;
+		childMarker.endIndex = index;
+		
+		while(childMarker.currentIndex < childMarker.endIndex)
+		{
+			if(!parseValue(buffer, childMarker, *res))
+				return false;
+
+			skipWhiteSpace(buffer, childMarker);
+			if(childMarker.currentIndex < childMarker.endIndex && buffer [childMarker.currentIndex] == ',')
+				++childMarker.currentIndex;
+		}
+		++index;
+	}
+
+	skipWhiteSpace(buffer, marker);
+	if(index < buffer.size() && buffer [index] == ',')
+		++index;
+
+	res->jType |= JSONBlock::VALID_TYPE;
+	return true;
+
+}
+
+
+static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
+{
+	int &index = marker.currentIndex;
+	int endIndex = marker.endIndex;
+	if(buffer [index] != '{' || index >= endIndex)
+		return false;
+	++index;
+	inOutBlock.jType |= JSONBlock::OBJECT_TYPE;
+	if(!skipWhiteSpace(buffer, marker))
+		return false;
 	while(index < endIndex)
 	{
+		inOutBlock.children.emplace_back(JSONBlock());
+		JSONBlock &childBlock = inOutBlock.children.back();
+
+		if(!parseString(buffer, marker, childBlock.blockName))
+			return false;
+
 		if(!skipWhiteSpace(buffer, marker))
-			return ( index == marker.endIndex );
-		
-		char cc = buffer [index];
-		if(isNumOrMinus(cc) && isArray)
-		{
-			inOutBlock.children.emplace_back(JSONBlock());
-			JSONBlock &child = inOutBlock.children.back();
-			if(!getNumber(buffer, marker, child))
-				return false;
-		}
-		else if(tryParseBoolean(buffer, marker, inOutBlock))
-		{
+			return false;
 
-		}
-		else if(cc == '"')
-		{
-			inOutBlock.children.emplace_back(JSONBlock());
-			JSONBlock &child = inOutBlock.children.back();
-			child.named = true;
+		if(index >= endIndex || buffer [index] != ':')
+			return false;
 
-			if(!parseString(buffer, marker, child.blockName))
-				return false;
+		++index;
+		if(!skipWhiteSpace(buffer, marker))
+			return false;
 
-			if(!skipWhiteSpace(buffer, marker))
-				return false;
+		if(!parseValue(buffer, marker, childBlock))
+			return false;
 
-			if(index >= endIndex || buffer [index] != ':')
-			{
-				if(!isArray)
-					return false;
-			}
-			else
-			{
-
-				++index;
-
-				if(!skipWhiteSpace(buffer, marker))
-					return false;
-
-				if(index >= endIndex)
-					return false;
-
-				char c = buffer [index];
-				if(c == '[' || c == '{')
-				{
-					if(!getJSONContent(buffer, marker, child))
-						return false;
-				}
-
-				else if(isNumOrMinus(c))
-				{
-					if(!getNumber(buffer, marker, child))
-						return false;
-
-				}
-				else if(tryParseBoolean(buffer, marker, inOutBlock))
-				{
-
-				}
-
-				else if(c == '"')
-				{
-					if(!parseString(buffer, marker, child.valueStr))
-						return false;
-
-					child.jType |= JSONBlock::STRING_TYPE | JSONBlock::VALID_TYPE;
-
-				}
-				else
-				{
-					return false;
-				}
-			}
-		}
-		else
-		{
-			char findOpen = '[';
-			char findClosed = ']';
-
-			if(buffer [index] == '[')
-			{
-				findOpen = '[';
-				findClosed = ']';
-				inOutBlock.jType |= JSONBlock::ARRAY_TYPE;
-			}
-			else if(buffer [index] == '{')
-			{
-				findOpen = '{';
-				findClosed = '}';
-				inOutBlock.jType |= JSONBlock::OBJECT_TYPE;
-			}
-			else
-			{
-				return false;
-			}
-
-			int bracketCount = 1;
-
-			JSONMarker childMarker(index, -1);
-
-			++index;
-			childMarker.currentIndex = index;
-			while(index < endIndex)
-			{
-				char c = buffer [index];
-				if(c == findOpen)
-				{
-					++bracketCount;
-				}
-				else if(c == findClosed)
-				{
-					--bracketCount;
-					if(bracketCount == 0)
-					{
-						childMarker.endIndex = index;
-						++index;
-						break;
-					}
-				}
-				++index;
-			}
-
-			if(childMarker.endIndex == -1)
-				return false;
-			skipWhiteSpace(buffer, marker);
-			if(index < endIndex && buffer [index] == ',')
-				++index;
-
-			if(inOutBlock.named && !isArray)
-			{
-				if(!getJSONContent(buffer, childMarker, inOutBlock))
-					return false;
-			}
-			else
-			{
-				inOutBlock.children.emplace_back(JSONBlock());
-				JSONBlock &child = inOutBlock.children.back();
-				if(!getJSONContent(buffer, childMarker, inOutBlock))
-					return false;
-
-			}
-
-		}
 		skipWhiteSpace(buffer, marker);
-		if(index < buffer.size() && buffer [index] == ',')
+		if(index < endIndex && buffer [index] == ',')
 			++index;
+
+		skipWhiteSpace(buffer, marker);
 	}
+	if(index >= buffer.size() || index != endIndex || buffer [index] != '}')
+		return false;
+	++index;
+	inOutBlock.jType |= JSONBlock::VALID_TYPE;
 	return true;
 }
+
 
 
 bool JSONBlock::parseJSON(const std::vector<char> &data)
@@ -376,23 +365,28 @@ bool JSONBlock::parseJSON(const std::vector<char> &data)
 	if(data.size() <= 2)
 		return false;
 
-	JSONMarker marker(0, ( int )data.size());
-	named = true;
-	return getJSONContent(data, marker, (*this));
+	JSONMarker marker(0, ( int )data.size() - 1);
+	skipWhiteSpace(data, marker);
+	while(marker.endIndex > 0 && data [marker.endIndex] != '}')
+		--marker.endIndex;
+	if(marker.endIndex == 0)
+		return false;
+
+	return parseObject(data, marker, *this);
 }
 
-bool JSONBlock::parseString(std::string &outString)
+bool JSONBlock::parseString(std::string &outString) const
 {
 	return true;
 }
 
-bool JSONBlock::parseDouble(double &outDouble)
+bool JSONBlock::parseDouble(double &outDouble) const
 {
 	return true;
 
 }
 
-bool JSONBlock::parseInt(int64_t &outInt)
+bool JSONBlock::parseInt(int64_t &outInt) const
 {
 	return true;
 

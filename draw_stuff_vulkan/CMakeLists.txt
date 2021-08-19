@@ -14,7 +14,6 @@ target_link_libraries(draw_stuff_vulkan PUBLIC
 	${CMAKE_DL_LIBS} 
 	${GLFW_LIBRARIES}
 	Vulkan::Vulkan
-	nlohmann_json::nlohmann_json
 	meshoptimizer
 	MyLibraries
 	)
