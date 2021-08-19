@@ -1,6 +1,9 @@
 #include "json.h"
 
 
+const JSONBlock JSONBlock::emptyBlock = { };
+
+
 struct JSONMarker
 {
 	JSONMarker(int start) { startIndex = start; }
@@ -13,6 +16,69 @@ struct JSONMarker
 
 static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
 static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
+
+static void printBlock(const JSONBlock &bl, int spaces = 0)
+{
+
+	for(int i = 0; i < spaces; ++i)
+		printf("  ");
+
+	if(!bl.blockName.empty())
+		printf("%s: ", bl.blockName.c_str());
+
+	if(!bl.isValid())
+	{
+		printf("INVALID!\n");
+		return;
+	}
+
+	if(bl.isObject())
+	{
+
+		printf("Object\n");
+		for(const JSONBlock &child : bl.children)
+		{
+			printBlock(child, spaces + 1);
+		}
+	}
+	else if(bl.isArray())
+	{
+		printf("Array\n");
+		for(const JSONBlock &child : bl.children)
+		{
+			printBlock(child, spaces + 1);
+		}
+	}
+	else if(bl.isBool())
+	{
+		bool v = false;
+		if(!bl.parseBool(v))
+			printf("FAILED PARSE BOOL\n");
+		printf("Bool %i\n", v);
+	}
+	else if(bl.isInt())
+	{
+		int64_t v = -2312;
+		if(!bl.parseInt(v))
+			printf("FAILED PARSE INT\n");
+		printf("Int %i\n", ( int )v);
+	}
+	else if(bl.isDouble())
+	{
+		double v = -2312.0;
+		if(!bl.parseDouble(v))
+			printf("FAILED PARSE DOUBLE\n");
+		printf("Double %f\n", ( float )v);
+	}
+	else if(bl.isString())
+	{
+		std::string s = "awef";
+		if(!bl.parseString(s))
+			printf("FAILED PARSE STRING\n");
+		printf("Str %s\n", s.c_str());
+	}
+}
+
 
 static bool skipWord(const std::vector<char> &buffer, JSONMarker &marker)
 {
@@ -243,7 +309,7 @@ static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSON
 {
 	int &index = marker.currentIndex;
 	int endIndex = marker.endIndex;
-	bool isArray = inOutBlock.isArray();
+	bool isArray = (inOutBlock.jType & JSONBlock::ARRAY_TYPE) == JSONBlock::ARRAY_TYPE;
 
 	JSONBlock *res = &inOutBlock;
 	if(isArray)
@@ -285,7 +351,6 @@ static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSON
 	else if(cc = '[')
 	{
 		res->jType |= JSONBlock::ARRAY_TYPE;
-		res->jType |= JSONBlock::VALID_TYPE;
 		JSONMarker childMarker(index, -1);
 		childMarker.currentIndex = index + 1;
 		if(!parseBetweenMarkers(buffer, marker, '[', ']', false))
@@ -302,6 +367,10 @@ static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSON
 				++childMarker.currentIndex;
 		}
 		++index;
+	}
+	else
+	{
+		return false;
 	}
 
 	skipWhiteSpace(buffer, marker);
@@ -377,17 +446,178 @@ bool JSONBlock::parseJSON(const std::vector<char> &data)
 
 bool JSONBlock::parseString(std::string &outString) const
 {
+	if(!isString())
+		return false;
+
+	outString = valueStr;
 	return true;
 }
 
 bool JSONBlock::parseDouble(double &outDouble) const
 {
+	if(!isDouble())
+		return false;
+
+	outDouble = valueDbl;
+	return true;
+
+}
+
+bool JSONBlock::parseFloat(float &outFloat) const
+{
+	double d = 0.0;
+	if(!parseDouble(d))
+		return false;
+	
+	outFloat = float(d);
 	return true;
 
 }
 
 bool JSONBlock::parseInt(int64_t &outInt) const
 {
+	if(!isInt())
+		return false;
+
+	outInt = valueInt;
 	return true;
 
 }
+
+bool JSONBlock::parseInt(int &outInt) const
+{
+	int64_t v = 0;
+	if(!parseInt(v))
+		return false;
+	if(v < -0x1'0000'0000i64 || v > 0xffff'ffffi64)
+		return false;
+
+	outInt = int(v);
+	return true;
+
+}
+
+bool JSONBlock::parseUInt(uint32_t &outInt) const
+{
+	int64_t v = 0;
+	if(!parseInt(v))
+		return false;
+	if(v < 0 || v > 0xffff'ffffi64)
+		return false;
+
+	outInt = uint32_t(v);
+	return true;
+
+}
+
+
+bool JSONBlock::parseBool(bool &outBool) const
+{
+	if(!isBool())
+		return false;
+
+	outBool = valueBool;
+	return true;
+
+}
+
+
+bool JSONBlock::parseBuffer(std::vector<uint8_t> &outBuffer) const
+{
+	if(!isString())
+		return false;
+
+	int strLen = valueStr.length();
+
+	if(strLen < 37)
+		return false;
+
+	if(memcmp(valueStr.c_str(), "data:application/octet-stream;base64,", 37) != 0)
+		return false;
+
+	outBuffer.reserve(strLen - 37);
+	outBuffer.clear();
+
+	int byteOffset = 0;
+	uint8_t currentByte = 0u;
+
+	for(int charIndex = 37; charIndex < strLen; ++charIndex)
+	{
+		char c = valueStr [charIndex];
+		uint8_t readByte = 0u;
+
+		if(c >= 'A' && c <= 'Z') readByte = ( c - 'A' );
+		if(c >= 'a' && c <= 'z') readByte = ( c - 'a' ) + 26;
+		if(c >= '0' && c <= '9') readByte = ( c - '0' ) + 52;
+		if(c == '+') readByte = 62;
+		if(c == '/') readByte = 63;
+		if(c == '=') return true;
+		if(c == '\"') break;
+
+		if(byteOffset == 0)
+		{
+			currentByte = readByte << 2;
+		}
+		else if(byteOffset == 1)
+		{
+			currentByte |= ( readByte >> 4 );
+			outBuffer.push_back(currentByte);
+			currentByte = ( readByte & 15 ) << 4;
+		}
+		else if(byteOffset == 2)
+		{
+			currentByte |= ( readByte >> 2 );
+			outBuffer.push_back(currentByte);
+			currentByte = ( readByte & 3 ) << 6;
+		}
+		else if(byteOffset == 3)
+		{
+			currentByte |= ( readByte );
+			outBuffer.push_back(currentByte);
+			currentByte = 0;
+		}
+		byteOffset = ( byteOffset + 1 ) % 4;
+	}
+	if(currentByte != 0)
+		outBuffer.push_back(currentByte);
+
+
+	return true;
+}
+
+bool JSONBlock::hasChild(const std::string &childName) const
+{
+	for(const JSONBlock &child : children)
+	{
+		if(child.blockName == childName)
+			return true;
+	}
+
+	return false;
+
+}
+
+const JSONBlock &JSONBlock::getChild(int index) const
+{
+	if(index < 0 || index >= children.size())
+		return emptyBlock;
+
+	return children [index];
+}
+
+const JSONBlock &JSONBlock::getChild(const std::string &childName) const
+{
+	for(const JSONBlock &child : children)
+	{
+		if(child.blockName == childName)
+			return child;
+	}
+
+	return emptyBlock;
+}
+
+void JSONBlock::print() const
+{
+	printBlock((*this), 0);
+}
+

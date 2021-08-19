@@ -169,276 +169,6 @@ VulkanFontDraw::~VulkanFontDraw()
 
 }
 
-bool skipWord(const std::vector<char> &buffer, JSONBlockz &block)
-{
-	int &index = block.currentIndex;
-	int sz = block.endIndex;
-	while(index < sz && !isspace(buffer [index]))
-		++index;
-
-	return index < sz;
-}
-
-
-bool skipWhiteSpace(const std::vector<char> &buffer, JSONBlockz &block)
-{
-	int &index = block.currentIndex;
-	int sz = block.endIndex;
-	while(index < sz && isspace(buffer [index]))
-		++index;
-
-	return index < sz;
-}
-
-JSONBlockz getTypeContent(const std::vector<char> &buffer, JSONBlockz &block)
-{
-	JSONBlockz result(0);
-	int &index = block.currentIndex;
-	int endIndex = block.endIndex;
-
-	if(!skipWhiteSpace(buffer, block))
-		return result;
-
-	char findOpen = '[';
-	char findClosed = ']';
-
-	if(buffer [index] == '[')
-	{
-		findOpen = '[';
-		findClosed = ']';
-		result.vbracket = true;
-	}
-	else if(buffer [index] == '{')
-	{
-		findOpen = '{';
-		findClosed = '}';
-		result.varray = true;
-	}
-	else
-	{
-		result.vvalid = true;
-		return result;
-	}
-
-	int bracketCount = 1;
-
-	result.startIndex = index;
-
-	++index;
-	result.currentIndex = index;
-	while(index < endIndex)
-	{
-		char c = buffer [index];
-		if(c == findOpen)
-		{
-			++bracketCount;
-		}
-		else if(c == findClosed)
-		{
-			--bracketCount;
-			if(bracketCount == 0)
-			{
-				result.endIndex = index;
-				++index;
-				break;
-			}
-		}
-		++index;
-	}
-	if(skipWhiteSpace(buffer, block) && buffer [index] == ',')
-		++index;
-	result.vvalid = result.endIndex > result.startIndex;
-	return result;
-}
-
-bool subStrCmp(std::vector<char> &buffer, const char *cmpStr, int startPos)
-{
-	int l = strlen(cmpStr);
-
-	return startPos + l < ( int )buffer.size() && strncmp(buffer.data() + startPos, cmpStr, l) == 0;
-}
-bool parseInt(std::vector<char> &buffer, JSONBlockz &block, int64_t &outResult)
-{
-	int &index = block.currentIndex;
-	int sz = block.endIndex;
-	if(!skipWhiteSpace(buffer, block))
-		return false;
-
-	bool neg = false;
-	if(buffer [index] == '-')
-	{
-		neg = true;
-		index++;
-	}
-	outResult = 0;
-	int numCount = 0;
-	while(index < sz)
-	{
-		char c = buffer [index];
-		if(c >= '0' && c <= '9')
-		{
-			++numCount;
-			if(numCount > 18)
-				return false;
-			outResult = outResult * 10 + int(c - '0');
-		}
-		else
-			break;
-
-		++index;
-	}
-	if(neg)
-		outResult = -outResult;
-	if(buffer [index] == ',')
-		++index;
-
-	return numCount > 0;
-}
-
-bool parseFloat(std::vector<char> &buffer, JSONBlockz &block, float &outResult)
-{
-	int &index = block.currentIndex;
-	outResult = 0.0f;
-	int64_t num = 0;
-	int sz = block.endIndex;
-	bool neg = false;
-	if(!skipWhiteSpace(buffer, block))
-		return false;
-	if(buffer [index] == '-')
-	{
-		++index;
-		neg = true;
-	}
-
-	if(!parseInt(buffer, block, num))
-		return false;
-	outResult = num;
-	if(isspace(buffer [index]))
-		return true;
-
-	if(index >= sz)
-		return false;
-
-	if(buffer [index] != '.')
-		return false;
-	++index;
-	int tmpStartIndex = index;
-	if(!parseInt(buffer, block, num))
-		return false;
-
-	if(num < 0)
-		return false;
-	float div = 1.0f;
-	while(tmpStartIndex < index)
-	{
-		div *= 10.0f;
-		++tmpStartIndex;
-	}
-	outResult += num / div;
-	if(neg)
-		outResult = -outResult;
-	if(buffer [index] == ',')
-		++index;
-
-	return index < sz;
-}
-
-bool parseStringQuotas(std::vector<char> &buffer, JSONBlockz &block, std::string &outStr)
-{
-	int &index = block.currentIndex;
-	int sz = block.endIndex;
-	if(!skipWhiteSpace(buffer, block))
-		return false;
-
-	if(buffer [index] != '"')
-		return false;
-
-	++index;
-
-	int startIndex = index;
-	while(index < sz && buffer [index] != '"')
-		++index;
-
-	if(index >= sz || startIndex == index)
-		return false;
-
-	int letters = index - startIndex;
-	outStr.resize(letters);
-	for(int i = 0; i < letters; ++i)
-	{
-		outStr [i] = buffer [index - letters + i];
-	}
-	++index;
-	if(index < sz && buffer [index] == ',')
-		++index;
-
-	return index < sz;
-}
-
-bool parseVariableName(std::vector<char> &buffer, JSONBlockz &block, std::string &outStr)
-{
-	if(!parseStringQuotas(buffer, block, outStr))
-		return false;
-
-	if(!skipWhiteSpace(buffer, block))
-		return false;
-
-	if(buffer [block.currentIndex] != ':')
-		return false;
-
-	++block.currentIndex;
-	return skipWhiteSpace(buffer, block);
-}
-
-void print(const JSONBlock &bl, int spaces = 0)
-{
-
-	for(int i = 0; i < spaces; ++i)
-		printf("  ");
-
-	if(!bl.blockName.empty())
-		printf("%s: ", bl.blockName.c_str());
-
-	if(!bl.isValid())
-	{
-		printf("INVALID!\n");
-		return;
-	}
-
-	if(bl.isObject())
-	{
-
-		printf("Object\n");
-		for(const JSONBlock &child : bl.children)
-		{
-			print(child, spaces + 1);
-		}
-	}
-	else if(bl.isArray())
-	{
-		printf("Array\n");
-		for(const JSONBlock &child : bl.children)
-		{
-			print(child, spaces + 1);
-		}
-	}
-	else if(bl.isBool())
-	{
-		printf("Bool %i\n", bl.valueBool);
-	}
-	else if(bl.isInt())
-	{
-		printf("Int %i\n", (int)bl.valueInt);
-	}
-	else if(bl.isDouble())
-	{
-		printf("Double %f\n", (float)bl.valueDbl);
-	}
-	else if(bl.isString())
-	{
-		printf("Str %s\n", bl.valueStr.c_str());
-	}
-}
 
 bool readGLTF(const char *filename)
 {
@@ -451,10 +181,12 @@ bool readGLTF(const char *filename)
 	JSONBlock bl;
 	bool parseSuccess = bl.parseJSON(buffer);
 	printf("parsed: %i\n", parseSuccess);
+	if(!parseSuccess)
+		return false;
 
 	if(parseSuccess)
 	{
-		print(bl);
+		bl.print();
 	}
 
 	struct Vertex
@@ -508,250 +240,92 @@ bool readGLTF(const char *filename)
 	std::vector<BufferType> bufferTypes;
 	std::vector<std::vector<uint8_t>> buffers;
 
-
-
-	int sz = ( int )buffer.size();
-
-	std::string s;
-	s.reserve(256);
-	JSONBlockz tmp(0, sz);
-	JSONBlockz b1 = getTypeContent(buffer, tmp);
-	if(!b1.isArray())
+	if(!bl.isObject() || bl.getChildCount() < 1)
 		return false;
 
-
-
-	while(parseVariableName(buffer, b1, s))
 	{
-		char cc = buffer [b1.currentIndex];
-		JSONBlockz b2 = getTypeContent(buffer, b1);
-		if(!b2.isValid())
+		const JSONBlock &meshBlock = bl.getChild("meshes");
+		if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
 			return false;
 
-		if(s == "scene")
-			skipWord(buffer, b1);
-		else if(!( b2.isBracket() || b2.isArray() ))
-			return false;
+		meshes.resize(meshBlock.getChildCount());
 
-		if(s == "scenes")
+		for(int i = 0; i < meshBlock.getChildCount(); ++i)
 		{
-			LOG("Scenes\n");
+			const JSONBlock &child = meshBlock.children [i];
+			MeshNode &node = meshes [i];
+			if(!child.getChild("name").parseString(node.name))
+				return false;
 
-		}
+			const JSONBlock &prims = child.getChild("primitives").getChild(0);
+			if(!prims.isValid())
+				return false;
 
-		else if(s == "nodes" && b2.isBracket())
-		{
-			LOG("Nodes\n");
+			if(!prims.getChild("indices").parseUInt(node.indicesIndex) ||
+				!prims.getChild("material").parseUInt(node.materialIndex))
+				return false;
 
-			int nodeIndex = 0;
+			const JSONBlock &attribs = prims.getChild("attributes");
+			if(!attribs.isValid() || attribs.getChildCount() < 1)
+				return false;
 
-			JSONBlockz b3 = getTypeContent(buffer, b2);
-			while(b3.isArray())
-			{
-				while(nodeIndex >= nodes.size())
-					nodes.emplace_back(SceneNode());
-
-				SceneNode &node = nodes [nodeIndex];
-				++nodeIndex;
-
-				while(parseVariableName(buffer, b3, s))
-				{
-					JSONBlockz b4 = getTypeContent(buffer, b3);
-					if(!b4.isValid())
-						return false;
-
-					if(s == "mesh")
-					{
-						int64_t ind = -1;
-						if(!parseInt(buffer, b3, ind))
-							return false;
-						node.meshIndex = ( int )ind;
-					}
-					else if(s == "name")
-					{
-						if(!parseStringQuotas(buffer, b3, node.name))
-							return false;
-					}
-					else if(s == "rotation")
-					{
-						if(!parseFloat(buffer, b4, node.rot.v.x))
-							return false;
-						if(!parseFloat(buffer, b4, node.rot.v.y))
-							return false;
-						if(!parseFloat(buffer, b4, node.rot.v.z))
-							return false;
-						if(!parseFloat(buffer, b4, node.rot.w))
-							return false;
-					}
-					else if(s == "translation")
-					{
-						if(!parseFloat(buffer, b4, node.trans.x))
-							return false;
-						if(!parseFloat(buffer, b4, node.trans.y))
-							return false;
-						if(!parseFloat(buffer, b4, node.trans.z))
-							return false;
-
-					}
-
-					if(buffer [b3.currentIndex] == ',')
-						++b3.currentIndex;
-				}
-				b3 = getTypeContent(buffer, b2);
-			}
-			// take all the nodes....
-
-		}
-		else if(s == "meshes")
-		{
-			LOG("Meshes\n");
-
-			JSONBlockz b3 = getTypeContent(buffer, b2);
-			while(b3.isArray())
-			{
-				meshes.push_back(MeshNode());
-				MeshNode &mesh = meshes [meshes.size() - 1];
-				while(parseVariableName(buffer, b3, s))
-				{
-					if(s == "name")
-					{
-						if(!parseStringQuotas(buffer, b3, mesh.name))
-							return false;
-					}
-
-					else if(s == "primitives")
-					{
-						JSONBlockz b5 = getTypeContent(buffer, b3);
-						if(!b5.isBracket())
-							return false;
-						JSONBlockz b6 = getTypeContent(buffer, b5);
-						while(b6.isArray())
-						{ 
-							while(parseVariableName(buffer, b6, s))
-							{
-								if(s == "indices")
-								{
-									int64_t ind = -1;
-									if(!parseInt(buffer, b6, ind))
-										return false;
-
-									mesh.indicesIndex = ind;
-								}
-								else if(s == "material")
-								{
-									int64_t ind = -1;
-									if(!parseInt(buffer, b6, ind))
-										return false;
-
-									mesh.materialIndex = ind;
-								}
-								else if(s == "attributes")
-								{
-									JSONBlockz b4 = getTypeContent(buffer, b6);
-									if(!b4.isArray())
-										return false;
-									while(parseVariableName(buffer, b4, s))
-									{
-										int64_t ind = -1;
-										if(!parseInt(buffer, b4, ind))
-											return false;
-
-										if(s == "POSITION")
-											mesh.positionIndex = ind;
-										else if(s == "NORMAL")
-											mesh.normalIndex = ind;
-										else if(s == "TEXCOORD_0")
-											mesh.uvIndex = ind;
-										else if(s == "COLOR_0")
-											mesh.colorIndex = ind;
-
-									}
-								}
-							}
-							b6 = getTypeContent(buffer, b5);
-						}
-					}
-
-				}
-
-
-				b3 = getTypeContent(buffer, b2);
-			}
-
-		}
-		else if(s == "buffers")
-		{
-			LOG("Buffers\n");
-			JSONBlockz b3 = getTypeContent(buffer, b2);
-			while(b3.isArray())
-			{
-				while(parseVariableName(buffer, b3, s))
-				{
-					if(s == "byteLength")
-					{
-						skipWord(buffer, b3);
-					}
-					else if(s == "uri")
-					{
-						if(!parseStringQuotas(buffer, b3, s) != s.length() < 37)
-							return false;
-
-						if(memcmp(s.c_str(), "data:application/octet-stream;base64,", 37) != 0)
-							return false;
-
-						buffers.push_back(std::vector<uint8_t>());
-						std::vector<uint8_t> &byteData = buffers [buffers.size() - 1];
-						byteData.reserve(1024);
-						int byteOffset = 0;
-						uint8_t currentByte = 0u;
-
-						int strLen = s.length();
-						for(int charIndex = 37; charIndex < strLen; ++charIndex)
-						{
-							char c = s [charIndex];
-							uint8_t readByte = 0u;
-
-							if(c >= 'A' && c <= 'Z') readByte = ( c - 'A' );
-							if(c >= 'a' && c <= 'z') readByte = ( c - 'a' ) + 26;
-							if(c >= '0' && c <= '9') readByte = ( c - '0' ) + 52;
-							if(c == '+') readByte = 62;
-							if(c == '/') readByte = 63;
-							if(c == '\"')
-								break;
-
-							if(byteOffset == 0)
-							{
-								currentByte = readByte << 2;
-							}
-							else if(byteOffset == 1)
-							{
-								currentByte |= ( readByte >> 4 );
-								byteData.push_back(currentByte);
-								currentByte = ( readByte & 15 ) << 4;
-							}
-							else if(byteOffset == 2)
-							{
-								currentByte |= ( readByte >> 2 );
-								byteData.push_back(currentByte);
-								currentByte = ( readByte & 3 ) << 6;
-							}
-							else if(byteOffset == 3)
-							{
-								currentByte |= ( readByte );
-								byteData.push_back(currentByte);
-								currentByte = 0;
-							}
-							byteOffset = ( byteOffset + 1 ) % 4;
-							++b1.currentIndex;
-						}
-						if(currentByte != 0)
-							byteData.push_back(currentByte);
-					}
-				}
-				b3 = getTypeContent(buffer, b2);
-			}
+			if(!attribs.getChild("POSITION").parseUInt(node.positionIndex) ||
+				!attribs.getChild("NORMAL").parseUInt(node.normalIndex) ||
+				!attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex) ||
+				!attribs.getChild("COLOR_0").parseUInt(node.colorIndex))
+				return false;
 		}
 	}
+	{
+		const JSONBlock &nodeBlock = bl.getChild("nodes");
+		if(!nodeBlock.isValid() || nodeBlock.getChildCount() < 1)
+			return false;
+
+		nodes.resize(nodeBlock.getChildCount());
+
+		for(int i = 0; i < nodeBlock.getChildCount(); ++i)
+		{
+			const JSONBlock &child = nodeBlock.children [i];
+			SceneNode &node = nodes [i];
+			if(!child.getChild("name").parseString(node.name))
+				return false;
+
+			child.getChild("mesh").parseUInt(node.meshIndex);
+			child.getChild("rotation").getChild(0).parseFloat(node.rot.v.x);
+			child.getChild("rotation").getChild(1).parseFloat(node.rot.v.y);
+			child.getChild("rotation").getChild(2).parseFloat(node.rot.v.z);
+			child.getChild("rotation").getChild(3).parseFloat(node.rot.w);
+
+			child.getChild("translation").getChild(0).parseFloat(node.trans.x);
+			child.getChild("translation").getChild(1).parseFloat(node.trans.y);
+			child.getChild("translation").getChild(2).parseFloat(node.trans.z);
+		}
+	}
+
+	{
+		const JSONBlock &bufferBlock = bl.getChild("buffers");
+		if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
+			return false;
+
+		buffers.resize(bufferBlock.getChildCount());
+
+		for(int i = 0; i < bufferBlock.getChildCount(); ++i)
+		{
+			const JSONBlock &child = bufferBlock.children [i];
+			std::vector<uint8_t> &buffer = buffers [i];
+
+			uint32_t bufLen = 0u;
+			if(!child.getChild("byteLength").parseUInt(bufLen))
+				return false;
+
+			if(!child.getChild("uri").parseBuffer(buffer))
+				return false;
+
+			if(bufLen != buffer.size())
+				return false;
+		}
+	}
+
 	if(buffers.size() > 0)
 	{
 		std::vector<uint8_t> &byteData = buffers [0];

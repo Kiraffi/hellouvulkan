@@ -30,13 +30,20 @@ struct JSONBlock
 
 	bool parseString(std::string &outString) const;
 	bool parseDouble(double &outDouble) const;
+	bool parseFloat(float &outFloat) const;
 	bool parseInt(int64_t &outInt) const;
+	bool parseInt(int &outInt) const;
+	bool parseUInt(uint32_t &outInt) const;
+	bool parseBool(bool &outBool) const;
+	bool parseBuffer(std::vector<uint8_t> &outBuffer) const;
 
 	bool hasChild(const std::string &childName) const;
 
 	int getChildCount() const { return ( int )children.size(); }
 	const JSONBlock &getChild(int index) const;
-	const JSONBlock &getChild(const std::string &name) const;
+	const JSONBlock &getChild(const std::string &childName) const;
+
+	void print() const;
 
 	std::vector< JSONBlock > children;
 	std::string blockName;
@@ -49,5 +56,7 @@ struct JSONBlock
 	int64_t valueInt = -1;
 	
 	int jType = 0;
+
+	static const JSONBlock emptyBlock;
 };
 
