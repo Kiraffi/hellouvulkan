@@ -291,14 +291,17 @@ bool readGLTF(const char *filename)
 				return false;
 
 			child.getChild("mesh").parseUInt(node.meshIndex);
-			child.getChild("rotation").getChild(0).parseFloat(node.rot.v.x);
-			child.getChild("rotation").getChild(1).parseFloat(node.rot.v.y);
-			child.getChild("rotation").getChild(2).parseFloat(node.rot.v.z);
-			child.getChild("rotation").getChild(3).parseFloat(node.rot.w);
 
-			child.getChild("translation").getChild(0).parseFloat(node.trans.x);
-			child.getChild("translation").getChild(1).parseFloat(node.trans.y);
-			child.getChild("translation").getChild(2).parseFloat(node.trans.z);
+			const JSONBlock &rotBlock = child.getChild("rotation");
+			rotBlock.getChild(0).parseFloat(node.rot.v.x);
+			rotBlock.getChild(1).parseFloat(node.rot.v.y);
+			rotBlock.getChild(2).parseFloat(node.rot.v.z);
+			rotBlock.getChild(3).parseFloat(node.rot.w);
+
+			const JSONBlock &transBlock = child.getChild("translation");
+			transBlock.getChild(0).parseFloat(node.trans.x);
+			transBlock.getChild(1).parseFloat(node.trans.y);
+			transBlock.getChild(2).parseFloat(node.trans.z);
 		}
 	}
 
