@@ -3,6 +3,7 @@
 #include <cstdint>
 // memcpy...
 #include <string.h>
+#include <cmath>
 
 #include "core/timer.h"
 #include "core/general.h"

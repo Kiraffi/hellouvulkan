@@ -1,6 +1,6 @@
 #include "json.h"
 
-
+#include <cstring>
 const JSONBlock JSONBlock::emptyBlock = { };
 
 
@@ -489,7 +489,7 @@ bool JSONBlock::parseInt(int &outInt) const
 	int64_t v = 0;
 	if(!parseInt(v))
 		return false;
-	if(v < -0x1'0000'0000i64 || v > 0xffff'ffffi64)
+	if(v < -0x1'0000'0000LL || v > 0xffff'ffffLL)
 		return false;
 
 	outInt = int(v);
@@ -502,7 +502,7 @@ bool JSONBlock::parseUInt(uint32_t &outInt) const
 	int64_t v = 0;
 	if(!parseInt(v))
 		return false;
-	if(v < 0 || v > 0xffff'ffffi64)
+	if(v < 0 || v > 0xffff'ffffLL)
 		return false;
 
 	outInt = uint32_t(v);
