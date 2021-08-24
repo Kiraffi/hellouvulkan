@@ -191,8 +191,8 @@ bool readGLTF(const char *filename)
 
 	struct Vertex
 	{
-		Vec3 pos;
-		Vec3 norm;
+		Vec4 pos;
+		Vec4 norm;
 		Vec4 color;
 	};
 
@@ -305,54 +305,6 @@ bool readGLTF(const char *filename)
 			transBlock.getChild(2).parseFloat(node.trans.z);
 		}
 	}
-	{
-		const JSONBlock &bufferTypeBlock = bl.getChild("nodes");
-		if(!bufferTypeBlock.isValid() || bufferTypeBlock.getChildCount() < 1)
-			return false;
-
-		bufferTypes.resize(bufferTypeBlock.getChildCount());
-
-		for(int i = 0; i <bufferTypeBlock.getChildCount(); ++i)
-		{
-			const JSONBlock &child = bufferTypeBlock.children [i];
-			BufferType &view = bufferTypes [i];
-			if(!child.getChild("bufferView").parseUInt(view.bufferViewIndex))
-				return false;
-
-			if(!child.getChild("bufferView").parseUInt(view.componentType))
-				return false;
-
-			if(child.getChild("min").isValid() || child.getChild("max").isValid())
-			{
-				if(!child.getChild("min").getChild(0).parseFloat(view.minValue.x)
-				 || !child.getChild("min").getChild(1).parseFloat(view.minValue.y)
-				 || !child.getChild("min").getChild(2).parseFloat(view.minValue.z)
-
-				 || !child.getChild("max").getChild(0).parseFloat(view.maxValue.x)
-				 || !child.getChild("max").getChild(1).parseFloat(view.maxValue.y)
-				 || !child.getChild("max").getChild(2).parseFloat(view.maxValue.z))
-				 {
-					 return false;
-				 }
-				 view.hasMinMax = true;
-			}
-
-			std::string s;
-			if(!child.getChild("type").parseString(s))
-				return false;
-
-			if(s == "SCALAR")
-				view.componentCount = 1;
-			else if(s == "VEC2")
-				view.componentCount = 2;
-			else if(s == "VEC3")
-				view.componentCount = 3;
-			else if(s == "VEC4")
-				view.componentCount = 4;
-			else
-				return false;
-		}
-	}
 
 	{
 		const JSONBlock &bufferBlock = bl.getChild("buffers");
@@ -377,6 +329,145 @@ bool readGLTF(const char *filename)
 				return false;
 		}
 	}
+
+	{
+		const JSONBlock &accessorBlock = bl.getChild("accessors");
+		if(!accessorBlock.isValid() || accessorBlock.getChildCount() < 1)
+			return false;
+
+		const JSONBlock &bufferViewBlock = bl.getChild("bufferViews");
+		if(!bufferViewBlock.isValid() || bufferViewBlock.getChildCount() < 1)
+			return false;
+		
+
+		MeshNode &node = meshes [0];
+		
+		auto lam =[&](uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
+		{
+			if(index == ~0u || index >= accessorBlock.getChildCount())
+				return false;
+			
+			const JSONBlock &block = accessorBlock.getChild(index);
+			if(!block.isValid())
+				return false;
+
+			uint32_t viewIndex = ~0u;
+            uint32_t componentType = ~0u;
+			uint32_t count = ~0u;
+			bool normalized = false;
+			std::string s;
+
+			if(!block.getChild("bufferView").parseUInt(viewIndex)
+			 || !block.getChild("componentType").parseUInt(componentType)
+			 || !block.getChild("count").parseUInt(count)
+			 || !block.getChild("type").parseString(s)
+			)
+				return false;
+
+
+
+
+			block.getChild("normalized").parseBool(normalized);
+
+			uint32_t componentCount = ~0u;
+
+			if(s == "SCALAR")
+				componentCount = 1;
+			else if(s == "VEC2")
+				componentCount = 2;
+			else if(s == "VEC3")
+				componentCount = 3;
+			else if(s == "VEC4")
+				componentCount = 4;
+			else
+				return false;
+
+			switch(componentType)
+			{
+				case 5126:
+					componentType = 4u;
+				break;
+				case 5123:
+					componentType = 2u;
+				break;
+				default:
+				return false;
+			}
+			uint32_t bufferIndex = ~0u;
+			uint32_t bufferOffset = ~0u;
+			uint32_t bufferLen = ~0u;
+	
+			const JSONBlock &bufferBlock = bufferViewBlock.getChild(viewIndex);
+			if(!bufferBlock.isValid())
+				return false;
+
+			if(!bufferBlock.getChild("buffer").parseUInt(bufferIndex)
+				|| !bufferBlock.getChild("byteLength").parseUInt(bufferLen)
+				|| !bufferBlock.getChild("byteOffset").parseUInt(bufferOffset)
+				)
+				return false;
+
+			if(bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size() )
+				return false;
+
+			if(useVertices)
+			{
+				if(vertices.size() == 0) 
+					vertices.resize(count);
+				if(vertices.size() != count)
+					return false;
+				
+				uint32_t bufferReadIndex = 0u;
+
+				uint8_t *ptr = &buffers[bufferIndex][0];
+
+				for(uint32_t i = 0; i < count; ++i)
+				{
+					Vertex &v = vertices[i];
+					float *f = ((float *)&v) + floatStartOffsetIndex / 4;
+					for(uint32_t j = 0; j < componentCount; ++j)
+					{
+						float f1 = 0.0f;
+
+						if(componentType == 4)
+							memcpy(&f1, ptr + bufferReadIndex, componentType);
+						else if(componentType == 2 && normalized)
+						{
+							uint16_t tmp = 0;
+							memcpy(&tmp, ptr + bufferReadIndex, componentType);
+
+							f1 = (float)tmp / 65535.0f;
+						}
+						else 
+							return false;
+
+						*(f + j) = f1;
+						
+						bufferReadIndex += componentType;
+					}
+				}
+			}
+			return true;
+
+		};
+
+		if(!lam(node.positionIndex, offsetof(Vertex, pos), true))
+			return false;
+
+		if(!lam(node.normalIndex, offsetof(Vertex, norm), true))
+			return false;
+
+		if(!lam(node.colorIndex, offsetof(Vertex, color), true))
+			return false;
+	}
+
+	for(uint32_t i = 0; i < vertices.size(); ++i)
+	{
+		printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
+		printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].norm.x, vertices[i].norm.y, vertices[i].norm.z);
+		printf("i: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
+	}
+
 
 	if(buffers.size() > 0)
 	{
