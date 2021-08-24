@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstdint>
 // memcpy...
-#include <string.h>
+#include <cstring>
 
 #include "core/timer.h"
 #include "core/general.h"
@@ -55,7 +55,7 @@ void FontRenderSystem::deInit(VkDevice device)
 
 
 
-bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
+bool FontRenderSystem::init(std::string_view fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
 	VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass,
 	VkPipelineCache pipelineCache, DeviceWithQueues &deviceWithQueues,
 	Buffer &scratchBuffer, const Buffer &renderFrameBuffer)
@@ -63,7 +63,7 @@ bool FontRenderSystem::init(const std::string& fontFilename, VkDevice device, Vk
 	std::vector<char> data;
 	if (!loadBytes(fontFilename, data))
 	{
-		printf("Failed to load file: %s\n", fontFilename.c_str());
+		printf("Failed to load file: %s\n", fontFilename.data());
 		return false;
 	}
 	VkPhysicalDeviceMemoryProperties memoryProperties;

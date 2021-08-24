@@ -37,13 +37,13 @@ struct JSONBlock
 	bool parseBool(bool &outBool) const;
 	bool parseBuffer(std::vector<uint8_t> &outBuffer) const;
 
-	bool hasChild(const std::string &childName) const;
+	bool hasChild(std::string_view childName) const;
 
 	int getChildCount() const { return ( int )children.size(); }
 	const JSONBlock &getChild(int index) const;
-	const JSONBlock &getChild(const std::string &childName) const;
+	const JSONBlock &getChild(std::string_view childName) const;
 
-	void print() const;
+	bool print() const;
 
 	std::vector< JSONBlock > children;
 	std::string blockName;

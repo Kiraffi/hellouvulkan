@@ -69,25 +69,6 @@ bool saveFontData(const std::string &filename, const std::vector<char> &data)
 	return false;
 }
 
-
-struct JSONBlockz
-{
-	JSONBlockz(int start) { startIndex = start; }
-	JSONBlockz(int start, int end): startIndex(start), endIndex(end) { }
-
-	bool isBracket() { return vvalid && !varray && vbracket; }
-	bool isArray() { return vvalid && varray && !vbracket; }
-	bool isValid() { return vvalid && !( varray && vbracket ); }
-
-	int startIndex = 0;
-	int endIndex = 0;
-	int currentIndex = 0;
-	bool varray = false;
-	bool vbracket = false;
-	bool vvalid = false;
-};
-
-
 enum TIME_POINTS
 {
 	START_POINT,
@@ -218,27 +199,9 @@ bool readGLTF(const char *filename)
 		uint32_t materialIndex = ~0u;
 	};
 
-	struct BufferType
-	{
-		uint32_t dataCount;
-		uint32_t componentType;
-		// scalar = 1, vec2 = 2....
-		uint32_t componentCount;
-
-		Vec3 minValue;
-		Vec3 maxValue;
-
-		uint32_t bufferViewIndex;
-		uint32_t bufferIndex;
-		uint32_t len;
-		uint32_t off;
-		bool hasMinMax = false;
-	};
-
 
 	std::vector<SceneNode> nodes;
 	std::vector<MeshNode> meshes;
-	std::vector<BufferType> bufferTypes;
 	std::vector<std::vector<uint8_t>> buffers;
 
 	if(!bl.isObject() || bl.getChildCount() < 1)
@@ -410,6 +373,9 @@ bool readGLTF(const char *filename)
 			if(bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size() )
 				return false;
 
+			uint8_t *ptr = &buffers[bufferIndex][0] + bufferOffset;
+			uint8_t *endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
+
 			if(useVertices)
 			{
 				if(vertices.size() == 0) 
@@ -417,24 +383,23 @@ bool readGLTF(const char *filename)
 				if(vertices.size() != count)
 					return false;
 				
-				uint32_t bufferReadIndex = bufferOffset;
-
-				uint8_t *ptr = &buffers[bufferIndex][0];
-
 				for(uint32_t i = 0; i < count; ++i)
 				{
+
 					Vertex &v = vertices[i];
 					float *f = (float *)(((uint8_t *)&v) + floatStartOffsetIndex);
 					for(uint32_t j = 0; j < componentCount; ++j)
 					{
+						if(ptr + componentType > endPtr)
+							return false;
 						float f1 = 0.0f;
 
 						if(componentType == 4)
-							memcpy(&f1, ptr + bufferReadIndex, componentType);
+							memcpy(&f1, ptr, componentType);
 						else if(componentType == 2 && normalized)
 						{
 							uint16_t tmp = 0;
-							memcpy(&tmp, ptr + bufferReadIndex, componentType);
+							memcpy(&tmp, ptr, componentType);
 
 							f1 = (float)tmp / 65535.0f;
 						}
@@ -443,8 +408,37 @@ bool readGLTF(const char *filename)
 
 						*(f + j) = f1;
 						
-						bufferReadIndex += componentType;
+						ptr += componentType;
 					}
+				}
+			}
+			else
+			{
+				if(indices.size() != 0)
+					return false;
+				indices.resize(count);
+
+				for(uint32_t i = 0; i < count; ++i)
+				{
+					if(ptr + componentType > endPtr)
+						return false;
+
+					uint32_t value = 0u;
+					if(componentType == 4)
+						memcpy(&value, ptr, componentType);
+					else if(componentType == 2)
+					{
+						uint16_t tmp = 0;
+						memcpy(&tmp, ptr, componentType);
+
+						value = tmp;
+					}
+					else 
+						return false;
+					
+					indices[i] = value;
+
+					ptr += componentType;
 				}
 			}
 			return true;
@@ -459,6 +453,9 @@ bool readGLTF(const char *filename)
 
 		if(!lam(node.colorIndex, offsetof(Vertex, color), true))
 			return false;
+
+		if(!lam(node.indicesIndex, 0, false))
+			return false;
 	}
 
 	for(uint32_t i = 0; i < vertices.size(); ++i)
@@ -468,6 +465,10 @@ bool readGLTF(const char *filename)
 		printf("i: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
 	}
 
+	for(uint32_t i = 0; i < indices.size(); ++i)
+	{
+		printf("i: %i, index: %u\n", i, indices[i]);
+	}
 
 	if(buffers.size() > 0)
 	{

@@ -12,7 +12,7 @@ class FontRenderSystem
 public:
 	FontRenderSystem() {}
 	~FontRenderSystem() {}
-	bool init(const std::string& fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
+	bool init(std::string_view fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
 		VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass, 
 		VkPipelineCache pipelineCache, DeviceWithQueues& deviceWithQueues, 
 		Buffer& scratchBuffer, const Buffer& renderFrameBuffer);

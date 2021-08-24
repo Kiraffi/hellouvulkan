@@ -10,7 +10,7 @@
 
 #include "mytypes.h"
 
-bool loadBytes(const std::string& fileName, std::vector<char>& dataOut)
+bool loadBytes(std::string_view fileName, std::vector<char>& dataOut)
 {
 	#ifdef _WIN32
 		char buf[1024] = {};

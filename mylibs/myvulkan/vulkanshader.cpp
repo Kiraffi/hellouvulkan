@@ -463,9 +463,8 @@ void destroyPipeline(VkDevice device, Pipeline &pipeline)
 }
 
 
-VkShaderModule loadShader(VkDevice device, const char *path)
+VkShaderModule loadShader(VkDevice device, std::string_view filename)
 {
-	std::string filename = std::string(path);
 	std::vector<char> buffer;
 	VkShaderModule shaderModule = 0;
 

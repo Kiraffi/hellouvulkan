@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <vulkan/vulkan_core.h>
 #include <vector>
 
@@ -75,7 +76,7 @@ struct DescriptorInfo
 
 
 
-VkShaderModule loadShader(VkDevice device, const char *path);
+VkShaderModule loadShader(VkDevice device, std::string_view filename);
 
 Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipelineCache cache, VkShaderModule vs, VkShaderModule fs, const VertexInput &vertexInput, 
 	const std::vector<DescriptorSet> &descriptors, bool depthTest, size_t pushConstantSize = 0, VkShaderStageFlagBits pushConstantStage  = VK_SHADER_STAGE_ALL);

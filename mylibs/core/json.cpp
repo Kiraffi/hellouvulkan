@@ -1,6 +1,7 @@
 #include "json.h"
 
 #include <cstring>
+
 const JSONBlock JSONBlock::emptyBlock = { };
 
 
@@ -17,7 +18,7 @@ struct JSONMarker
 static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
 static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
 
-static void printBlock(const JSONBlock &bl, int spaces = 0)
+static bool printBlock(const JSONBlock &bl, int spaces = 0)
 {
 
 	for(int i = 0; i < spaces; ++i)
@@ -29,7 +30,7 @@ static void printBlock(const JSONBlock &bl, int spaces = 0)
 	if(!bl.isValid())
 	{
 		printf("INVALID!\n");
-		return;
+		return false;
 	}
 
 	if(bl.isObject())
@@ -38,7 +39,8 @@ static void printBlock(const JSONBlock &bl, int spaces = 0)
 		printf("Object\n");
 		for(const JSONBlock &child : bl.children)
 		{
-			printBlock(child, spaces + 1);
+			if(!printBlock(child, spaces + 1))
+				return false;
 		}
 	}
 	else if(bl.isArray())
@@ -53,30 +55,49 @@ static void printBlock(const JSONBlock &bl, int spaces = 0)
 	{
 		bool v = false;
 		if(!bl.parseBool(v))
+		{
 			printf("FAILED PARSE BOOL\n");
+			return false;
+		}
 		printf("Bool %i\n", v);
 	}
 	else if(bl.isInt())
 	{
 		int64_t v = -2312;
 		if(!bl.parseInt(v))
+		{
 			printf("FAILED PARSE INT\n");
+			return false;
+		}
 		printf("Int %i\n", ( int )v);
 	}
 	else if(bl.isDouble())
 	{
 		double v = -2312.0;
 		if(!bl.parseDouble(v))
+		{
 			printf("FAILED PARSE DOUBLE\n");
+			return false;
+		}
 		printf("Double %f\n", ( float )v);
 	}
 	else if(bl.isString())
 	{
-		std::string s = "awef";
+		std::string s;
 		if(!bl.parseString(s))
+		{
 			printf("FAILED PARSE STRING\n");
+			return false;
+		}
 		printf("Str %s\n", s.c_str());
 	}
+	else
+	{
+		printf("IS NOT KNOWN TYPE\n");
+		return false;
+	
+	}
+	return true;
 }
 
 
@@ -585,7 +606,7 @@ bool JSONBlock::parseBuffer(std::vector<uint8_t> &outBuffer) const
 	return true;
 }
 
-bool JSONBlock::hasChild(const std::string &childName) const
+bool JSONBlock::hasChild(std::string_view childName) const
 {
 	for(const JSONBlock &child : children)
 	{
@@ -605,7 +626,7 @@ const JSONBlock &JSONBlock::getChild(int index) const
 	return children [index];
 }
 
-const JSONBlock &JSONBlock::getChild(const std::string &childName) const
+const JSONBlock &JSONBlock::getChild(std::string_view childName) const
 {
 	for(const JSONBlock &child : children)
 	{
@@ -616,8 +637,8 @@ const JSONBlock &JSONBlock::getChild(const std::string &childName) const
 	return emptyBlock;
 }
 
-void JSONBlock::print() const
+bool JSONBlock::print() const
 {
-	printBlock((*this), 0);
+	return printBlock((*this), 0);
 }
 

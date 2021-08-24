@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 #include <vulkan/vulkan_core.h>
 
 #include "core/mytypes.h"
@@ -52,8 +52,8 @@ VkPhysicalDevice createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
 DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 
-void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name);
+void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name);
 void setObjectTag(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
-void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, Vec4 color);
-void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string markerName, Vec4 color);
+void beginDebugRegion(VkCommandBuffer cmdbuffer, std::string_view pMarkerName, Vec4 color);
+void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string_view markerName, Vec4 color);
 void endDebugRegion(VkCommandBuffer cmdBuffer);

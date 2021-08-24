@@ -7,6 +7,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include <cstring>
+#include <string>
 #include <set>
 #include <stdio.h>
 #include <vector>
@@ -155,7 +156,7 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceK
 
 
 // From sasha wilems debugmarker
-void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name)
+void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name)
 {
 	// Check for a valid function pointer
 	if (pfnDebugMarkerSetObjectName)
@@ -164,7 +165,7 @@ void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT 
 		nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
 		nameInfo.objectType = objectType;
 		nameInfo.object = object;
-		nameInfo.pObjectName = name;
+		nameInfo.pObjectName = name.data();
 		pfnDebugMarkerSetObjectName(device, &nameInfo);
 	}
 }
@@ -186,7 +187,7 @@ void setObjectTag(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT o
 }
 
 // Start a new debug marker region
-void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, Vec4 color)
+void beginDebugRegion(VkCommandBuffer cmdbuffer, std::string_view pMarkerName, Vec4 color)
 {
 	// Check for valid function pointer (may not be present if not running in a debugging application)
 //	if (pfnCmdDebugMarkerBegin)
@@ -200,7 +201,7 @@ void beginDebugRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, Vec4 c
 }
 
 // Insert a new debug marker into the command buffer
-void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string markerName, Vec4 color)
+void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string_view markerName, Vec4 color)
 {
 	// Check for valid function pointer (may not be present if not running in a debugging application)
 //	if (pfnCmdDebugMarkerInsert)
