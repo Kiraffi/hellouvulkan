@@ -167,7 +167,7 @@ bool readGLTF(const char *filename)
 
 	if(parseSuccess)
 	{
-		bl.print();
+//		bl.print();
 	}
 
 	struct Vertex
@@ -458,6 +458,7 @@ bool readGLTF(const char *filename)
 			return false;
 	}
 
+/*
 	for(uint32_t i = 0; i < vertices.size(); ++i)
 	{
 		printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
@@ -469,63 +470,7 @@ bool readGLTF(const char *filename)
 	{
 		printf("i: %i, index: %u\n", i, indices[i]);
 	}
-
-	if(buffers.size() > 0)
-	{
-		std::vector<uint8_t> &byteData = buffers [0];
-		int index = 0;
-		int rowC = 0;
-		for(; index < 288; index += 12)
-		{
-			Vec3 v;
-			memcpy(&v.x, byteData.data() + index, 12);
-			printf("pos %i: x: %f, y: %f, z: %f\n", rowC, v.x, v.y, v.z);
-			++rowC;
-		}
-		rowC = 0;
-		for(; index < 288 + 288; index += 12)
-		{
-			Vec3 v;
-			memcpy(&v.x, byteData.data() + index, 12);
-			printf("norm %i: x: %f, y: %f, z: %f\n", rowC, v.x, v.y, v.z);
-			++rowC;
-		}
-		rowC = 0;
-		for(; index < 576 + 192; index += 8)
-		{
-			Vec2 v;
-			memcpy(&v.x, byteData.data() + index, 8);
-			printf("tx0 %i: x: %f, y: %f\n", rowC, v.x, v.y);
-			++rowC;
-		}
-		rowC = 0;
-		for(; index < 768 + 192; index += 8)
-		{
-			//09B6FF
-			// normalized
-			Vec4 v;
-
-			for(int i = 0; i < 4; ++i)
-			{
-				uint32_t t = 0;
-				memcpy(&t, byteData.data() + index + i * 2, 2);
-
-				float f = float(t) / 65535.0f;
-				v [i] = f;
-			}
-			printf("col %i: x: %f, y: %f, z: %f, w: %f\n", rowC, v.x, v.y, v.z, v.w);
-			++rowC;
-		}
-		rowC = 0;
-		for(; index < 960 + 72; index += 2)
-		{
-			uint16_t v;
-			memcpy(&v, byteData.data() + index, 2);
-			printf("ind %i: x: %i\n", rowC, v);
-			++rowC;
-		}
-	}
-
+*/
 	return true;
 }
 
