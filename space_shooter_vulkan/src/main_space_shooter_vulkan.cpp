@@ -561,7 +561,7 @@ void SpaceShooter::run()
 
 								double minSize = ( ent.size + asteroidEnt.size ) * 0.8f;
 
-								if (abs(ent.posX - asteroidEnt.posX) < minSize && abs(ent.posY - asteroidEnt.posY) < minSize)
+								if (std::abs(ent.posX - asteroidEnt.posX) < minSize && std::abs(ent.posY - asteroidEnt.posY) < minSize)
 								{
 									asteroidEntities[ astInd - 1 ] = asteroidEntities.back();
 									asteroidEntities.resize(asteroidEntities.size() - 1);

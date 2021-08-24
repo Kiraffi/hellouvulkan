@@ -348,7 +348,7 @@ static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSON
 			return false;
 		++index;
 	}
-	else if(cc = '[')
+	else if(cc == '[')
 	{
 		res->jType |= JSONBlock::ARRAY_TYPE;
 		JSONMarker childMarker(index, -1);

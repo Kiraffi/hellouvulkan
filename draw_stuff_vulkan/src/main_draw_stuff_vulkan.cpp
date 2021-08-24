@@ -232,6 +232,7 @@ bool readGLTF(const char *filename)
 		uint32_t bufferIndex;
 		uint32_t len;
 		uint32_t off;
+		bool hasMinMax = false;
 	};
 
 
@@ -302,6 +303,54 @@ bool readGLTF(const char *filename)
 			transBlock.getChild(0).parseFloat(node.trans.x);
 			transBlock.getChild(1).parseFloat(node.trans.y);
 			transBlock.getChild(2).parseFloat(node.trans.z);
+		}
+	}
+	{
+		const JSONBlock &bufferTypeBlock = bl.getChild("nodes");
+		if(!bufferTypeBlock.isValid() || bufferTypeBlock.getChildCount() < 1)
+			return false;
+
+		bufferTypes.resize(bufferTypeBlock.getChildCount());
+
+		for(int i = 0; i <bufferTypeBlock.getChildCount(); ++i)
+		{
+			const JSONBlock &child = bufferTypeBlock.children [i];
+			BufferType &view = bufferTypes [i];
+			if(!child.getChild("bufferView").parseUInt(view.bufferViewIndex))
+				return false;
+
+			if(!child.getChild("bufferView").parseUInt(view.componentType))
+				return false;
+
+			if(child.getChild("min").isValid() || child.getChild("max").isValid())
+			{
+				if(!child.getChild("min").getChild(0).parseFloat(view.minValue.x)
+				 || !child.getChild("min").getChild(1).parseFloat(view.minValue.y)
+				 || !child.getChild("min").getChild(2).parseFloat(view.minValue.z)
+
+				 || !child.getChild("max").getChild(0).parseFloat(view.maxValue.x)
+				 || !child.getChild("max").getChild(1).parseFloat(view.maxValue.y)
+				 || !child.getChild("max").getChild(2).parseFloat(view.maxValue.z))
+				 {
+					 return false;
+				 }
+				 view.hasMinMax = true;
+			}
+
+			std::string s;
+			if(!child.getChild("type").parseString(s))
+				return false;
+
+			if(s == "SCALAR")
+				view.componentCount = 1;
+			else if(s == "VEC2")
+				view.componentCount = 2;
+			else if(s == "VEC3")
+				view.componentCount = 3;
+			else if(s == "VEC4")
+				view.componentCount = 4;
+			else
+				return false;
 		}
 	}
 
