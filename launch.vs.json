@@ -5,36 +5,36 @@
     {
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "vulkan_test.exe (vulkan_test\\vulkan_test.exe)",
-      "name": "vulkan_test.exe (vulkan_test\\vulkan_test.exe)",
+      "projectTarget": "vulkan_test.exe (src\\vulkan_test\\vulkan_test.exe)",
+      "name": "vulkan_test.exe (src\\vulkan_test\\vulkan_test.exe)",
       "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "font_render_vulkan.exe (font_render_vulkan\\font_render_vulkan.exe)",
-      "name": "font_render_vulkan.exe (font_render_vulkan\\font_render_vulkan.exe)",
+      "projectTarget": "font_render_vulkan.exe (src\\font_render_vulkan\\font_render_vulkan.exe)",
+      "name": "font_render_vulkan.exe (src\\font_render_vulkan\\font_render_vulkan.exe)",
       "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "font_draw_vulkan.exe (font_draw_vulkan\\font_draw_vulkan.exe)",
-      "name": "font_draw_vulkan.exe (font_draw_vulkan\\font_draw_vulkan.exe)",
+      "projectTarget": "font_draw_vulkan.exe (src\\font_draw_vulkan\\font_draw_vulkan.exe)",
+      "name": "font_draw_vulkan.exe (src\\font_draw_vulkan\\font_draw_vulkan.exe)",
       "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "space_shooter_vulkan.exe (space_shooter_vulkan\\space_shooter_vulkan.exe)",
-      "name": "space_shooter_vulkan.exe (space_shooter_vulkan\\space_shooter_vulkan.exe)",
+      "projectTarget": "space_shooter_vulkan.exe (src\\space_shooter_vulkan\\space_shooter_vulkan.exe)",
+      "name": "space_shooter_vulkan.exe (src\\space_shooter_vulkan\\space_shooter_vulkan.exe)",
       "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "draw_stuff_vulkan.exe (draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
-      "name": "draw_stuff_vulkan.exe (draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
+      "projectTarget": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
+      "name": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
       "currentDir": "${workspaceRoot}"
     }
   ]
