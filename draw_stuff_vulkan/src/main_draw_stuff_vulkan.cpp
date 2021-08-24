@@ -417,14 +417,14 @@ bool readGLTF(const char *filename)
 				if(vertices.size() != count)
 					return false;
 				
-				uint32_t bufferReadIndex = 0u;
+				uint32_t bufferReadIndex = bufferOffset;
 
 				uint8_t *ptr = &buffers[bufferIndex][0];
 
 				for(uint32_t i = 0; i < count; ++i)
 				{
 					Vertex &v = vertices[i];
-					float *f = ((float *)&v) + floatStartOffsetIndex / 4;
+					float *f = (float *)(((uint8_t *)&v) + floatStartOffsetIndex);
 					for(uint32_t j = 0; j < componentCount; ++j)
 					{
 						float f1 = 0.0f;
