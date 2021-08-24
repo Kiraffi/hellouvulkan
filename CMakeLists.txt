@@ -62,16 +62,8 @@ ADD_DEFINITIONS(-DDISCRETE_GPU=0)
 ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
 ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
-#add_subdirectory("externallibs")
 add_subdirectory("external/glfw-3.3.4")
 add_subdirectory("external/meshoptimizer")
+include_directories("external/"	"external/glfw-3.3.4/include/")
 
-add_subdirectory("mylibs")
-add_subdirectory("external")
-
-
-add_subdirectory ("font_draw_vulkan")
-add_subdirectory ("font_render_vulkan")
-add_subdirectory ("space_shooter_vulkan")
-add_subdirectory ("vulkan_test")
-add_subdirectory ("draw_stuff_vulkan")
+add_subdirectory("src")

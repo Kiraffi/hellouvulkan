@@ -40,11 +40,11 @@
 #include "fontsystem.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
+#include "tiny_obj_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include "stb/stb_image.h"
 
-#include <meshoptimizer/src/meshoptimizer.h>
+#include "meshoptimizer/src/meshoptimizer.h"
 
 
 enum TIME_POINTS
