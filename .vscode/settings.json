@@ -1,5 +1,6 @@
 {
     "cmake.configureOnOpen": true,
+    "cmake.generator": "Ninja",
     "cmake.debugConfig": {
         "cwd": "${workspaceFolder}"
     },
