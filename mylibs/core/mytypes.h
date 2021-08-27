@@ -1,9 +1,23 @@
 #pragma once
 
-#include <assert.h>
-#include <stdio.h>
-
 #include <stdint.h>
+
+void myPrint(const char* ptr, ...);
+
+extern "C" int printf (const char *__restrict __format, ...);
+//extern "C" void *memcpy(void *__restrict dest, const void *__restrict src, int64_t n);
+//void *memcpy(void * dest, const void * src, int64_t n);
+//extern "C" int memcmp( const void *ptr1, const void *ptr2, long num );
+//extern "C" int strcmp(const char *str1, const char *str2);
+
+float ftanf(float a);
+float fsinf(float a);
+float fcosf(float a);
+float ffabsf(float a);
+float fsqrtf(float a);
+float ffmodf(float a, float b);
+float ffminf(float a, float b);
+float ffmaxf(float a, float b);
 
 using f32 = float;
 using f64 = double;
@@ -29,23 +43,10 @@ const float pii = 3.1415926265359f;
 	const bool enableValidationLayers = false;
 #endif
 
-#ifdef NDEBUG
-	#define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call ;} while(0)
-#else
-	#define VK_CHECK(call) do { VkResult callResult = call; assert(callResult == VkResult::VK_SUCCESS); } while(0)
-#endif
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#endif
 
-#if 0
-#ifdef NDEBUG
-	#define ASSERT(assertcall) do { } while(0)
-#else
-	#define ASSERT(assertcall) do{ assert(assertcall); } while(0)
-#endif
-#endif
+
+
 
 
 
@@ -67,7 +68,7 @@ void printOutBuffer(const char *buffer);
 #else
 #define HELPER_LOG(LOG_TYPE, LOG_TEXT_STRING, ...) \
 				do { \
-					fprintf(stdout, LOG_TEXT_STRING, ##__VA_ARGS__); \
+					printf(LOG_TEXT_STRING, ##__VA_ARGS__); \
 				} while(0)
 #endif
 
@@ -106,3 +107,15 @@ do \
 
 #define ASSERT(STUFF) HELPER_ASSERT_STRING(STUFF, #STUFF)
 
+
+
+
+#ifdef NDEBUG
+	#define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call ;} while(0)
+#else
+	#define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
+#endif
+
+#ifndef ARRAYSIZE
+#define ARRAYSIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#endif

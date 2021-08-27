@@ -1,7 +1,8 @@
 #include "quaternion.h"
-#include <algorithm>
-#include <math.h>
-#include <stdio.h>
+//#include <algorithm>
+//#include <math.h>
+//#include <stdio.h>
+
 
 Quaternion operator *(const Quaternion &a, const Quaternion &b)
 {
@@ -19,9 +20,9 @@ Quaternion operator *(const Quaternion &a, const Quaternion &b)
 Quaternion normalize(const Quaternion &q)
 {
 	Quaternion result;
-	result.w = std::min(q.w, 1.0f);
+	result.w = ffminf(q.w, 1.0f);
 	if(result.w != 1.0f && result.w != -1.0f)
-		result.v = normalize(q.v) * sqrtf(1.0f - result.w * result.w);
+		result.v = normalize(q.v) * fsqrtf(1.0f - result.w * result.w);
 	return result;
 }
 
@@ -51,12 +52,12 @@ void getAxis(const Quaternion &quat, Vector3 &right, Vector3 &up, Vector3 &forwa
 
 Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
 {
-	float s = sinf(angle * 0.5f);
+	float s = fsinf(angle * 0.5f);
 
 	Quaternion result;
 	result.v = normalize(v) * s;
 
-	result.w = -cosf(angle * 0.5f);
+	result.w = -fcosf(angle * 0.5f);
 	return result;
 }
 
@@ -70,14 +71,14 @@ Quaternion getQuaternionFromNormalizedVectors(const Vector3 &from, const Vector3
 	else if (d <= -1.0f + 1e-5f)
 	{
 		// Generate a rotation axis to do 180 degree rotation
-		if (fabs(from.x) < 0.707f)
+		if (ffabsf(from.x) < 0.707f)
 			return getQuaternionFromAxisAngle(normalize(cross(Vector3(1.0f, 0.0f, 0.0f), from)), PI);
 		else
 			return getQuaternionFromAxisAngle(normalize(cross(Vector3(0.0f, 1.0f, 0.0f), from)), PI);
 	}
 	else
 	{
-		float s = sqrtf((1.0f + d) * 2.0f);
+		float s = fsqrtf((1.0f + d) * 2.0f);
 		result.v = cross(from, toVector);
 		result.w = 0.5f * s;
 		return normalize(result);

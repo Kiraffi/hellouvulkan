@@ -1,8 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-// memcpy...
-#include <string.h>
 
 #include "core/general.h"
 
@@ -34,6 +29,7 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
+#include <memory.h>
 
 
 static constexpr int SCREEN_WIDTH  = 640;

@@ -2,12 +2,13 @@
 # and include sub-projects here.
 #
 cmake_minimum_required (VERSION 3.15)
-
 project ("hellouvulkan" VERSION 0.0.1)
+
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
+#ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
@@ -52,9 +53,9 @@ foreach (_variableName ${_variableNames})
 endforeach()
 endif (SHOW_VARIABLES)
  
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" )
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" )
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" )
 
 ADD_DEFINITIONS(-DSHOW_INFO_MESSAGES=0)
 ADD_DEFINITIONS(-DVSYNC=2)
@@ -62,8 +63,11 @@ ADD_DEFINITIONS(-DDISCRETE_GPU=0)
 ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
 ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
-add_subdirectory("external/glfw-3.3.4")
-add_subdirectory("external/meshoptimizer")
 include_directories("external/"	"external/glfw-3.3.4/include/")
-
+include_directories("mylibs")
+ 
+#add_subdirectory("external/meshoptimizer")
+add_subdirectory("external/glfw-3.3.4")
+add_subdirectory ("mylibs")
 add_subdirectory("src")
+

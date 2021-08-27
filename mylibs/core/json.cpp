@@ -1,6 +1,5 @@
 #include "json.h"
-
-#include <cstring>
+#include <memory.h>
 
 const JSONBlock JSONBlock::emptyBlock = { };
 
@@ -304,7 +303,7 @@ bool tryParseBoolean(const std::vector<char> &buffer, JSONMarker &marker, JSONBl
 	int &index = marker.currentIndex;
 	int endIndex = marker.endIndex;
 
-	if(index + 4 < endIndex && memcmp(&buffer [index], "true", 4) == 0)
+	if(index + 4 < endIndex && memcmp((const void *)(&(buffer [index])), "true", 4) == 0)
 	{
 		inOutBlock.valueBool = true;
 		inOutBlock.jType |= JSONBlock::BOOL_TYPE | JSONBlock::VALID_TYPE;

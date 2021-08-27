@@ -6,12 +6,10 @@
 #include "math/vector3.h"
 #include <vulkan/vulkan_core.h>
 
-#include <cstring>
 #include <string>
 #include <set>
-#include <stdio.h>
 #include <vector>
-
+#include <memory.h>
 
 
 
@@ -329,7 +327,7 @@ VkPhysicalDevice createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
 
 		if(formatIndex == ~0u)
 			continue;
-		assert(formatIndex != ~0u);
+		ASSERT(formatIndex != ~0u);
 		QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
 		if(!indices.isValid())
 			continue;
@@ -428,7 +426,7 @@ DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfa
 	{
 		deviceWithQueues.colorFormat = defaultFormat[0];
 	}
-	assert(deviceWithQueues.colorFormat != VK_FORMAT_UNDEFINED);
+	ASSERT(deviceWithQueues.colorFormat != VK_FORMAT_UNDEFINED);
 
 
 	for (uint32_t j = 0; j < ARRAYSIZE(defaultFormat); ++j)
@@ -443,7 +441,7 @@ DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfa
 		}
 	}
 
-	assert(deviceWithQueues.computeColorFormat != VK_FORMAT_UNDEFINED);
+	ASSERT(deviceWithQueues.computeColorFormat != VK_FORMAT_UNDEFINED);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<uint32_t> uniqueQueueFamilies = {queueFamilyIndices.graphicsFamily, queueFamilyIndices.presentFamily};

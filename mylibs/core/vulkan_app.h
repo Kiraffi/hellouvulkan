@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <cstdint>
 #include "core/timer.h"
 
 #define GLFW_INCLUDE_VULKAN

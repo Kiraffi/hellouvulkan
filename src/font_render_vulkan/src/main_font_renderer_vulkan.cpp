@@ -1,8 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-// memcpy...
-#include <string.h>
 
 #include "core/timer.h"
 #include "core/general.h"

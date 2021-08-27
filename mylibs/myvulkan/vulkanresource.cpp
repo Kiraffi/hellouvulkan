@@ -1,11 +1,9 @@
 #include "vulkanresource.h"
 
-#include <stdio.h>
-#include <memory.h>
-
 #include "vulkandevice.h"
 #include "core/mytypes.h"
 
+#include <memory.h>
 
 static u32 selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProperties, u32 memoryTypeBits, VkMemoryPropertyFlags flags)
 {
@@ -108,7 +106,7 @@ Image createImage(VkDevice device, u32 familyIndex, const VkPhysicalDeviceMemory
 	if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 	{
 		VK_CHECK(vkMapMemory(device, result.deviceMemory, 0, size, 0, &data));
-		assert(data);
+		ASSERT(data);
 	}
 	result.data = data;
 	result.size = size;

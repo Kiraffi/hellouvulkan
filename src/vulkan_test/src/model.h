@@ -4,7 +4,7 @@
 #include "math/vector3.h"
 
 #include <vector>
-#include <cstring> //memcmp
+
 const u32 trianglesPerPatch = 32u;
 
 struct Vertex

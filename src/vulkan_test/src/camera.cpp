@@ -4,7 +4,7 @@
 #include "math/general_math.h"
 
 
-#include <cmath>
+#include <math.h>
 
 Matrix perspectiveProjection(const Camera &camera)
 {;

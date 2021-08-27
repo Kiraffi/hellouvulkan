@@ -2,8 +2,6 @@
 #include "model.h"
 
 
-#include <algorithm>
-#include <cmath>
 #include "core/mytypes.h"
 #include "core/timer.h"
 

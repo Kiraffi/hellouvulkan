@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <stdio.h>
-#include <cmath>
+#include <math.h>
 #include <vector>
 #include <set>
 #include <thread>
@@ -37,7 +37,6 @@
 
 #include "model.h"
 #include "camera.h"
-#include "fontsystem.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -280,7 +279,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 			loading = loadMesh(mesh, modelNames[i], totalMeshIndices);
 			ASSERT(loading);
 			totalMeshIndices += (u32)mesh.indices.size();
-			assert(totalMeshIndices < (1u << 20u));
+			ASSERT(totalMeshIndices < (1u << 20u));
 		}
 	}
 	meshData.indiceCount = u32(meshes[MESH_KITTEN].indices.size());

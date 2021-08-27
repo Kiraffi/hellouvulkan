@@ -1,9 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-// memcpy...
-#include <string.h>
-#include <cmath>
 
 #include "core/timer.h"
 #include "core/general.h"
@@ -36,8 +30,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <filesystem>
-#include <fstream>
+#include <memory.h>
 
 
 static constexpr int SCREEN_WIDTH = 800;
@@ -260,8 +253,8 @@ static uint32_t getPackedPosition(float x, float y)
 static uint32_t getPackedSizeRot(float sz, float rotInRad)
 {
 	uint32_t result = uint32_t(( sz / 64.0f ) * 1023.0f);
-	float sinv = sinf(rotInRad);
-	float cosv = cosf(rotInRad);
+	float sinv = fsinf(rotInRad);
+	float cosv = fcosf(rotInRad);
 	result += uint32_t(( sinv * 0.5f + 0.5f ) * 1023.0f) << 10u;
 	result += uint32_t(( cosv * 0.5f + 0.5f ) * 1023.0f) << 20u;
 
@@ -365,8 +358,8 @@ void SpaceShooter::run()
 			for (uint32_t i = 0; i < AsteroidCorners; ++i)
 			{
 				float angle = -float(i) * float(2.0f * PI) / float(AsteroidCorners);
-				float x = cos(angle);
-				float y = sin(angle);
+				float x = fcosf(angle);
+				float y = fsinf(angle);
 				float r = 0.5f + 0.5f * ( float(rand()) / float(RAND_MAX) );
 
 				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
@@ -388,8 +381,8 @@ void SpaceShooter::run()
 			for (uint32_t i = 0; i < BulletCorners; ++i)
 			{
 				float angle = -float(i) * float(2.0f * PI) / float(BulletCorners);
-				float x = cos(angle);
-				float y = sin(angle);
+				float x = fcosf(angle);
+				float y = fsinf(angle);
 				float r = 1.0f;
 
 				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
@@ -477,8 +470,8 @@ void SpaceShooter::run()
 				// Update position, definitely not accurate physics, if dt is big this doesn't work properly, trying to split it into several updates.
 				while (dtSplit > 0.0f)
 				{
-					double dddt = fminf(dtSplit, 0.005f);
-					float origSpeed = 1.0f * sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+					double dddt = ffminf(dtSplit, 0.005f);
+					float origSpeed = 1.0f * fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
 
 					double timeHere = currentTime + dddt;
 
@@ -494,11 +487,11 @@ void SpaceShooter::run()
 						rotSpeed = rotSpeed * 2.0f - ( 1.0f - rotSpeed ) * 0.005f;
 						playerEntity.rotation -= rotSpeed * dddt;
 					}
-					playerEntity.rotation = std::fmod(playerEntity.rotation, PI * 2.0);
+					playerEntity.rotation = ffmodf(playerEntity.rotation, PI * 2.0);
 					if (isDown(GLFW_KEY_UP) || isDown(GLFW_KEY_W))
 					{
-						playerEntity.speedX += cosf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
-						playerEntity.speedY += sinf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
+						playerEntity.speedX += fcosf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
+						playerEntity.speedY += fsinf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
 					}
 
 
@@ -506,8 +499,8 @@ void SpaceShooter::run()
 					{
 						if (bulletEntities.size() < ( 1 << 15 ))
 						{
-							float rotX = cosf(playerEntity.rotation + float(PI) * 0.5f);
-							float rotY = sinf(playerEntity.rotation + float(PI) * 0.5f);
+							float rotX = fcosf(playerEntity.rotation + float(PI) * 0.5f);
+							float rotY = fsinf(playerEntity.rotation + float(PI) * 0.5f);
 
 							float speedX = rotX * 1000.0f;
 							float speedY = rotY * 1000.0f;
@@ -526,9 +519,9 @@ void SpaceShooter::run()
 					}
 
 					{
-						float origSpeed = sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+						float origSpeed = fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
 						float dec = dddt * 0.001f * origSpeed;
-						float speed = fmax(origSpeed - dec, 0.0f);
+						float speed = ffmaxf(origSpeed - dec, 0.0f);
 						float slowDown = 0.95f; //origSpeed > 0.01f ? speed / std::max(origSpeed, 1.0f) : 0.0f;
 						playerEntity.speedX *= slowDown;
 						playerEntity.speedY *= slowDown;

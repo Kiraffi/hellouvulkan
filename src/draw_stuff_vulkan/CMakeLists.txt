@@ -5,15 +5,16 @@ cmake_minimum_required (VERSION 3.15)
 
 
 # Add source to this project's executable.
-add_executable (draw_stuff_vulkan "src/main_draw_stuff_vulkan.cpp" ${SPV_SHADERS})
+add_executable (draw_stuff_vulkan "src/main_draw_stuff_vulkan.cpp")
 
 add_dependencies(draw_stuff_vulkan shaders)
 
-target_link_libraries(draw_stuff_vulkan PUBLIC 
-	glfw 
-	${CMAKE_DL_LIBS} 
-	${GLFW_LIBRARIES}
+target_link_libraries(draw_stuff_vulkan PRIVATE 
+	glfw
+	#${CMAKE_DL_LIBS} 
+	#${GLFW_LIBRARIES}
 	Vulkan::Vulkan
-	meshoptimizer
+	#meshoptimizer
 	MyLibraries
+	
 	)

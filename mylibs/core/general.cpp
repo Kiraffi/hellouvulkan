@@ -1,14 +1,26 @@
 #include "general.h"
-#include <cstdint>
+#include "mytypes.h"
 #include <filesystem>
 #include <fstream>
-#include <cmath>
+#include <math.h>
+#include <stdio.h>
+#include <memory.h>
 
 #ifdef _WIN32
 	#include <Windows.h>
 #endif
 
-#include "mytypes.h"
+
+float fsqrtf(float a) { return sqrtf(a); }
+float ftanf(float a) { return tanf(a); }
+float fsinf(float a) { return sinf(a); }
+float fcosf(float a) { return cosf(a); }
+float ffabsf(float a) { uint32_t b = *((uint32_t *)(&a)); b &= 0x8fff'ffff; return *((float *)(&b)); }
+float ffmodf(float a, float b) { return fmodf(a, b); }
+float ffminf(float a, float b) {return a < b;}
+float ffmaxf(float a, float b) {return a > b;}
+
+//void myPrint(const char* ptr, )
 
 bool loadBytes(std::string_view fileName, std::vector<char>& dataOut)
 {

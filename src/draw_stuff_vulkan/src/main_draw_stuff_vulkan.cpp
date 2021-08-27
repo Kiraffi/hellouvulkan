@@ -1,8 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-// memcpy...
-#include <string.h>
 
 #include "core/general.h"
 #include "core/json.h"
@@ -33,8 +28,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <filesystem>
-#include <fstream>
+#include <memory.h>
 
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
@@ -50,24 +44,6 @@ struct GPUVertexData
 
 
 
-bool saveFontData(const std::string &filename, const std::vector<char> &data)
-{
-	//
-	if(std::filesystem::exists(filename))
-	{
-		std::filesystem::path p(filename);
-
-
-		std::ofstream f(p, std::ios::out | std::ios::binary);
-
-
-		f.write(data.data(), data.size());
-
-		printf("filesize: %u\n", uint32_t(data.size()));
-		return true;
-	}
-	return false;
-}
 
 enum TIME_POINTS
 {
@@ -269,7 +245,7 @@ bool readGLTF(const char *filename)
 		}
 	}
 
-	{
+ 	{
 		const JSONBlock &bufferBlock = bl.getChild("buffers");
 		if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
 			return false;
@@ -690,9 +666,6 @@ void VulkanFontDraw::run()
 					chosenLetter = ( int )bufferedPresses [i];
 				}
 			}
-
-			if(keyDowns [GLFW_KEY_S].isDown && keyDowns [GLFW_KEY_S].pressCount > 0u && isControlDown)
-				saveFontData(fontFilename, data);
 
 			if(keyDowns [GLFW_KEY_L].isDown && keyDowns [GLFW_KEY_L].pressCount > 0u && isControlDown)
 				loadBytes(fontFilename, data);

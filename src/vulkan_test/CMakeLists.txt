@@ -10,8 +10,6 @@ add_executable (vulkan_test
 
 	"src/camera.cpp"
 	"src/camera.h"
-	"src/fontsystem.cpp"
-	"src/fontsystem.h"
 	"src/model.cpp"
 	"src/model.h"
 	"src/transform.h"
@@ -24,16 +22,16 @@ add_executable (vulkan_test
 #file( GLOB LIB_HEADERS2 src/myvulkan/*.h )
 
 # Add source to this project's executable.
-#add_executable (vulkan_test ${LIB_SOURCES} ${LIB_HEADERS})
+add_executable (vulkan_test ${LIB_SOURCES} ${LIB_HEADERS})
 
 #target_link_libraries(vulkan_test PRIVATE MyGlad MyLibraries)
 # TODO: Add tests and install targets if needed.
-target_link_libraries(vulkan_test PUBLIC 
+target_link_libraries(vulkan_test PRIVATE 
 	glfw 
-	${CMAKE_DL_LIBS} 
-	${GLFW_LIBRARIES}
+	#${CMAKE_DL_LIBS} 
+	#${GLFW_LIBRARIES}
 	Vulkan::Vulkan
-	meshoptimizer
+	#meshoptimizer
 	MyLibraries
 	#${VULKAN_INCLUDE_DIR}
 	#${VULKAN_INCLUDE_DIRS}

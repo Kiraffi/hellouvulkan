@@ -13,7 +13,7 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface, VkSwapchainKHR oldSwapchain)
 {
 	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
-	assert(swapChainSupport.formats.size() > 0);
+	ASSERT(swapChainSupport.formats.size() > 0);
 	VkSurfaceFormatKHR surfaceFormat = swapChainSupport.formats[0];
 	bool found = false;
 	for (const auto& availableFormat : swapChainSupport.formats) 
@@ -31,7 +31,7 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 		surfaceFormat.format = colorFormat;
 		found = true;
 	}
-	assert(found);
+	ASSERT(found);
 
 	VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
 	#if VSYNC == 1
@@ -121,14 +121,14 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, V
 
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-	assert(formatCount > 0);
+	ASSERT(formatCount > 0);
 
 	details.formats.resize(formatCount);
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data());
 
 	uint32_t presentModeCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
-	assert(presentModeCount > 0);
+	ASSERT(presentModeCount > 0);
 
 	details.presentModes.resize(presentModeCount);
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, details.presentModes.data());

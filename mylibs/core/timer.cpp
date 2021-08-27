@@ -1,7 +1,5 @@
 #include "timer.h"
-
-#include <stdio.h>
-
+#include "core/mytypes.h"
 
 Timer::Timer()
 {

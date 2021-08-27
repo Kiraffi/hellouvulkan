@@ -1,8 +1,5 @@
 #include "vector3.h"
 
-#include <math.h>
-#include <stdio.h>
-
 Vector2 operator+(const Vector2 &a, const Vector2 &b)
 {
 	Vector2 result(a);
@@ -52,7 +49,7 @@ float sqrLen(const Vector2 &a)
 
 float len(const Vector2 &a)
 {
-	return sqrtf(a.x * a.x + a.y * a.y);
+	return fsqrtf(a.x * a.x + a.y * a.y);
 }
 
 Vector2 normalize(const Vector2 &a)
@@ -130,7 +127,7 @@ float sqrLen(const Vector3 &a)
 
 float len(const Vector3 &a)
 {
-	return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z);
+	return fsqrtf(a.x * a.x + a.y * a.y + a.z * a.z);
 }
 
 Vector3 normalize(const Vector3 &a)

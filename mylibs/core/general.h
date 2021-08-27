@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 #include <vector>
 
 bool loadBytes(std::string_view fileName, std::vector<char> &dataOut);

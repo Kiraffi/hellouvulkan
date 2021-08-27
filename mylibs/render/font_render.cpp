@@ -1,9 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-// memcpy...
-#include <cstring>
-
 #include "core/timer.h"
 #include "core/general.h"
 
@@ -28,9 +22,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <filesystem>
-#include <fstream>
-
+#include <memory.h>
 
 ////////////////////////
 //

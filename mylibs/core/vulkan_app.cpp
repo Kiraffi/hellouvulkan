@@ -1,19 +1,18 @@
 #include "vulkan_app.h"
 
-#include <stdio.h>
-#include <string.h>
-
 #include "myvulkan/vulkandevice.h"
 #include "myvulkan/vulkanhelperfuncs.h"
 #include "myvulkan/vulkanresource.h"
 #include "myvulkan/vulkanshader.h"
 #include "myvulkan/vulkanswapchain.h"
 
+#include <memory.h>
+
 static double timer_frequency = 0.0;
 
 static void error_callback(int error, const char* description)
 {
-	fprintf(stderr, "Error: %s\n", description);
+	printf("Error: %s\n", description);
 }
 
 

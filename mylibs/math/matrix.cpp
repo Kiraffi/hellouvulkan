@@ -1,7 +1,5 @@
 #include "matrix.h"
 #include "math/quaternion.h"
-#include <stdio.h>
-#include <math.h>
 
 #define MATRIX_ADD_ROW_MULT(row, col) (a._##row##0 * b._0##col + a._##row##1 * b._1##col + a._##row##2 * b._2##col + a._##row##3 * b._3##col)
 #define MATRIX_SET(row, col) (result._##row##col)  = MATRIX_ADD_ROW_MULT(row, col)
@@ -69,9 +67,9 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
 {
 	Matrix result;
 
-	ASSERT(fabs(width) >= 1.0f);
-	ASSERT(fabs(height) >= 1.0f);
-	ASSERT(fabs(farPlane - nearPlane) > 0.00001f);
+	ASSERT(ffabsf(width) >= 1.0f);
+	ASSERT(ffabsf(height) >= 1.0f);
+	ASSERT(ffabsf(farPlane - nearPlane) > 0.00001f);
 
 	float fRange = 1.0f / (farPlane - nearPlane);
 
@@ -88,11 +86,11 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
 Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
 	Matrix result;
-	ASSERT(fabs(fov) > 0.00001f);
-	ASSERT(fabs(aspectRatio) > 0.001f);
-	ASSERT(fabs(farPlane - nearPlane) > 0.00001f);
+	ASSERT(ffabsf(fov) > 0.00001f);
+	ASSERT(ffabsf(aspectRatio) > 0.001f);
+	ASSERT(ffabsf(farPlane - nearPlane) > 0.00001f);
 
-	float yScale = 1.0f / tanf(fov / 180.0f * PI);
+	float yScale = 1.0f / ftanf(fov / 180.0f * PI);
 	float xScale = yScale / aspectRatio;
 	float fRange1 = 1.0f / (farPlane - nearPlane);
 	float fRange2 = farPlane * fRange1;

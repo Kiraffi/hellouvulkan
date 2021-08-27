@@ -1,7 +1,6 @@
 #include "vulkanshader.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <vector>
 
 #include "core/general.h"
