@@ -9,16 +9,15 @@
 
 
 
-static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice,
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface, VkSwapchainKHR oldSwapchain)
+static VkSwapchainKHR createSwapchain(GLFWwindow *window, DeviceWithQueues &deviceWithQueues, VkSwapchainKHR oldSwapchain)
 {
-	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
+	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(deviceWithQueues.physicalDevice, deviceWithQueues.surface);
 	ASSERT(swapChainSupport.formats.size() > 0);
 	VkSurfaceFormatKHR surfaceFormat = swapChainSupport.formats[0];
 	bool found = false;
 	for (const auto& availableFormat : swapChainSupport.formats) 
 	{
-		if (availableFormat.format == colorFormat && availableFormat.colorSpace == colorSpace)
+		if (availableFormat.format == deviceWithQueues.colorFormat && availableFormat.colorSpace == deviceWithQueues.colorSpace)
 		{
 			surfaceFormat = availableFormat;
 			found = true;
@@ -27,8 +26,8 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 	}
 	if(!found && swapChainSupport.formats.size() == 1 && swapChainSupport.formats[0].format == VK_FORMAT_UNDEFINED)
 	{
-		surfaceFormat.colorSpace = colorSpace;
-		surfaceFormat.format = colorFormat;
+		surfaceFormat.colorSpace = deviceWithQueues.colorSpace;
+		surfaceFormat.format = deviceWithQueues.colorFormat;
 		found = true;
 	}
 	ASSERT(found);
@@ -72,7 +71,7 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 		imageCount = swapChainSupport.capabilities.maxImageCount;
 	}
 	VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
-	createInfo.surface = surface;
+	createInfo.surface = deviceWithQueues.surface;
 	createInfo.minImageCount = imageCount;
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -81,7 +80,7 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 	createInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	createInfo.oldSwapchain = oldSwapchain;
 
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+	QueueFamilyIndices indices = findQueueFamilies(deviceWithQueues.physicalDevice, deviceWithQueues.surface);
 	uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
 	if (indices.graphicsFamily != indices.presentFamily)
 	{
@@ -102,7 +101,7 @@ static VkSwapchainKHR createSwapchain(GLFWwindow *window, VkDevice device, VkPhy
 
 	VkSwapchainKHR swapChain = 0;
 //	PreCallValidateCreateSwapchainKHR()
-	[[maybe_unused]] VkResult res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain);
+	[[maybe_unused]] VkResult res = vkCreateSwapchainKHR(deviceWithQueues.device, &createInfo, nullptr, &swapChain);
 	if (res != VK_SUCCESS)
 	{
 		LOG("Failed to initialize swapchain\n");
@@ -151,10 +150,10 @@ void destroySwapchain(SwapChain &swapchain, VkDevice device)
 
 }
 
-bool createSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice, 
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface)
+bool createSwapchain(SwapChain &swapChain, GLFWwindow *window, DeviceWithQueues &deviceWithQueues)
 {
-	swapChain.swapchain = createSwapchain(window, device, physicalDevice, colorFormat, colorSpace, surface, swapChain.swapchain);
+	VkDevice device = deviceWithQueues.device;
+	swapChain.swapchain = createSwapchain(window, deviceWithQueues, swapChain.swapchain);
 
 	u32 swapchainCount = 0;
 	VK_CHECK(vkGetSwapchainImagesKHR(device, swapChain.swapchain, &swapchainCount, nullptr));
@@ -172,8 +171,7 @@ bool createSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, 
 	return true;
 }
 
-bool resizeSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, VkPhysicalDevice physicalDevice, 
-	VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkSurfaceKHR surface)
+bool resizeSwapchain(SwapChain &swapChain, GLFWwindow *window, DeviceWithQueues &deviceWithQueues)
 {
 	int width = 0;
 	int height = 0;
@@ -190,12 +188,12 @@ bool resizeSwapchain(SwapChain &swapChain, GLFWwindow *window, VkDevice device, 
 	if (swapChain.width == newWidth && swapChain.height == newHeight)
 		return false;
 
-	VK_CHECK(vkDeviceWaitIdle(device));
+	VK_CHECK(vkDeviceWaitIdle(deviceWithQueues.device));
 
 	SwapChain oldSwapchain = swapChain;
-	createSwapchain(swapChain, window, device, physicalDevice, colorFormat, colorSpace, surface);
+	createSwapchain(swapChain, window, deviceWithQueues);
 
-	destroySwapchain(oldSwapchain, device);
+	destroySwapchain(oldSwapchain, deviceWithQueues.device);
 	return true;
 }
 

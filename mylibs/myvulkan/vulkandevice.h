@@ -33,14 +33,23 @@ struct QueueFamilyIndices
 
 struct DeviceWithQueues
 {
+	VkPhysicalDevice physicalDevice = nullptr;
 	VkDevice device = nullptr;
+	VkSurfaceKHR surface = nullptr;
+	
+	VkCommandPool mainCommandPool = nullptr;
+	VkCommandBuffer mainCommandBuffer = nullptr;
+
 	VkQueue graphicsQueue = nullptr;
 	VkQueue presentQueue = nullptr;
+	VkQueue computeQueue = nullptr;
+
 	QueueFamilyIndices queueFamilyIndices;
+
 	VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
 	VkFormat colorFormat = VkFormat::VK_FORMAT_UNDEFINED;
 	VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;
-	VkColorSpaceKHR colorSpace;
+	VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_END_RANGE_KHR;
 };
 
 

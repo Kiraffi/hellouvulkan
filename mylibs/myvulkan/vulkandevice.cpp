@@ -368,28 +368,34 @@ VkPhysicalDevice createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
 			primary = secondary = devices[i];
 			break;
 		}
-		else if(!secondary)
+		else if(!secondary && 
+			(prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ||
+			prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))
 		{
 			secondary = devices[i];
 		}
 	}
+	if(!primary && !secondary)
+	{
+		printf("Didn't find any gpus\n");
+		return nullptr;
+	}
 
+
+	VkPhysicalDeviceProperties prop;
 	if(primary)
 	{
-		VkPhysicalDeviceProperties prop;
 		vkGetPhysicalDeviceProperties(primary, &prop);
-		printf("Picking discrete device: %s\n", prop.deviceName);
-		return primary;
 	}
 	else if(secondary)
 	{
-		VkPhysicalDeviceProperties prop;
 		vkGetPhysicalDeviceProperties(secondary, &prop);
-		printf("Picking non-discrete device: %s\n", prop.deviceName);
-		return secondary;
 	}
-	printf("Failed to pick any gpu\n");
-	return nullptr;
+	const char *typeText = prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? "discrete" : "integrated";
+	printf("Picking %s device: %s\n", typeText, prop.deviceName);
+	return primary ? primary : secondary;
+
+
 }
 
 
@@ -495,14 +501,18 @@ DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfa
 
 	vkGetDeviceQueue(deviceWithQueues.device, queueFamilyIndices.graphicsFamily, 0, &deviceWithQueues.graphicsQueue);
 	vkGetDeviceQueue(deviceWithQueues.device, queueFamilyIndices.presentFamily, 0, &deviceWithQueues.presentQueue);
+	vkGetDeviceQueue(deviceWithQueues.device, queueFamilyIndices.computeFamily, 0, &deviceWithQueues.computeQueue);
 	ASSERT(deviceWithQueues.graphicsQueue);
 	ASSERT(deviceWithQueues.presentQueue);
+	ASSERT(deviceWithQueues.computeQueue);
 
 	if(optionals.canUseVulkanRenderdocExtensionMarker)
 		acquireDeviceDebugRenderdocFunctions(deviceWithQueues.device);
 	deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
 	deviceWithQueues.colorSpace = defaultColorSpace;
 	deviceWithQueues.depthFormat = defaultDepthFormat;
+	deviceWithQueues.surface = surface;
+	deviceWithQueues.physicalDevice = physicalDevice;
 	return deviceWithQueues; 
 }
 

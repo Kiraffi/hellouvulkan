@@ -168,8 +168,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 		return false;
 	}
 
-	[[maybe_unused]] bool scSuccess = createSwapchain(swapchain, window, device, physicalDevice, 
-		deviceWithQueues.colorFormat, deviceWithQueues.colorSpace, surface);
+	[[maybe_unused]] bool scSuccess = createSwapchain(swapchain, window, deviceWithQueues);
 	ASSERT(scSuccess);
 	if(!scSuccess)
 	{
@@ -228,7 +227,8 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 		printf("Failed to create vulkan command buffer!\n");
 		return false;
 	}
-
+	deviceWithQueues.mainCommandBuffer = commandBuffer;
+	deviceWithQueues.mainCommandPool = commandPool;
 
 
 
@@ -366,8 +366,7 @@ bool VulkanApp::startRender()
 	VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
 	if (res == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
-			surface))
+		if (resizeSwapchain(swapchain, window, deviceWithQueues))
 		{
 			recreateSwapchainData();
 			VK_CHECK(vkDeviceWaitIdle(device));
@@ -494,8 +493,7 @@ void VulkanApp::present(Image &presentImage)
 		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || needToResize)
 		{
 			needToResize = true;
-			if (resizeSwapchain(swapchain, window, device, physicalDevice, deviceWithQueues.computeColorFormat, deviceWithQueues.colorSpace,
-				surface))
+			if (resizeSwapchain(swapchain, window, deviceWithQueues))
 			{
 				recreateSwapchainData();
 			}
