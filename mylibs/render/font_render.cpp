@@ -47,11 +47,10 @@ void FontRenderSystem::deInit(VkDevice device)
 
 
 
-bool FontRenderSystem::init(std::string_view fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
-	VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass,
-	VkPipelineCache pipelineCache, DeviceWithQueues &deviceWithQueues,
-	Buffer &scratchBuffer, const Buffer &renderFrameBuffer)
+bool FontRenderSystem::init(std::string_view fontFilename, DeviceWithQueues &deviceWithQueues, VkRenderPass renderPass,
+	VkPipelineCache pipelineCache, Buffer &scratchBuffer, const Buffer &renderFrameBuffer)
 {
+	VkDevice device = deviceWithQueues.device;
 	std::vector<char> data;
 	if (!loadBytes(fontFilename, data))
 	{
@@ -59,7 +58,7 @@ bool FontRenderSystem::init(std::string_view fontFilename, VkDevice device, VkPh
 		return false;
 	}
 	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+	vkGetPhysicalDeviceMemoryProperties(deviceWithQueues.physicalDevice, &memoryProperties);
 
 	// Create buffers
 	{
@@ -93,7 +92,7 @@ bool FontRenderSystem::init(std::string_view fontFilename, VkDevice device, VkPh
 				indices[size_t(i) * 6 + 5] = i * 4 + 3;
 			}
 			offset = uploadToScratchbuffer(scratchBuffer, (void*)indices.data(), size_t(sizeof(indices[0]) * indices.size()), offset);
-			uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
+			uploadScratchBufferToGpuBuffer(device, deviceWithQueues.mainCommandPool, deviceWithQueues.mainCommandBuffer, deviceWithQueues.graphicsQueue,
 				letterIndexBuffer, scratchBuffer, offset);
 		}
 	}
@@ -131,7 +130,7 @@ bool FontRenderSystem::init(std::string_view fontFilename, VkDevice device, VkPh
 			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			"TextImage");
 
-		updateImageWithData(device, commandBuffer, commandPool, deviceWithQueues.graphicsQueue,
+		updateImageWithData(device, deviceWithQueues.mainCommandBuffer, deviceWithQueues.mainCommandPool, deviceWithQueues.graphicsQueue,
 			textureWidth, textureHeight, 4u,
 			scratchBuffer, textImage,
 			(u32)fontPic.size(), (void*)fontPic.data());

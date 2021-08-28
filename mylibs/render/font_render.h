@@ -12,9 +12,8 @@ class FontRenderSystem
 public:
 	FontRenderSystem() {}
 	~FontRenderSystem() {}
-	bool init(std::string_view fontFilename, VkDevice device, VkPhysicalDevice physicalDevice,
-		VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkRenderPass renderPass, 
-		VkPipelineCache pipelineCache, DeviceWithQueues& deviceWithQueues, 
+	bool init(std::string_view fontFilename, DeviceWithQueues &deviceWithQueues, VkRenderPass renderPass,
+		VkPipelineCache pipelineCache,  
 		Buffer& scratchBuffer, const Buffer& renderFrameBuffer);
 	void deInit(VkDevice device);
 	//void update(VkDevice device, VkCommandBuffer commandBuffer,

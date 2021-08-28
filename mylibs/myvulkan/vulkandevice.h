@@ -49,7 +49,7 @@ struct DeviceWithQueues
 	VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
 	VkFormat colorFormat = VkFormat::VK_FORMAT_UNDEFINED;
 	VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;
-	VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_END_RANGE_KHR;
+	VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_MAX_ENUM_KHR;
 };
 
 

@@ -261,8 +261,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 	}
 
-	if (!fontSystem.init("assets/font/new_font.dat", deviceWithQueues.device, physicalDevice, commandPool, commandBuffer, renderPass, pipelineCache,
-		deviceWithQueues, scratchBuffer, renderFrameBuffer))
+	if (!fontSystem.init("assets/font/new_font.dat", deviceWithQueues, renderPass, pipelineCache, scratchBuffer, renderFrameBuffer))
 
 	{
 		printf("Failed to initialize the font system!\n");
