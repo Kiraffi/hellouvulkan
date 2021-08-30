@@ -7,7 +7,7 @@ project ("hellouvulkan libs" VERSION 0.0.1)
 add_library(MyLibraries
 	"core/general.cpp"
 	"core/timer.cpp"
-
+	"core/camera.cpp"
 
 	"core/vulkan_app.cpp"
 	
@@ -26,6 +26,8 @@ add_library(MyLibraries
 	"myvulkan/vulkanmemorymanager.cpp"
 	
 	"core/json.cpp"
+
+
 	)
 target_include_directories(MyLibraries PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/"

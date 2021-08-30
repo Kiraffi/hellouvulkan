@@ -170,7 +170,7 @@ bool FontRenderSystem::init(std::string_view fontFilename, DeviceWithQueues &dev
 
 
 
-void FontRenderSystem::addText(const std::string& text, Vector2 pos, Vec2 charSize, const Vector4& color)
+void FontRenderSystem::addText(std::string_view text, Vector2 pos, Vec2 charSize, const Vector4& color)
 {
 	ASSERT(vertData.size() + text.length() < MAX_LETTERS);
 	uint16_t charWidth = uint16_t(charSize.x);

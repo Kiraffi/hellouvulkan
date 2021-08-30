@@ -33,16 +33,6 @@
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
-struct GPUVertexData
-{
-	float posX;
-	float posY;
-	uint16_t pixelSizeX;
-	uint16_t pixelSizeY;
-	uint32_t color;
-};
-
-
 
 
 enum TIME_POINTS
@@ -79,11 +69,11 @@ enum BufferIndexes
 };
 
 
-class VulkanFontDraw : public VulkanApp
+class VulkanDrawStuff : public VulkanApp
 {
 public:
-	VulkanFontDraw() { }
-	virtual ~VulkanFontDraw() override;
+	VulkanDrawStuff() { }
+	virtual ~VulkanDrawStuff() override;
 	//bool initApp(const std::string &fontFilename);
 	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 	virtual void run() override;
@@ -99,6 +89,8 @@ public:
 	PipelineWithDescriptors pipelinesWithDescriptors [NUM_PIPELINE];
 
 	std::string fontFilename;
+
+	uint32_t indicesCount = 0;
 };
 
 
@@ -108,7 +100,7 @@ public:
 //
 ////////////////////////
 
-VulkanFontDraw::~VulkanFontDraw()
+VulkanDrawStuff::~VulkanDrawStuff()
 {
 	VkDevice device = deviceWithQueues.device;
 
@@ -126,8 +118,22 @@ VulkanFontDraw::~VulkanFontDraw()
 
 }
 
+struct RenderModel
+{
+	struct Vertex
+	{
+		Vec4 pos;
+		Vec4 norm;
+		Vec4 color;
+	};
 
-bool readGLTF(const char *filename)
+
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+};
+
+
+bool readGLTF(const char *filename, RenderModel &outModel)
 {
 	std::string fName = std::string(filename);
 	std::vector<char> buffer;
@@ -146,15 +152,6 @@ bool readGLTF(const char *filename)
 //		bl.print();
 	}
 
-	struct Vertex
-	{
-		Vec4 pos;
-		Vec4 norm;
-		Vec4 color;
-	};
-
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
 
 	struct SceneNode
 	{
@@ -303,33 +300,62 @@ bool readGLTF(const char *filename)
 			)
 				return false;
 
-
+			if (block.getChild("sparse").isValid())
+			{
+				LOG("No sparse view are handled!\n");
+				ASSERT(false && "No sparse view are handled");
+				return false;
+			}
 
 
 			block.getChild("normalized").parseBool(normalized);
 
 			uint32_t componentCount = ~0u;
 
-			if(s == "SCALAR")
-				componentCount = 1;
-			else if(s == "VEC2")
-				componentCount = 2;
-			else if(s == "VEC3")
-				componentCount = 3;
-			else if(s == "VEC4")
-				componentCount = 4;
-			else
-				return false;
+			//"SCALAR" 	1
+			//"VEC2" 	2
+			//"VEC3" 	3
+			//"VEC4" 	4
+			//"MAT2" 	4
+			//"MAT3" 	9
+			//"MAT4" 	16
 
+			if (s == "SCALAR") componentCount = 1;
+			else if (s == "VEC2") componentCount = 2;
+			else if (s == "VEC3") componentCount = 3;
+			else if (s == "VEC4") componentCount = 4;
+			else if (s == "MAT2") componentCount = 4;
+			else if (s == "MAT3") componentCount = 9;
+			else if (s == "MAT4") componentCount = 16;
+			else return false;
+
+			//// Maybe 5124 is half?
+			//5120 (BYTE)1
+			//5121(UNSIGNED_BYTE)1
+			//5122 (SHORT)2
+			//5123 (UNSIGNED_SHORT)2
+			//5125 (UNSIGNED_INT)4
+			//5126 (FLOAT)4
+
+			uint32_t componentTypeBitCount = 0u;
 			switch(componentType)
 			{
-				case 5126:
-					componentType = 4u;
+			case 5120:
+			case 5121:
+				componentTypeBitCount = 1u;
 				break;
-				case 5123:
-					componentType = 2u;
+
+			case 5122:
+			case 5123:
+				componentTypeBitCount = 2u;
 				break;
-				default:
+
+			case 5125:
+			case 5126:
+				componentTypeBitCount = 4u;
+				break;
+
+			default:
 				return false;
 			}
 			uint32_t bufferIndex = ~0u;
@@ -352,82 +378,104 @@ bool readGLTF(const char *filename)
 			uint8_t *ptr = &buffers[bufferIndex][0] + bufferOffset;
 			uint8_t *endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
 
+
+			// Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
 			if(useVertices)
 			{
-				if(vertices.size() == 0) 
-					vertices.resize(count);
-				if(vertices.size() != count)
+				bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized);
+				ASSERT(isValidVertice);
+				if (!isValidVertice)
+					return false;
+
+
+				if(outModel.vertices.size() == 0)
+					outModel.vertices.resize(count);
+				if(outModel.vertices.size() != count)
 					return false;
 				
 				for(uint32_t i = 0; i < count; ++i)
 				{
 
-					Vertex &v = vertices[i];
+					RenderModel::Vertex &v = outModel.vertices[i];
 					float *f = (float *)(((uint8_t *)&v) + floatStartOffsetIndex);
 					for(uint32_t j = 0; j < componentCount; ++j)
 					{
-						if(ptr + componentType > endPtr)
+						if(ptr + componentTypeBitCount > endPtr)
 							return false;
+						
 						float f1 = 0.0f;
+						uint32_t u1 = 0u;
 
-						if(componentType == 4)
-							memcpy(&f1, ptr, componentType);
-						else if(componentType == 2 && normalized)
+
+						if (componentType == 5126)
+						{
+							memcpy(&f1, ptr, componentTypeBitCount);
+						}
+						else if(componentType == 5123 && normalized)
 						{
 							uint16_t tmp = 0;
-							memcpy(&tmp, ptr, componentType);
+							memcpy(&tmp, ptr, componentTypeBitCount);
 
 							f1 = (float)tmp / 65535.0f;
 						}
-						else 
+						else
+						{
 							return false;
+						}
+							
 
 						*(f + j) = f1;
-						
-						ptr += componentType;
+						ptr += componentTypeBitCount;
 					}
 				}
 			}
+			// Assumption that all indices are either u16 or u32 values.
 			else
 			{
-				if(indices.size() != 0)
+				bool isValidIndice = componentType == 5123 || componentType == 5125;
+				ASSERT(isValidIndice);
+				if (!isValidIndice)
 					return false;
-				indices.resize(count);
+
+
+				if(outModel.indices.size() != 0)
+					return false;
+				outModel.indices.resize(count);
 
 				for(uint32_t i = 0; i < count; ++i)
 				{
-					if(ptr + componentType > endPtr)
+					if(ptr + componentTypeBitCount > endPtr)
 						return false;
 
 					uint32_t value = 0u;
-					if(componentType == 4)
-						memcpy(&value, ptr, componentType);
-					else if(componentType == 2)
+					if(componentTypeBitCount == 4)
+						memcpy(&value, ptr, componentTypeBitCount);
+					else if(componentTypeBitCount == 2)
 					{
 						uint16_t tmp = 0;
-						memcpy(&tmp, ptr, componentType);
+						memcpy(&tmp, ptr, componentTypeBitCount);
 
 						value = tmp;
 					}
 					else 
 						return false;
 					
-					indices[i] = value;
+					outModel.indices[i] = value;
 
-					ptr += componentType;
+					ptr += componentTypeBitCount;
 				}
 			}
 			return true;
 
 		};
 
-		if(!lam(node.positionIndex, offsetof(Vertex, pos), true))
+		if(!lam(node.positionIndex, offsetof(RenderModel::Vertex, pos), true))
 			return false;
 
-		if(!lam(node.normalIndex, offsetof(Vertex, norm), true))
+		if(!lam(node.normalIndex, offsetof(RenderModel::Vertex, norm), true))
 			return false;
 
-		if(!lam(node.colorIndex, offsetof(Vertex, color), true))
+		if(!lam(node.colorIndex, offsetof(RenderModel::Vertex, color), true))
 			return false;
 
 		if(!lam(node.indicesIndex, 0, false))
@@ -450,20 +498,27 @@ bool readGLTF(const char *filename)
 	return true;
 }
 
-bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanDrawStuff::init(const char *windowStr, int screenWidth, int screenHeight)
 {
 	if(!VulkanApp::init(windowStr, screenWidth, screenHeight))
 		return false;
 
 	glfwSetWindowUserPointer(window, this);
-	printf("gltf read success: %i\n", readGLTF("assets/models/test_gltf.gltf"));
+
+	RenderModel renderModel;
+
+	bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
+
+	printf("gltf read success: %i\n", readSuccess);
+	if (!readSuccess)
+		return false;
 
 	VkDevice device = deviceWithQueues.device;
 
-	shaderModules [SHADER_MODULE_RENDER_QUAD_VERT] = loadShader(device, "assets/shader/vulkan_new/coloredquad.vert.spv");
+	shaderModules [SHADER_MODULE_RENDER_QUAD_VERT] = loadShader(device, "assets/shader/vulkan_new/basic3d.vert.spv");
 	ASSERT(shaderModules [SHADER_MODULE_RENDER_QUAD_VERT]);
 
-	shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG] = loadShader(device, "assets/shader/vulkan_new/coloredquad.frag.spv");
+	shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG] = loadShader(device, "assets/shader/vulkan_new/basic3d.frag.spv");
 	ASSERT(shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG]);
 
 
@@ -487,27 +542,23 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
 	{
 		uint32_t offset = 0;
-		std::vector<uint32_t> indices;
-		indices.resize(6 * 10240);
-		for(int i = 0; i < 10240; ++i)
-		{
-			indices [size_t(i) * 6 + 0] = i * 4 + 0;
-			indices [size_t(i) * 6 + 1] = i * 4 + 1;
-			indices [size_t(i) * 6 + 2] = i * 4 + 2;
-
-			indices [size_t(i) * 6 + 3] = i * 4 + 0;
-			indices [size_t(i) * 6 + 4] = i * 4 + 2;
-			indices [size_t(i) * 6 + 5] = i * 4 + 3;
-		}
-		offset = uploadToScratchbuffer(scratchBuffer, ( void * )indices.data(), size_t(sizeof(indices [0]) * indices.size()), offset);
+		offset = uploadToScratchbuffer(scratchBuffer, ( void * )renderModel.indices.data(), size_t(sizeof(renderModel.indices[0]) * renderModel.indices.size()), offset);
 		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
 			buffers [INDEX_DATA_BUFFER], scratchBuffer, offset);
+
+		offset = 0;
+		offset = uploadToScratchbuffer(scratchBuffer, (void*)renderModel.vertices.data(), size_t(sizeof(renderModel.vertices[0]) * renderModel.vertices.size()), offset);
+		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
+			buffers[QUAD_BUFFER], scratchBuffer, offset);
+
+
+		indicesCount = renderModel.indices.size();
 	}
 	return true;
 }
 
 
-bool VulkanFontDraw::createPipelines()
+bool VulkanDrawStuff::createPipelines()
 {
 	VkDevice device = deviceWithQueues.device;
 	VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -519,7 +570,8 @@ bool VulkanFontDraw::createPipelines()
 	pipeline.descriptorSet = std::vector<DescriptorSet>(
 		{
 			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &renderFrameBuffer, 0u, 64u * 1024u },
-			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, true, &buffers [QUAD_BUFFER] },
+			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &renderFrameBuffer, 64u * 1024u, 64u * 1024u },
+			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u, true, &buffers [QUAD_BUFFER] },
 		});
 	VertexInput vertexInput;
 	pipeline.pipeline = createGraphicsPipeline(
@@ -534,81 +586,9 @@ bool VulkanFontDraw::createPipelines()
 }
 
 
-void VulkanFontDraw::run()
+void VulkanDrawStuff::run()
 {
-	const u32 charCount = 128 - 32;
-	std::vector<char> data;
-	if(!loadBytes(fontFilename, data))
-	{
-		printf("Failed to load file: %s\n", fontFilename.c_str());
-		return;
-	}
-
-	int32_t chosenLetter = 'a';
-
-	std::vector<GPUVertexData> vertData;
-	vertData.resize(12 * 8 * ( charCount + 1 ) + 1);
-
-
-	static constexpr float buttonSize = 20.0f;
-	static constexpr float smallButtonSize = 2.0f;
-	static constexpr float borderSizes = 2.0f;
-
-	{
-		float offX = ( borderSizes + buttonSize ) + windowWidth * 0.5f;
-		float offY = ( borderSizes + buttonSize ) + windowHeight * 0.5f;
-
-		GPUVertexData &vdata = vertData [0];
-		vdata.color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
-		vdata.pixelSizeX = uint16_t(smallButtonSize) * 8 + 4;
-		vdata.pixelSizeY = uint16_t(smallButtonSize) * 12 + 4;
-		vdata.posX = offX;
-		vdata.posY = offY;
-	}
-
-	for(int j = 0; j < 12; ++j)
-	{
-		for(int i = 0; i < 8; ++i)
-		{
-			float offX = float(( i - 4 ) * ( borderSizes + buttonSize )) + windowWidth * 0.5f;// -buttonSize * 0.5f;
-			float offY = float(( j - 6 ) * ( borderSizes + buttonSize )) + windowHeight * 0.5f;// -buttonSize * 0.5f;
-
-			GPUVertexData &vdata = vertData [i + size_t(j) * 8 + 1];
-			vdata.color = 0;
-			vdata.pixelSizeX = vdata.pixelSizeY = buttonSize;
-			vdata.posX = offX;
-			vdata.posY = offY;
-		}
-	}
-
-	for(int k = 0; k < charCount; ++k)
-	{
-		int x = k % 8;
-		int y = k / 8;
-		for(int j = 0; j < 12; ++j)
-		{
-			for(int i = 0; i < 8; ++i)
-			{
-				GPUVertexData &vdata = vertData [i + size_t(j) * 8 + ( size_t(k) + 1 ) * 8 * 12 + 1];
-
-				float smallOffX = float(i * ( smallButtonSize )) + 10.0f + float(x * 8) * smallButtonSize + x * 2;
-				float smallOffY = float(j * ( smallButtonSize )) + 10.0f + float(y * 12) * smallButtonSize + y * 2;
-
-				uint32_t indx = k * 12 + j;
-				bool isVisible = ( ( data [indx] >> i ) & 1 ) == 1;
-
-				vdata.color = isVisible ? ~0u : 0u;
-				vdata.pixelSizeX = vdata.pixelSizeY = smallButtonSize;
-				vdata.posX = smallOffX;
-				vdata.posY = smallOffY;
-
-			}
-		}
-	}
-
-	char buffData [12] = { };
-
-
+	Camera camera;
 
 	////////////////////////
 	//
@@ -640,102 +620,8 @@ void VulkanFontDraw::run()
 
 		glfwPollEvents();
 		MouseState mouseState = getMouseState();
-		{
 
-
-			if(isPressed(GLFW_KEY_LEFT))
-				--chosenLetter;
-
-			if(isPressed(GLFW_KEY_RIGHT))
-				++chosenLetter;
-
-			if(isPressed(GLFW_KEY_DOWN))
-				chosenLetter += 8;
-
-			if(isPressed(GLFW_KEY_UP))
-				chosenLetter -= 8;
-
-
-
-			bool isControlDown = keyDowns [GLFW_KEY_LEFT_CONTROL].isDown || keyDowns [GLFW_KEY_RIGHT_CONTROL].isDown;
-
-			for(int i = 0; i < bufferedPressesCount; ++i)
-			{
-				if(!isControlDown && bufferedPresses [i] >= 32 && bufferedPresses [i] < 128)
-				{
-					chosenLetter = ( int )bufferedPresses [i];
-				}
-			}
-
-			if(keyDowns [GLFW_KEY_L].isDown && keyDowns [GLFW_KEY_L].pressCount > 0u && isControlDown)
-				loadBytes(fontFilename, data);
-
-			if(keyDowns [GLFW_KEY_C].isDown && keyDowns [GLFW_KEY_C].pressCount > 0u && isControlDown)
-			{
-				for(int i = 0; i < 12; ++i)
-				{
-					uint32_t ind = ( chosenLetter - 32 ) * 12 + i;
-					buffData [i] = data [ind];
-				}
-			}
-
-			if(keyDowns [GLFW_KEY_V].isDown && keyDowns [GLFW_KEY_V].pressCount > 0u && isControlDown)
-			{
-				for(int i = 0; i < 12; ++i)
-				{
-					uint32_t ind = ( chosenLetter - 32 ) * 12 + i;
-					data [ind] = char(buffData [i]);
-				}
-			}
-
-			if(chosenLetter < 32)
-				chosenLetter = 32;
-			if(chosenLetter > 127)
-				chosenLetter = 127;
-
-			for(int j = 0; j < 12; ++j)
-			{
-
-				for(int i = 0; i < 8; ++i)
-				{
-					float offX = float(( i - 4 ) * ( borderSizes + buttonSize )) + windowWidth * 0.5f;
-					float offY = float(( j - 6 ) * ( borderSizes + buttonSize )) + windowHeight * 0.5f;
-
-					bool insideRect = mouseState.x > offX - ( borderSizes + buttonSize ) * 0.5f &&
-						mouseState.x < offX + ( borderSizes + buttonSize ) * 0.5f &&
-						mouseState.y > offY - ( borderSizes + buttonSize ) * 0.5f &&
-						mouseState.y < offY + ( borderSizes + buttonSize ) * 0.5f;
-
-					offX -= 0.5f * buttonSize;
-					offY -= 0.5f * buttonSize;
-
-					uint32_t indx = ( chosenLetter - 32 ) * 12 + j;
-
-					if(mouseState.leftButtonDown && insideRect)
-						data [indx] |= ( 1 << i );
-					else if(mouseState.rightButtonDown && insideRect)
-						data [indx] &= ~( char(1 << i) );
-
-					bool isVisible = ( ( data [indx] >> i ) & 1 ) == 1;
-
-					vertData [i + size_t(j) * 8 + 1].color = isVisible ? ~0u : 0u;
-					vertData [i + size_t(j) * 8 + 1].posX = uint16_t(offX);
-					vertData [i + size_t(j) * 8 + 1].posY = uint16_t(offY);
-					vertData [( size_t(indx) + 12 ) * 8 + i + 1].color = isVisible ? ~0u : 0u;
-
-				}
-
-			}
-			uint32_t xOff = ( chosenLetter - 32 ) % 8;
-			uint32_t yOff = ( chosenLetter - 32 ) / 8;
-
-			vertData [0].posX = 10.0f + ( xOff * 8 ) * smallButtonSize + xOff * 2 - 2;
-			vertData [0].posY = 10.0f + ( yOff * 12 ) * smallButtonSize + yOff * 2 - 2;
-		}
-
-		ASSERT(vertData.size() * sizeof(GPUVertexData) < buffers [QUAD_BUFFER].size);
-
-
+		checkCameraKeypresses(deltaTime, camera);
 		////////////////////////
 		//
 		// RENDER PASSES START
@@ -744,6 +630,37 @@ void VulkanFontDraw::run()
 		//
 		////////////////////////
 
+
+		{
+			Vec2 fontSize(8.0f, 12.0f);
+			char tmpStr[1024];
+
+			snprintf(tmpStr, 1024, "Camera position: (%f, %f, %f)", camera.position.x, camera.position.y, camera.position.z);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 10.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+			snprintf(tmpStr, 1024, "Camera look: (%f, %f, %f)", camera.forwardDir.x, camera.forwardDir.y, camera.forwardDir.z);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 22.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+
+		struct FrameBuffer
+		{
+			Matrix camMat;
+			Matrix viewProj;
+			Matrix mvp;
+			Matrix padding;
+		};
+		FrameBuffer b;
+
+		b.camMat = createMatrixFromLookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
+
+		camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
+		camera.fovY = 90.0f;
+		camera.zFar = 2000.0f;
+		camera.zNear = 0.001f;
+		
+		b.viewProj = createPerspectiveMatrix(90.0f, camera.aspectRatioWByH, 0.01f, 2000.0f);
+		//b.viewProj = perspectiveProjection(camera);
+		b.mvp = b.viewProj * b.camMat;
 		if(!startRender())
 			continue;
 
@@ -752,19 +669,21 @@ void VulkanFontDraw::run()
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
 
 		{
+			
+			
 			uint32_t offset = updateRenderFrameBuffer();
 			// use scratch buffer to unifrom buffer transfer
-			uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
-			memcpy(( void * )( ( char * )scratchBuffer.data + offset ), vertData.data(), vertDataSize);
+			uint32_t bufSize = sizeof(FrameBuffer);
+			memcpy(( void * )( ( char * )scratchBuffer.data + offset ), &b, bufSize);
 
 			{
-				VkBufferCopy region = { offset, 0, VkDeviceSize(vertDataSize) };
-				vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers [QUAD_BUFFER].buffer, 1, &region);
+				VkBufferCopy region = { offset, 64u * 1024u, VkDeviceSize(bufSize) };
+				vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, renderFrameBuffer.buffer, 1, &region);
 			}
 
 			VkBufferMemoryBarrier bar[ ]
 			{
-				bufferBarrier(buffers [QUAD_BUFFER].buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
+				bufferBarrier(renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, bufSize),
 			};
 
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -818,14 +737,18 @@ void VulkanFontDraw::run()
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissors);
 
+
 			// draw calls here
 			// Render
 			{
 				bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors [PIPELINE_GRAPHICS_PIPELINE]);
 				vkCmdBindIndexBuffer(commandBuffer, buffers [INDEX_DATA_BUFFER].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
+				vkCmdDrawIndexed(commandBuffer, indicesCount, 1, 0, 0, 0);
 
 			}
+
+			fontSystem.render(commandBuffer);
+
 			vkCmdEndRenderPass(commandBuffer);
 		}
 
@@ -883,12 +806,10 @@ void VulkanFontDraw::run()
 
 
 		char str [100];
-		char renderLetter = chosenLetter != 127 ? char(chosenLetter) : ' ';
 		float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
-		sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i, Letter: %c",
+		sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
 			float(dt * 1000.0), fps,
-			mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown,
-			renderLetter);
+			mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown);
 		setTitle(str);
 
 
@@ -906,18 +827,7 @@ void VulkanFontDraw::run()
 
 int main(int argCount, char **argv)
 {
-	std::vector<char> data;
-	std::string filename;
-	if(argCount < 2)
-	{
-		filename = "assets/font/new_font.dat";
-	}
-	else
-	{
-		filename = argv [1];
-	}
-	VulkanFontDraw app;
-	app.fontFilename = filename;
+	VulkanDrawStuff app;
 	if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT)
 		&& app.createGraphics() && app.createPipelines())
 	{

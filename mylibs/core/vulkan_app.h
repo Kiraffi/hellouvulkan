@@ -2,13 +2,15 @@
 
 #include "core/timer.h"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 #include "myvulkan/vulkandevice.h"
 #include "myvulkan/vulkanresource.h"
 #include "myvulkan/vulkanswapchain.h"
 #include "render/font_render.h"
+
+#include "core/camera.h"
+
+struct GLFWwindow;
 
 constexpr u32 QUERY_COUNT = 128u;
 
@@ -51,6 +53,8 @@ public:
 	void setVsyncEnabled(bool enable);
 	void setClearColor(float r, float g, float b, float a);
 	void setTitle(const char *str);
+
+	void checkCameraKeypresses(float dt, Camera& camera);
 
 	double getDeltaTime();
 	MouseState getMouseState();

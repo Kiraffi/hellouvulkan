@@ -22,3 +22,5 @@ struct Camera
 
 
 Matrix perspectiveProjection(const Camera &camera);
+Matrix perspectiveProjectionInf(const Camera& camera);
+

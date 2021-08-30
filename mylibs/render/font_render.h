@@ -24,7 +24,7 @@ public:
 		uint32_t offset);
 	void render(VkCommandBuffer commandBuffer);
 
-	void addText(const std::string& text, Vector2 pos, 
+	void addText(std::string_view text, Vector2 pos, 
 		Vector2 charSize = Vector2(8.0f, 12.0f), const Vector4 &color = Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
 private:
@@ -44,8 +44,8 @@ private:
 
 	std::vector<GPUVertexData> vertData;
 
-	VkShaderModule vertexShader;
-	VkShaderModule fragShader;
+	VkShaderModule vertexShader = nullptr;
+	VkShaderModule fragShader = nullptr;
 
 	Buffer letterDataBuffer;
 	Buffer letterIndexBuffer;

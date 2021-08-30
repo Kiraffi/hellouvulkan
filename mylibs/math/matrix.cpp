@@ -1,5 +1,6 @@
 #include "matrix.h"
 #include "math/quaternion.h"
+#include "math/general_math.h"
 
 #define MATRIX_ADD_ROW_MULT(row, col) (a._##row##0 * b._0##col + a._##row##1 * b._1##col + a._##row##2 * b._2##col + a._##row##3 * b._3##col)
 #define MATRIX_SET(row, col) (result._##row##col)  = MATRIX_ADD_ROW_MULT(row, col)
@@ -89,21 +90,26 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 	ASSERT(ffabsf(fov) > 0.00001f);
 	ASSERT(ffabsf(aspectRatio) > 0.001f);
 	ASSERT(ffabsf(farPlane - nearPlane) > 0.00001f);
-
-	float yScale = 1.0f / ftanf(fov / 180.0f * PI);
+	
+	float yScale = 1.0f / ftanf(toRadians(fov * 0.5f));
 	float xScale = yScale / aspectRatio;
 	float fRange1 = 1.0f / (farPlane - nearPlane);
 	float fRange2 = farPlane * fRange1;
 
 	result._00 = xScale;
 	result._11 = yScale;
-//opengl
+
+	//opengl ?
+#if 1
 	result._22 = -fRange1 * (farPlane + nearPlane);
 	result._23 = -2.0f * fRange2 * nearPlane;
-/* dx
+	
+	// dx ?	
+#else
 	result._22 = fRange2;
 	result._23 = -fRange2 * nearPlane;
-*/
+#endif
+
 	result._32 = -1.0f;
 	result._33 = 0.0f;
 	return result;
@@ -128,7 +134,12 @@ Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const V
 	result._21 = forward.y;
 	result._22 = forward.z;
 
-	return result;
+	Matrix mat2;
+	mat2._30 = -pos.x;
+	mat2._31 = -pos.y;
+	mat2._32 = -pos.z;
+
+	return mat2 * result;
 }
 
 Matrix transpose(const Matrix &m)

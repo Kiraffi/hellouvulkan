@@ -36,7 +36,7 @@
 
 
 #include "model.h"
-#include "camera.h"
+#include "core/camera.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -670,70 +670,6 @@ int main(int argc, char **argv)
 }
 
 
-void VulkanTest::checkKeypresses(float deltaTime, Camera &camera)
-{
-	//printf("deltatime: %f\n", deltaTime);
-	float moveBooster = keyDowns[GLFW_KEY_LEFT_SHIFT].isDown ? 5.0f : 1.0f;
-	float rotationBooster = keyDowns[GLFW_KEY_LEFT_SHIFT].isDown ? 2.0f : 1.0f;
-
-	float moveSpeed = deltaTime * 2.0f * moveBooster;
-	float rotationSpeed = deltaTime * 1.0f * rotationBooster;
-
- 	if(keyDowns[GLFW_KEY_I].isDown)
-	{
-		camera.pitch -= rotationSpeed;
-	}
-	if(keyDowns[GLFW_KEY_K].isDown)
-	{
-		camera.pitch += rotationSpeed;
-	}
-	if(keyDowns[GLFW_KEY_J].isDown)
-	{
-		camera.yaw -= rotationSpeed;
-	}
-	if(keyDowns[GLFW_KEY_L].isDown)
-	{
-		camera.yaw += rotationSpeed;
-	}
-
-	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
-	camera.yaw = fmod(camera.yaw, 2.0f * pii);
-
-
-	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);
-	cameraRotation = cameraRotation * getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), camera.pitch);
-	camera.forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
-	camera.upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
-
-	Vec3 cameraRight = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
-
-	if(keyDowns[GLFW_KEY_W].isDown)
-	{
-		camera.position = camera.position + camera.forwardDir * moveSpeed;
-	}
-	if(keyDowns[GLFW_KEY_S].isDown)
-	{
-		camera.position = camera.position - camera.forwardDir * moveSpeed;
-	}
-	if(keyDowns[GLFW_KEY_A].isDown)
-	{
-		camera.position = camera.position - cameraRight * moveSpeed;
-	}
-	if(keyDowns[GLFW_KEY_D].isDown)
-	{
-		camera.position = camera.position + cameraRight * moveSpeed;
-
-	}
-	if(keyDowns[GLFW_KEY_Q].isDown)
-	{
-		camera.position = camera.position + camera.upDir * moveSpeed;
-	}
-	if(keyDowns[GLFW_KEY_E].isDown)
-	{
-		camera.position = camera.position - camera.upDir * moveSpeed;
-	}
-}
-
 
 
 void VulkanTest::run()
@@ -846,7 +782,7 @@ void VulkanTest::run()
 		}
 		++frameIndex;
 		glfwPollEvents();
-		checkKeypresses(deltaTime, camera);
+		checkCameraKeypresses(deltaTime, camera);
 
 		if (!startRender())
 			continue;
@@ -887,7 +823,7 @@ void VulkanTest::run()
 			camera.zFar = 0.1f;
 
 			uniformValues.mvp = perspectiveProjection(camera) * uniformValues.camMat;
-			uniformValues.cameraForwardDir = Vec4(camera.position, 0.0f);
+			uniformValues.cameraPosition = Vec4(camera.position, 0.0f);
 			uniformValues.cameraForwardDir = Vec4(camera.forwardDir, 0.0f);
 
 

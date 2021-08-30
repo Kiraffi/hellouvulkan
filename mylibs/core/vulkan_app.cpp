@@ -1,10 +1,17 @@
 #include "vulkan_app.h"
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "myvulkan/vulkandevice.h"
 #include "myvulkan/vulkanhelperfuncs.h"
 #include "myvulkan/vulkanresource.h"
 #include "myvulkan/vulkanshader.h"
 #include "myvulkan/vulkanswapchain.h"
+
+
+#include "math/general_math.h"
+#include "math/quaternion.h"
 
 #include <memory.h>
 
@@ -594,4 +601,71 @@ MouseState VulkanApp::getMouseState()
 	mouseState.rightButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 	mouseState.middleButtonDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
 	return mouseState;
+}
+
+
+
+
+void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
+{
+	//printf("deltatime: %f\n", deltaTime);
+	float moveBooster = keyDowns[GLFW_KEY_LEFT_SHIFT].isDown ? 5.0f : 1.0f;
+	float rotationBooster = keyDowns[GLFW_KEY_LEFT_SHIFT].isDown ? 2.0f : 1.0f;
+
+	float moveSpeed = deltaTime * 2.0f * moveBooster;
+	float rotationSpeed = deltaTime * 1.0f * rotationBooster;
+
+	if (keyDowns[GLFW_KEY_I].isDown)
+	{
+		camera.pitch -= rotationSpeed;
+	}
+	if (keyDowns[GLFW_KEY_K].isDown)
+	{
+		camera.pitch += rotationSpeed;
+	}
+	if (keyDowns[GLFW_KEY_J].isDown)
+	{
+		camera.yaw -= rotationSpeed;
+	}
+	if (keyDowns[GLFW_KEY_L].isDown)
+	{
+		camera.yaw += rotationSpeed;
+	}
+
+	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
+	camera.yaw = fmod(camera.yaw, 2.0f * pii);
+
+
+	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);
+	cameraRotation = cameraRotation * getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), camera.pitch);
+	camera.forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
+	camera.upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
+
+	Vec3 cameraRight = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
+
+	if (keyDowns[GLFW_KEY_W].isDown)
+	{
+		camera.position = camera.position + camera.forwardDir * moveSpeed;
+	}
+	if (keyDowns[GLFW_KEY_S].isDown)
+	{
+		camera.position = camera.position - camera.forwardDir * moveSpeed;
+	}
+	if (keyDowns[GLFW_KEY_A].isDown)
+	{
+		camera.position = camera.position - cameraRight * moveSpeed;
+	}
+	if (keyDowns[GLFW_KEY_D].isDown)
+	{
+		camera.position = camera.position + cameraRight * moveSpeed;
+
+	}
+	if (keyDowns[GLFW_KEY_Q].isDown)
+	{
+		camera.position = camera.position + camera.upDir * moveSpeed;
+	}
+	if (keyDowns[GLFW_KEY_E].isDown)
+	{
+		camera.position = camera.position - camera.upDir * moveSpeed;
+	}
 }
