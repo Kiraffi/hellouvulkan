@@ -633,7 +633,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 	}
 
 	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
-	camera.yaw = fmod(camera.yaw, 2.0f * pii);
+	camera.yaw = ffmodf(camera.yaw, 2.0f * pii);
 
 
 	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);
