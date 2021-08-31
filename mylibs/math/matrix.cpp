@@ -94,13 +94,13 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 
 	float yScale = 1.0f / ftanf(toRadians(fov * 0.5f));
 	float xScale = yScale / aspectRatio;
-	float fRange = -farPlane / (farPlane - nearPlane);
+	float fRange = farPlane / (farPlane - nearPlane);
 
 	result._00 = xScale;
 	result._11 = yScale;
 
-	result._22 = fRange;
-	result._23 = nearPlane * fRange;
+	result._22 = -fRange;
+	result._23 = -nearPlane * fRange;
 	result._32 = -1.0f;
 	result._33 = 0.0f;
 	return result;
@@ -109,46 +109,38 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up)
 {
 	Vector3 forward = normalize(target - pos);
-	Vector3 right = cross(up, forward);
-	Vector3 realUp = cross(right, forward);
+	Vector3 right = -cross(up, forward);
+	Vector3 realUp = -cross(right, forward);
 
-	Matrix result1;
-	result1._00 = right.x;
-	result1._01 = realUp.x;
-	result1._02 = forward.x;
+	Matrix result;
+	result._00 = right.x;
+	result._01 = right.y;
+	result._02 = right.z;
 
-	result1._10 = right.y;
-	result1._11 = realUp.y;
-	result1._12 = forward.y;
+	result._10 = realUp.x;
+	result._11 = realUp.y;
+	result._12 = realUp.z;
 
-	result1._20 = right.z;
-	result1._21 = realUp.z;
-	result1._22 = forward.z;
-
-
-	Matrix result2;
-	result2._00 = right.x;
-	result2._01 = right.y;
-	result2._02 = right.z;
-
-	result2._10 = realUp.x;
-	result2._11 = realUp.y;
-	result2._12 = realUp.z;
-
-	result2._20 = forward.x;
-	result2._21 = forward.y;
-	result2._22 = forward.z;
+	result._20 = forward.x;
+	result._21 = forward.y;
+	result._22 = forward.z;
 
 	Matrix m;
-	//m._30 = -dot(pos, right);
-	//m._31 = -dot(pos, realUp);
-	//m._32 = -dot(pos, forward);
+	m._30 = pos.x;
+	m._31 = pos.y;
+	m._32 = pos.z;
+//	return result * m;
 
-	m._03 = -pos.x;
-	m._13 = -pos.y;
-	m._23 = -pos.z;
+	//result._03 = dot(pos, Vec3(right.x, realUp.x, forward.x));
+	//result._13 = dot(pos, Vec3(right.y, realUp.y, forward.y));
+	//result._23 = dot(pos, Vec3(right.z, realUp.z, forward.z));
 
-	return result2 * m;
+	result._03 = dot(pos, right);
+	result._13 = dot(pos, realUp);
+	result._23 = dot(pos, forward);
+	return result;
+
+
 }
 
 Matrix transpose(const Matrix &m)

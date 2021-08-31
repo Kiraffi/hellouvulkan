@@ -640,7 +640,8 @@ void VulkanDrawStuff::run()
 		};
 		FrameBuffer b;
 
-		b.camMat = createMatrixFromLookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
+		//b.camMat = createMatrixFromLookAt(camera.position, camera.position + camera.forwardDir, camera.upDir);
+		b.camMat = getCameraMatrix(camera);
 
 		camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
 		camera.fovY = 90.0f;
