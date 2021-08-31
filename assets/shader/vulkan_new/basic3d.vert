@@ -37,8 +37,8 @@ void main()
 	VData data = vertexValues[gl_VertexIndex];
 	//gl_Position = mvp * vec4(data.pos.xyz, 1.0f);
 	vec3 p = data.pos.xyz;
-	p.xy = p.xy * 0.5f;
-	p.z = p.z * 0.25f + 0.5f;
-	gl_Position = mvp * vec4(p, 1.0f);
+	//p.xy = p.xy * 0.5f;
+	//p.z = p.z * 0.25f + 0.5f;
+	gl_Position = mvp  * (vec4(p, 1.0f) * matrix_padding);
 	colOut = data.color;
 }

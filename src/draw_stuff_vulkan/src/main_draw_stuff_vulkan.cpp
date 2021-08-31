@@ -11,6 +11,7 @@
 
 #include "core/timer.h"
 #include "core/mytypes.h"
+#include "core/transform.h"
 
 #include "myvulkan/vulkandevice.h"
 #include "myvulkan/vulkanhelperfuncs.h"
@@ -652,6 +653,18 @@ void VulkanDrawStuff::run()
 		//b.viewProj = perspectiveProjection(camera);
 		b.mvp = transpose(b.viewProj * b.camMat);
 
+		Transform trans;
+		trans.pos = Vec3(3.0f, 3.0f, 13.0f);
+		static float rotationAmount = 0.0f;
+
+		trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
+		trans.scale = Vec3(3.0f, 3.0f, 3.0f);
+
+		Transform trans2;
+		trans2.pos = Vec3(10.0f, 0.0f, 0.0f);
+		rotationAmount += 1.5f * dt;
+
+		b.padding = getModelMatrix(trans2) * getModelMatrix(trans);
 		{
 			Vec2 fontSize(8.0f, 12.0f);
 			char tmpStr[1024];
