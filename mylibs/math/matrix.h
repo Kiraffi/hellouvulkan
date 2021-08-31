@@ -1,9 +1,9 @@
 #pragma once
 
 #include "core/mytypes.h"
+#include "math/vector3.h"
 
 struct Quaternion;
-struct Vector3;
 
 struct Matrix
 {
@@ -54,5 +54,8 @@ Matrix transpose(const Matrix &m);
 Matrix operator*(const Matrix &a, const Matrix &b);
 
 void printMatrix(const Matrix &m, const char name[]);
+
+Vec4 mul(const Matrix& m, const Vec4& v);
+Vec4 mul(const Vec4& v, const Matrix& m);
 
 using mat4 = Matrix;

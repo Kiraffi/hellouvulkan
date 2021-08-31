@@ -7,6 +7,7 @@ struct Camera
 {
 	Vec3 forwardDir = Vec3(0.0f, 0.0f, 1.0f);
 	Vec3 upDir = Vec3(0.0f, 1.0f, 0.0f);
+	Vec3 rightDir = Vec3(1.0f, 0.0f, 0.0f);
 	Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
 
 	float aspectRatioWByH = 1.667f;
@@ -23,4 +24,4 @@ struct Camera
 
 Matrix perspectiveProjection(const Camera &camera);
 Matrix perspectiveProjectionInf(const Camera& camera);
-
+Matrix getCameraMatrix(const Camera& camera);

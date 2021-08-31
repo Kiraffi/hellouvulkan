@@ -8,12 +8,11 @@
 
 Matrix perspectiveProjection(const Camera &camera)
 {;
-	float fovY = toRadians(camera.fovY);
-	float f = 1.0f / tanf(fovY / 2.0f);
+	float fovY = toRadians(camera.fovY * 0.5f);
+	float f = 1.0f / tanf(fovY);
 
-	float farMinusNear = camera.zFar - camera.zNear;
-	float s1 = -camera.zFar / farMinusNear;
-	float s2 = -camera.zFar * camera.zNear / farMinusNear;
+	float s1 = camera.zFar / (camera.zFar - camera.zNear);
+	float s2 = -camera.zNear * s1;
 
 	return Matrix(
 		f / camera.aspectRatioWByH, 0.0f, 0.0f, 0.0f,
@@ -37,4 +36,31 @@ Matrix perspectiveProjectionInf(const Camera& camera)
 		0.0f, f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f,
 		0.0f, 0.0f, camera.zNear, 0.0f);
+}
+
+
+Matrix getCameraMatrix(const Camera& camera)
+{
+	Vector3 right = cross(camera.upDir, camera.forwardDir);
+
+
+	Matrix result;
+	result._00 = right.x;
+	result._01 = camera.upDir.x;
+	result._02 = camera.forwardDir.x;
+
+	result._10 = right.y;
+	result._11 = camera.upDir.y;
+	result._12 = camera.forwardDir.y;
+
+	result._20 = right.z;
+	result._21 = camera.upDir.z;
+	result._22 = camera.forwardDir.z;
+
+	Matrix m;
+	m._03 = camera.position.x;
+	m._13 = camera.position.y;
+	m._23 = camera.position.z;
+
+	return result * m;
 }

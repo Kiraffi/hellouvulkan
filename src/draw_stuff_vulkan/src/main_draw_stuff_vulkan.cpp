@@ -631,17 +631,6 @@ void VulkanDrawStuff::run()
 		////////////////////////
 
 
-		{
-			Vec2 fontSize(8.0f, 12.0f);
-			char tmpStr[1024];
-
-			snprintf(tmpStr, 1024, "Camera position: (%f, %f, %f)", camera.position.x, camera.position.y, camera.position.z);
-			fontSystem.addText(tmpStr, Vector2(10.0f, 10.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-			snprintf(tmpStr, 1024, "Camera look: (%f, %f, %f)", camera.forwardDir.x, camera.forwardDir.y, camera.forwardDir.z);
-			fontSystem.addText(tmpStr, Vector2(10.0f, 22.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-		}
-
 		struct FrameBuffer
 		{
 			Matrix camMat;
@@ -657,10 +646,48 @@ void VulkanDrawStuff::run()
 		camera.fovY = 90.0f;
 		camera.zFar = 2000.0f;
 		camera.zNear = 0.001f;
-		
+
 		b.viewProj = createPerspectiveMatrix(90.0f, camera.aspectRatioWByH, 0.01f, 2000.0f);
 		//b.viewProj = perspectiveProjection(camera);
-		b.mvp = b.viewProj * b.camMat;
+		b.mvp = transpose(b.viewProj * b.camMat);
+
+		{
+			Vec2 fontSize(8.0f, 12.0f);
+			char tmpStr[1024];
+
+			snprintf(tmpStr, 1024, "Camera position: (%f, %f, %f), pitch: %f, yaw:%f", camera.position.x, camera.position.y, camera.position.z, camera.pitch, camera.yaw);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 8.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+			snprintf(tmpStr, 1024, "Camera look: (%f, %f, %f)", camera.forwardDir.x, camera.forwardDir.y, camera.forwardDir.z);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 22.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			snprintf(tmpStr, 1024, "Camera up: (%f, %f, %f)", camera.upDir.x, camera.upDir.y, camera.upDir.z);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 34.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			snprintf(tmpStr, 1024, "Camera right: (%f, %f, %f)", camera.rightDir.x, camera.rightDir.y, camera.rightDir.z);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 46.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+			Matrix m = b.camMat;
+
+			snprintf(tmpStr, 1024, "Camera mat0: (%f, %f, %f, %f)", m._00, m._01, m._02, m._03);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 60.0f + 12.0f * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			snprintf(tmpStr, 1024, "Camera mat1: (%f, %f, %f, %f)", m._10, m._11, m._12, m._13);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 60.0f + 12.0f * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			snprintf(tmpStr, 1024, "Camera mat2: (%f, %f, %f, %f)", m._20, m._21, m._22, m._23);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 60.0f + 12.0f * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			snprintf(tmpStr, 1024, "Camera mat3: (%f, %f, %f, %f)", m._30, m._31, m._32, m._33);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 60.0f + 12.0f * 3.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+
+			Vec4 p(1.0f, 1.0f, 1.0f, 1.0f);
+			Vec4 p1 = mul(p, b.mvp);
+			Vec4 p2 = mul(b.mvp, p);
+			snprintf(tmpStr, 1024, "p1: (%f, %f, %f, %f)", p1.x, p1.y, p1.z, p1.w);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 110.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			snprintf(tmpStr, 1024, "p2: (%f, %f, %f, %f)", p2.x, p2.y, p2.z, p2.w);
+			fontSystem.addText(tmpStr, Vector2(10.0f, 122.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+
+		}
+
 		if(!startRender())
 			continue;
 

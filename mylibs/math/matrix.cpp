@@ -90,26 +90,17 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 	ASSERT(ffabsf(fov) > 0.00001f);
 	ASSERT(ffabsf(aspectRatio) > 0.001f);
 	ASSERT(ffabsf(farPlane - nearPlane) > 0.00001f);
-	
+	ASSERT(ffabsf(nearPlane) > 0.0f);
+
 	float yScale = 1.0f / ftanf(toRadians(fov * 0.5f));
 	float xScale = yScale / aspectRatio;
-	float fRange1 = 1.0f / (farPlane - nearPlane);
-	float fRange2 = farPlane * fRange1;
+	float fRange = -farPlane / (farPlane - nearPlane);
 
 	result._00 = xScale;
 	result._11 = yScale;
 
-	//opengl ?
-#if 1
-	result._22 = -fRange1 * (farPlane + nearPlane);
-	result._23 = -2.0f * fRange2 * nearPlane;
-	
-	// dx ?	
-#else
-	result._22 = fRange2;
-	result._23 = -fRange2 * nearPlane;
-#endif
-
+	result._22 = fRange;
+	result._23 = nearPlane * fRange;
 	result._32 = -1.0f;
 	result._33 = 0.0f;
 	return result;
@@ -121,25 +112,43 @@ Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const V
 	Vector3 right = cross(up, forward);
 	Vector3 realUp = cross(right, forward);
 
-	Matrix result;
-	result._00 = right.x;
-	result._01 = right.y;
-	result._02 = right.z;
+	Matrix result1;
+	result1._00 = right.x;
+	result1._01 = realUp.x;
+	result1._02 = forward.x;
 
-	result._10 = realUp.x;
-	result._11 = realUp.y;
-	result._12 = realUp.z;
+	result1._10 = right.y;
+	result1._11 = realUp.y;
+	result1._12 = forward.y;
 
-	result._20 = forward.x;
-	result._21 = forward.y;
-	result._22 = forward.z;
+	result1._20 = right.z;
+	result1._21 = realUp.z;
+	result1._22 = forward.z;
 
-	Matrix mat2;
-	mat2._30 = -pos.x;
-	mat2._31 = -pos.y;
-	mat2._32 = -pos.z;
 
-	return mat2 * result;
+	Matrix result2;
+	result2._00 = right.x;
+	result2._01 = right.y;
+	result2._02 = right.z;
+
+	result2._10 = realUp.x;
+	result2._11 = realUp.y;
+	result2._12 = realUp.z;
+
+	result2._20 = forward.x;
+	result2._21 = forward.y;
+	result2._22 = forward.z;
+
+	Matrix m;
+	//m._30 = -dot(pos, right);
+	//m._31 = -dot(pos, realUp);
+	//m._32 = -dot(pos, forward);
+
+	m._03 = -pos.x;
+	m._13 = -pos.y;
+	m._23 = -pos.z;
+
+	return result2 * m;
 }
 
 Matrix transpose(const Matrix &m)
@@ -194,6 +203,28 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 
 	return result;
 }
+
+
+Vec4 mul(const Matrix& m, const Vec4& v)
+{
+	Vec4 result;
+	result.x = v.x * m._00 + v.y * m._10 + v.z * m._20 + v.w * m._30;
+	result.y = v.x * m._01 + v.y * m._11 + v.z * m._21 + v.w * m._31;
+	result.z = v.x * m._02 + v.y * m._12 + v.z * m._22 + v.w * m._32;
+	result.w = v.x * m._03 + v.y * m._13 + v.z * m._23 + v.w * m._33;
+	return result;
+}
+Vec4 mul(const Vec4& v, const Matrix& m)
+{
+	Vec4 result;
+	result.x = v.x * m._00 + v.y * m._00 + v.z * m._02 + v.w * m._03;
+	result.y = v.x * m._10 + v.y * m._11 + v.z * m._12 + v.w * m._13;
+	result.z = v.x * m._20 + v.y * m._21 + v.z * m._22 + v.w * m._23;
+	result.w = v.x * m._30 + v.y * m._31 + v.z * m._32 + v.w * m._33;
+	return result;
+
+}
+
 
 
 void printMatrix(const Matrix &m, const char name[])

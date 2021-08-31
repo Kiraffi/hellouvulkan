@@ -625,11 +625,11 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 	}
 	if (keyDowns[GLFW_KEY_J].isDown)
 	{
-		camera.yaw -= rotationSpeed;
+		camera.yaw += rotationSpeed;
 	}
 	if (keyDowns[GLFW_KEY_L].isDown)
 	{
-		camera.yaw += rotationSpeed;
+		camera.yaw -= rotationSpeed;
 	}
 
 	camera.pitch = clamp(camera.pitch, -0.5f * pii, 0.5f * pii);
@@ -637,11 +637,11 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 
 
 	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), camera.yaw);
-	cameraRotation = cameraRotation * getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), camera.pitch);
+	cameraRotation = getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), camera.pitch) * cameraRotation;
 	camera.forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
 	camera.upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
 
-	Vec3 cameraRight = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
+	camera.rightDir = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
 
 	if (keyDowns[GLFW_KEY_W].isDown)
 	{
@@ -653,11 +653,11 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 	}
 	if (keyDowns[GLFW_KEY_A].isDown)
 	{
-		camera.position = camera.position - cameraRight * moveSpeed;
+		camera.position = camera.position - camera.rightDir * moveSpeed;
 	}
 	if (keyDowns[GLFW_KEY_D].isDown)
 	{
-		camera.position = camera.position + cameraRight * moveSpeed;
+		camera.position = camera.position + camera.rightDir * moveSpeed;
 
 	}
 	if (keyDowns[GLFW_KEY_Q].isDown)
