@@ -46,7 +46,7 @@ Matrix getMatrixFromQuaternion(const Quaternion &quat);
 Matrix getMatrixFromScale(const Vector3 &scale);
 Matrix getMatrixFromTranslation(const Vector3 &pos);
 Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPlane);
-Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane);
+Matrix createPerspectiveMatrixRH(float fov, float aspectRatio, float nearPlane, float farPlane);
 
 Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
 

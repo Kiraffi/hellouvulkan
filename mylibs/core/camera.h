@@ -3,13 +3,17 @@
 #include "math/vector3.h"
 #include "math/matrix.h"
 
+class FontRenderSystem;
+
 struct Camera
 {
-	Vec3 forwardDir = Vec3(0.0f, 0.0f, 1.0f);
-	Vec3 upDir = Vec3(0.0f, 1.0f, 0.0f);
-	Vec3 rightDir = Vec3(1.0f, 0.0f, 0.0f);
-	Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
+	Matrix perspectiveProjectionRH();
+	Matrix getCameraMatrix();
+	void getCameraDirections(Vec3& rightDir, Vec3& upDir, Vec3& forwardDie);
 
+	void renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);
+
+	Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
 	float aspectRatioWByH = 1.667f;
 	float fovY = 100.0f;
 
@@ -18,10 +22,7 @@ struct Camera
 	float roll = 0.0f;
 
 	float zNear = 0.1f;
-	float zFar = 2000.0f; // infinite?
+	float zFar = 2000.0f;
 };
 
 
-Matrix perspectiveProjection(const Camera &camera);
-Matrix perspectiveProjectionInf(const Camera& camera);
-Matrix getCameraMatrix(const Camera& camera);

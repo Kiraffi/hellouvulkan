@@ -84,7 +84,7 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
 	return result;
 }
 
-Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
+Matrix createPerspectiveMatrixRH(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
 	Matrix result;
 	ASSERT(ffabsf(fov) > 0.00001f);
@@ -100,8 +100,8 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 	result._11 = yScale;
 
 	result._22 = -fRange;
-	result._23 = -nearPlane * fRange;
-	result._32 = -1.0f;
+	result._23 = -1.0f;
+	result._32 = -nearPlane * fRange;
 	result._33 = 0.0f;
 	return result;
 }
@@ -109,38 +109,26 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up)
 {
 	Vector3 forward = normalize(target - pos);
-	Vector3 right = -cross(up, forward);
-	Vector3 realUp = -cross(right, forward);
+	Vector3 right = normalize(cross(up, forward));
+	Vector3 realUp = normalize(cross(forward, right));
 
 	Matrix result;
 	result._00 = right.x;
-	result._01 = right.y;
-	result._02 = right.z;
+	result._01 = realUp.x;
+	result._02 = forward.x;
 
-	result._10 = realUp.x;
+	result._10 = right.y;
 	result._11 = realUp.y;
-	result._12 = realUp.z;
+	result._12 = forward.y;
 
-	result._20 = forward.x;
-	result._21 = forward.y;
+	result._20 = right.z;
+	result._21 = realUp.z;
 	result._22 = forward.z;
 
-	Matrix m;
-	m._30 = pos.x;
-	m._31 = pos.y;
-	m._32 = pos.z;
-//	return result * m;
-
-	//result._03 = dot(pos, Vec3(right.x, realUp.x, forward.x));
-	//result._13 = dot(pos, Vec3(right.y, realUp.y, forward.y));
-	//result._23 = dot(pos, Vec3(right.z, realUp.z, forward.z));
-
-	result._03 = dot(pos, right);
-	result._13 = dot(pos, realUp);
-	result._23 = dot(pos, forward);
+	result._30 = -dot(pos, right);
+	result._31 = -dot(pos, realUp);
+	result._32 = -dot(pos, forward);
 	return result;
-
-
 }
 
 Matrix transpose(const Matrix &m)

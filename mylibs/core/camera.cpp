@@ -2,89 +2,87 @@
 #include "camera.h"
 #include "math/matrix.h"
 #include "math/general_math.h"
+#include "math/quaternion.h"
 
+#include "render/font_render.h"
 
 #include <math.h>
 
-Matrix perspectiveProjection(const Camera &camera)
-{;
-	float fovY = toRadians(camera.fovY * 0.5f);
-	float f = 1.0f / tanf(fovY);
+Matrix Camera::perspectiveProjectionRH()
+{
+	float f = 1.0f / tanf(toRadians(fovY * 0.5f));
 
-	float s1 = camera.zFar / (camera.zFar - camera.zNear);
-	float s2 = -camera.zNear * s1;
+	float s1 = -zFar / (zFar - zNear);
+	float s2 = zNear * s1;
 
 	return Matrix(
-		f / camera.aspectRatioWByH, 0.0f, 0.0f, 0.0f,
+		f / aspectRatioWByH, 0.0f, 0.0f, 0.0f,
 		0.0f, f, 0.0f, 0.0f,
-		0.0f, 0.0f, s1, 1.0f,
+		0.0f, 0.0f, s1, -1.0f,
 		0.0f, 0.0f, s2, 0.0f);
 }
 
 
-
-Matrix perspectiveProjectionInf(const Camera& camera)
+Matrix Camera::getCameraMatrix()
 {
-	;
-	float fovY = toRadians(camera.fovY);
-	float f = 1.0f / tanf(fovY / 2.0f);
-
-	float farMinusNear = camera.zFar - camera.zNear;
-
-	return Matrix(
-		f / camera.aspectRatioWByH, 0.0f, 0.0f, 0.0f,
-		0.0f, f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, camera.zNear, 0.0f);
-}
-
-
-Matrix getCameraMatrix2(const Camera& camera)
-{
-	Vector3 right = cross(camera.upDir, camera.forwardDir);
 	
-	Matrix result;
-	result._00 = camera.rightDir.x;
-	result._01 = camera.rightDir.y;
-	result._02 = camera.rightDir.z;
-
-	result._10 = camera.upDir.x;
-	result._11 = camera.upDir.y;
-	result._12 = camera.upDir.z;
-
-	result._20 = camera.forwardDir.x;
-	result._21 = camera.forwardDir.y;
-	result._22 = camera.forwardDir.z;
-
-	Matrix m;
-	m._03 = camera.position.x;
-	m._13 = camera.position.y;
-	m._23 = camera.position.z;
-
-	return result * m;
-}
-
-Matrix getCameraMatrix(const Camera& camera)
-{
-	Vector3 right = cross(camera.upDir, camera.forwardDir);
+	Vector3 rightDir;
+	Vector3 upDir;
+	Vector3 forwardDir;
+	getCameraDirections(rightDir, upDir, forwardDir);
 
 	Matrix result;
-	result._00 = camera.rightDir.x;
-	result._01 = camera.upDir.x;
-	result._02 = camera.forwardDir.x;
+	result._00 = rightDir.x;
+	result._01 = upDir.x;
+	result._02 = forwardDir.x;
 
-	result._10 = camera.rightDir.y;
-	result._11 = camera.upDir.y;
-	result._12 = camera.forwardDir.y;
+	result._10 = rightDir.y;
+	result._11 = upDir.y;
+	result._12 = forwardDir.y;
 
-	result._20 = camera.rightDir.z;
-	result._21 = camera.upDir.z;
-	result._22 = camera.forwardDir.z;
+	result._20 = rightDir.z;
+	result._21 = upDir.z;
+	result._22 = forwardDir.z;
 
 
-	result._30 = -dot(camera.position, camera.rightDir);
-	result._31 = -dot(camera.position, camera.upDir);
-	result._32 = -dot(camera.position, camera.forwardDir);
+	result._30 = -dot(position, rightDir);
+	result._31 = -dot(position, upDir);
+	result._32 = -dot(position, forwardDir);
 
 	return result;
+}
+
+
+void Camera::getCameraDirections(Vec3 &rightDir, Vec3 &upDir, Vec3 &forwardDir)
+{
+	Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), yaw);
+	cameraRotation = getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), pitch) * cameraRotation;
+
+	rightDir = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
+	upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
+	forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
+}
+
+
+void Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize)
+{
+	char tmpStr[1024];
+
+	snprintf(tmpStr, 1024, "Camera position: (%.2f, %.2f, %.2f), pitch: %.2f, yaw:%.2f", position.x, position.y, position.z, pitch, yaw);
+	fontSystem.addText(tmpStr, camInfoPosition, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+
+	Vec3 cameraRightdDir;
+	Vec3 cameraUpDir;
+	Vec3 cameraForwardDir;
+	getCameraDirections(cameraRightdDir, cameraUpDir, cameraForwardDir);
+
+	camInfoPosition.y += fontSize.y + 2.0f;
+
+	snprintf(tmpStr, 1024, "Camera look: (%.3f, %.3f, %.3f)", -cameraForwardDir.x, -cameraForwardDir.y, -cameraForwardDir.z);
+	fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 0.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	snprintf(tmpStr, 1024, "Camera up: (%.3f, %.3f, %.3f)", cameraUpDir.x, cameraUpDir.y, cameraUpDir.z);
+	fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 1.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	snprintf(tmpStr, 1024, "Camera right: (%.3f, %.3f, %.3f)", cameraRightdDir.x, cameraRightdDir.y, cameraRightdDir.z);
+	fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 2.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 }
