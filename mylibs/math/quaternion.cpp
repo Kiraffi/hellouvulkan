@@ -57,7 +57,7 @@ Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
 	Quaternion result;
 	result.v = normalize(v) * s;
 
-	result.w = -fcosf(angle * 0.5f);
+	result.w = fcosf(angle * 0.5f);
 	return result;
 }
 

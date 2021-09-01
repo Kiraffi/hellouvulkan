@@ -24,7 +24,7 @@ Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vect
 	return result;
 }
 
-Matrix getMatrixFromQuaternion(const Quaternion &quat)
+Matrix getMatrixFromQuaternionLH(const Quaternion &quat)
 {
 	Matrix result;
 	result._00 = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
@@ -37,6 +37,24 @@ Matrix getMatrixFromQuaternion(const Quaternion &quat)
 
 	result._20 = 2.0f * quat.v.x * quat.v.z + 2.0f * quat.w * quat.v.y;
 	result._21 = 2.0f * quat.v.y * quat.v.z - 2.0f * quat.w * quat.v.x;
+	result._22 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.y * quat.v.y;
+
+	return result;
+}
+
+Matrix getMatrixFromQuaternion(const Quaternion &quat)
+{
+	Matrix result;
+	result._00 = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
+	result._01 = 2.0f * quat.v.x * quat.v.y - 2.0f * quat.w * quat.v.z;
+	result._02 = 2.0f * quat.v.x * quat.v.z + 2.0f * quat.w * quat.v.y;
+
+	result._10 = 2.0f * quat.v.x * quat.v.y + 2.0f * quat.w * quat.v.z;
+	result._11 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.z * quat.v.z;
+	result._12 = 2.0f * quat.v.y * quat.v.z - 2.0f * quat.w * quat.v.x;
+
+	result._20 = 2.0f * quat.v.x * quat.v.z - 2.0f * quat.w * quat.v.y;
+	result._21 = 2.0f * quat.v.y * quat.v.z + 2.0f * quat.w * quat.v.x;
 	result._22 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.y * quat.v.y;
 
 	return result;

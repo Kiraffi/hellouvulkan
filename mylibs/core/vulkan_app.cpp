@@ -617,19 +617,19 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 
 	if (keyDowns[GLFW_KEY_I].isDown)
 	{
-		camera.pitch += rotationSpeed;
+		camera.pitch -= rotationSpeed;
 	}
 	if (keyDowns[GLFW_KEY_K].isDown)
 	{
-		camera.pitch -= rotationSpeed;
+		camera.pitch += rotationSpeed;
 	}
 	if (keyDowns[GLFW_KEY_J].isDown)
 	{
-		camera.yaw += rotationSpeed;
+		camera.yaw -= rotationSpeed;
 	}
 	if (keyDowns[GLFW_KEY_L].isDown)
 	{
-		camera.yaw -= rotationSpeed;
+		camera.yaw += rotationSpeed;
 	}
 
 	camera.pitch = clamp(camera.pitch, -0.499f * pii, 0.4999f * pii);

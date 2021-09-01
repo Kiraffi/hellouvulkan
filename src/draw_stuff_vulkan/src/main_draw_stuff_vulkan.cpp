@@ -657,14 +657,15 @@ void VulkanDrawStuff::run()
 
 		Transform trans;
 		trans.pos = Vec3(3.0f, 3.0f, 13.0f);
-		static float rotationAmount = 0.0f;
+		static float rotationAmount = Pi * 0.25f;
 
-		trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
+		trans.rot = getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), rotationAmount);
+		Vec3 tmp = rotateVector(Vector3(0.0f, 0.0f, 1.0f), trans.rot);
 		trans.scale = Vec3(1.0f, 1.0f, 1.0f);
 
 		Transform trans2;
 		trans2.pos = Vec3(5.0f, 0.0f, 0.0f);
-		//rotationAmount += 1.5f * dt;
+		rotationAmount += 1.5f * dt;
 
 		b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
 

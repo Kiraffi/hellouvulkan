@@ -7,6 +7,7 @@
 #include "render/font_render.h"
 
 #include <math.h>
+#include <stdio.h>
 
 Matrix Camera::perspectiveProjectionRH()
 {
