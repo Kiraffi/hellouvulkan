@@ -39,6 +39,6 @@ void main()
 	vec3 p = data.pos.xyz;
 	//p.xy = p.xy * 0.5f;
 	//p.z = p.z * 0.25f + 0.5f;
-	gl_Position = mvp  * (vec4(p, 1.0f) * matrix_padding);
+	gl_Position =  mvp * matrix_padding * vec4(p, 1.0f); 
 	colOut = data.color;
 }

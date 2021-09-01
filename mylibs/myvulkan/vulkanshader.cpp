@@ -384,7 +384,7 @@ Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipe
 		depthInfo.depthTestEnable = VK_TRUE;
 		depthInfo.depthWriteEnable = VK_TRUE;
 	}
-	depthInfo.depthCompareOp = VK_COMPARE_OP_GREATER;
+	depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
 	VkPipelineColorBlendAttachmentState colorAttachmentState = {};
 	colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_A_BIT;

@@ -209,9 +209,10 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 
 			if(!attribs.getChild("POSITION").parseUInt(node.positionIndex) ||
 				!attribs.getChild("NORMAL").parseUInt(node.normalIndex) ||
-				!attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex) ||
 				!attribs.getChild("COLOR_0").parseUInt(node.colorIndex))
 				return false;
+
+			attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex);
 		}
 	}
 	{
@@ -508,7 +509,8 @@ bool VulkanDrawStuff::init(const char *windowStr, int screenWidth, int screenHei
 
 	RenderModel renderModel;
 
-	bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
+	//bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
+	bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
 
 	printf("gltf read success: %i\n", readSuccess);
 	if (!readSuccess)
@@ -579,7 +581,7 @@ bool VulkanDrawStuff::createPipelines()
 		device, renderPass, pipelineCache,
 		shaderModules [SHADER_MODULE_RENDER_QUAD_VERT],
 		shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG],
-		vertexInput, pipeline.descriptorSet, false,
+		vertexInput, pipeline.descriptorSet, true,
 		0u, VK_SHADER_STAGE_ALL_GRAPHICS);
 	pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
 
@@ -646,12 +648,16 @@ void VulkanDrawStuff::run()
 
 		camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
 		camera.fovY = 90.0f;
-		camera.zFar = 2000.0f;
+		camera.zFar = 200.0f;
 		camera.zNear = 0.001f;
 
-		b.viewProj = createPerspectiveMatrix(90.0f, camera.aspectRatioWByH, 0.01f, 2000.0f);
-		//b.viewProj = perspectiveProjection(camera);
-		b.mvp = transpose(b.viewProj * b.camMat);
+		//camera.zFar = 0.001f;
+		//camera.zNear = 2000.0f;
+
+		//b.viewProj = createPerspectiveMatrix(90.0f, camera.aspectRatioWByH, 2000.0f, 0.01f);
+		//b.viewProj = perspectiveProjectionInf(camera);
+		b.viewProj = perspectiveProjection(camera);
+		b.mvp = b.camMat * b.viewProj;
 
 		Transform trans;
 		trans.pos = Vec3(3.0f, 3.0f, 13.0f);
@@ -661,10 +667,10 @@ void VulkanDrawStuff::run()
 		trans.scale = Vec3(3.0f, 3.0f, 3.0f);
 
 		Transform trans2;
-		trans2.pos = Vec3(10.0f, 0.0f, 0.0f);
+		trans2.pos = Vec3(5.0f, 0.0f, 0.0f);
 		rotationAmount += 1.5f * dt;
 
-		b.padding = getModelMatrix(trans2) * getModelMatrix(trans);
+		//b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
 		{
 			Vec2 fontSize(8.0f, 12.0f);
 			char tmpStr[1024];
@@ -759,7 +765,7 @@ void VulkanDrawStuff::run()
 		{
 			VkClearValue clearValues [2] = { };
 			clearValues [0].color = VkClearColorValue { { 0.0f, 0.5f, 1.0f, 1.0f } };
-			clearValues [1].depthStencil = { 0.0f, 0 };
+			clearValues [1].depthStencil = { 1.0f, 0 };
 
 			VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 			passBeginInfo.renderPass = renderPass;

@@ -13,11 +13,9 @@ struct Transform
 
 Matrix getModelMatrix(const Transform &trans)
 {
-	Matrix posMat = getMatrixFromTranslation(-trans.pos);
+	Matrix posMat = getMatrixFromTranslation(trans.pos);
 	Matrix scaleMat = getMatrixFromScale(trans.scale);
-	Quat p = trans.rot;
-	p.w = -p.w;
-	Matrix rotMat = getMatrixFromQuaternion(p);
+	Matrix rotMat = getMatrixFromQuaternion(trans.rot);
 
-	return posMat * rotMat * scaleMat;
+	return scaleMat * rotMat * posMat;
 }

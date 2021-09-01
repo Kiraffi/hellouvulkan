@@ -56,9 +56,9 @@ Matrix getMatrixFromScale(const Vector3 &scale)
 Matrix getMatrixFromTranslation(const Vector3 &pos)
 {
 	Matrix result;
-	result._03 = pos.x;
-	result._13 = pos.y;
-	result._23 = pos.z;
+	result._30 = pos.x;
+	result._31 = pos.y;
+	result._32 = pos.z;
 
 	return result;
 
