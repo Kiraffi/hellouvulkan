@@ -83,12 +83,12 @@ bool FontRenderSystem::init(std::string_view fontFilename, DeviceWithQueues &dev
 			indices.resize(6 * MAX_LETTERS);
 			for (int i = 0; i < MAX_LETTERS; ++i)
 			{
-				indices[size_t(i) * 6 + 0] = i * 4 + 0;
-				indices[size_t(i) * 6 + 1] = i * 4 + 1;
+				indices[size_t(i) * 6 + 0] = i * 4 + 1;
+				indices[size_t(i) * 6 + 1] = i * 4 + 0;
 				indices[size_t(i) * 6 + 2] = i * 4 + 2;
 
-				indices[size_t(i) * 6 + 3] = i * 4 + 0;
-				indices[size_t(i) * 6 + 4] = i * 4 + 2;
+				indices[size_t(i) * 6 + 3] = i * 4 + 2;
+				indices[size_t(i) * 6 + 4] = i * 4 + 0;
 				indices[size_t(i) * 6 + 5] = i * 4 + 3;
 			}
 			offset = uploadToScratchbuffer(scratchBuffer, (void*)indices.data(), size_t(sizeof(indices[0]) * indices.size()), offset);

@@ -372,7 +372,7 @@ Pipeline createGraphicsPipeline(VkDevice device, VkRenderPass renderPass, VkPipe
 
 	VkPipelineRasterizationStateCreateInfo rasterInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
 	rasterInfo.lineWidth = 1.0f;
-	rasterInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // VK_FRONT_FACE_CLOCKWISE;
 	rasterInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 
 	VkPipelineMultisampleStateCreateInfo multiSampleInfo = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };

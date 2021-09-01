@@ -21,7 +21,7 @@ layout (binding = 1) uniform FrameDataBlock
 struct VData
 {
 	vec4 pos;
-	vec4 norm;
+	vec4 nor;
 	vec4 color;
 };
 
@@ -35,10 +35,9 @@ layout (location = 0) out flat vec4 colOut;
 void main()
 {
 	VData data = vertexValues[gl_VertexIndex];
-	//gl_Position = mvp * vec4(data.pos.xyz, 1.0f);
-	vec3 p = data.pos.xyz;
-	//p.xy = p.xy * 0.5f;
-	//p.z = p.z * 0.25f + 0.5f;
-	gl_Position =  mvp * matrix_padding * vec4(p, 1.0f); 
-	colOut = data.color;
+	mat4 finalMat = mvp * matrix_padding;
+	gl_Position = finalMat * vec4(data.pos.xyz, 1.0f);
+	vec3 norm =  (matrix_padding * vec4(data.nor.xyz, 0.0f)).xyz;
+	vec3 sunDir = vec3(0.5f, -1.0f, 0.5f);
+	colOut = data.color * 0.75f + 0.25f * (-dot(norm, sunDir));
 }
