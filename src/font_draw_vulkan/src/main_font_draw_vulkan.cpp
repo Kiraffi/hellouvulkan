@@ -189,12 +189,12 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 		indices.resize(6 * 10240);
 		for (int i = 0; i < 10240; ++i)
 		{
-			indices[ size_t(i) * 6 + 0 ] = i * 4 + 0;
-			indices[ size_t(i) * 6 + 1 ] = i * 4 + 1;
+			indices[ size_t(i) * 6 + 0 ] = i * 4 + 1;
+			indices[ size_t(i) * 6 + 1 ] = i * 4 + 0;
 			indices[ size_t(i) * 6 + 2 ] = i * 4 + 2;
 
-			indices[ size_t(i) * 6 + 3 ] = i * 4 + 0;
-			indices[ size_t(i) * 6 + 4 ] = i * 4 + 2;
+			indices[ size_t(i) * 6 + 3 ] = i * 4 + 2;
+			indices[ size_t(i) * 6 + 4 ] = i * 4 + 0;
 			indices[ size_t(i) * 6 + 5 ] = i * 4 + 3;
 		}
 		offset = uploadToScratchbuffer(scratchBuffer, ( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);

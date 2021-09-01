@@ -342,8 +342,8 @@ void SpaceShooter::run()
 			vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 1.5f });
 			vertices.emplace_back(GpuModelVertex{ .posX = 1.0f, .posY = -1.0f });
 			model.modelIndices.emplace_back(0);
-			model.modelIndices.emplace_back(1);
 			model.modelIndices.emplace_back(2);
+			model.modelIndices.emplace_back(1);
 		}
 
 		// Asteroid models
@@ -365,8 +365,8 @@ void SpaceShooter::run()
 				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
 
 				model.modelIndices.emplace_back(0u);
-				model.modelIndices.emplace_back(( i + 0 ) % AsteroidCorners + 1);
 				model.modelIndices.emplace_back(( i + 1 ) % AsteroidCorners + 1);
+				model.modelIndices.emplace_back(( i + 0 ) % AsteroidCorners + 1);
 			}
 		}
 
@@ -388,8 +388,8 @@ void SpaceShooter::run()
 				vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
 
 				model.modelIndices.emplace_back(0u);
-				model.modelIndices.emplace_back(( i + 0 ) % BulletCorners + 1);
 				model.modelIndices.emplace_back(( i + 1 ) % BulletCorners + 1);
+				model.modelIndices.emplace_back(( i + 0 ) % BulletCorners + 1);
 			}
 		}
 
