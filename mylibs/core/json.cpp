@@ -250,6 +250,9 @@ bool getNumber(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &i
 	if(numCount <= 0 || index > marker.endIndex)
 		return false;
 
+	inOutBlock.valueInt = neg ? -v : v;
+	inOutBlock.valueDbl = neg ? -v : v;
+
 	if(buffer [index] == '.')
 	{
 		++index;
@@ -528,6 +531,16 @@ bool JSONBlock::parseUInt(uint32_t &outInt) const
 	outInt = uint32_t(v);
 	return true;
 
+}
+
+
+bool JSONBlock::parseNumber(float& outFloat) const
+{
+	if(!isInt() && !isDouble())
+		return false;
+
+	outFloat = (float)valueDbl;
+		return true;
 }
 
 

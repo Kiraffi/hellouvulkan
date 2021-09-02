@@ -127,13 +127,218 @@ struct RenderModel
 		Vec4 norm;
 		Vec4 color;
 	};
-
+	struct AnimationVertexData
+	{
+		Vec4 weights;
+		uint32_t indices[4];
+	};
 
 	std::vector<Vertex> vertices;
+	std::vector<AnimationVertexData> animationVertices;
 	std::vector<uint32_t> indices;
 };
 
+struct ModelBone
+{
 
+};
+
+#if 0
+bool parseBuffer(const JSONBlock& accessorBlock, uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
+{
+	auto lam = [&](uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
+	{
+		if (index == ~0u || index >= accessorBlock.getChildCount())
+			return false;
+
+		const JSONBlock& block = accessorBlock.getChild(index);
+		if (!block.isValid())
+			return false;
+
+		uint32_t viewIndex = ~0u;
+		uint32_t componentType = ~0u;
+		uint32_t count = ~0u;
+		bool normalized = false;
+		std::string s;
+
+		if (!block.getChild("bufferView").parseUInt(viewIndex)
+			|| !block.getChild("componentType").parseUInt(componentType)
+			|| !block.getChild("count").parseUInt(count)
+			|| !block.getChild("type").parseString(s)
+			)
+			return false;
+
+		if (block.getChild("sparse").isValid())
+		{
+			LOG("No sparse view are handled!\n");
+			ASSERT(false && "No sparse view are handled");
+			return false;
+		}
+
+
+		block.getChild("normalized").parseBool(normalized);
+
+		uint32_t componentCount = ~0u;
+
+		//"SCALAR" 	1
+		//"VEC2" 	2
+		//"VEC3" 	3
+		//"VEC4" 	4
+		//"MAT2" 	4
+		//"MAT3" 	9
+		//"MAT4" 	16
+
+		if (s == "SCALAR") componentCount = 1;
+		else if (s == "VEC2") componentCount = 2;
+		else if (s == "VEC3") componentCount = 3;
+		else if (s == "VEC4") componentCount = 4;
+		else if (s == "MAT2") componentCount = 4;
+		else if (s == "MAT3") componentCount = 9;
+		else if (s == "MAT4") componentCount = 16;
+		else return false;
+
+		//// Maybe 5124 is half?
+		//5120 (BYTE)1
+		//5121(UNSIGNED_BYTE)1
+		//5122 (SHORT)2
+		//5123 (UNSIGNED_SHORT)2
+		//5125 (UNSIGNED_INT)4
+		//5126 (FLOAT)4
+
+		uint32_t componentTypeBitCount = 0u;
+		switch (componentType)
+		{
+		case 5120:
+		case 5121:
+			componentTypeBitCount = 1u;
+			break;
+
+		case 5122:
+		case 5123:
+			componentTypeBitCount = 2u;
+			break;
+
+		case 5125:
+		case 5126:
+			componentTypeBitCount = 4u;
+			break;
+
+		default:
+			return false;
+		}
+		uint32_t bufferIndex = ~0u;
+		uint32_t bufferOffset = ~0u;
+		uint32_t bufferLen = ~0u;
+
+		const JSONBlock& bufferBlock = bufferViewBlock.getChild(viewIndex);
+		if (!bufferBlock.isValid())
+			return false;
+
+		if (!bufferBlock.getChild("buffer").parseUInt(bufferIndex)
+			|| !bufferBlock.getChild("byteLength").parseUInt(bufferLen)
+			|| !bufferBlock.getChild("byteOffset").parseUInt(bufferOffset)
+			)
+			return false;
+
+		if (bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size())
+			return false;
+
+		uint8_t* ptr = &buffers[bufferIndex][0] + bufferOffset;
+		uint8_t* endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
+
+
+		// Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
+		if (useVertices)
+		{
+			bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized) || (componentType == 5121);
+			ASSERT(isValidVertice);
+			if (!isValidVertice)
+				return false;
+
+
+			if (outModel.vertices.size() == 0)
+				outModel.vertices.resize(count);
+			if (outModel.vertices.size() != count)
+				return false;
+
+			for (uint32_t i = 0; i < count; ++i)
+			{
+
+				RenderModel::Vertex& v = outModel.vertices[i];
+				float* f = (float*)(((uint8_t*)&v) + floatStartOffsetIndex);
+				for (uint32_t j = 0; j < componentCount; ++j)
+				{
+					if (ptr + componentTypeBitCount > endPtr)
+						return false;
+
+					float f1 = 0.0f;
+					uint32_t u1 = 0u;
+
+
+					if (componentType == 5126)
+					{
+						memcpy(&f1, ptr, componentTypeBitCount);
+					}
+					else if (componentType == 5123 && normalized)
+					{
+						uint16_t tmp = 0;
+						memcpy(&tmp, ptr, componentTypeBitCount);
+
+						f1 = (float)tmp / 65535.0f;
+					}
+					else
+					{
+						return false;
+					}
+
+
+					*(f + j) = f1;
+					ptr += componentTypeBitCount;
+				}
+			}
+		}
+		// Assumption that all indices are either u16 or u32 values.
+		else
+		{
+			bool isValidIndice = componentType == 5123 || componentType == 5125;
+			ASSERT(isValidIndice);
+			if (!isValidIndice)
+				return false;
+
+
+			if (outModel.indices.size() != 0)
+				return false;
+			outModel.indices.resize(count);
+
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				if (ptr + componentTypeBitCount > endPtr)
+					return false;
+
+				uint32_t value = 0u;
+				if (componentTypeBitCount == 4)
+					memcpy(&value, ptr, componentTypeBitCount);
+				else if (componentTypeBitCount == 2)
+				{
+					uint16_t tmp = 0;
+					memcpy(&tmp, ptr, componentTypeBitCount);
+
+					value = tmp;
+				}
+				else
+					return false;
+
+				outModel.indices[i] = value;
+
+				ptr += componentTypeBitCount;
+			}
+		}
+		return true;
+
+	};
+}
+
+#endif
 bool readGLTF(const char *filename, RenderModel &outModel)
 {
 	std::string fName = std::string(filename);
@@ -160,6 +365,8 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 		Quat rot;
 		Vec3 trans;
 		uint32_t meshIndex = ~0u;
+		uint32_t skinIndex = ~0u;
+		std::vector<uint32_t> childNodeIndices;
 	};
 
 	struct MeshNode
@@ -171,12 +378,29 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 		uint32_t colorIndex = ~0u;
 		uint32_t indicesIndex = ~0u;
 		uint32_t materialIndex = ~0u;
+		uint32_t jointsIndex = ~0u;
+		uint32_t weightIndex = ~0u;
 	};
 
+	struct SkinNode
+	{
+		std::string name;
+		std::vector<uint32_t> joints;
+		uint32_t inverseMatricesIndex = ~0u;
+
+		std::vector<Matrix> inverseMatrices;
+	};
 
 	std::vector<SceneNode> nodes;
 	std::vector<MeshNode> meshes;
+	std::vector<SkinNode> skins;
 	std::vector<std::vector<uint8_t>> buffers;
+
+
+	struct AnimationData
+	{
+
+	};
 
 	if(!bl.isObject() || bl.getChildCount() < 1)
 		return false;
@@ -213,6 +437,11 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 				return false;
 
 			attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex);
+
+			attribs.getChild("JOINTS_0").parseUInt(node.jointsIndex);
+			attribs.getChild("WEIGHTS_0").parseUInt(node.weightIndex);
+
+			
 		}
 	}
 	{
@@ -230,17 +459,64 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 				return false;
 
 			child.getChild("mesh").parseUInt(node.meshIndex);
+			child.getChild("skin").parseUInt(node.skinIndex);
+			
 
 			const JSONBlock &rotBlock = child.getChild("rotation");
-			rotBlock.getChild(0).parseFloat(node.rot.v.x);
-			rotBlock.getChild(1).parseFloat(node.rot.v.y);
-			rotBlock.getChild(2).parseFloat(node.rot.v.z);
-			rotBlock.getChild(3).parseFloat(node.rot.w);
+			rotBlock.getChild(0).parseNumber(node.rot.v.x);
+			rotBlock.getChild(1).parseNumber(node.rot.v.y);
+			rotBlock.getChild(2).parseNumber(node.rot.v.z);
+			rotBlock.getChild(3).parseNumber(node.rot.w);
 
 			const JSONBlock &transBlock = child.getChild("translation");
-			transBlock.getChild(0).parseFloat(node.trans.x);
-			transBlock.getChild(1).parseFloat(node.trans.y);
-			transBlock.getChild(2).parseFloat(node.trans.z);
+			transBlock.getChild(0).parseNumber(node.trans.x);
+			transBlock.getChild(1).parseNumber(node.trans.y);
+			transBlock.getChild(2).parseNumber(node.trans.z);
+
+
+			const JSONBlock& childrenBlock = child.getChild("children");
+			for (int childIndex = 0; childIndex < childrenBlock.getChildCount(); ++childIndex)
+			{
+				uint32_t tmpIndex = ~0u;
+				if (!childrenBlock.getChild(childIndex).parseUInt(tmpIndex))
+					return false;
+				node.childNodeIndices.push_back(tmpIndex);
+			}
+
+		}
+	}
+
+	{
+		const JSONBlock& skinBlock = bl.getChild("skins");
+		if (skinBlock.isValid() && skinBlock.getChildCount() > 0)
+		{
+			skins.resize(skinBlock.getChildCount());
+
+			for (int i = 0; i < skinBlock.getChildCount(); ++i)
+			{
+				SkinNode& node = skins[i];
+				const JSONBlock& child = skinBlock.children[i];
+
+				if (!child.getChild("name").parseString(node.name))
+					return false;
+
+				if (!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
+					return false;
+
+				const JSONBlock& jointsBlock = child.getChild("joints");
+				if (!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
+					return false;
+
+				for (int j = 0; j < jointsBlock.getChildCount(); ++j)
+				{
+					uint32_t tmpInt = ~0u;
+					if (!jointsBlock.getChild(j).parseUInt(tmpInt))
+						return false;
+
+					node.joints.push_back(tmpInt);
+				}
+
+			}
 		}
 	}
 
@@ -267,7 +543,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 				return false;
 		}
 	}
-
+	
 	{
 		const JSONBlock &accessorBlock = bl.getChild("accessors");
 		if(!accessorBlock.isValid() || accessorBlock.getChildCount() < 1)
@@ -384,7 +660,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 			// Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
 			if(useVertices)
 			{
-				bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized);
+				bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized) || (componentType == 5121);
 				ASSERT(isValidVertice);
 				if (!isValidVertice)
 					return false;
@@ -510,7 +786,8 @@ bool VulkanDrawStuff::init(const char *windowStr, int screenWidth, int screenHei
 	RenderModel renderModel;
 
 	//bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
-	bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
+	//bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
+	bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
 
 	printf("gltf read success: %i\n", readSuccess);
 	if (!readSuccess)
@@ -592,7 +869,7 @@ bool VulkanDrawStuff::createPipelines()
 void VulkanDrawStuff::run()
 {
 	Camera camera;
-	camera.position = Vec3(9.0f, 6.0f, 40.0f);
+	camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
 	////////////////////////
 	//
@@ -667,7 +944,7 @@ void VulkanDrawStuff::run()
 		trans2.pos = Vec3(5.0f, 0.0f, 0.0f);
 		rotationAmount += 1.5f * dt;
 
-		b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
+		//b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
 
 		camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
 
