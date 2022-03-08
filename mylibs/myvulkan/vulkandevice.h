@@ -8,9 +8,9 @@
 
 
 #if USE_RENDERDOC_MARKERS
-	const bool useVulkanDebugMarkersRenderDoc = true;
+    const bool useVulkanDebugMarkersRenderDoc = true;
 #else
-	const bool useVulkanDebugMarkersRenderDoc = false;
+    const bool useVulkanDebugMarkersRenderDoc = false;
 #endif
 
 // #define SHOW_INFO_MESSAGES 0
@@ -18,39 +18,29 @@
 //#define VSYNC 0 // 0 = no vsync, 1 = fifo, 2 = mailbox
 //#define DISCRETE_GPU 0
 
-struct QueueFamilyIndices 
+struct QueueFamilyIndices
 {
-	u32 graphicsFamily = ~0u;
-	u32 presentFamily = ~0u;
-	u32 computeFamily = ~0u;
-	u32 transferFamily = ~0u;
+    u32 graphicsFamily = ~0u;
+    u32 presentFamily = ~0u;
+    u32 computeFamily = ~0u;
+    u32 transferFamily = ~0u;
 
-	bool isValid() 
-	{
-		return (computeFamily != ~0u && transferFamily != ~0u && graphicsFamily != ~0u && presentFamily != ~0u);
-	}
+    bool isValid()
+    {
+        return (computeFamily != ~0u && transferFamily != ~0u && graphicsFamily != ~0u && presentFamily != ~0u);
+    }
 };
 
 struct DeviceWithQueues
 {
-	VkPhysicalDevice physicalDevice = nullptr;
-	VkDevice device = nullptr;
-	VkSurfaceKHR surface = nullptr;
-	
-	VkCommandPool mainCommandPool = nullptr;
-	VkCommandBuffer mainCommandBuffer = nullptr;
-
-	VkQueue graphicsQueue = nullptr;
-	VkQueue presentQueue = nullptr;
-	VkQueue computeQueue = nullptr;
-
-	QueueFamilyIndices queueFamilyIndices;
-
-	VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
-	VkFormat colorFormat = VkFormat::VK_FORMAT_UNDEFINED;
-	VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;
-	VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_MAX_ENUM_KHR;
+    VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
+    VkFormat colorFormat = VkFormat::VK_FORMAT_UNDEFINED;
+    VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;
+    VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_MAX_ENUM_KHR;
 };
+
+
+bool initVulkan();
 
 
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);

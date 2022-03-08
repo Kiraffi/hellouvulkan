@@ -38,9 +38,9 @@ const float pii = 3.1415926265359f;
 
 
 #if USE_GPU_DEBUG_VALIDATION
-	const bool enableValidationLayers = true;
+    const bool enableValidationLayers = true;
 #else
-	const bool enableValidationLayers = false;
+    const bool enableValidationLayers = false;
 #endif
 
 
@@ -60,16 +60,16 @@ void printOutBuffer(const char *buffer);
 #define LOG_LEN 1024
 #if 0 // _MSC_VER
 #define HELPER_LOG(LOG_TYPE, LOG_TEXT_STRING, ...) \
-				do { \
-					char debugBuffer[LOG_LEN]; \
-					snprintf(debugBuffer, (size_t)LOG_LEN, LOG_TYPE ## LOG_TEXT_STRING, ##__VA_ARGS__); \
-					printOutBuffer(debugBuffer); \
-				} while(0)
+                do { \
+                    char debugBuffer[LOG_LEN]; \
+                    snprintf(debugBuffer, (size_t)LOG_LEN, LOG_TYPE ## LOG_TEXT_STRING, ##__VA_ARGS__); \
+                    printOutBuffer(debugBuffer); \
+                } while(0)
 #else
 #define HELPER_LOG(LOG_TYPE, LOG_TEXT_STRING, ...) \
-				do { \
-					printf(LOG_TEXT_STRING, ##__VA_ARGS__); \
-				} while(0)
+                do { \
+                    printf(LOG_TEXT_STRING, ##__VA_ARGS__); \
+                } while(0)
 #endif
 
 #else
@@ -77,11 +77,11 @@ void printOutBuffer(const char *buffer);
 #endif
 
 #define PRINTF(LOG_TEXT_STRING, ...) \
-				do { \
-					char debugBuffer[LOG_LEN]; \
-					snprintf(debugBuffer, (size_t)LOG_LEN, LOG_TEXT_STRING, ##__VA_ARGS__); \
-					printOutBuffer(debugBuffer); \
-				} while(0)
+                do { \
+                    char debugBuffer[LOG_LEN]; \
+                    snprintf(debugBuffer, (size_t)LOG_LEN, LOG_TEXT_STRING, ##__VA_ARGS__); \
+                    printOutBuffer(debugBuffer); \
+                } while(0)
 
 #define LOG(LOG_TEXT_STRING, ...) HELPER_LOG("Output: ", LOG_TEXT_STRING, ##__VA_ARGS__)
 #define LOGERROR(LOG_TEXT_STRING, ...) HELPER_LOG("Error: ", LOG_TEXT_STRING, ##__VA_ARGS__)
@@ -90,19 +90,19 @@ void printOutBuffer(const char *buffer);
 #define DEBUG_BREAK_MACRO() __debugbreak()
 #else
 #include <signal.h>
-	//#define DEBUG_BREAK_MACRO __builtin_trap()
+    //#define DEBUG_BREAK_MACRO __builtin_trap()
 #define DEBUG_BREAK_MACRO() raise(SIGTRAP)
 #endif
 
 #define HELPER_ASSERT_STRING(STUFF, STUFFSTRING) \
 do \
 { \
-	if (STUFF) {} \
-	else  \
-	{  \
-		LOG("Assertion: %s\n", STUFFSTRING); \
-		DEBUG_BREAK_MACRO(); \
-	} \
+    if (STUFF) {} \
+    else  \
+    {  \
+        LOG("Assertion: %s\n", STUFFSTRING); \
+        DEBUG_BREAK_MACRO(); \
+    } \
 } while (0)
 
 #define ASSERT(STUFF) HELPER_ASSERT_STRING(STUFF, #STUFF)
@@ -111,9 +111,9 @@ do \
 
 
 #ifdef NDEBUG
-	#define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call ;} while(0)
+    #define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call ;} while(0)
 #else
-	#define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
+    #define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
 #endif
 
 #ifndef ARRAYSIZE

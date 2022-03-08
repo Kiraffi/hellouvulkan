@@ -38,60 +38,60 @@ static constexpr int SCREEN_HEIGHT = 540;
 
 enum TIME_POINTS
 {
-	START_POINT,
-	DRAW_FINISHED,
+    START_POINT,
+    DRAW_FINISHED,
 
-	NUM_TIME_POINTS
+    NUM_TIME_POINTS
 };
 
 
 // Probably not good in long run?
 enum PipelineWithDescriptorsIndexes
 {
-	PIPELINE_GRAPHICS_PIPELINE,
-	NUM_PIPELINE
+    PIPELINE_GRAPHICS_PIPELINE,
+    NUM_PIPELINE
 };
 
 enum ShaderModuleIndexes
 {
-	SHADER_MODULE_RENDER_QUAD_VERT,
-	SHADER_MODULE_RENDER_QUAD_FRAG,
+    SHADER_MODULE_RENDER_QUAD_VERT,
+    SHADER_MODULE_RENDER_QUAD_FRAG,
 
-	NUM_SHADER_MODULES
+    NUM_SHADER_MODULES
 };
 
 enum BufferIndexes
 {
-	QUAD_BUFFER,
+    QUAD_BUFFER,
 
-	INDEX_DATA_BUFFER,
+    INDEX_DATA_BUFFER,
 
-	NUM_BUFFERS
+    NUM_BUFFERS
 };
 
 
 class VulkanDrawStuff : public VulkanApp
 {
 public:
-	VulkanDrawStuff() { }
-	virtual ~VulkanDrawStuff() override;
-	//bool initApp(const std::string &fontFilename);
-	virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
-	virtual void run() override;
+    VulkanDrawStuff() { }
+    virtual ~VulkanDrawStuff() override;
+    //bool initApp(const std::string &fontFilename);
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
+    virtual void run() override;
 
-	bool createPipelines();
+    bool createPipelines();
 
 public:
 
-	VkShaderModule shaderModules [NUM_SHADER_MODULES] = { };
-	Buffer buffers [NUM_BUFFERS];
+    VkShaderModule shaderModules [NUM_SHADER_MODULES] = { };
+    Buffer buffers [NUM_BUFFERS];
 
-	std::vector<DescriptorSet> descriptorSets [NUM_SHADER_MODULES];
-	PipelineWithDescriptors pipelinesWithDescriptors [NUM_PIPELINE];
+    std::vector<DescriptorSet> descriptorSets [NUM_SHADER_MODULES];
+    PipelineWithDescriptors pipelinesWithDescriptors [NUM_PIPELINE];
 
-	std::string fontFilename;
+    std::string fontFilename;
 
-	uint32_t indicesCount = 0;
+    uint32_t indicesCount = 0;
 };
 
 
@@ -103,39 +103,39 @@ public:
 
 VulkanDrawStuff::~VulkanDrawStuff()
 {
-	VkDevice device = deviceWithQueues.device;
+    VkDevice device = deviceWithQueues.device;
 
-	for(auto &pipeline : pipelinesWithDescriptors)
-	{
-		destroyDescriptor(device, pipeline.descriptor);
-		destroyPipeline(device, pipeline.pipeline);
-	}
+    for(auto &pipeline : pipelinesWithDescriptors)
+    {
+        destroyDescriptor(device, pipeline.descriptor);
+        destroyPipeline(device, pipeline.pipeline);
+    }
 
-	for(auto &buffer : buffers)
-		destroyBuffer(device, buffer);
+    for(auto &buffer : buffers)
+        destroyBuffer(device, buffer);
 
-	for(auto &shaderModule : shaderModules)
-		vkDestroyShaderModule(device, shaderModule, nullptr);
+    for(auto &shaderModule : shaderModules)
+        vkDestroyShaderModule(device, shaderModule, nullptr);
 
 }
 
 struct RenderModel
 {
-	struct Vertex
-	{
-		Vec4 pos;
-		Vec4 norm;
-		Vec4 color;
-	};
-	struct AnimationVertexData
-	{
-		Vec4 weights;
-		uint32_t indices[4];
-	};
+    struct Vertex
+    {
+        Vec4 pos;
+        Vec4 norm;
+        Vec4 color;
+    };
+    struct AnimationVertexData
+    {
+        Vec4 weights;
+        uint32_t indices[4];
+    };
 
-	std::vector<Vertex> vertices;
-	std::vector<AnimationVertexData> animationVertices;
-	std::vector<uint32_t> indices;
+    std::vector<Vertex> vertices;
+    std::vector<AnimationVertexData> animationVertices;
+    std::vector<uint32_t> indices;
 };
 
 struct ModelBone
@@ -146,965 +146,965 @@ struct ModelBone
 #if 0
 bool parseBuffer(const JSONBlock& accessorBlock, uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
 {
-	auto lam = [&](uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
-	{
-		if (index == ~0u || index >= accessorBlock.getChildCount())
-			return false;
+    auto lam = [&](uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
+    {
+        if (index == ~0u || index >= accessorBlock.getChildCount())
+            return false;
 
-		const JSONBlock& block = accessorBlock.getChild(index);
-		if (!block.isValid())
-			return false;
+        const JSONBlock& block = accessorBlock.getChild(index);
+        if (!block.isValid())
+            return false;
 
-		uint32_t viewIndex = ~0u;
-		uint32_t componentType = ~0u;
-		uint32_t count = ~0u;
-		bool normalized = false;
-		std::string s;
+        uint32_t viewIndex = ~0u;
+        uint32_t componentType = ~0u;
+        uint32_t count = ~0u;
+        bool normalized = false;
+        std::string s;
 
-		if (!block.getChild("bufferView").parseUInt(viewIndex)
-			|| !block.getChild("componentType").parseUInt(componentType)
-			|| !block.getChild("count").parseUInt(count)
-			|| !block.getChild("type").parseString(s)
-			)
-			return false;
+        if (!block.getChild("bufferView").parseUInt(viewIndex)
+            || !block.getChild("componentType").parseUInt(componentType)
+            || !block.getChild("count").parseUInt(count)
+            || !block.getChild("type").parseString(s)
+            )
+            return false;
 
-		if (block.getChild("sparse").isValid())
-		{
-			LOG("No sparse view are handled!\n");
-			ASSERT(false && "No sparse view are handled");
-			return false;
-		}
-
-
-		block.getChild("normalized").parseBool(normalized);
-
-		uint32_t componentCount = ~0u;
-
-		//"SCALAR" 	1
-		//"VEC2" 	2
-		//"VEC3" 	3
-		//"VEC4" 	4
-		//"MAT2" 	4
-		//"MAT3" 	9
-		//"MAT4" 	16
-
-		if (s == "SCALAR") componentCount = 1;
-		else if (s == "VEC2") componentCount = 2;
-		else if (s == "VEC3") componentCount = 3;
-		else if (s == "VEC4") componentCount = 4;
-		else if (s == "MAT2") componentCount = 4;
-		else if (s == "MAT3") componentCount = 9;
-		else if (s == "MAT4") componentCount = 16;
-		else return false;
-
-		//// Maybe 5124 is half?
-		//5120 (BYTE)1
-		//5121(UNSIGNED_BYTE)1
-		//5122 (SHORT)2
-		//5123 (UNSIGNED_SHORT)2
-		//5125 (UNSIGNED_INT)4
-		//5126 (FLOAT)4
-
-		uint32_t componentTypeBitCount = 0u;
-		switch (componentType)
-		{
-		case 5120:
-		case 5121:
-			componentTypeBitCount = 1u;
-			break;
-
-		case 5122:
-		case 5123:
-			componentTypeBitCount = 2u;
-			break;
-
-		case 5125:
-		case 5126:
-			componentTypeBitCount = 4u;
-			break;
-
-		default:
-			return false;
-		}
-		uint32_t bufferIndex = ~0u;
-		uint32_t bufferOffset = ~0u;
-		uint32_t bufferLen = ~0u;
-
-		const JSONBlock& bufferBlock = bufferViewBlock.getChild(viewIndex);
-		if (!bufferBlock.isValid())
-			return false;
-
-		if (!bufferBlock.getChild("buffer").parseUInt(bufferIndex)
-			|| !bufferBlock.getChild("byteLength").parseUInt(bufferLen)
-			|| !bufferBlock.getChild("byteOffset").parseUInt(bufferOffset)
-			)
-			return false;
-
-		if (bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size())
-			return false;
-
-		uint8_t* ptr = &buffers[bufferIndex][0] + bufferOffset;
-		uint8_t* endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
+        if (block.getChild("sparse").isValid())
+        {
+            LOG("No sparse view are handled!\n");
+            ASSERT(false && "No sparse view are handled");
+            return false;
+        }
 
 
-		// Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
-		if (useVertices)
-		{
-			bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized) || (componentType == 5121);
-			ASSERT(isValidVertice);
-			if (!isValidVertice)
-				return false;
+        block.getChild("normalized").parseBool(normalized);
+
+        uint32_t componentCount = ~0u;
+
+        //"SCALAR"     1
+        //"VEC2"     2
+        //"VEC3"     3
+        //"VEC4"     4
+        //"MAT2"     4
+        //"MAT3"     9
+        //"MAT4"     16
+
+        if (s == "SCALAR") componentCount = 1;
+        else if (s == "VEC2") componentCount = 2;
+        else if (s == "VEC3") componentCount = 3;
+        else if (s == "VEC4") componentCount = 4;
+        else if (s == "MAT2") componentCount = 4;
+        else if (s == "MAT3") componentCount = 9;
+        else if (s == "MAT4") componentCount = 16;
+        else return false;
+
+        //// Maybe 5124 is half?
+        //5120 (BYTE)1
+        //5121(UNSIGNED_BYTE)1
+        //5122 (SHORT)2
+        //5123 (UNSIGNED_SHORT)2
+        //5125 (UNSIGNED_INT)4
+        //5126 (FLOAT)4
+
+        uint32_t componentTypeBitCount = 0u;
+        switch (componentType)
+        {
+        case 5120:
+        case 5121:
+            componentTypeBitCount = 1u;
+            break;
+
+        case 5122:
+        case 5123:
+            componentTypeBitCount = 2u;
+            break;
+
+        case 5125:
+        case 5126:
+            componentTypeBitCount = 4u;
+            break;
+
+        default:
+            return false;
+        }
+        uint32_t bufferIndex = ~0u;
+        uint32_t bufferOffset = ~0u;
+        uint32_t bufferLen = ~0u;
+
+        const JSONBlock& bufferBlock = bufferViewBlock.getChild(viewIndex);
+        if (!bufferBlock.isValid())
+            return false;
+
+        if (!bufferBlock.getChild("buffer").parseUInt(bufferIndex)
+            || !bufferBlock.getChild("byteLength").parseUInt(bufferLen)
+            || !bufferBlock.getChild("byteOffset").parseUInt(bufferOffset)
+            )
+            return false;
+
+        if (bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size())
+            return false;
+
+        uint8_t* ptr = &buffers[bufferIndex][0] + bufferOffset;
+        uint8_t* endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
 
 
-			if (outModel.vertices.size() == 0)
-				outModel.vertices.resize(count);
-			if (outModel.vertices.size() != count)
-				return false;
-
-			for (uint32_t i = 0; i < count; ++i)
-			{
-
-				RenderModel::Vertex& v = outModel.vertices[i];
-				float* f = (float*)(((uint8_t*)&v) + floatStartOffsetIndex);
-				for (uint32_t j = 0; j < componentCount; ++j)
-				{
-					if (ptr + componentTypeBitCount > endPtr)
-						return false;
-
-					float f1 = 0.0f;
-					uint32_t u1 = 0u;
+        // Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
+        if (useVertices)
+        {
+            bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized) || (componentType == 5121);
+            ASSERT(isValidVertice);
+            if (!isValidVertice)
+                return false;
 
 
-					if (componentType == 5126)
-					{
-						memcpy(&f1, ptr, componentTypeBitCount);
-					}
-					else if (componentType == 5123 && normalized)
-					{
-						uint16_t tmp = 0;
-						memcpy(&tmp, ptr, componentTypeBitCount);
+            if (outModel.vertices.size() == 0)
+                outModel.vertices.resize(count);
+            if (outModel.vertices.size() != count)
+                return false;
 
-						f1 = (float)tmp / 65535.0f;
-					}
-					else
-					{
-						return false;
-					}
+            for (uint32_t i = 0; i < count; ++i)
+            {
 
+                RenderModel::Vertex& v = outModel.vertices[i];
+                float* f = (float*)(((uint8_t*)&v) + floatStartOffsetIndex);
+                for (uint32_t j = 0; j < componentCount; ++j)
+                {
+                    if (ptr + componentTypeBitCount > endPtr)
+                        return false;
 
-					*(f + j) = f1;
-					ptr += componentTypeBitCount;
-				}
-			}
-		}
-		// Assumption that all indices are either u16 or u32 values.
-		else
-		{
-			bool isValidIndice = componentType == 5123 || componentType == 5125;
-			ASSERT(isValidIndice);
-			if (!isValidIndice)
-				return false;
+                    float f1 = 0.0f;
+                    uint32_t u1 = 0u;
 
 
-			if (outModel.indices.size() != 0)
-				return false;
-			outModel.indices.resize(count);
+                    if (componentType == 5126)
+                    {
+                        memcpy(&f1, ptr, componentTypeBitCount);
+                    }
+                    else if (componentType == 5123 && normalized)
+                    {
+                        uint16_t tmp = 0;
+                        memcpy(&tmp, ptr, componentTypeBitCount);
 
-			for (uint32_t i = 0; i < count; ++i)
-			{
-				if (ptr + componentTypeBitCount > endPtr)
-					return false;
+                        f1 = (float)tmp / 65535.0f;
+                    }
+                    else
+                    {
+                        return false;
+                    }
 
-				uint32_t value = 0u;
-				if (componentTypeBitCount == 4)
-					memcpy(&value, ptr, componentTypeBitCount);
-				else if (componentTypeBitCount == 2)
-				{
-					uint16_t tmp = 0;
-					memcpy(&tmp, ptr, componentTypeBitCount);
 
-					value = tmp;
-				}
-				else
-					return false;
+                    *(f + j) = f1;
+                    ptr += componentTypeBitCount;
+                }
+            }
+        }
+        // Assumption that all indices are either u16 or u32 values.
+        else
+        {
+            bool isValidIndice = componentType == 5123 || componentType == 5125;
+            ASSERT(isValidIndice);
+            if (!isValidIndice)
+                return false;
 
-				outModel.indices[i] = value;
 
-				ptr += componentTypeBitCount;
-			}
-		}
-		return true;
+            if (outModel.indices.size() != 0)
+                return false;
+            outModel.indices.resize(count);
 
-	};
+            for (uint32_t i = 0; i < count; ++i)
+            {
+                if (ptr + componentTypeBitCount > endPtr)
+                    return false;
+
+                uint32_t value = 0u;
+                if (componentTypeBitCount == 4)
+                    memcpy(&value, ptr, componentTypeBitCount);
+                else if (componentTypeBitCount == 2)
+                {
+                    uint16_t tmp = 0;
+                    memcpy(&tmp, ptr, componentTypeBitCount);
+
+                    value = tmp;
+                }
+                else
+                    return false;
+
+                outModel.indices[i] = value;
+
+                ptr += componentTypeBitCount;
+            }
+        }
+        return true;
+
+    };
 }
 
 #endif
 bool readGLTF(const char *filename, RenderModel &outModel)
 {
-	std::string fName = std::string(filename);
-	std::vector<char> buffer;
+    std::string fName = std::string(filename);
+    std::vector<char> buffer;
 
-	if(!loadBytes(fName, buffer))
-		return false;
+    if(!loadBytes(fName, buffer))
+        return false;
 
-	JSONBlock bl;
-	bool parseSuccess = bl.parseJSON(buffer);
-	printf("parsed: %i\n", parseSuccess);
-	if(!parseSuccess)
-		return false;
+    JSONBlock bl;
+    bool parseSuccess = bl.parseJSON(buffer);
+    printf("parsed: %i\n", parseSuccess);
+    if(!parseSuccess)
+        return false;
 
-	if(parseSuccess)
-	{
-//		bl.print();
-	}
-
-
-	struct SceneNode
-	{
-		std::string name;
-		Quat rot;
-		Vec3 trans;
-		uint32_t meshIndex = ~0u;
-		uint32_t skinIndex = ~0u;
-		std::vector<uint32_t> childNodeIndices;
-	};
-
-	struct MeshNode
-	{
-		std::string name;
-		uint32_t positionIndex = ~0u;
-		uint32_t normalIndex = ~0u;
-		uint32_t uvIndex = ~0u;
-		uint32_t colorIndex = ~0u;
-		uint32_t indicesIndex = ~0u;
-		uint32_t materialIndex = ~0u;
-		uint32_t jointsIndex = ~0u;
-		uint32_t weightIndex = ~0u;
-	};
-
-	struct SkinNode
-	{
-		std::string name;
-		std::vector<uint32_t> joints;
-		uint32_t inverseMatricesIndex = ~0u;
-
-		std::vector<Matrix> inverseMatrices;
-	};
-
-	std::vector<SceneNode> nodes;
-	std::vector<MeshNode> meshes;
-	std::vector<SkinNode> skins;
-	std::vector<std::vector<uint8_t>> buffers;
+    if(parseSuccess)
+    {
+//        bl.print();
+    }
 
 
-	struct AnimationData
-	{
+    struct SceneNode
+    {
+        std::string name;
+        Quat rot;
+        Vec3 trans;
+        uint32_t meshIndex = ~0u;
+        uint32_t skinIndex = ~0u;
+        std::vector<uint32_t> childNodeIndices;
+    };
 
-	};
+    struct MeshNode
+    {
+        std::string name;
+        uint32_t positionIndex = ~0u;
+        uint32_t normalIndex = ~0u;
+        uint32_t uvIndex = ~0u;
+        uint32_t colorIndex = ~0u;
+        uint32_t indicesIndex = ~0u;
+        uint32_t materialIndex = ~0u;
+        uint32_t jointsIndex = ~0u;
+        uint32_t weightIndex = ~0u;
+    };
 
-	if(!bl.isObject() || bl.getChildCount() < 1)
-		return false;
+    struct SkinNode
+    {
+        std::string name;
+        std::vector<uint32_t> joints;
+        uint32_t inverseMatricesIndex = ~0u;
 
-	{
-		const JSONBlock &meshBlock = bl.getChild("meshes");
-		if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
-			return false;
+        std::vector<Matrix> inverseMatrices;
+    };
 
-		meshes.resize(meshBlock.getChildCount());
-
-		for(int i = 0; i < meshBlock.getChildCount(); ++i)
-		{
-			const JSONBlock &child = meshBlock.children [i];
-			MeshNode &node = meshes [i];
-			if(!child.getChild("name").parseString(node.name))
-				return false;
-
-			const JSONBlock &prims = child.getChild("primitives").getChild(0);
-			if(!prims.isValid())
-				return false;
-
-			if(!prims.getChild("indices").parseUInt(node.indicesIndex) ||
-				!prims.getChild("material").parseUInt(node.materialIndex))
-				return false;
-
-			const JSONBlock &attribs = prims.getChild("attributes");
-			if(!attribs.isValid() || attribs.getChildCount() < 1)
-				return false;
-
-			if(!attribs.getChild("POSITION").parseUInt(node.positionIndex) ||
-				!attribs.getChild("NORMAL").parseUInt(node.normalIndex) ||
-				!attribs.getChild("COLOR_0").parseUInt(node.colorIndex))
-				return false;
-
-			attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex);
-
-			attribs.getChild("JOINTS_0").parseUInt(node.jointsIndex);
-			attribs.getChild("WEIGHTS_0").parseUInt(node.weightIndex);
-
-			
-		}
-	}
-	{
-		const JSONBlock &nodeBlock = bl.getChild("nodes");
-		if(!nodeBlock.isValid() || nodeBlock.getChildCount() < 1)
-			return false;
-
-		nodes.resize(nodeBlock.getChildCount());
-
-		for(int i = 0; i < nodeBlock.getChildCount(); ++i)
-		{
-			const JSONBlock &child = nodeBlock.children [i];
-			SceneNode &node = nodes [i];
-			if(!child.getChild("name").parseString(node.name))
-				return false;
-
-			child.getChild("mesh").parseUInt(node.meshIndex);
-			child.getChild("skin").parseUInt(node.skinIndex);
-			
-
-			const JSONBlock &rotBlock = child.getChild("rotation");
-			rotBlock.getChild(0).parseNumber(node.rot.v.x);
-			rotBlock.getChild(1).parseNumber(node.rot.v.y);
-			rotBlock.getChild(2).parseNumber(node.rot.v.z);
-			rotBlock.getChild(3).parseNumber(node.rot.w);
-
-			const JSONBlock &transBlock = child.getChild("translation");
-			transBlock.getChild(0).parseNumber(node.trans.x);
-			transBlock.getChild(1).parseNumber(node.trans.y);
-			transBlock.getChild(2).parseNumber(node.trans.z);
+    std::vector<SceneNode> nodes;
+    std::vector<MeshNode> meshes;
+    std::vector<SkinNode> skins;
+    std::vector<std::vector<uint8_t>> buffers;
 
 
-			const JSONBlock& childrenBlock = child.getChild("children");
-			for (int childIndex = 0; childIndex < childrenBlock.getChildCount(); ++childIndex)
-			{
-				uint32_t tmpIndex = ~0u;
-				if (!childrenBlock.getChild(childIndex).parseUInt(tmpIndex))
-					return false;
-				node.childNodeIndices.push_back(tmpIndex);
-			}
+    struct AnimationData
+    {
 
-		}
-	}
+    };
 
-	{
-		const JSONBlock& skinBlock = bl.getChild("skins");
-		if (skinBlock.isValid() && skinBlock.getChildCount() > 0)
-		{
-			skins.resize(skinBlock.getChildCount());
+    if(!bl.isObject() || bl.getChildCount() < 1)
+        return false;
 
-			for (int i = 0; i < skinBlock.getChildCount(); ++i)
-			{
-				SkinNode& node = skins[i];
-				const JSONBlock& child = skinBlock.children[i];
+    {
+        const JSONBlock &meshBlock = bl.getChild("meshes");
+        if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
+            return false;
 
-				if (!child.getChild("name").parseString(node.name))
-					return false;
+        meshes.resize(meshBlock.getChildCount());
 
-				if (!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
-					return false;
+        for(int i = 0; i < meshBlock.getChildCount(); ++i)
+        {
+            const JSONBlock &child = meshBlock.children [i];
+            MeshNode &node = meshes [i];
+            if(!child.getChild("name").parseString(node.name))
+                return false;
 
-				const JSONBlock& jointsBlock = child.getChild("joints");
-				if (!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
-					return false;
+            const JSONBlock &prims = child.getChild("primitives").getChild(0);
+            if(!prims.isValid())
+                return false;
 
-				for (int j = 0; j < jointsBlock.getChildCount(); ++j)
-				{
-					uint32_t tmpInt = ~0u;
-					if (!jointsBlock.getChild(j).parseUInt(tmpInt))
-						return false;
+            if(!prims.getChild("indices").parseUInt(node.indicesIndex) ||
+                !prims.getChild("material").parseUInt(node.materialIndex))
+                return false;
 
-					node.joints.push_back(tmpInt);
-				}
+            const JSONBlock &attribs = prims.getChild("attributes");
+            if(!attribs.isValid() || attribs.getChildCount() < 1)
+                return false;
 
-			}
-		}
-	}
+            if(!attribs.getChild("POSITION").parseUInt(node.positionIndex) ||
+                !attribs.getChild("NORMAL").parseUInt(node.normalIndex) ||
+                !attribs.getChild("COLOR_0").parseUInt(node.colorIndex))
+                return false;
 
- 	{
-		const JSONBlock &bufferBlock = bl.getChild("buffers");
-		if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
-			return false;
+            attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex);
 
-		buffers.resize(bufferBlock.getChildCount());
+            attribs.getChild("JOINTS_0").parseUInt(node.jointsIndex);
+            attribs.getChild("WEIGHTS_0").parseUInt(node.weightIndex);
 
-		for(int i = 0; i < bufferBlock.getChildCount(); ++i)
-		{
-			const JSONBlock &child = bufferBlock.children [i];
-			std::vector<uint8_t> &buffer = buffers [i];
 
-			uint32_t bufLen = 0u;
-			if(!child.getChild("byteLength").parseUInt(bufLen))
-				return false;
+        }
+    }
+    {
+        const JSONBlock &nodeBlock = bl.getChild("nodes");
+        if(!nodeBlock.isValid() || nodeBlock.getChildCount() < 1)
+            return false;
 
-			if(!child.getChild("uri").parseBuffer(buffer))
-				return false;
+        nodes.resize(nodeBlock.getChildCount());
 
-			if(bufLen != buffer.size())
-				return false;
-		}
-	}
-	
-	{
-		const JSONBlock &accessorBlock = bl.getChild("accessors");
-		if(!accessorBlock.isValid() || accessorBlock.getChildCount() < 1)
-			return false;
+        for(int i = 0; i < nodeBlock.getChildCount(); ++i)
+        {
+            const JSONBlock &child = nodeBlock.children [i];
+            SceneNode &node = nodes [i];
+            if(!child.getChild("name").parseString(node.name))
+                return false;
 
-		const JSONBlock &bufferViewBlock = bl.getChild("bufferViews");
-		if(!bufferViewBlock.isValid() || bufferViewBlock.getChildCount() < 1)
-			return false;
-		
+            child.getChild("mesh").parseUInt(node.meshIndex);
+            child.getChild("skin").parseUInt(node.skinIndex);
 
-		MeshNode &node = meshes [0];
-		
-		auto lam =[&](uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
-		{
-			if(index == ~0u || index >= accessorBlock.getChildCount())
-				return false;
-			
-			const JSONBlock &block = accessorBlock.getChild(index);
-			if(!block.isValid())
-				return false;
 
-			uint32_t viewIndex = ~0u;
+            const JSONBlock &rotBlock = child.getChild("rotation");
+            rotBlock.getChild(0).parseNumber(node.rot.v.x);
+            rotBlock.getChild(1).parseNumber(node.rot.v.y);
+            rotBlock.getChild(2).parseNumber(node.rot.v.z);
+            rotBlock.getChild(3).parseNumber(node.rot.w);
+
+            const JSONBlock &transBlock = child.getChild("translation");
+            transBlock.getChild(0).parseNumber(node.trans.x);
+            transBlock.getChild(1).parseNumber(node.trans.y);
+            transBlock.getChild(2).parseNumber(node.trans.z);
+
+
+            const JSONBlock& childrenBlock = child.getChild("children");
+            for (int childIndex = 0; childIndex < childrenBlock.getChildCount(); ++childIndex)
+            {
+                uint32_t tmpIndex = ~0u;
+                if (!childrenBlock.getChild(childIndex).parseUInt(tmpIndex))
+                    return false;
+                node.childNodeIndices.push_back(tmpIndex);
+            }
+
+        }
+    }
+
+    {
+        const JSONBlock& skinBlock = bl.getChild("skins");
+        if (skinBlock.isValid() && skinBlock.getChildCount() > 0)
+        {
+            skins.resize(skinBlock.getChildCount());
+
+            for (int i = 0; i < skinBlock.getChildCount(); ++i)
+            {
+                SkinNode& node = skins[i];
+                const JSONBlock& child = skinBlock.children[i];
+
+                if (!child.getChild("name").parseString(node.name))
+                    return false;
+
+                if (!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
+                    return false;
+
+                const JSONBlock& jointsBlock = child.getChild("joints");
+                if (!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
+                    return false;
+
+                for (int j = 0; j < jointsBlock.getChildCount(); ++j)
+                {
+                    uint32_t tmpInt = ~0u;
+                    if (!jointsBlock.getChild(j).parseUInt(tmpInt))
+                        return false;
+
+                    node.joints.push_back(tmpInt);
+                }
+
+            }
+        }
+    }
+
+     {
+        const JSONBlock &bufferBlock = bl.getChild("buffers");
+        if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
+            return false;
+
+        buffers.resize(bufferBlock.getChildCount());
+
+        for(int i = 0; i < bufferBlock.getChildCount(); ++i)
+        {
+            const JSONBlock &child = bufferBlock.children [i];
+            std::vector<uint8_t> &buffer = buffers [i];
+
+            uint32_t bufLen = 0u;
+            if(!child.getChild("byteLength").parseUInt(bufLen))
+                return false;
+
+            if(!child.getChild("uri").parseBuffer(buffer))
+                return false;
+
+            if(bufLen != buffer.size())
+                return false;
+        }
+    }
+
+    {
+        const JSONBlock &accessorBlock = bl.getChild("accessors");
+        if(!accessorBlock.isValid() || accessorBlock.getChildCount() < 1)
+            return false;
+
+        const JSONBlock &bufferViewBlock = bl.getChild("bufferViews");
+        if(!bufferViewBlock.isValid() || bufferViewBlock.getChildCount() < 1)
+            return false;
+
+
+        MeshNode &node = meshes [0];
+
+        auto lam =[&](uint32_t index, int32_t floatStartOffsetIndex, bool useVertices)
+        {
+            if(index == ~0u || index >= accessorBlock.getChildCount())
+                return false;
+
+            const JSONBlock &block = accessorBlock.getChild(index);
+            if(!block.isValid())
+                return false;
+
+            uint32_t viewIndex = ~0u;
             uint32_t componentType = ~0u;
-			uint32_t count = ~0u;
-			bool normalized = false;
-			std::string s;
+            uint32_t count = ~0u;
+            bool normalized = false;
+            std::string s;
 
-			if(!block.getChild("bufferView").parseUInt(viewIndex)
-			 || !block.getChild("componentType").parseUInt(componentType)
-			 || !block.getChild("count").parseUInt(count)
-			 || !block.getChild("type").parseString(s)
-			)
-				return false;
+            if(!block.getChild("bufferView").parseUInt(viewIndex)
+             || !block.getChild("componentType").parseUInt(componentType)
+             || !block.getChild("count").parseUInt(count)
+             || !block.getChild("type").parseString(s)
+            )
+                return false;
 
-			if (block.getChild("sparse").isValid())
-			{
-				LOG("No sparse view are handled!\n");
-				ASSERT(false && "No sparse view are handled");
-				return false;
-			}
-
-
-			block.getChild("normalized").parseBool(normalized);
-
-			uint32_t componentCount = ~0u;
-
-			//"SCALAR" 	1
-			//"VEC2" 	2
-			//"VEC3" 	3
-			//"VEC4" 	4
-			//"MAT2" 	4
-			//"MAT3" 	9
-			//"MAT4" 	16
-
-			if (s == "SCALAR") componentCount = 1;
-			else if (s == "VEC2") componentCount = 2;
-			else if (s == "VEC3") componentCount = 3;
-			else if (s == "VEC4") componentCount = 4;
-			else if (s == "MAT2") componentCount = 4;
-			else if (s == "MAT3") componentCount = 9;
-			else if (s == "MAT4") componentCount = 16;
-			else return false;
-
-			//// Maybe 5124 is half?
-			//5120 (BYTE)1
-			//5121(UNSIGNED_BYTE)1
-			//5122 (SHORT)2
-			//5123 (UNSIGNED_SHORT)2
-			//5125 (UNSIGNED_INT)4
-			//5126 (FLOAT)4
-
-			uint32_t componentTypeBitCount = 0u;
-			switch(componentType)
-			{
-			case 5120:
-			case 5121:
-				componentTypeBitCount = 1u;
-				break;
-
-			case 5122:
-			case 5123:
-				componentTypeBitCount = 2u;
-				break;
-
-			case 5125:
-			case 5126:
-				componentTypeBitCount = 4u;
-				break;
-
-			default:
-				return false;
-			}
-			uint32_t bufferIndex = ~0u;
-			uint32_t bufferOffset = ~0u;
-			uint32_t bufferLen = ~0u;
-	
-			const JSONBlock &bufferBlock = bufferViewBlock.getChild(viewIndex);
-			if(!bufferBlock.isValid())
-				return false;
-
-			if(!bufferBlock.getChild("buffer").parseUInt(bufferIndex)
-				|| !bufferBlock.getChild("byteLength").parseUInt(bufferLen)
-				|| !bufferBlock.getChild("byteOffset").parseUInt(bufferOffset)
-				)
-				return false;
-
-			if(bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size() )
-				return false;
-
-			uint8_t *ptr = &buffers[bufferIndex][0] + bufferOffset;
-			uint8_t *endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
+            if (block.getChild("sparse").isValid())
+            {
+                LOG("No sparse view are handled!\n");
+                ASSERT(false && "No sparse view are handled");
+                return false;
+            }
 
 
-			// Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
-			if(useVertices)
-			{
-				bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized) || (componentType == 5121);
-				ASSERT(isValidVertice);
-				if (!isValidVertice)
-					return false;
+            block.getChild("normalized").parseBool(normalized);
+
+            uint32_t componentCount = ~0u;
+
+            //"SCALAR"     1
+            //"VEC2"     2
+            //"VEC3"     3
+            //"VEC4"     4
+            //"MAT2"     4
+            //"MAT3"     9
+            //"MAT4"     16
+
+            if (s == "SCALAR") componentCount = 1;
+            else if (s == "VEC2") componentCount = 2;
+            else if (s == "VEC3") componentCount = 3;
+            else if (s == "VEC4") componentCount = 4;
+            else if (s == "MAT2") componentCount = 4;
+            else if (s == "MAT3") componentCount = 9;
+            else if (s == "MAT4") componentCount = 16;
+            else return false;
+
+            //// Maybe 5124 is half?
+            //5120 (BYTE)1
+            //5121(UNSIGNED_BYTE)1
+            //5122 (SHORT)2
+            //5123 (UNSIGNED_SHORT)2
+            //5125 (UNSIGNED_INT)4
+            //5126 (FLOAT)4
+
+            uint32_t componentTypeBitCount = 0u;
+            switch(componentType)
+            {
+            case 5120:
+            case 5121:
+                componentTypeBitCount = 1u;
+                break;
+
+            case 5122:
+            case 5123:
+                componentTypeBitCount = 2u;
+                break;
+
+            case 5125:
+            case 5126:
+                componentTypeBitCount = 4u;
+                break;
+
+            default:
+                return false;
+            }
+            uint32_t bufferIndex = ~0u;
+            uint32_t bufferOffset = ~0u;
+            uint32_t bufferLen = ~0u;
+
+            const JSONBlock &bufferBlock = bufferViewBlock.getChild(viewIndex);
+            if(!bufferBlock.isValid())
+                return false;
+
+            if(!bufferBlock.getChild("buffer").parseUInt(bufferIndex)
+                || !bufferBlock.getChild("byteLength").parseUInt(bufferLen)
+                || !bufferBlock.getChild("byteOffset").parseUInt(bufferOffset)
+                )
+                return false;
+
+            if(bufferIndex >= buffers.size() || bufferOffset + bufferLen > buffers[bufferIndex].size() )
+                return false;
+
+            uint8_t *ptr = &buffers[bufferIndex][0] + bufferOffset;
+            uint8_t *endPtr = &buffers[bufferIndex][0] + bufferOffset + bufferLen;
 
 
-				if(outModel.vertices.size() == 0)
-					outModel.vertices.resize(count);
-				if(outModel.vertices.size() != count)
-					return false;
-				
-				for(uint32_t i = 0; i < count; ++i)
-				{
-
-					RenderModel::Vertex &v = outModel.vertices[i];
-					float *f = (float *)(((uint8_t *)&v) + floatStartOffsetIndex);
-					for(uint32_t j = 0; j < componentCount; ++j)
-					{
-						if(ptr + componentTypeBitCount > endPtr)
-							return false;
-						
-						float f1 = 0.0f;
-						uint32_t u1 = 0u;
+            // Doesnt exactly handle cases properly... Just reading stuff into float buffer, in case its either normalized u16 value or 32 bit float.
+            if(useVertices)
+            {
+                bool isValidVertice = componentType == 5126 || (componentType == 5123 && normalized) || (componentType == 5121);
+                ASSERT(isValidVertice);
+                if (!isValidVertice)
+                    return false;
 
 
-						if (componentType == 5126)
-						{
-							memcpy(&f1, ptr, componentTypeBitCount);
-						}
-						else if(componentType == 5123 && normalized)
-						{
-							uint16_t tmp = 0;
-							memcpy(&tmp, ptr, componentTypeBitCount);
+                if(outModel.vertices.size() == 0)
+                    outModel.vertices.resize(count);
+                if(outModel.vertices.size() != count)
+                    return false;
 
-							f1 = (float)tmp / 65535.0f;
-						}
-						else
-						{
-							return false;
-						}
-							
+                for(uint32_t i = 0; i < count; ++i)
+                {
 
-						*(f + j) = f1;
-						ptr += componentTypeBitCount;
-					}
-				}
-			}
-			// Assumption that all indices are either u16 or u32 values.
-			else
-			{
-				bool isValidIndice = componentType == 5123 || componentType == 5125;
-				ASSERT(isValidIndice);
-				if (!isValidIndice)
-					return false;
+                    RenderModel::Vertex &v = outModel.vertices[i];
+                    float *f = (float *)(((uint8_t *)&v) + floatStartOffsetIndex);
+                    for(uint32_t j = 0; j < componentCount; ++j)
+                    {
+                        if(ptr + componentTypeBitCount > endPtr)
+                            return false;
+
+                        float f1 = 0.0f;
+                        uint32_t u1 = 0u;
 
 
-				if(outModel.indices.size() != 0)
-					return false;
-				outModel.indices.resize(count);
+                        if (componentType == 5126)
+                        {
+                            memcpy(&f1, ptr, componentTypeBitCount);
+                        }
+                        else if(componentType == 5123 && normalized)
+                        {
+                            uint16_t tmp = 0;
+                            memcpy(&tmp, ptr, componentTypeBitCount);
 
-				for(uint32_t i = 0; i < count; ++i)
-				{
-					if(ptr + componentTypeBitCount > endPtr)
-						return false;
+                            f1 = (float)tmp / 65535.0f;
+                        }
+                        else
+                        {
+                            return false;
+                        }
 
-					uint32_t value = 0u;
-					if(componentTypeBitCount == 4)
-						memcpy(&value, ptr, componentTypeBitCount);
-					else if(componentTypeBitCount == 2)
-					{
-						uint16_t tmp = 0;
-						memcpy(&tmp, ptr, componentTypeBitCount);
 
-						value = tmp;
-					}
-					else 
-						return false;
-					
-					outModel.indices[i] = value;
+                        *(f + j) = f1;
+                        ptr += componentTypeBitCount;
+                    }
+                }
+            }
+            // Assumption that all indices are either u16 or u32 values.
+            else
+            {
+                bool isValidIndice = componentType == 5123 || componentType == 5125;
+                ASSERT(isValidIndice);
+                if (!isValidIndice)
+                    return false;
 
-					ptr += componentTypeBitCount;
-				}
-			}
-			return true;
 
-		};
+                if(outModel.indices.size() != 0)
+                    return false;
+                outModel.indices.resize(count);
 
-		if(!lam(node.positionIndex, offsetof(RenderModel::Vertex, pos), true))
-			return false;
+                for(uint32_t i = 0; i < count; ++i)
+                {
+                    if(ptr + componentTypeBitCount > endPtr)
+                        return false;
 
-		if(!lam(node.normalIndex, offsetof(RenderModel::Vertex, norm), true))
-			return false;
+                    uint32_t value = 0u;
+                    if(componentTypeBitCount == 4)
+                        memcpy(&value, ptr, componentTypeBitCount);
+                    else if(componentTypeBitCount == 2)
+                    {
+                        uint16_t tmp = 0;
+                        memcpy(&tmp, ptr, componentTypeBitCount);
 
-		if(!lam(node.colorIndex, offsetof(RenderModel::Vertex, color), true))
-			return false;
+                        value = tmp;
+                    }
+                    else
+                        return false;
 
-		if(!lam(node.indicesIndex, 0, false))
-			return false;
-	}
+                    outModel.indices[i] = value;
+
+                    ptr += componentTypeBitCount;
+                }
+            }
+            return true;
+
+        };
+
+        if(!lam(node.positionIndex, offsetof(RenderModel::Vertex, pos), true))
+            return false;
+
+        if(!lam(node.normalIndex, offsetof(RenderModel::Vertex, norm), true))
+            return false;
+
+        if(!lam(node.colorIndex, offsetof(RenderModel::Vertex, color), true))
+            return false;
+
+        if(!lam(node.indicesIndex, 0, false))
+            return false;
+    }
 
 /*
-	for(uint32_t i = 0; i < vertices.size(); ++i)
-	{
-		printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
-		printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].norm.x, vertices[i].norm.y, vertices[i].norm.z);
-		printf("i: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
-	}
+    for(uint32_t i = 0; i < vertices.size(); ++i)
+    {
+        printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
+        printf("i: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].norm.x, vertices[i].norm.y, vertices[i].norm.z);
+        printf("i: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
+    }
 
-	for(uint32_t i = 0; i < indices.size(); ++i)
-	{
-		printf("i: %i, index: %u\n", i, indices[i]);
-	}
+    for(uint32_t i = 0; i < indices.size(); ++i)
+    {
+        printf("i: %i, index: %u\n", i, indices[i]);
+    }
 */
-	return true;
+    return true;
 }
 
 bool VulkanDrawStuff::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-	if(!VulkanApp::init(windowStr, screenWidth, screenHeight))
-		return false;
+    if(!VulkanApp::init(windowStr, screenWidth, screenHeight))
+        return false;
 
-	glfwSetWindowUserPointer(window, this);
+    glfwSetWindowUserPointer(window, this);
 
-	RenderModel renderModel;
+    RenderModel renderModel;
 
-	//bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
-	//bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
-	bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
+    //bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
+    //bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
+    bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
 
-	printf("gltf read success: %i\n", readSuccess);
-	if (!readSuccess)
-		return false;
+    printf("gltf read success: %i\n", readSuccess);
+    if (!readSuccess)
+        return false;
 
-	VkDevice device = deviceWithQueues.device;
+    VkDevice device = deviceWithQueues.device;
 
-	shaderModules [SHADER_MODULE_RENDER_QUAD_VERT] = loadShader(device, "assets/shader/vulkan_new/basic3d.vert.spv");
-	ASSERT(shaderModules [SHADER_MODULE_RENDER_QUAD_VERT]);
+    shaderModules [SHADER_MODULE_RENDER_QUAD_VERT] = loadShader(device, "assets/shader/vulkan_new/basic3d.vert.spv");
+    ASSERT(shaderModules [SHADER_MODULE_RENDER_QUAD_VERT]);
 
-	shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG] = loadShader(device, "assets/shader/vulkan_new/basic3d.frag.spv");
-	ASSERT(shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG]);
-
-
-
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-	buffers [QUAD_BUFFER] = createBuffer(device, memoryProperties, 8u * 1024u * 1024u,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		//VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
-
-	buffers [INDEX_DATA_BUFFER] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
-		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
-
-	// Random tag data
-	//struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
-	//setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
+    shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG] = loadShader(device, "assets/shader/vulkan_new/basic3d.frag.spv");
+    ASSERT(shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG]);
 
 
-	{
-		uint32_t offset = 0;
-		offset = uploadToScratchbuffer(scratchBuffer, ( void * )renderModel.indices.data(), size_t(sizeof(renderModel.indices[0]) * renderModel.indices.size()), offset);
-		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers [INDEX_DATA_BUFFER], scratchBuffer, offset);
 
-		offset = 0;
-		offset = uploadToScratchbuffer(scratchBuffer, (void*)renderModel.vertices.data(), size_t(sizeof(renderModel.vertices[0]) * renderModel.vertices.size()), offset);
-		uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
-			buffers[QUAD_BUFFER], scratchBuffer, offset);
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+    buffers [QUAD_BUFFER] = createBuffer(device, memoryProperties, 8u * 1024u * 1024u,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
+
+    buffers [INDEX_DATA_BUFFER] = createBuffer(device, memoryProperties, 32 * 1024 * 1024,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
+
+    // Random tag data
+    //struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
+    //setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
 
 
-		indicesCount = renderModel.indices.size();
-	}
-	return true;
+    {
+        uint32_t offset = 0;
+        offset = uploadToScratchbuffer(scratchBuffer, ( void * )renderModel.indices.data(), size_t(sizeof(renderModel.indices[0]) * renderModel.indices.size()), offset);
+        uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
+            buffers [INDEX_DATA_BUFFER], scratchBuffer, offset);
+
+        offset = 0;
+        offset = uploadToScratchbuffer(scratchBuffer, (void*)renderModel.vertices.data(), size_t(sizeof(renderModel.vertices[0]) * renderModel.vertices.size()), offset);
+        uploadScratchBufferToGpuBuffer(device, commandPool, commandBuffer, deviceWithQueues.graphicsQueue,
+            buffers[QUAD_BUFFER], scratchBuffer, offset);
+
+
+        indicesCount = renderModel.indices.size();
+    }
+    return true;
 }
 
 
 bool VulkanDrawStuff::createPipelines()
 {
-	VkDevice device = deviceWithQueues.device;
-	VkPhysicalDeviceMemoryProperties memoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-	//recreateSwapchainData();
+    VkDevice device = deviceWithQueues.device;
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+    //recreateSwapchainData();
 
-	PipelineWithDescriptors &pipeline = pipelinesWithDescriptors [PIPELINE_GRAPHICS_PIPELINE];
+    PipelineWithDescriptors &pipeline = pipelinesWithDescriptors [PIPELINE_GRAPHICS_PIPELINE];
 
-	pipeline.descriptorSet = std::vector<DescriptorSet>(
-		{
-			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &renderFrameBuffer, 0u, 64u * 1024u },
-			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &renderFrameBuffer, 64u * 1024u, 64u * 1024u },
-			DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u, true, &buffers [QUAD_BUFFER] },
-		});
-	VertexInput vertexInput;
-	pipeline.pipeline = createGraphicsPipeline(
-		device, renderPass, pipelineCache,
-		shaderModules [SHADER_MODULE_RENDER_QUAD_VERT],
-		shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG],
-		vertexInput, pipeline.descriptorSet, true,
-		0u, VK_SHADER_STAGE_ALL_GRAPHICS);
-	pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
+    pipeline.descriptorSet = std::vector<DescriptorSet>(
+        {
+            DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &renderFrameBuffer, 0u, 64u * 1024u },
+            DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u, true, &renderFrameBuffer, 64u * 1024u, 64u * 1024u },
+            DescriptorSet { VK_SHADER_STAGE_ALL_GRAPHICS, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u, true, &buffers [QUAD_BUFFER] },
+        });
+    VertexInput vertexInput;
+    pipeline.pipeline = createGraphicsPipeline(
+        device, renderPass, pipelineCache,
+        shaderModules [SHADER_MODULE_RENDER_QUAD_VERT],
+        shaderModules [SHADER_MODULE_RENDER_QUAD_FRAG],
+        vertexInput, pipeline.descriptorSet, true,
+        0u, VK_SHADER_STAGE_ALL_GRAPHICS);
+    pipeline.descriptor = createDescriptor(device, pipeline.descriptorSet, pipeline.pipeline.descriptorSetLayout);
 
-	return true;
+    return true;
 }
 
 
 void VulkanDrawStuff::run()
 {
-	Camera camera;
-	camera.position = Vec3(0.0f, 4.0f, 5.0f);
+    Camera camera;
+    camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
-	////////////////////////
-	//
-	// MAIN LOOP START
-	// UPDATING ENGINE STATE
-	//
-	////////////////////////
+    ////////////////////////
+    //
+    // MAIN LOOP START
+    // UPDATING ENGINE STATE
+    //
+    ////////////////////////
 
-	double previousFrameTime = glfwGetTime();
-	u32 framesSinceLastDelta = 0u;
-	double deltaTime = 0.0;
+    double previousFrameTime = glfwGetTime();
+    u32 framesSinceLastDelta = 0u;
+    double deltaTime = 0.0;
 
-	u32 gpuframeCount = 0u;
-	double gpuTime = 0.0;
-	double cpuTimeStamp = glfwGetTime();
-
-
-	VkDevice device = deviceWithQueues.device;
-
-	while(!glfwWindowShouldClose(window))
-	{
-		if(++framesSinceLastDelta > 10)
-		{
-			double newTime = glfwGetTime();
-			deltaTime = ( newTime - previousFrameTime ) / framesSinceLastDelta;
-			previousFrameTime = newTime;
-			framesSinceLastDelta = 0u;
-		}
-
-		glfwPollEvents();
-		MouseState mouseState = getMouseState();
-
-		checkCameraKeypresses(deltaTime, camera);
-		////////////////////////
-		//
-		// RENDER PASSES START
-		// WRITING VALUES INTO
-		// "CONSTANT BUFFEERS"
-		//
-		////////////////////////
+    u32 gpuframeCount = 0u;
+    double gpuTime = 0.0;
+    double cpuTimeStamp = glfwGetTime();
 
 
-		struct FrameBuffer
-		{
-			Matrix camMat;
-			Matrix viewProj;
-			Matrix mvp;
-			Matrix padding;
-		};
-		FrameBuffer b;
+    VkDevice device = deviceWithQueues.device;
+
+    while(!glfwWindowShouldClose(window))
+    {
+        if(++framesSinceLastDelta > 10)
+        {
+            double newTime = glfwGetTime();
+            deltaTime = ( newTime - previousFrameTime ) / framesSinceLastDelta;
+            previousFrameTime = newTime;
+            framesSinceLastDelta = 0u;
+        }
+
+        glfwPollEvents();
+        MouseState mouseState = getMouseState();
+
+        checkCameraKeypresses(deltaTime, camera);
+        ////////////////////////
+        //
+        // RENDER PASSES START
+        // WRITING VALUES INTO
+        // "CONSTANT BUFFEERS"
+        //
+        ////////////////////////
 
 
-		b.camMat = camera.getCameraMatrix();
-
-		camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
-		camera.fovY = 90.0f;
-		camera.zFar = 200.0f;
-		camera.zNear = 0.001f;
-
-		b.viewProj = camera.perspectiveProjectionRH();
-		b.mvp = b.camMat * b.viewProj;
-
-		Transform trans;
-		trans.pos = Vec3(3.0f, 3.0f, 13.0f);
-		static float rotationAmount = Pi * 0.25f;
-
-		trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
-		Vec3 tmp = rotateVector(Vector3(0.0f, 0.0f, 1.0f), trans.rot);
-		trans.scale = Vec3(1.0f, 1.0f, 1.0f);
-
-		Transform trans2;
-		trans2.pos = Vec3(5.0f, 0.0f, 0.0f);
-		rotationAmount += 1.5f * dt;
-
-		//b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
-
-		camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
-
-		if(!startRender())
-			continue;
-
-		beginSingleTimeCommands(device, commandPool, commandBuffer);
-		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
-		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
-
-		{
-			
-			
-			uint32_t offset = updateRenderFrameBuffer();
-			// use scratch buffer to unifrom buffer transfer
-			uint32_t bufSize = sizeof(FrameBuffer);
-			memcpy(( void * )( ( char * )scratchBuffer.data + offset ), &b, bufSize);
-
-			{
-				VkBufferCopy region = { offset, 64u * 1024u, VkDeviceSize(bufSize) };
-				vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, renderFrameBuffer.buffer, 1, &region);
-			}
-
-			VkBufferMemoryBarrier bar[ ]
-			{
-				bufferBarrier(renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, bufSize),
-			};
-
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
-		}
+        struct FrameBuffer
+        {
+            Matrix camMat;
+            Matrix viewProj;
+            Matrix mvp;
+            Matrix padding;
+        };
+        FrameBuffer b;
 
 
+        b.camMat = camera.getCameraMatrix();
 
-		////////////////////////
-		//
-		// MAIN RENDER
-		//
-		////////////////////////
-		{
-			VkImageMemoryBarrier imageBarriers[ ] =
-			{
-				imageBarrier(mainColorRenderTarget.image,
-				0, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
+        camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
+        camera.fovY = 90.0f;
+        camera.zFar = 200.0f;
+        camera.zNear = 0.001f;
 
-				imageBarrier(mainDepthRenderTarget.image,
-				0, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_ASPECT_DEPTH_BIT),
-			};
+        b.viewProj = camera.perspectiveProjectionRH();
+        b.mvp = b.camMat * b.viewProj;
 
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
-		}
+        Transform trans;
+        trans.pos = Vec3(3.0f, 3.0f, 13.0f);
+        static float rotationAmount = Pi * 0.25f;
 
-		// Drawingg
-		{
-			VkClearValue clearValues [2] = { };
-			clearValues [0].color = VkClearColorValue { { 0.0f, 0.5f, 1.0f, 1.0f } };
-			clearValues [1].depthStencil = { 1.0f, 0 };
+        trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
+        Vec3 tmp = rotateVector(Vector3(0.0f, 0.0f, 1.0f), trans.rot);
+        trans.scale = Vec3(1.0f, 1.0f, 1.0f);
 
-			VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-			passBeginInfo.renderPass = renderPass;
-			passBeginInfo.framebuffer = targetFB;
-			passBeginInfo.renderArea.extent.width = swapchain.width;
-			passBeginInfo.renderArea.extent.height = swapchain.height;
-			passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
-			passBeginInfo.pClearValues = clearValues;
+        Transform trans2;
+        trans2.pos = Vec3(5.0f, 0.0f, 0.0f);
+        rotationAmount += 1.5f * dt;
 
-			vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+        //b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
 
-			VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };
-			VkRect2D scissors = { { 0, 0 }, { u32(swapchain.width), u32(swapchain.height) } };
+        camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
 
-			insertDebugRegion(commandBuffer, "Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-			vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
-			vkCmdSetScissor(commandBuffer, 0, 1, &scissors);
+        if(!startRender())
+            continue;
+
+        beginSingleTimeCommands(device, commandPool, commandBuffer);
+        vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
+        vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
+
+        {
 
 
-			// draw calls here
-			// Render
-			{
-				bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors [PIPELINE_GRAPHICS_PIPELINE]);
-				vkCmdBindIndexBuffer(commandBuffer, buffers [INDEX_DATA_BUFFER].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, indicesCount, 1, 0, 0, 0);
+            uint32_t offset = updateRenderFrameBuffer();
+            // use scratch buffer to unifrom buffer transfer
+            uint32_t bufSize = sizeof(FrameBuffer);
+            memcpy(( void * )( ( char * )scratchBuffer.data + offset ), &b, bufSize);
 
-			}
+            {
+                VkBufferCopy region = { offset, 64u * 1024u, VkDeviceSize(bufSize) };
+                vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, renderFrameBuffer.buffer, 1, &region);
+            }
 
-			fontSystem.render(commandBuffer);
+            VkBufferMemoryBarrier bar[ ]
+            {
+                bufferBarrier(renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, bufSize),
+            };
 
-			vkCmdEndRenderPass(commandBuffer);
-		}
-
-		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
-
-		mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		present(mainColorRenderTarget);
-
-		////////////////////////
-		//
-		// END PASS, COLLECT TIMINGS
-		//
-		////////////////////////
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+        }
 
 
-		uint64_t queryResults [TIME_POINTS::NUM_TIME_POINTS];
-		vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults [0]), VK_QUERY_RESULT_64_BIT);
+
+        ////////////////////////
+        //
+        // MAIN RENDER
+        //
+        ////////////////////////
+        {
+            VkImageMemoryBarrier imageBarriers[ ] =
+            {
+                imageBarrier(mainColorRenderTarget.image,
+                0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
+
+                imageBarrier(mainDepthRenderTarget.image,
+                0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_ASPECT_DEPTH_BIT),
+            };
+
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+        }
+
+        // Drawingg
+        {
+            VkClearValue clearValues [2] = { };
+            clearValues [0].color = VkClearColorValue { { 0.0f, 0.5f, 1.0f, 1.0f } };
+            clearValues [1].depthStencil = { 1.0f, 0 };
+
+            VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+            passBeginInfo.renderPass = renderPass;
+            passBeginInfo.framebuffer = targetFB;
+            passBeginInfo.renderArea.extent.width = swapchain.width;
+            passBeginInfo.renderArea.extent.height = swapchain.height;
+            passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
+            passBeginInfo.pClearValues = clearValues;
+
+            vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };
+            VkRect2D scissors = { { 0, 0 }, { u32(swapchain.width), u32(swapchain.height) } };
+
+            insertDebugRegion(commandBuffer, "Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+            vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+            vkCmdSetScissor(commandBuffer, 0, 1, &scissors);
 
 
-		struct TimeValues
-		{
-			double timeDuration [TIME_POINTS::NUM_TIME_POINTS];
-		};
+            // draw calls here
+            // Render
+            {
+                bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors [PIPELINE_GRAPHICS_PIPELINE]);
+                vkCmdBindIndexBuffer(commandBuffer, buffers [INDEX_DATA_BUFFER].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(commandBuffer, indicesCount, 1, 0, 0, 0);
 
-		VkPhysicalDeviceProperties props = { };
-		vkGetPhysicalDeviceProperties(physicalDevice, &props);
+            }
 
-		static TimeValues timeValues = { };
-		for(u32 i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
-			timeValues.timeDuration [i] += ( double(queryResults [i]) - double(queryResults [i - 1]) ) * props.limits.timestampPeriod * 1.0e-9f;
+            fontSystem.render(commandBuffer);
 
-		gpuTime += ( double(queryResults [TIME_POINTS::NUM_TIME_POINTS - 1]) - double(queryResults [0]) ) * props.limits.timestampPeriod * 1.0e-9f;
+            vkCmdEndRenderPass(commandBuffer);
+        }
 
-		++gpuframeCount;
-		if(glfwGetTime() - cpuTimeStamp >= 1.0)
-		{
-			double d = 1000.0 / gpuframeCount;
-			double e = gpuframeCount;
-			double currTime = glfwGetTime();
-			double cpuTime = currTime - cpuTimeStamp;
-			cpuTimeStamp += 1.0f;
+        vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::DRAW_FINISHED);
 
-			printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
-				( float )( gpuTime * d ), ( float )( cpuTime * d ),
-				( float )( timeValues.timeDuration [DRAW_FINISHED] * d ),
-				e / gpuTime, e / cpuTime);
-			gpuframeCount = 0u;
+        mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        present(mainColorRenderTarget);
 
-			for(u32 i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
-				timeValues.timeDuration [i] = 0.0;
-
-			gpuTime = 0.0;
-		}
+        ////////////////////////
+        //
+        // END PASS, COLLECT TIMINGS
+        //
+        ////////////////////////
 
 
-		char str [100];
-		float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
-		sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
-			float(dt * 1000.0), fps,
-			mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown);
-		setTitle(str);
+        uint64_t queryResults [TIME_POINTS::NUM_TIME_POINTS];
+        vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults [0]), VK_QUERY_RESULT_64_BIT);
 
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        struct TimeValues
+        {
+            double timeDuration [TIME_POINTS::NUM_TIME_POINTS];
+        };
 
-	}
+        VkPhysicalDeviceProperties props = { };
+        vkGetPhysicalDeviceProperties(physicalDevice, &props);
 
-	VK_CHECK(vkDeviceWaitIdle(device));
+        static TimeValues timeValues = { };
+        for(u32 i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
+            timeValues.timeDuration [i] += ( double(queryResults [i]) - double(queryResults [i - 1]) ) * props.limits.timestampPeriod * 1.0e-9f;
+
+        gpuTime += ( double(queryResults [TIME_POINTS::NUM_TIME_POINTS - 1]) - double(queryResults [0]) ) * props.limits.timestampPeriod * 1.0e-9f;
+
+        ++gpuframeCount;
+        if(glfwGetTime() - cpuTimeStamp >= 1.0)
+        {
+            double d = 1000.0 / gpuframeCount;
+            double e = gpuframeCount;
+            double currTime = glfwGetTime();
+            double cpuTime = currTime - cpuTimeStamp;
+            cpuTimeStamp += 1.0f;
+
+            printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
+                ( float )( gpuTime * d ), ( float )( cpuTime * d ),
+                ( float )( timeValues.timeDuration [DRAW_FINISHED] * d ),
+                e / gpuTime, e / cpuTime);
+            gpuframeCount = 0u;
+
+            for(u32 i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
+                timeValues.timeDuration [i] = 0.0;
+
+            gpuTime = 0.0;
+        }
+
+
+        char str [100];
+        float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
+        sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
+            float(dt * 1000.0), fps,
+            mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown);
+        setTitle(str);
+
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+    }
+
+    VK_CHECK(vkDeviceWaitIdle(device));
 
 }
 
@@ -1114,12 +1114,12 @@ void VulkanDrawStuff::run()
 
 int main(int argCount, char **argv)
 {
-	VulkanDrawStuff app;
-	if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT)
-		&& app.createGraphics() && app.createPipelines())
-	{
-		app.run();
-	}
+    VulkanDrawStuff app;
+    if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT)
+        && app.createGraphics() && app.createPipelines())
+    {
+        app.run();
+    }
 
-	return 0;
+    return 0;
 }

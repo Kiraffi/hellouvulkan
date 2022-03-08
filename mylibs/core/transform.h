@@ -6,16 +6,16 @@
 
 struct Transform
 {
-	Vec3 pos;
-	Vec3 scale{ 1.0f, 1.0f, 1.0f };
-	Quat rot;
+    Vec3 pos;
+    Vec3 scale{ 1.0f, 1.0f, 1.0f };
+    Quat rot;
 };
 
 Matrix getModelMatrix(const Transform &trans)
 {
-	Matrix posMat = getMatrixFromTranslation(trans.pos);
-	Matrix scaleMat = getMatrixFromScale(trans.scale);
-	Matrix rotMat = getMatrixFromQuaternion(trans.rot);
+    Matrix posMat = getMatrixFromTranslation(trans.pos);
+    Matrix scaleMat = getMatrixFromScale(trans.scale);
+    Matrix rotMat = getMatrixFromQuaternion(trans.rot);
 
-	return scaleMat * rotMat * posMat;
+    return scaleMat * rotMat * posMat;
 }
