@@ -11,11 +11,11 @@ Quaternion operator *(const Quaternion &a, const Quaternion &b);
 
 struct Quaternion
 {
-	Quaternion() {}
-	Quaternion(const Vector3 &v, float w) : v(v), w(w) {}
-	Quaternion(float x, float y, float z, float w) : v(x, y, z), w(w) {}
-	Vector3 v;
-	float w = 1.0f;
+    Quaternion() {}
+    Quaternion(const Vector3 &v, float w) : v(v), w(w) {}
+    Quaternion(float x, float y, float z, float w) : v(x, y, z), w(w) {}
+    Vector3 v;
+    float w = 1.0f;
 
 
 

@@ -3,39 +3,39 @@
 
 Timer::Timer()
 {
-	startTime = std::chrono::high_resolution_clock::now();
-	lastTime = startTime;
+    startTime = std::chrono::high_resolution_clock::now();
+    lastTime = startTime;
 }
 
 double Timer::getDuration() const
 {
-	std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
 
-	double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-		(newTime - startTime).count() * 1.0e-9;
+    double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
+        (newTime - startTime).count() * 1.0e-9;
 
-	return dur;
+    return dur;
 }
 
 double Timer::getLapDuration()
 {
-	std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
 
-	double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-		(newTime - lastTime).count() * 1.0e-9;
+    double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
+        (newTime - lastTime).count() * 1.0e-9;
 
-	lastTime = newTime;
-	return dur;
+    lastTime = newTime;
+    return dur;
 }
 
 void printTime(const Timer& timer)
 {
-	float msTime = (float)timer.getDuration();
-	printf("Timer: %fs\n", msTime);
+    float msTime = (float)timer.getDuration();
+    printf("Timer: %fs\n", msTime);
 }
 
 void printNamedTimer(const Timer& timer, const char* name)
 {
-	float msTime = (float)timer.getDuration();
-	printf("Timer %s: %f\n", name, msTime);
+    float msTime = (float)timer.getDuration();
+    printf("Timer %s: %f\n", name, msTime);
 }

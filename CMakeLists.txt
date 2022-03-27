@@ -8,7 +8,7 @@ project ("hellouvulkan" VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
-#ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
+ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
@@ -28,8 +28,8 @@ set(GLSLC_EXECUTABLE glslc)
 
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/vulkan_new)
 
-#set(SPV_SHADERS 
-#	${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag 
+#set(SPV_SHADERS
+#	${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag
 #	#${SHADER_DIR}/*.comp
 #)
 file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp
@@ -40,8 +40,8 @@ foreach(SHADER IN LISTS SPV_SHADERS)
     get_filename_component(FILENAME ${SHADER} NAME)
 	message(STATUS "Compiling ${SHADER}")
 	execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.1 -o ${SHADER_DIR}/${FILENAME}.spv)
-endForeach() 
- 
+endForeach()
+
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
 #set(SHOW_VARIABLES true)
@@ -52,17 +52,17 @@ foreach (_variableName ${_variableNames})
     message(STATUS "${_variableName}=${${_variableName}}")
 endforeach()
 endif (SHOW_VARIABLES)
- 
+
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" )
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" )
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" )
- 
+
 ADD_DEFINITIONS(-DSHOW_INFO_MESSAGES=0)
 ADD_DEFINITIONS(-DVSYNC=2)
-ADD_DEFINITIONS(-DDISCRETE_GPU=0)
+ADD_DEFINITIONS(-DDISCRETE_GPU=1)
 ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
 ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
- 
+
 include_directories("external/"	"external/glfw-3.3.4/include/")
 include_directories("mylibs")
 

@@ -3,11 +3,12 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "myvulkan/vulkandevice.h"
-#include "myvulkan/vulkanhelperfuncs.h"
-#include "myvulkan/vulkanresource.h"
-#include "myvulkan/vulkanshader.h"
-#include "myvulkan/vulkanswapchain.h"
+#include "myvulkan/myvulkan.h"
+//#include "myvulkan/vulkandevice.h"
+//#include "myvulkan/vulkanhelperfuncs.h"
+//#include "myvulkan/vulkanresource.h"
+//#include "myvulkan/vulkanshader.h"
+//#include "myvulkan/vulkanswapchain.h"
 
 
 #include "math/general_math.h"
@@ -97,6 +98,8 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
         printf("Couldn't create glfw window\n");
         return false;
     }
+
+/*
 
     instance = createInstance();
     ASSERT(instance);
@@ -239,7 +242,6 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 
 
-    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
     {
         VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -267,13 +269,20 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
 
     }
+*/
+    if(!initVulkan(window))
+    {
+        printf("Failed to initialize vulkan\n");
+        return false;
+    }
 
-    if (!fontSystem.init("assets/font/new_font.dat", deviceWithQueues, renderPass, pipelineCache, scratchBuffer, renderFrameBuffer))
+    if (!fontSystem.init("assets/font/new_font.dat"))
 
     {
         printf("Failed to initialize the font system!\n");
         return false;
     }
+    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
     return true;
 
@@ -281,6 +290,8 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 VulkanApp::~VulkanApp()
 {
+    deinitVulkan();
+    /*
     VkDevice device = deviceWithQueues.device;
     if(device)
     {
@@ -313,7 +324,7 @@ VulkanApp::~VulkanApp()
         dest(instance, debugCallBack, nullptr);
     }
     vkDestroyInstance(instance, nullptr);
-
+    */
 
     if(window)
         glfwDestroyWindow(window);
@@ -362,7 +373,7 @@ bool VulkanApp::isUp(int keyCode)
     return false;
 }
 
-
+/*
 bool VulkanApp::startRender()
 {
     VkDevice device = deviceWithQueues.device;
@@ -417,10 +428,10 @@ uint32_t VulkanApp::updateRenderFrameBuffer()
 
     return offset;
 }
-
+*/
 void VulkanApp::present(Image &presentImage)
 {
-
+/*
     VkDevice device = deviceWithQueues.device;
     // Copy final image to swap chain target
     {
@@ -512,7 +523,7 @@ void VulkanApp::present(Image &presentImage)
     }
 
     VK_CHECK(vkDeviceWaitIdle(device));
-
+*/
     for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
     {
         keyDowns[ i ].pressCount = 0u;
@@ -520,7 +531,7 @@ void VulkanApp::present(Image &presentImage)
     bufferedPressesCount = 0u;
     dt = timer.getLapDuration();
 }
-
+/*
 bool VulkanApp::createGraphics()
 {
     VkDevice device = deviceWithQueues.device;
@@ -573,7 +584,7 @@ void VulkanApp::recreateSwapchainData()
     createGraphics();
     needToResize = false;
 }
-
+*/
 
 
 

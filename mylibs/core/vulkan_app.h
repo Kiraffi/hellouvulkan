@@ -3,16 +3,15 @@
 #include "core/timer.h"
 
 
-#include "myvulkan/vulkandevice.h"
-#include "myvulkan/vulkanresource.h"
-#include "myvulkan/vulkanswapchain.h"
+//#include "myvulkan/vulkandevice.h"
+//#include "myvulkan/vulkanresource.h"
+//#include "myvulkan/vulkanswapchain.h"
 #include "render/font_render.h"
 
 #include "core/camera.h"
 
 struct GLFWwindow;
 
-constexpr u32 QUERY_COUNT = 128u;
 
 struct Image;
 
@@ -43,11 +42,11 @@ public:
     virtual bool startRender();
 
     // Returns offset to scratch buffer
-    uint32_t updateRenderFrameBuffer();
+    //uint32_t updateRenderFrameBuffer();
     virtual void present(Image &presentImage);
-    virtual void recreateSwapchainData();
-    virtual bool createGraphics();
-    virtual void deleteFrameTargets();
+    //virtual void recreateSwapchainData();
+    //virtual bool createGraphics();
+    //virtual void deleteFrameTargets();
 
     void resizeWindow(int w, int h);
     void setVsyncEnabled(bool enable);
@@ -79,16 +78,15 @@ public:
 
 protected:
 
-    Image mainColorRenderTarget;
-    Image mainDepthRenderTarget;
 
 
     FontRenderSystem fontSystem;
 
     Timer timer;
     double dt = 0.0;
-    uint32_t imageIndex = 0u;
-
+/*
+    Image mainColorRenderTarget;
+    Image mainDepthRenderTarget;
     VkDebugUtilsMessengerEXT debugCallBack = 0;
 
     VkInstance instance = 0;
@@ -118,4 +116,5 @@ protected:
 
 
     VkPipelineCache pipelineCache = 0;
+*/
 };

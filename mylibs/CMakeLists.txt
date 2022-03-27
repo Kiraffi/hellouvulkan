@@ -10,13 +10,14 @@ add_library(MyLibraries
 	"core/camera.cpp"
 
 	"core/vulkan_app.cpp"
-	
-	
-	"myvulkan/vulkandevice.cpp"
-	"myvulkan/vulkanmemorymanager.cpp"
-	"myvulkan/vulkanresource.cpp"
-	"myvulkan/vulkanshader.cpp"
-	"myvulkan/vulkanswapchain.cpp"
+
+
+	"myvulkan/myvulkan.cpp"
+	#"myvulkan/vulkandevice.cpp"
+	#"myvulkan/vulkanmemorymanager.cpp"
+	#"myvulkan/vulkanresource.cpp"
+	#"myvulkan/vulkanshader.cpp"
+	#"myvulkan/vulkanswapchain.cpp"
 
 	"math/matrix.cpp"
 	"math/quaternion.cpp"
@@ -24,7 +25,7 @@ add_library(MyLibraries
 
 	"render/font_render.cpp"
 	"myvulkan/vulkanmemorymanager.cpp"
-	
+
 	"core/json.cpp"
 
 
@@ -40,8 +41,8 @@ target_include_directories(MyLibraries PRIVATE
 #
 #
 #	"core/vulkan_app.h"
-#	
-#	
+#
+#
 #	"myvulkan/vulkandevice.h"
 #	"myvulkan/vulkanhelperfuncs.h"
 #	"myvulkan/vulkanmemorymanager.h"
@@ -50,12 +51,12 @@ target_include_directories(MyLibraries PRIVATE
 #
 #	"render/font_render.h"
 #	"myvulkan/vulkanmemorymanager.h"
-#	
+#
 #	"core/json.h"
 #	)
 #
-#target_include_directories(MyLibraries PUBLIC 
-#	"${CMAKE_CURRENT_SOURCE_DIR}/"	
+#target_include_directories(MyLibraries PUBLIC
+#	"${CMAKE_CURRENT_SOURCE_DIR}/"
 #	#"${CMAKE_DL_LIBS}"
 #	#"Vulkan::Vulkan"
 #	#"glfw"

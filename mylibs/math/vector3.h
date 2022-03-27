@@ -4,40 +4,40 @@
 
 struct Vector2
 {
-	Vector2() {}
-	Vector2(float x, float y) : x(x), y(y) {}
-	float x = 0.0f;
-	float y = 0.0f;
+    Vector2() {}
+    Vector2(float x, float y) : x(x), y(y) {}
+    float x = 0.0f;
+    float y = 0.0f;
 
-	float &operator[](u32 index) { return (&x)[index]; }
+    float &operator[](u32 index) { return (&x)[index]; }
 };
 
 
 struct Vector3
 {
-	float x = 0.0f;
-	float y = 0.0f;
-	float z = 0.0f;
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
 
-	Vector3() {}
-	Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
+    Vector3() {}
+    Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
 
-	float &operator[](u32 index) { return (&x)[index]; }
+    float &operator[](u32 index) { return (&x)[index]; }
 
 };
 struct Vector4
 {
-	Vector4() {}
-	Vector4(float x, float y, float z, float w): x(x), y(y), z(z), w(w) {}
-	Vector4(float f): x(f), y(f), z(f), w(f) {}
-	Vector4(const Vector3 &v, float w): x(v.x), y(v.y), z(v.z), w(w) {}
+    Vector4() {}
+    Vector4(float x, float y, float z, float w): x(x), y(y), z(z), w(w) {}
+    Vector4(float f): x(f), y(f), z(f), w(f) {}
+    Vector4(const Vector3 &v, float w): x(v.x), y(v.y), z(v.z), w(w) {}
 
-	float x = 0.0f;
-	float y = 0.0f;
-	float z = 0.0f;
-	float w = 0.0f;
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    float w = 0.0f;
 
-	float &operator[](u32 index) { return ( &x )[ index ]; }
+    float &operator[](u32 index) { return ( &x )[ index ]; }
 };
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b);

@@ -12,11 +12,12 @@
 #include "core/timer.h"
 #include "core/mytypes.h"
 
-#include "myvulkan/vulkandevice.h"
-#include "myvulkan/vulkanhelperfuncs.h"
-#include "myvulkan/vulkanresource.h"
-#include "myvulkan/vulkanshader.h"
-#include "myvulkan/vulkanswapchain.h"
+#include "myvulkan/myvulkan.h"
+//#include "myvulkan/vulkandevice.h"
+//#include "myvulkan/vulkanhelperfuncs.h"
+//#include "myvulkan/vulkanresource.h"
+//#include "myvulkan/vulkanshader.h"
+//#include "myvulkan/vulkanswapchain.h"
 
 #include "math/general_math.h"
 #include "math/matrix.h"
@@ -171,16 +172,16 @@ void VulkanFontRender::run()
 		// "CONSTANT BUFFEERS"
 		//
 		////////////////////////
-	
+
 		if (!startRender())
 			continue;
 
 		beginSingleTimeCommands(device, commandPool, commandBuffer);
 		vkCmdResetQueryPool(commandBuffer, queryPool, 0, QUERY_COUNT);
 		vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, TIME_POINTS::START_POINT);
-		
+
 		uint32_t offset = updateRenderFrameBuffer();
-	
+
 
 		////////////////////////
 		//
@@ -292,14 +293,14 @@ void VulkanFontRender::run()
 
 }
 
-int main(int argCount, char **argv) 
+int main(int argCount, char **argv)
 {
 	VulkanFontRender app;
-	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT) 
+	if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT)
 		&& app.createGraphics())
 	{
 		app.run();
 	}
-	
+
 	return 0;
 }

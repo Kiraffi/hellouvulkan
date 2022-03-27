@@ -7,11 +7,11 @@
 /*
 struct Plane
 {
-	Plane() {}
-	Plane(float x, float y, float z, float w) : distanceFromOrigo(w), normalDir(normalize(Vector3(x, y, z))) {}
-	Plane(const Vector3 &a, float w) : distanceFromOrigo(w), normalDir(normalize(a)) {}
+    Plane() {}
+    Plane(float x, float y, float z, float w) : distanceFromOrigo(w), normalDir(normalize(Vector3(x, y, z))) {}
+    Plane(const Vector3 &a, float w) : distanceFromOrigo(w), normalDir(normalize(a)) {}
 
-	Vector3 normalDir;
-	float distanceFromOrigo = 0.0f;
+    Vector3 normalDir;
+    float distanceFromOrigo = 0.0f;
 };
 */
