@@ -18,36 +18,6 @@ constexpr u32 QUERY_COUNT = 128u;
     const bool useVulkanDebugMarkersRenderDoc = false;
 #endif
 
-// #define SHOW_INFO_MESSAGES 0
-
-//#define VSYNC 0 // 0 = no vsync, 1 = fifo, 2 = mailbox
-//#define DISCRETE_GPU 0
-
-
-
-/*
-struct DeviceWithQueues
-{
-    VkPhysicalDevice physicalDevice = nullptr;
-    VkDevice device = nullptr;
-    VkSurfaceKHR surface = nullptr;
-
-    VkCommandPool mainCommandPool = nullptr;
-    VkCommandBuffer mainCommandBuffer = nullptr;
-
-    VkQueue graphicsQueue = nullptr;
-    VkQueue presentQueue = nullptr;
-    VkQueue computeQueue = nullptr;
-
-    QueueFamilyIndices queueFamilyIndices;
-
-
-    VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
-    VkFormat colorFormat = VkFormat::VK_FORMAT_UNDEFINED;
-    VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;
-    VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_MAX_ENUM_KHR;
-};
-*/
 struct Image;
 
 bool initVulkan(GLFWwindow *window);
@@ -55,21 +25,11 @@ void deinitVulkan();
 bool startRender(GLFWwindow *window);
 void present(GLFWwindow *window, Image &presentImage);
 
-//QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-//VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance);
-
-//QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-//VkInstance createInstance();
-//VkPhysicalDevice createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
-//DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-
-
 void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name);
 void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
 void beginDebugRegion(std::string_view pMarkerName, Vec4 color);
 void insertDebugRegion(std::string_view markerName, Vec4 color);
 void endDebugRegion();
-
 
 void beginSingleTimeCommands();
 void endSingleTimeCommands();
@@ -78,8 +38,7 @@ Image createImage(u32 width, u32 height, VkFormat format, VkImageUsageFlags usag
     VkMemoryPropertyFlags memoryFlags, const char *imageName);
 
 void updateImageWithData(u32 width, u32 height, u32 pixelSize,
-    Image &targetImage,
-    u32 dataSize, void *data);
+    Image &targetImage, u32 dataSize, void *data);
 
 VkSampler createSampler(const VkSamplerCreateInfo &info);
 
@@ -116,75 +75,6 @@ VkBufferMemoryBarrier bufferBarrier(const Buffer &buffer, VkAccessFlags srcAcces
 
 
 
-// Shaders...
-struct DescriptorSetLayout
-{
-    VkDescriptorType descriptorType;
-    u32 bindingIndex = ~0u;
-};
-
-struct DescriptorSet
-{
-    VkDescriptorType descriptorType;
-    u32 bindingIndex = ~0u;
-    const Buffer *buffer = nullptr;
-    VkDeviceSize offset = 0;
-    VkDeviceSize size = 0;
-    VkImage image = 0;
-    VkImageView imageView = 0;
-    VkSampler sampler = 0;
-    VkImageLayout layout;
-};
-
-struct Descriptor
-{
-    VkDescriptorSet descriptorSet = 0;
-    VkDescriptorPool pool = 0;
-};
-
-struct DescriptorInfo
-{
-    enum class DescriptorType
-    {
-        IMAGE,
-        BUFFER,
-
-        NOT_VALID
-    };
-
-    DescriptorInfo(VkImageView imageView, VkImageLayout layout, VkSampler sampler)
-    {
-        imageInfo.imageView = imageView;
-        imageInfo.imageLayout = layout;
-        imageInfo.sampler = sampler;
-        type = DescriptorType::IMAGE;
-    }
-
-    //
-    DescriptorInfo(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range)
-    {
-        ASSERT(range > 0u);
-        bufferInfo.buffer = buffer;
-        bufferInfo.offset = offset;
-        bufferInfo.range = range;
-        type = DescriptorType::BUFFER;
-    }
-
-    VkDescriptorImageInfo imageInfo {};
-    VkDescriptorBufferInfo bufferInfo {};
-
-    DescriptorType type = DescriptorType::NOT_VALID;
-};
-
-
-
-struct Pipeline
-{
-    VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-};
-
 VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
     bool depthTest);
 
@@ -206,41 +96,9 @@ bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
 
 
 // Swapchain stuff...
-
-
-struct GLFWwindow;
-
-
-
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
-
 bool resizeSwapchain(GLFWwindow *window);
 
 
 
-struct PipelineWithDescriptors
-{
-    Pipeline pipeline;
-
-    Descriptor descriptor;
-    std::vector<DescriptorSetLayout> descriptorSetLayout;
-    std::vector<DescriptorInfo> descriptorSetBinds;
-};
 void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWithDescriptors &pipelineWithDescriptor);
 
-
-
-
-/*
-Buffer &getRenderFrameBuffer();
-VkRenderPass getRenderPass();
-VkCommandBuffer getCommandBuffer();
-
-Buffer &getScratchBuffer();
-VkQueryPool getQueryPool();
-*/

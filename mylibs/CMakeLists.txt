@@ -24,7 +24,7 @@ add_library(MyLibraries
 	"math/vector3.cpp"
 
 	"render/font_render.cpp"
-	"myvulkan/vulkanmemorymanager.cpp"
+	#"myvulkan/vulkanmemorymanager.cpp"
 
 	"core/json.cpp"
 

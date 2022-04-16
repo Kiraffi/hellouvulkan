@@ -23,29 +23,18 @@ static constexpr Formats defaultFormats[] = {
 
 static bool createGraphics();
 
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
+
 // Intel?
 //const VkFormat defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-/*
-#if 0 // HDR
-    const VkFormat defaultFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-    const VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
-    const VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_HDR10_ST2084_EXT;
-#else
-    const VkFormat defaultFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM}; //, VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB };
-    const VkFormat defaultDepthFormat = VK_FORMAT_D32_SFLOAT;
-    const VkColorSpaceKHR defaultColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-#endif
-*/
-
-// Global variables
-
 VulkGlob vulk;
-
-//QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-//static bool createInstance();
-//static bool createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
-//static bool createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 
 static PFN_vkDebugMarkerSetObjectTagEXT pfnDebugMarkerSetObjectTag = nullptr;
@@ -209,8 +198,6 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
     int i = 0;
     for (const auto& queueFamily : queueFamilies)
     {
-
-
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             indices.graphicsFamily = i;
         else
@@ -279,6 +266,9 @@ static void destroySwapchain(SwapChain &swapchain)
         vkDestroySwapchainKHR(vulk.device, swapchain.swapchain, nullptr);
     swapchain.swapchain = VK_NULL_HANDLE;
 }
+
+
+
 
 static bool createSwapchain(GLFWwindow *window)
 {
@@ -678,10 +668,6 @@ static bool createDeviceWithQueues()
 
     if(optionals.canUseVulkanRenderdocExtensionMarker)
         acquireDeviceDebugRenderdocFunctions(vulk.device);
-    //vulk.colorSpace = defaultColorSpace;
-    //vulk.depthFormat = defaultDepthFormat;
-    //vulk.surface = surface;
-    //vulk.physicalDevice = physicalDevice;
     return true;
 }
 
@@ -953,20 +939,17 @@ bool initVulkan(GLFWwindow *window)
         printf("Failed to create vulkan command buffer!\n");
         return false;
     }
-
-
-    {
-        vkGetPhysicalDeviceMemoryProperties(vulk.physicalDevice, &vulk.memoryProperties);
-
-
-        vulk.scratchBuffer = createBuffer(64 * 1024 * 1024, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
-
-    }
     setObjectName((uint64_t)vulk.commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
+
 
     {
         // Create buffers
+        vkGetPhysicalDeviceMemoryProperties(vulk.physicalDevice, &vulk.memoryProperties);
+
+        vulk.scratchBuffer = createBuffer(64 * 1024 * 1024,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
+
         vulk.renderFrameBuffer = createBuffer(64u * 1024 * 1024,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
@@ -983,40 +966,28 @@ static void deleteFrameTargets()
     vulk.targetFB = nullptr;
     destroyImage(vulk.mainColorRenderTarget);
     destroyImage(vulk.mainDepthRenderTarget);
-
-    //QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-    //deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
-    //ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
-
 }
 
 static bool createGraphics()
 {
-    //vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-    //recreateSwapchainData();
-
     // create color and depth images
-    {
-        vulk.mainColorRenderTarget =
-            createImage(
-                vulk.swapchain.width, vulk.swapchain.height,
-                //deviceWithQueues.computeColorFormat,
-                vulk.colorFormat,
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-                //| VK_IMAGE_USAGE_STORAGE_BIT
-                , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                "Main color target image");
+    vulk.mainColorRenderTarget = createImage(
+        vulk.swapchain.width, vulk.swapchain.height,
+        //deviceWithQueues.computeColorFormat,
+        vulk.colorFormat,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main color target image");
 
-        vulk.mainDepthRenderTarget = createImage(
-            vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            "Main depth target image");
+    vulk.mainDepthRenderTarget = createImage(
+        vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main depth target image");
 
-        vulk.targetFB = createFramebuffer(vulk.renderPass,
-            vulk.mainColorRenderTarget.imageView, vulk.mainDepthRenderTarget.imageView,
-            vulk.swapchain.width, vulk.swapchain.height);
-    }
+    vulk.targetFB = createFramebuffer(vulk.renderPass,
+        vulk.mainColorRenderTarget.imageView, vulk.mainDepthRenderTarget.imageView,
+        vulk.swapchain.width, vulk.swapchain.height);
+
     return true;
 }
 
@@ -1387,38 +1358,6 @@ bool startRender(GLFWwindow *window)
     return false;
 }
 
-/*
-uint32_t updateRenderFrameBuffer()
-{
-    struct Buff
-    {
-        Vector2 areaSize;
-        float tmp[6 + 8];
-    };
-
-    Buff buff{ Vector2(windowWidth, windowHeight) };
-
-    // use scratch buffer to unifrom buffer transfer
-    uint32_t buffSize = uint32_t(sizeof(Buff));
-    memcpy(scratchBuffer.data, &buff, buffSize);
-    {
-        VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-        vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, renderFrameBuffer.buffer, 1, &region);
-    }
-
-    VkBufferMemoryBarrier bar[]
-    {
-        bufferBarrier(renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
-    };
-
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
-
-    uint32_t offset = fontSystem.update(deviceWithQueues.device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer, buffSize);
-
-    return offset;
-}
-*/
 void present(GLFWwindow *window, Image &presentImage)
 {
 

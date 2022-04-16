@@ -18,6 +18,7 @@ struct QueueFamilyIndices
     }
 };
 
+
 struct Formats
 {
     VkFormat format;
@@ -115,3 +116,87 @@ struct VulkGlob
 };
 
 extern VulkGlob vulk;
+
+
+
+
+
+// Shaders...
+struct DescriptorSetLayout
+{
+    VkDescriptorType descriptorType;
+    u32 bindingIndex = ~0u;
+};
+
+struct DescriptorSet
+{
+    VkDescriptorType descriptorType;
+    u32 bindingIndex = ~0u;
+    const Buffer *buffer = nullptr;
+    VkDeviceSize offset = 0;
+    VkDeviceSize size = 0;
+    VkImage image = 0;
+    VkImageView imageView = 0;
+    VkSampler sampler = 0;
+    VkImageLayout layout;
+};
+
+struct Descriptor
+{
+    VkDescriptorSet descriptorSet = 0;
+    VkDescriptorPool pool = 0;
+};
+
+struct DescriptorInfo
+{
+    enum class DescriptorType
+    {
+        IMAGE,
+        BUFFER,
+
+        NOT_VALID
+    };
+
+    DescriptorInfo(VkImageView imageView, VkImageLayout layout, VkSampler sampler)
+    {
+        imageInfo.imageView = imageView;
+        imageInfo.imageLayout = layout;
+        imageInfo.sampler = sampler;
+        type = DescriptorType::IMAGE;
+    }
+
+    //
+    DescriptorInfo(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range)
+    {
+        ASSERT(range > 0u);
+        bufferInfo.buffer = buffer;
+        bufferInfo.offset = offset;
+        bufferInfo.range = range;
+        type = DescriptorType::BUFFER;
+    }
+
+    VkDescriptorImageInfo imageInfo {};
+    VkDescriptorBufferInfo bufferInfo {};
+
+    DescriptorType type = DescriptorType::NOT_VALID;
+};
+
+
+
+struct Pipeline
+{
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+};
+
+struct PipelineWithDescriptors
+{
+    Pipeline pipeline;
+
+    Descriptor descriptor;
+    std::vector<DescriptorSetLayout> descriptorSetLayout;
+    std::vector<DescriptorInfo> descriptorSetBinds;
+};
+
+

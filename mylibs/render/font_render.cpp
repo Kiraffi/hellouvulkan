@@ -242,7 +242,6 @@ void FontRenderSystem::render()
     VkCommandBuffer commandBuffer = vulk.commandBuffer;
     if (vertData.size() > 0 && commandBuffer)
     {
-
         bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptor);
         vkCmdBindIndexBuffer(commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);

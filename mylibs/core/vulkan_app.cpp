@@ -4,12 +4,8 @@
 #include <GLFW/glfw3.h>
 
 #include "myvulkan/myvulkan.h"
-//#include "myvulkan/vulkandevice.h"
-//#include "myvulkan/vulkanhelperfuncs.h"
-//#include "myvulkan/vulkanresource.h"
-//#include "myvulkan/vulkanshader.h"
-//#include "myvulkan/vulkanswapchain.h"
 
+#include "core/camera.h"
 
 #include "math/general_math.h"
 #include "math/quaternion.h"
@@ -98,178 +94,10 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
         printf("Couldn't create glfw window\n");
         return false;
     }
-    resizeWindow(screenWidth, screenHeight);
-/*
-
-    instance = createInstance();
-    ASSERT(instance);
-    if(!instance)
-    {
-        printf("Failed to create vulkan instance!\n");
-        return false;
-    }
-
     int w,h;
     glfwGetFramebufferSize(window, &w, &h);
     resizeWindow(w, h);
 
-    glfwSetKeyCallback(window, keyboardHandlerCallback);
-
-    debugCallBack = registerDebugCallback(instance);
-
-
-
-    VK_CHECK(glfwCreateWindowSurface(instance, window, nullptr, &surface));
-    ASSERT(surface);
-    if(!surface)
-    {
-        printf("Failed to create vulkan surface!\n");
-        return false;
-    }
-
-
-    physicalDevice = createPhysicalDevice(instance, surface);
-    ASSERT(physicalDevice);
-    if(!physicalDevice)
-    {
-        printf("Failed to create vulkan physical device!\n");
-        return false;
-    }
-
-
-    VkPhysicalDeviceProperties props = {};
-    vkGetPhysicalDeviceProperties(physicalDevice, &props);
-    ASSERT(props.limits.timestampComputeAndGraphics);
-    if(!props.limits.timestampComputeAndGraphics)
-    {
-        printf("Physical device not supporting compute and graphics!\n");
-        return false;
-    }
-
-    deviceWithQueues = createDeviceWithQueues(physicalDevice, surface);
-    VkDevice device = deviceWithQueues.device;
-    ASSERT(device);
-    if(!device)
-    {
-        printf("Failed to create vulkan device!\n");
-        return false;
-    }
-
-    {
-        VkPhysicalDeviceSubgroupProperties subgroupProperties;
-        subgroupProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
-        subgroupProperties.pNext = NULL;
-
-        VkPhysicalDeviceProperties2 physicalDeviceProperties;
-        physicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-        physicalDeviceProperties.pNext = &subgroupProperties;
-
-        vkGetPhysicalDeviceProperties2(physicalDevice, &physicalDeviceProperties);
-
-        printf("subgroup size: %u\n", subgroupProperties.subgroupSize);
-        printf("subgroup operations: %u\n", subgroupProperties.supportedOperations);
-
-    }
-    renderPass = createRenderPass(device, deviceWithQueues.computeColorFormat, deviceWithQueues.depthFormat);
-    ASSERT(renderPass);
-    if(!renderPass)
-    {
-        printf("Failed to create render pass!\n");
-        return false;
-    }
-
-    [[maybe_unused]] bool scSuccess = createSwapchain(swapchain, window, deviceWithQueues);
-    ASSERT(scSuccess);
-    if(!scSuccess)
-    {
-        printf("Failed to create vulkan swapchain!\n");
-        return false;
-    }
-
-    queryPool = createQueryPool(device, QUERY_COUNT);
-    ASSERT(queryPool);
-    if(!queryPool)
-    {
-        printf("Failed to create vulkan query pool!\n");
-        return false;
-    }
-
-    acquireSemaphore = createSemaphore(device);
-    ASSERT(acquireSemaphore);
-    if(!acquireSemaphore)
-    {
-        printf("Failed to create vulkan acquire semapohore!\n");
-        return false;
-    }
-
-    releaseSemaphore = createSemaphore(device);
-    ASSERT(releaseSemaphore);
-    if(!releaseSemaphore)
-    {
-        printf("Failed to create vulkan release semaphore!\n");
-        return false;
-    }
-
-    fence = createFence(device);
-    ASSERT(fence);
-    if(!fence)
-    {
-        printf("Failed to create vulkan fence!\n");
-        return false;
-    }
-
-    commandPool = createCommandPool(device, deviceWithQueues.queueFamilyIndices.graphicsFamily);
-    ASSERT(commandPool);
-    if(!commandPool)
-    {
-        printf("Failed to create vulkan command pool!\n");
-        return false;
-    }
-
-    VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    allocateInfo.commandPool = commandPool;
-    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandBufferCount = 1;
-
-    VK_CHECK(vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer));
-    if(!commandBuffer)
-    {
-        printf("Failed to create vulkan command buffer!\n");
-        return false;
-    }
-    deviceWithQueues.mainCommandBuffer = commandBuffer;
-    deviceWithQueues.mainCommandPool = commandPool;
-
-
-
-
-    {
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-
-        scratchBuffer = createBuffer(device, memoryProperties, 64 * 1024 * 1024,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
-
-    }
-    setObjectName(device, (uint64_t)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
-
-    // rdoc....
-    //glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-    //glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE);
-
-    {
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-        // Create buffers
-        renderFrameBuffer = createBuffer(device, memoryProperties, 64u * 1024 * 1024,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
-
-    }
-*/
     if(!initVulkan(window))
     {
         printf("Failed to initialize vulkan\n");
@@ -292,39 +120,6 @@ VulkanApp::~VulkanApp()
 {
     fontSystem.deInit();
     deinitVulkan();
-    /*
-    VkDevice device = deviceWithQueues.device;
-    if(device)
-    {
-
-
-        destroyBuffer(device, scratchBuffer);
-        destroyBuffer(device, renderFrameBuffer);
-
-        deleteFrameTargets();
-
-        vkDestroyCommandPool(device, commandPool, nullptr);
-
-        vkDestroyQueryPool(device, queryPool, nullptr);
-
-        destroySwapchain(swapchain, device);
-
-        vkDestroyRenderPass(device, renderPass, nullptr);
-        vkDestroyFence(device, fence, nullptr);
-        vkDestroySemaphore(device, acquireSemaphore, nullptr);
-        vkDestroySemaphore(device, releaseSemaphore, nullptr);
-
-        vkDestroyDevice(device, nullptr);
-    }
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-
-    if (enableValidationLayers)
-    {
-        auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-        dest(instance, debugCallBack, nullptr);
-    }
-    vkDestroyInstance(instance, nullptr);
-    */
 
     if(window)
         glfwDestroyWindow(window);
@@ -335,7 +130,6 @@ VulkanApp::~VulkanApp()
 
 void VulkanApp::resizeWindow(int w, int h)
 {
-
     windowWidth = w;
     windowHeight = h;
     printf("Window size: %i: %i\n", w, h);
@@ -373,31 +167,6 @@ bool VulkanApp::isUp(int keyCode)
     return false;
 }
 
-/*
-bool VulkanApp::startRender()
-{
-    VkDevice device = deviceWithQueues.device;
-    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
-    if (acquireSemaphore == VK_NULL_HANDLE)
-        return false;
-    VkResult res = ( vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex) );
-    if (res == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        if (resizeSwapchain(swapchain, window, deviceWithQueues))
-        {
-            recreateSwapchainData();
-            VK_CHECK(vkDeviceWaitIdle(device));
-            needToResize = false;
-        }
-        return false;
-    }
-    else if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
-        return true;
-
-    VK_CHECK(res);
-    return false;
-}
-*/
 uint32_t VulkanApp::updateRenderFrameBuffer()
 {
     struct Buff
@@ -433,99 +202,6 @@ uint32_t VulkanApp::updateRenderFrameBuffer()
 void VulkanApp::present(Image &presentImage)
 {
     ::present(window, presentImage);
-/*
-    VkDevice device = deviceWithQueues.device;
-    // Copy final image to swap chain target
-    {
-        VkImageMemoryBarrier copyBeginBarriers[] =
-        {
-            imageBarrier(presentImage.image,
-                        presentImage.accessMask, presentImage.layout,
-                        VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
-
-                    imageBarrier(swapchain.images[ imageIndex ],
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        };
-
-        vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(copyBeginBarriers), copyBeginBarriers);
-
-
-        insertDebugRegion(commandBuffer, "Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-
-        VkImageBlit imageBlitRegion = {};
-
-        imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageBlitRegion.srcSubresource.layerCount = 1;
-        imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageBlitRegion.dstSubresource.layerCount = 1;
-        imageBlitRegion.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) swapchain.width, ( i32 ) swapchain.height, 1 };
-        imageBlitRegion.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) swapchain.width, ( i32 ) swapchain.height, 1 };
-
-
-        vkCmdBlitImage(commandBuffer, presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        swapchain.images[ imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
-    }
-
-    // Prepare image for presenting.
-    {
-        VkImageMemoryBarrier presentBarrier = imageBarrier(swapchain.images[ imageIndex ],
-                                                            VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                                            0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-        vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &presentBarrier);
-    }
-
-
-    endDebugRegion(commandBuffer);
-
-    VK_CHECK(vkEndCommandBuffer(commandBuffer));
-
-    // Submit
-    {
-        VkPipelineStageFlags submitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; //VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-        vkResetFences(device, 1, &fence);
-
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &acquireSemaphore;
-        submitInfo.pWaitDstStageMask = &submitStageMask;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &releaseSemaphore;
-        VK_CHECK(vkQueueSubmit(deviceWithQueues.graphicsQueue, 1, &submitInfo, fence));
-
-        VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &releaseSemaphore;
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &swapchain.swapchain;
-        presentInfo.pImageIndices = &imageIndex;
-
-        VkResult res = ( vkQueuePresentKHR(deviceWithQueues.presentQueue, &presentInfo) );
-        if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || needToResize)
-        {
-            needToResize = true;
-            if (resizeSwapchain(swapchain, window, deviceWithQueues))
-            {
-                recreateSwapchainData();
-            }
-            needToResize = false;
-        }
-        else
-        {
-            VK_CHECK(res);
-        }
-    }
-
-    VK_CHECK(vkDeviceWaitIdle(device));
-*/
     for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
     {
         keyDowns[ i ].pressCount = 0u;
@@ -533,61 +209,6 @@ void VulkanApp::present(Image &presentImage)
     bufferedPressesCount = 0u;
     dt = timer.getLapDuration();
 }
-/*
-bool VulkanApp::createGraphics()
-{
-    VkDevice device = deviceWithQueues.device;
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-    //recreateSwapchainData();
-
-    // create color and depth images
-    {
-        mainColorRenderTarget =
-            createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-                swapchain.width, swapchain.height,
-                //deviceWithQueues.computeColorFormat,
-                deviceWithQueues.colorFormat,
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-                //| VK_IMAGE_USAGE_STORAGE_BIT
-                , VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                "Main color target image");
-
-        mainDepthRenderTarget = createImage(device, deviceWithQueues.queueFamilyIndices.graphicsFamily, memoryProperties,
-            swapchain.width, swapchain.height, deviceWithQueues.depthFormat,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            "Main depth target image");
-
-        targetFB = createFramebuffer(device, renderPass,
-            mainColorRenderTarget.imageView, mainDepthRenderTarget.imageView,
-            swapchain.width, swapchain.height);
-    }
-    return true;
-}
-
-void VulkanApp::deleteFrameTargets()
-{
-    VkDevice device = deviceWithQueues.device;
-
-    vkDestroyFramebuffer(device, targetFB, nullptr);
-    destroyImage(device, mainColorRenderTarget);
-    destroyImage(device, mainDepthRenderTarget);
-
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-    deviceWithQueues.queueFamilyIndices = queueFamilyIndices;
-    ASSERT(deviceWithQueues.queueFamilyIndices.isValid());
-
-}
-
-void VulkanApp::recreateSwapchainData()
-{
-    deleteFrameTargets();
-    createGraphics();
-    needToResize = false;
-}
-*/
-
 
 
 void VulkanApp::setTitle(const char *str)
