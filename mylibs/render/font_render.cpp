@@ -154,14 +154,14 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         pipeline.pipeline = createPipelineLayout(pipeline.descriptorSetLayout, VK_SHADER_STAGE_ALL_GRAPHICS);
 
 
-        pipeline.pipeline.pipeline = createGraphicsPipeline(getRenderPass(),
+        pipeline.pipeline.pipeline = createGraphicsPipeline(vulk.renderPass,
             vertexShader, fragShader,
             pipeline.pipeline.pipelineLayout, false);
 
         pipeline.descriptorSetBinds = std::vector<DescriptorInfo>(
         {
-            DescriptorInfo(getRenderFrameBuffer().buffer, 0u, 64u * 1024u ),
-            DescriptorInfo(letterDataBuffer.buffer, 0u, 0u),
+            DescriptorInfo(vulk.renderFrameBuffer.buffer, 0u, 64u * 1024u ),
+            DescriptorInfo(letterDataBuffer.buffer, 0u, 64u * 1024u),
             DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
         pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayout, pipeline.pipeline.descriptorSetLayout);
@@ -211,13 +211,17 @@ uint32_t FontRenderSystem::update(Vector2 renderAreaSize, uint32_t offset)
     if (vertData.size() == 0)
         return offset;
 
+    VkCommandBuffer commandBuffer = vulk.commandBuffer;
+    if(!commandBuffer)
+        return offset;
+
     // use scratch buffer to unifrom buffer transfer
     uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
 
-    memcpy((void*)((char*)scratchBuffer.data + offset), vertData.data(), vertDataSize);
+    memcpy((void*)((char*)vulk.scratchBuffer.data + offset), vertData.data(), vertDataSize);
 
     VkBufferCopy region = { offset, 0, VkDeviceSize(vertDataSize) };
-    vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, letterDataBuffer.buffer, 1, &region);
+    vkCmdCopyBuffer(commandBuffer, vulk.scratchBuffer.buffer, letterDataBuffer.buffer, 1, &region);
 
 
     VkBufferMemoryBarrier bar[]
@@ -233,11 +237,13 @@ uint32_t FontRenderSystem::update(Vector2 renderAreaSize, uint32_t offset)
 
 
 
-void FontRenderSystem::render(VkCommandBuffer commandBuffer)
+void FontRenderSystem::render()
 {
-    if (vertData.size() > 0)
+    VkCommandBuffer commandBuffer = vulk.commandBuffer;
+    if (vertData.size() > 0 && commandBuffer)
     {
-        bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptor);
+
+        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptor);
         vkCmdBindIndexBuffer(commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
     }

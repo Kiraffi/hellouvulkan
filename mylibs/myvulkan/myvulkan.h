@@ -7,6 +7,8 @@
 #include "core/mytypes.h"
 #include "math/vector3.h"
 
+#include "vulkglob.h"
+
 struct GLFWwindow;
 constexpr u32 QUERY_COUNT = 128u;
 
@@ -21,18 +23,6 @@ constexpr u32 QUERY_COUNT = 128u;
 //#define VSYNC 0 // 0 = no vsync, 1 = fifo, 2 = mailbox
 //#define DISCRETE_GPU 0
 
-struct QueueFamilyIndices
-{
-    u32 graphicsFamily = ~0u;
-    u32 presentFamily = ~0u;
-    u32 computeFamily = ~0u;
-    u32 transferFamily = ~0u;
-
-    bool isValid()
-    {
-        return (computeFamily != ~0u && transferFamily != ~0u && graphicsFamily != ~0u && presentFamily != ~0u);
-    }
-};
 
 
 /*
@@ -74,35 +64,12 @@ void present(GLFWwindow *window, Image &presentImage);
 //DeviceWithQueues createDeviceWithQueues(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 
-void setObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name);
-void setObjectTag(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
-void beginDebugRegion(VkCommandBuffer cmdbuffer, std::string_view pMarkerName, Vec4 color);
-void insertDebugRegion(VkCommandBuffer cmdbuffer, std::string_view markerName, Vec4 color);
-void endDebugRegion(VkCommandBuffer cmdBuffer);
+void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name);
+void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
+void beginDebugRegion(std::string_view pMarkerName, Vec4 color);
+void insertDebugRegion(std::string_view markerName, Vec4 color);
+void endDebugRegion();
 
-
-// resource
-struct Buffer
-{
-    // cpu mapped memory for cpu accessbuffers
-    void *data = nullptr;
-    const char *bufferName;
-    VkDeviceMemory deviceMemory = 0;
-    VkBuffer buffer = 0;
-    size_t size = 0ull;
-};
-
-struct Image
-{
-    VkImage image = 0;
-    VkImageView imageView = 0;
-    VkDeviceMemory deviceMemory = 0;
-    const char *imageName;
-    VkAccessFlags accessMask = 0;
-    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    u32 width = 0u;
-    u32 height = 0u;
-};
 
 void beginSingleTimeCommands();
 void endSingleTimeCommands();
@@ -240,32 +207,9 @@ bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
 
 // Swapchain stuff...
 
-// Intel?
-//const VkFormat defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
-
-#if 0 // HDR
-    const VkFormat defaultFormat = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-    const VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
-    const VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_HDR10_ST2084_EXT;
-#else
-    const VkFormat defaultFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM}; //, VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB };
-    const VkFormat defaultDepthFormat = VK_FORMAT_D32_SFLOAT;
-    const VkColorSpaceKHR defaultColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-#endif
 
 struct GLFWwindow;
 
-struct SwapChain
-{
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-
-    std::vector<VkImage> images;
-
-    u32 width = 0;
-    u32 height = 0;
-
-    u32 swapchainCount = 0;
-};
 
 
 struct SwapChainSupportDetails
@@ -292,12 +236,11 @@ void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWit
 
 
 
-
-
-
-
-
+/*
 Buffer &getRenderFrameBuffer();
 VkRenderPass getRenderPass();
+VkCommandBuffer getCommandBuffer();
 
-
+Buffer &getScratchBuffer();
+VkQueryPool getQueryPool();
+*/

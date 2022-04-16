@@ -39,10 +39,10 @@ public:
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight);
     virtual void run() {}
     virtual void resized() {}
-    virtual bool startRender();
+    //virtual bool startRender();
 
     // Returns offset to scratch buffer
-    //uint32_t updateRenderFrameBuffer();
+    uint32_t updateRenderFrameBuffer();
     virtual void present(Image &presentImage);
     //virtual void recreateSwapchainData();
     //virtual bool createGraphics();

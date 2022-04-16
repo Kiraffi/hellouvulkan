@@ -98,7 +98,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
         printf("Couldn't create glfw window\n");
         return false;
     }
-
+    resizeWindow(screenWidth, screenHeight);
 /*
 
     instance = createInstance();
@@ -290,12 +290,12 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 
 VulkanApp::~VulkanApp()
 {
+    fontSystem.deInit();
     deinitVulkan();
     /*
     VkDevice device = deviceWithQueues.device;
     if(device)
     {
-        fontSystem.deInit(device);
 
 
         destroyBuffer(device, scratchBuffer);
@@ -397,7 +397,7 @@ bool VulkanApp::startRender()
     VK_CHECK(res);
     return false;
 }
-
+*/
 uint32_t VulkanApp::updateRenderFrameBuffer()
 {
     struct Buff
@@ -410,27 +410,29 @@ uint32_t VulkanApp::updateRenderFrameBuffer()
 
     // use scratch buffer to unifrom buffer transfer
     uint32_t buffSize = uint32_t(sizeof(Buff));
-    memcpy(scratchBuffer.data, &buff, buffSize);
+    memcpy(vulk.scratchBuffer.data, &buff, buffSize);
     {
         VkBufferCopy region = { 0, 0, VkDeviceSize(buffSize) };
-        vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, renderFrameBuffer.buffer, 1, &region);
+        vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, vulk.renderFrameBuffer.buffer, 1, &region);
     }
 
     VkBufferMemoryBarrier bar[]
     {
-        bufferBarrier(renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
+        bufferBarrier(vulk.renderFrameBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, buffSize),
     };
 
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
 
-    uint32_t offset = fontSystem.update(deviceWithQueues.device, commandBuffer, renderPass, Vector2(windowWidth, windowHeight), scratchBuffer, buffSize);
+    uint32_t offset = fontSystem.update(Vector2(windowWidth, windowHeight), buffSize);
 
     return offset;
 }
-*/
+
+
 void VulkanApp::present(Image &presentImage)
 {
+    ::present(window, presentImage);
 /*
     VkDevice device = deviceWithQueues.device;
     // Copy final image to swap chain target
