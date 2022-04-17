@@ -1,5 +1,5 @@
 #include "json.h"
-#include <memory.h>
+#include <string.h>
 
 const JSONBlock JSONBlock::emptyBlock = { };
 

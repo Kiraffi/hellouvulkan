@@ -29,7 +29,7 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
-#include <memory.h>
+#include <string.h>
 
 
 static constexpr int SCREEN_WIDTH  = 640;

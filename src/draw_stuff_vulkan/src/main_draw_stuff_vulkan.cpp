@@ -29,7 +29,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <memory.h>
+#include <string.h>
 
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;

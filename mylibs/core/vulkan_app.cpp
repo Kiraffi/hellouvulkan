@@ -10,7 +10,7 @@
 #include "math/general_math.h"
 #include "math/quaternion.h"
 
-#include <memory.h>
+#include <string.h>
 
 static double timer_frequency = 0.0;
 
