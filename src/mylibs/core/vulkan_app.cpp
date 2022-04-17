@@ -35,37 +35,38 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     VulkanApp *data = reinterpret_cast<VulkanApp *>(glfwGetWindowUserPointer(window));
-    if(data)
-    {
-        if(action == GLFW_PRESS)
-        {
-            if(key == GLFW_KEY_ESCAPE)
-                glfwSetWindowShouldClose( window, 1 );
-            else if (key >= 0 && key < 512)
-            {
-                data->keyDowns[ key ].isDown = true;
-                ++data->keyDowns[ key ].pressCount;
+    if(!data)
+        return;
 
-                if (key >= 32 && key < 128)
+
+    if(action == GLFW_PRESS)
+    {
+        if(key == GLFW_KEY_ESCAPE)
+            glfwSetWindowShouldClose( window, 1 );
+        else if (key >= 0 && key < 512)
+        {
+            data->keyDowns[ key ].isDown = true;
+            ++data->keyDowns[ key ].pressCount;
+
+            if (key >= 32 && key < 128)
+            {
+                char letter = ( char ) key;
+                if (key >= 65 && key <= 90)
                 {
-                    char letter = ( char ) key;
-                    if (key >= 65 && key <= 90)
-                    {
-                        int adder = 32;
-                        if (( mods & ( GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK ) ) != 0)
-                            adder = 0;
-                        letter += adder;
-                    }
-                    data->bufferedPresses[ data->bufferedPressesCount ] = letter;
-                    ++data->bufferedPressesCount;
+                    int adder = 32;
+                    if (( mods & ( GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK ) ) != 0)
+                        adder = 0;
+                    letter += adder;
                 }
+                data->bufferedPresses[ data->bufferedPressesCount ] = letter;
+                ++data->bufferedPressesCount;
             }
         }
-        else if(action == GLFW_RELEASE && key >= 0 && key < 512)
-        {
-            data->keyDowns[ key ].isDown = false;
-            ++data->keyDowns[ key ].pressCount;
-        }
+    }
+    else if(action == GLFW_RELEASE && key >= 0 && key < 512)
+    {
+        data->keyDowns[ key ].isDown = false;
+        ++data->keyDowns[ key ].pressCount;
     }
 }
 
@@ -111,7 +112,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
         return false;
     }
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-
+    glfwSetKeyCallback(window, keyboardHandlerCallback);
     return true;
 
 }
