@@ -65,10 +65,9 @@ ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
 include_directories("external/")
 include_directories("external/glfw-3.3.4/include/")
-include_directories("mylibs")
+include_directories("src/mylibs")
 
 #add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw-3.3.4")
-add_subdirectory("mylibs")
 add_subdirectory("src")
 
