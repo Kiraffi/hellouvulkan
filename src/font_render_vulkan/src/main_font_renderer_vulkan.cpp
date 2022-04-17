@@ -13,11 +13,6 @@
 #include "core/mytypes.h"
 
 #include "myvulkan/myvulkan.h"
-//#include "myvulkan/vulkandevice.h"
-//#include "myvulkan/vulkanhelperfuncs.h"
-//#include "myvulkan/vulkanresource.h"
-//#include "myvulkan/vulkanshader.h"
-//#include "myvulkan/vulkanswapchain.h"
 
 #include "math/general_math.h"
 #include "math/matrix.h"
