@@ -3,14 +3,14 @@
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include "core/mytypes.h"
+//#include "core/mytypes.h"
 
 struct QueueFamilyIndices
 {
-    u32 graphicsFamily = ~0u;
-    u32 presentFamily = ~0u;
-    u32 computeFamily = ~0u;
-    u32 transferFamily = ~0u;
+    uint32_t graphicsFamily = ~0u;
+    uint32_t presentFamily = ~0u;
+    uint32_t computeFamily = ~0u;
+    uint32_t transferFamily = ~0u;
 
     bool isValid()
     {
@@ -46,8 +46,8 @@ struct Image
     const char *imageName;
     VkAccessFlags accessMask = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    u32 width = 0u;
-    u32 height = 0u;
+    uint32_t width = 0u;
+    uint32_t height = 0u;
 };
 
 
@@ -57,10 +57,10 @@ struct SwapChain
 
     std::vector<VkImage> images;
 
-    u32 width = 0;
-    u32 height = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
 
-    u32 swapchainCount = 0;
+    uint32_t swapchainCount = 0;
 };
 
 
@@ -125,13 +125,13 @@ extern VulkGlob vulk;
 struct DescriptorSetLayout
 {
     VkDescriptorType descriptorType;
-    u32 bindingIndex = ~0u;
+    uint32_t bindingIndex = ~0u;
 };
 
 struct DescriptorSet
 {
     VkDescriptorType descriptorType;
-    u32 bindingIndex = ~0u;
+    uint32_t bindingIndex = ~0u;
     const Buffer *buffer = nullptr;
     VkDeviceSize offset = 0;
     VkDeviceSize size = 0;

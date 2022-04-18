@@ -49,7 +49,7 @@ public:
     virtual ~VulkanFontRender() override;
 
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
-    virtual void run() override;
+    virtual void update() override;
 
     void updateText(std::string& str);
 private:
@@ -90,9 +90,10 @@ void VulkanFontRender::updateText(std::string &str)
 }
 
 
-void VulkanFontRender::run()
+void VulkanFontRender::update()
 {
-    std::string txt = "Test";
+    VulkanApp::update();
+    static std::string txt = "Test";
 
     ////////////////////////
     //
@@ -101,189 +102,176 @@ void VulkanFontRender::run()
     //
     ////////////////////////
 
-    double previousFrameTime = glfwGetTime();
-    u32 framesSinceLastDelta = 0u;
-    double deltaTime = 0.0;
+    static double previousFrameTime = glfwGetTime();
+    static uint32_t framesSinceLastDelta = 0u;
+    static double deltaTime = 0.0;
 
-    u32 gpuframeCount = 0u;
-    double gpuTime = 0.0;
-    double cpuTimeStamp = glfwGetTime();
+    static uint32_t gpuframeCount = 0u;
+    static double gpuTime = 0.0;
+    static double cpuTimeStamp = glfwGetTime();
 
-
-    while (!glfwWindowShouldClose(window))
+    if (++framesSinceLastDelta > 10)
     {
-        if (++framesSinceLastDelta > 10)
-        {
-            double newTime = glfwGetTime();
-            deltaTime = ( newTime - previousFrameTime ) / framesSinceLastDelta;
-            previousFrameTime = newTime;
-            framesSinceLastDelta = 0u;
-        }
-
-        glfwPollEvents();
-        {
-            bool textNeedsUpdate = false;
-            for (int i = 0; i < bufferedPressesCount; ++i)
-            {
-                txt += char( bufferedPresses[i] );
-                textNeedsUpdate = true;
-            }
-
-            if (keyDowns[ GLFW_KEY_LEFT ].isDown)
-            {
-                fontSize.x--;
-                if (fontSize.x < 2)
-                    ++fontSize.x;
-                textNeedsUpdate = true;
-            }
-            if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
-            {
-                fontSize.x++;
-                textNeedsUpdate = true;
-            }
-            if (keyDowns[ GLFW_KEY_DOWN ].isDown)
-            {
-                fontSize.y++;
-                textNeedsUpdate = true;
-            }
-            if (keyDowns[ GLFW_KEY_UP ].isDown)
-            {
-                fontSize.y--;
-                if (fontSize.y < 2)
-                    ++fontSize.y;
-                textNeedsUpdate = true;
-            }
-
-            updateText(txt);
-        }
-
-
-        ////////////////////////
-        //
-        // RENDER PASSES START
-        // WRITING VALUES INTO
-        // "CONSTANT BUFFEERS"
-        //
-        ////////////////////////
-
-        if (!startRender(window))
-            continue;
-
-        beginSingleTimeCommands();
-        vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
-        vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
-
-        uint32_t offset = updateRenderFrameBuffer();
-
-
-        ////////////////////////
-        //
-        // MAIN RENDER
-        //
-        ////////////////////////
-        {
-            VkImageMemoryBarrier imageBarriers[] =
-            {
-                imageBarrier(vulk.mainColorRenderTarget.image,
-                            0, VK_IMAGE_LAYOUT_UNDEFINED,
-                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-
-                imageBarrier(vulk.mainDepthRenderTarget.image,
-                            0, VK_IMAGE_LAYOUT_UNDEFINED,
-                            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                            VK_IMAGE_ASPECT_DEPTH_BIT),
-            };
-
-            vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
-        }
-
-        // Drawingg
-        {
-            VkClearValue clearValues[ 2 ] = {};
-            clearValues[ 0 ].color = VkClearColorValue{ {48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
-            clearValues[ 1 ].depthStencil = { 0.0f, 0 };
-
-            VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-            passBeginInfo.renderPass = vulk.renderPass;
-            passBeginInfo.framebuffer = vulk.targetFB;
-            passBeginInfo.renderArea.extent.width = vulk.swapchain.width;
-            passBeginInfo.renderArea.extent.height = vulk.swapchain.height;
-            passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
-            passBeginInfo.pClearValues = clearValues;
-
-            vkCmdBeginRenderPass(vulk.commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-            VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
-            VkRect2D scissors = { { 0, 0 }, { u32(vulk.swapchain.width), u32(vulk.swapchain.height) } };
-
-            insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-            vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-            vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
-
-
-            fontSystem.render();
-            // draw calls here
-            // Render
-            {
-            }
-            vkCmdEndRenderPass(vulk.commandBuffer);
-        }
-
-        vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
-
-        vulk.mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        vulk.mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        present(vulk.mainColorRenderTarget);
-
-        ////////////////////////
-        //
-        // END PASS, COLLECT TIMINGS
-        //
-        ////////////////////////
-
-
-        uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-        vkGetQueryPoolResults(vulk.device, vulk.queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
-
-
-        static double timeDuration[TIME_POINTS::NUM_TIME_POINTS] = {};
-
-        VkPhysicalDeviceProperties props = {};
-        vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
-
-        for (u32 i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
-            timeDuration[ i ] += ( double(queryResults[ i ]) - double(queryResults[ i - 1 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-        gpuTime += ( double(queryResults[ TIME_POINTS::NUM_TIME_POINTS - 1 ]) - double(queryResults[ 0 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-        ++gpuframeCount;
-        if (glfwGetTime() - cpuTimeStamp >= 1.0)
-        {
-            double d = 1000.0 / gpuframeCount;
-            double e = gpuframeCount;
-            double currTime = glfwGetTime();
-            double cpuTime = currTime - cpuTimeStamp;
-            cpuTimeStamp += 1.0f;
-
-            printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
-                   ( float ) ( gpuTime * d ), ( float ) ( cpuTime * d ),
-                   ( float ) ( timeDuration[ DRAW_FINISHED ] * d ),
-                   e / gpuTime, e / cpuTime);
-            gpuframeCount = 0u;
-
-            for (u32 i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
-                timeDuration[ i ] = 0.0;
-
-            gpuTime = 0.0;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
+        double newTime = glfwGetTime();
+        deltaTime = ( newTime - previousFrameTime ) / framesSinceLastDelta;
+        previousFrameTime = newTime;
+        framesSinceLastDelta = 0u;
     }
 
-    VK_CHECK(vkDeviceWaitIdle(vulk.device));
+    {
+        bool textNeedsUpdate = false;
+        for (int i = 0; i < bufferedPressesCount; ++i)
+        {
+            txt += char( bufferedPresses[i] );
+            textNeedsUpdate = true;
+        }
 
+        if (keyDowns[ GLFW_KEY_LEFT ].isDown)
+        {
+            fontSize.x--;
+            if (fontSize.x < 2)
+                ++fontSize.x;
+            textNeedsUpdate = true;
+        }
+        if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
+        {
+            fontSize.x++;
+            textNeedsUpdate = true;
+        }
+        if (keyDowns[ GLFW_KEY_DOWN ].isDown)
+        {
+            fontSize.y++;
+            textNeedsUpdate = true;
+        }
+        if (keyDowns[ GLFW_KEY_UP ].isDown)
+        {
+            fontSize.y--;
+            if (fontSize.y < 2)
+                ++fontSize.y;
+            textNeedsUpdate = true;
+        }
+
+        updateText(txt);
+    }
+
+
+    ////////////////////////
+    //
+    // RENDER PASSES START
+    // WRITING VALUES INTO
+    // "CONSTANT BUFFEERS"
+    //
+    ////////////////////////
+
+    if (!startRender(window))
+        return;
+
+    beginSingleTimeCommands();
+    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
+    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
+
+    uint32_t offset = updateRenderFrameBuffer();
+
+
+    ////////////////////////
+    //
+    // MAIN RENDER
+    //
+    ////////////////////////
+    {
+        VkImageMemoryBarrier imageBarriers[] =
+        {
+            imageBarrier(vulk.mainColorRenderTarget.image,
+                        0, VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
+
+            imageBarrier(vulk.mainDepthRenderTarget.image,
+                        0, VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                        VK_IMAGE_ASPECT_DEPTH_BIT),
+        };
+
+        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+    }
+
+    // Drawingg
+    {
+        VkClearValue clearValues[ 2 ] = {};
+        clearValues[ 0 ].color = VkClearColorValue{ {48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
+        clearValues[ 1 ].depthStencil = { 0.0f, 0 };
+
+        VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        passBeginInfo.renderPass = vulk.renderPass;
+        passBeginInfo.framebuffer = vulk.targetFB;
+        passBeginInfo.renderArea.extent.width = vulk.swapchain.width;
+        passBeginInfo.renderArea.extent.height = vulk.swapchain.height;
+        passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
+        passBeginInfo.pClearValues = clearValues;
+
+        vkCmdBeginRenderPass(vulk.commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
+        VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
+
+        insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
+        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
+
+
+        fontSystem.render();
+        // draw calls here
+        // Render
+        {
+        }
+        vkCmdEndRenderPass(vulk.commandBuffer);
+    }
+
+    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
+
+    present(window);
+
+    ////////////////////////
+    //
+    // END PASS, COLLECT TIMINGS
+    //
+    ////////////////////////
+
+
+    uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
+    vkGetQueryPoolResults(vulk.device, vulk.queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
+
+
+    static double timeDuration[TIME_POINTS::NUM_TIME_POINTS] = {};
+
+    VkPhysicalDeviceProperties props = {};
+    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
+
+    for (uint32_t i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
+        timeDuration[ i ] += ( double(queryResults[ i ]) - double(queryResults[ i - 1 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
+
+    gpuTime += ( double(queryResults[ TIME_POINTS::NUM_TIME_POINTS - 1 ]) - double(queryResults[ 0 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
+
+    ++gpuframeCount;
+    if (glfwGetTime() - cpuTimeStamp >= 1.0)
+    {
+        double d = 1000.0 / gpuframeCount;
+        double e = gpuframeCount;
+        double currTime = glfwGetTime();
+        double cpuTime = currTime - cpuTimeStamp;
+        cpuTimeStamp += 1.0f;
+
+        printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
+                ( float ) ( gpuTime * d ), ( float ) ( cpuTime * d ),
+                ( float ) ( timeDuration[ DRAW_FINISHED ] * d ),
+                e / gpuTime, e / cpuTime);
+        gpuframeCount = 0u;
+
+        for (uint32_t i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
+            timeDuration[ i ] = 0.0;
+
+        gpuTime = 0.0;
+    }
 }
 
 int main(int argCount, char **argv)

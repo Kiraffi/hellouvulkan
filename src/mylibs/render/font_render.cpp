@@ -126,7 +126,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
         updateImageWithData(textureWidth, textureHeight, 4u,
             textImage,
-            (u32)fontPic.size(), (void*)fontPic.data());
+            (uint32_t)fontPic.size(), (void*)fontPic.data());
 
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         samplerInfo.magFilter = VK_FILTER_LINEAR;

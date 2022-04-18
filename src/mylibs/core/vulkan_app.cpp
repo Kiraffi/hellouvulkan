@@ -2,6 +2,9 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <chrono>
+#include <thread>
+#include <string.h>
 
 #include "myvulkan/myvulkan.h"
 
@@ -10,7 +13,6 @@
 #include "math/general_math.h"
 #include "math/quaternion.h"
 
-#include <string.h>
 
 static double timer_frequency = 0.0;
 
@@ -74,7 +76,6 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 
 bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-
     glfwSetErrorCallback(error_callback);
     int rc = glfwInit();
     ASSERT(rc);
@@ -199,7 +200,7 @@ uint32_t VulkanApp::updateRenderFrameBuffer()
     return offset;
 }
 
-
+/*
 void VulkanApp::present(Image &presentImage)
 {
     ::present(window, presentImage);
@@ -210,7 +211,33 @@ void VulkanApp::present(Image &presentImage)
     bufferedPressesCount = 0u;
     dt = timer.getLapDuration();
 }
+*/
 
+void VulkanApp::run()
+{
+
+    while (!glfwWindowShouldClose(window))
+    {
+        update();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        VK_CHECK(vkDeviceWaitIdle(vulk.device));
+
+    }
+}
+
+void VulkanApp::update()
+{
+    for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
+    {
+        keyDowns[ i ].pressCount = 0u;
+    }
+    bufferedPressesCount = 0u;
+    dt = timer.getLapDuration();
+
+    glfwPollEvents();
+
+
+}
 
 void VulkanApp::setTitle(const char *str)
 {

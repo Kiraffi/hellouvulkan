@@ -1,14 +1,10 @@
 #pragma once
 
 #include "core/timer.h"
-
 #include "render/font_render.h"
-
 
 struct GLFWwindow;
 struct Camera;
-
-struct Image;
 
 struct MouseState
 {
@@ -32,12 +28,12 @@ public:
     virtual ~VulkanApp();
 
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight);
-    virtual void run() {}
+    virtual void run();
+    virtual void update();
     virtual void resized() {}
 
     // Returns offset to scratch buffer
     uint32_t updateRenderFrameBuffer();
-    virtual void present(Image &presentImage);
 
     void resizeWindow(int w, int h);
     void setVsyncEnabled(bool enable);

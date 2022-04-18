@@ -19,20 +19,6 @@ float ffmodf(float a, float b);
 float ffminf(float a, float b);
 float ffmaxf(float a, float b);
 
-using f32 = float;
-using f64 = double;
-using u32 = unsigned int;
-using i32 = int;
-using b32 = int;
-
-using u8 = unsigned char;
-using i8 = char;
-using u16 = unsigned short;
-using i16 = short;
-using u64 = uint64_t;
-using i64 = int64_t;
-
-
 const float pii = 3.1415926265359f;
 
 

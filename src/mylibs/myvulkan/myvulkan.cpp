@@ -114,12 +114,12 @@ VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
 
 
 
-static u32 selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProperties, u32 memoryTypeBits, VkMemoryPropertyFlags flags)
+static uint32_t selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProperties, uint32_t memoryTypeBits, VkMemoryPropertyFlags flags)
 {
-    for(u32 i = 0; i < memoryProperties.memoryTypeCount; ++i)
+    for(uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
     {
         bool isUsed = (memoryTypeBits & (1 << i)) != 0u;
-        u32 foundFlags = (memoryProperties.memoryTypes[i].propertyFlags & flags);
+        uint32_t foundFlags = (memoryProperties.memoryTypes[i].propertyFlags & flags);
 
         //printf("Memory %u: Used: %u, flags: %u\n", i, isUsed, foundFlags);
 
@@ -133,7 +133,7 @@ static u32 selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProper
 
 static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
 {
-    u32 extensionCount;
+    uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -318,8 +318,8 @@ static bool createSwapchain(GLFWwindow *window)
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
 
-            extent.width = u32(width);
-            extent.height = u32(height);
+            extent.width = uint32_t(width);
+            extent.height = uint32_t(height);
 
             extent.width = std::max(swapChainSupport.capabilities.minImageExtent.width,
                 std::min(swapChainSupport.capabilities.maxImageExtent.width, extent.width));
@@ -376,19 +376,19 @@ static bool createSwapchain(GLFWwindow *window)
 
 
 
-    u32 swapchainCount = 0;
+    uint32_t swapchainCount = 0;
     VK_CHECK(vkGetSwapchainImagesKHR(vulk.device, vulk.swapchain.swapchain, &swapchainCount, nullptr));
 
     vulk.swapchain.swapchainCount = swapchainCount;
     vulk.swapchain.images.resize(swapchainCount);
     VK_CHECK(vkGetSwapchainImagesKHR(vulk.device, vulk.swapchain.swapchain, &swapchainCount, vulk.swapchain.images.data()));
 
-    i32 width = 0;
-    i32 height = 0;
+    int32_t width = 0;
+    int32_t height = 0;
 
     glfwGetWindowSize(window, &width, &height);
-    vulk.swapchain.width = u32(width);
-    vulk.swapchain.height = u32(height);
+    vulk.swapchain.width = uint32_t(width);
+    vulk.swapchain.height = uint32_t(height);
     return true;
 }
 
@@ -414,13 +414,13 @@ static bool createInstance()
     std::vector<const char*> extensions = getRequiredExtensions();
 
     createInfo.ppEnabledExtensionNames = extensions.data();
-    createInfo.enabledExtensionCount = (u32)extensions.size();
+    createInfo.enabledExtensionCount = (uint32_t)extensions.size();
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
     if (enableValidationLayers)
     {
         createInfo.ppEnabledLayerNames = validationLayers.data();
-        createInfo.enabledLayerCount = u32(validationLayers.size());
+        createInfo.enabledLayerCount = uint32_t(validationLayers.size());
 
         debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -447,14 +447,14 @@ static bool createInstance()
 static bool createPhysicalDevice()
 {
     VkPhysicalDevice devices[256] = {};
-    u32 count = ARRAYSIZE(devices);
+    uint32_t count = ARRAYSIZE(devices);
 
     VK_CHECK(vkEnumeratePhysicalDevices(vulk.instance, &count, devices));
 
     VkPhysicalDevice primary = nullptr;
     VkPhysicalDevice secondary = nullptr;
 
-    for(u32 i = 0; i < count; ++i)
+    for(uint32_t i = 0; i < count; ++i)
     {
         VkPhysicalDeviceProperties prop;
         VkPhysicalDevice physicalDevice = devices[i];
@@ -642,13 +642,13 @@ static bool createDeviceWithQueues()
     {
         deviceExts.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
-    createInfo.enabledExtensionCount = u32(deviceExts.size());
+    createInfo.enabledExtensionCount = uint32_t(deviceExts.size());
     createInfo.ppEnabledExtensionNames = deviceExts.data();
 
 
     if (enableValidationLayers)
     {
-        createInfo.enabledLayerCount = u32(validationLayers.size());
+        createInfo.enabledLayerCount = uint32_t(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
     }
     else
@@ -717,7 +717,7 @@ static VkSemaphore createSemaphore()
 
 static VkCommandPool createCommandPool()
 {
-    u32 familyIndex = vulk.queueFamilyIndices.graphicsFamily;
+    uint32_t familyIndex = vulk.queueFamilyIndices.graphicsFamily;
     VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     poolCreateInfo.queueFamilyIndex = familyIndex;
@@ -774,7 +774,7 @@ static VkRenderPass createRenderPass(VkFormat colorFormat, VkFormat depthFormat)
 
 
 
-static VkQueryPool createQueryPool(u32 queryCount)
+static VkQueryPool createQueryPool(uint32_t queryCount)
 {
     VkQueryPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
 
@@ -1001,7 +1001,7 @@ static VkDescriptorSetLayout createSetLayout(const std::vector<DescriptorSetLayo
 {
     ASSERT(descriptors.size() > 0);
     std::vector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
-    for(u32 i = 0; i < u32(descriptors.size()); ++i)
+    for(uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
     {
         setBindings[i].binding = descriptors[i].bindingIndex;
         setBindings[i].descriptorType = descriptors[i].descriptorType; // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1011,7 +1011,7 @@ static VkDescriptorSetLayout createSetLayout(const std::vector<DescriptorSetLayo
 
     VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 //    createInfo.flags =  VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-    createInfo.bindingCount = u32(setBindings.size());
+    createInfo.bindingCount = uint32_t(setBindings.size());
     createInfo.pBindings = setBindings.data();
 
     VkDescriptorSetLayout setLayout = 0;
@@ -1102,7 +1102,7 @@ void endSingleTimeCommands()
 
 
 
-Image createImage(u32 width, u32 height, VkFormat format,
+Image createImage(uint32_t width, uint32_t height, VkFormat format,
     VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char *imageName)
 {
 
@@ -1126,7 +1126,7 @@ Image createImage(u32 width, u32 height, VkFormat format,
     VkMemoryRequirements memoryRequirements;
     vkGetImageMemoryRequirements(vulk.device, result.image, &memoryRequirements);
 
-    u32 memoryTypeIndex = selectMemoryType(vulk.memoryProperties, memoryRequirements.memoryTypeBits, memoryFlags);
+    uint32_t memoryTypeIndex = selectMemoryType(vulk.memoryProperties, memoryRequirements.memoryTypeBits, memoryFlags);
     ASSERT(memoryTypeIndex != ~0u);
 
     VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
@@ -1160,9 +1160,9 @@ Image createImage(u32 width, u32 height, VkFormat format,
 
 
 
-void updateImageWithData(u32 width, u32 height, u32 pixelSize,
+void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
     Image &targetImage,
-    u32 dataSize, void *data)
+    uint32_t dataSize, void *data)
 {
     ASSERT(data != nullptr || dataSize > 0u);
     ASSERT(vulk.scratchBuffer.data);
@@ -1253,7 +1253,7 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     VkMemoryRequirements memoryRequirements;
     vkGetBufferMemoryRequirements(vulk.device, result.buffer, &memoryRequirements);
 
-    u32 memoryTypeIndex = selectMemoryType(vulk.memoryProperties, memoryRequirements.memoryTypeBits, memoryFlags);
+    uint32_t memoryTypeIndex = selectMemoryType(vulk.memoryProperties, memoryRequirements.memoryTypeBits, memoryFlags);
     ASSERT(memoryTypeIndex != ~0u);
 
     VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
@@ -1358,8 +1358,9 @@ bool startRender(GLFWwindow *window)
     return false;
 }
 
-void present(GLFWwindow *window, Image &presentImage)
+void present(GLFWwindow *window)
 {
+    Image &presentImage = vulk.mainColorRenderTarget;
 
     // Copy final image to swap chain target
     {
@@ -1387,9 +1388,9 @@ void present(GLFWwindow *window, Image &presentImage)
         imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageBlitRegion.dstSubresource.layerCount = 1;
         imageBlitRegion.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) vulk.swapchain.width, ( i32 ) vulk.swapchain.height, 1 };
+        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk.swapchain.width, ( int32_t ) vulk.swapchain.height, 1 };
         imageBlitRegion.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) vulk.swapchain.width, ( i32 ) vulk.swapchain.height, 1 };
+        imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk.swapchain.width, ( int32_t ) vulk.swapchain.height, 1 };
 
 
         vkCmdBlitImage(vulk.commandBuffer, presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -1456,7 +1457,7 @@ void present(GLFWwindow *window, Image &presentImage)
 
 
 VkFramebuffer createFramebuffer(VkRenderPass renderPass,
-    VkImageView colorView, VkImageView depthView, u32 width, u32 height)
+    VkImageView colorView, VkImageView depthView, uint32_t width, uint32_t height)
 {
     VkImageView attachMents[] = { colorView, depthView };
     VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
@@ -1602,7 +1603,7 @@ Descriptor createDescriptor(const std::vector<DescriptorSetLayout> &descriptors,
 
     std::vector<VkDescriptorPoolSize> poolSizes(descriptors.size());
 
-    for(u32 i = 0; i < descriptors.size(); ++i)
+    for(uint32_t i = 0; i < descriptors.size(); ++i)
     {
         poolSizes[i].type = descriptors[i].descriptorType;
         poolSizes[i].descriptorCount = 1;
@@ -1610,7 +1611,7 @@ Descriptor createDescriptor(const std::vector<DescriptorSetLayout> &descriptors,
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = u32(poolSizes.size());
+    poolInfo.poolSizeCount = uint32_t(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = 1; // NOTE ????
 
@@ -1633,7 +1634,7 @@ Descriptor createDescriptor(const std::vector<DescriptorSetLayout> &descriptors,
 bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
     const std::vector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet)
 {
-    u32 writeDescriptorCount = (u32)descriptorInfos.size();
+    uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
     if(writeDescriptorCount < 1u)
         return false;
 
@@ -1642,10 +1643,10 @@ bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
 
     std::vector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
 
-    u32 writeIndex = 0u;
-    u32 bufferCount = 0u;
-    u32 imageCount = 0u;
-    for(u32 i = 0; i < descriptorInfos.size(); ++i)
+    uint32_t writeIndex = 0u;
+    uint32_t bufferCount = 0u;
+    uint32_t imageCount = 0u;
+    for(uint32_t i = 0; i < descriptorInfos.size(); ++i)
     {
         if(descriptorInfos[ i ].type == DescriptorInfo::DescriptorType::BUFFER)
         {
@@ -1698,7 +1699,7 @@ bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
 
     if(writeDescriptorSets.size() > 0)
     {
-        vkUpdateDescriptorSets(vulk.device, u32(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+        vkUpdateDescriptorSets(vulk.device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
     }
     return true;
 }
@@ -1840,7 +1841,7 @@ VkShaderModule loadShader(std::string_view filename)
 
         VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         createInfo.codeSize = buffer.size();
-        createInfo.pCode = reinterpret_cast<u32*>(buffer.data());
+        createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
         vkCreateShaderModule(vulk.device, &createInfo, nullptr, &shaderModule);
     }
     ASSERT(shaderModule);
