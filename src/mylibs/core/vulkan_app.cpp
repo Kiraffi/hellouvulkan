@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "myvulkan/myvulkan.h"
-
+#include "container/mymemory.h"
 #include "core/camera.h"
 
 #include "math/general_math.h"
@@ -76,6 +76,20 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 
 bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 {
+    initMemory();
+    MemoryAutoRelease mem = allocateMemoryBytes(17u);
+    MemoryAutoRelease mem2 = allocateMemoryBytes(257u);
+    MemoryAutoRelease mem3 = allocateMemoryBytes(259u);
+
+
+    struct Moo
+    {
+        char moo[133];
+    };
+
+    MemoryAutoReleaseType mem4 = allocateMemory<Moo>(9);
+
+
     glfwSetErrorCallback(error_callback);
     int rc = glfwInit();
     ASSERT(rc);
@@ -219,6 +233,7 @@ void VulkanApp::run()
     while (!glfwWindowShouldClose(window))
     {
         update();
+        defragMemory();
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
@@ -231,12 +246,11 @@ void VulkanApp::update()
     {
         keyDowns[ i ].pressCount = 0u;
     }
+
     bufferedPressesCount = 0u;
     dt = timer.getLapDuration();
 
     glfwPollEvents();
-
-
 }
 
 void VulkanApp::setTitle(const char *str)
