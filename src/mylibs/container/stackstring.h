@@ -1,6 +1,7 @@
 #pragma once
 
-#include "core/mytypes.h"
+#include <stdint.h>
+#include <stdio.h>
 
 template<uint32_t N>
 class StackString
@@ -148,6 +149,6 @@ private:
     uint32_t size = 0u;
 };
 
-using ShortStackString = StackString<32>;
+using SmallStackString = StackString<32>;
 using MediumStackString = StackString<256>;
 using LongStackString = StackString<1024>;

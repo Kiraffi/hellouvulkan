@@ -10,8 +10,9 @@ public:
     PodVector() : buffer(sizeof(T))
     {
         static constexpr bool layout = std::is_standard_layout<T>();
-        static constexpr bool trivial = std::is_trivial<T>();
-        static_assert(layout && trivial, "Not pod class!");
+        //static constexpr bool trivial = std::is_trivial<T>();
+        static constexpr bool trivialCopy = std::is_trivially_copyable<T>();
+        static_assert(layout && trivialCopy, "Not pod class!");
     }
     ~PodVector();
 
@@ -62,7 +63,7 @@ T* PodVector<T>::end()
     ptr += bytes;
     if(ptr <= end)
         return (T*)(ptr);
-    return nullptr;
+    return (T*)(end);
 }
 
 

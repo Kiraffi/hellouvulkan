@@ -67,14 +67,18 @@ void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
 {
     if(bufferData.size + 1 >= bufferData.capasity)
     {
-        bufferData.capasity = bufferData.capasity < 8 ? 8 : bufferData.capasity * 2u;
-        reserve(bufferData.capasity);
+        uint32_t minCapasity = 256 / bufferData.dataTypeSize;
+        minCapasity = minCapasity < 8 ? 8 : minCapasity;
+        uint32_t newCapasity = bufferData.capasity < minCapasity ? minCapasity : bufferData.capasity * 2u;
+        reserve(newCapasity);
+        bufferData.capasity = newCapasity;
     }
     uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
-    // move everything forward
-    if(index < bufferData.size - 1)
+    // move everything forward, if not adding to last
+    if(index + 1 < bufferData.size)
     {
-        memmove(getBegin() + bufferData.dataTypeSize, startPtr, bufferData.dataTypeSize);
+        memmove(startPtr + bufferData.dataTypeSize, startPtr,
+            bufferData.dataTypeSize * (bufferData.size - index));
     }
     memmove(startPtr, obj, bufferData.dataTypeSize);
     bufferData.size += 1;

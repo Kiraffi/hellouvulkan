@@ -16,7 +16,7 @@ static constexpr uint32_t MemoryAlignment = 4096u;
 
 // What to initialize originally the memory, probably not really useful, since
 // it would have to initialize that during freeing.
-#define USE_DEBUGVALUE 1
+#define USE_DEBUGVALUE 0
 static constexpr uint8_t DebugValue = 0xabu;
 
 struct MemoryArea
@@ -32,8 +32,8 @@ struct AllMemory
         printf("Deleting memory!\n");
         if(allocationCount > 0)
             printf("Allocations alive: %u\n", allocationCount);
-
-        delete[] memory;
+        if(memory)
+            delete[] memory;
     }
 
     uint8_t *memory = nullptr;
@@ -232,7 +232,7 @@ Memory resizeMemory(Memory memory, uint32_t size)
     }
     uint32_t handleIndex = getHandleIndex(memory);
     MemoryArea &oldArea = allMemory.memoryAreas[handleIndex];
-    if(oldArea.size < size)
+    if(oldArea.size > size)
     {
         return memory;
     }
