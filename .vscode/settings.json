@@ -1,4 +1,5 @@
 {
+    "cmake.saveBeforeBuild": true,
     "cmake.configureOnOpen": true,
     "cmake.generator": "Ninja",
     "cmake.debugConfig": {

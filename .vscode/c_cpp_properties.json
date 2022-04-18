@@ -10,10 +10,10 @@
     "configurations": [
         {
             "name": "Linux",
+            //"intelliSenseMode": "msvc-x64",
             "intelliSenseMode": "clang-x64",
-            "includePath": [
-                "${myDefaultIncludePath}"
-            ],
+            "includePath": [ "${myDefaultIncludePath}" ],
+            //"compilerArgs": ["-Wpragma-once-outside-header"],
             //"macFrameworkPath": ["/System/Library/Frameworks"],
             "defines": [
                 "FOO",
@@ -26,12 +26,13 @@
             //"compileCommands": "/path/to/compile_commands.json",
             "browse": {
                 "path": [
-                    "${workspaceFolder}"
+                    "${workspaceFolder}",
+                    "${workspaceFolder}/src",
+                    "${workspaceFolder}/src/mylibs"
                 ],
-                "limitSymbolsToIncludedHeaders": true,
+                "limitSymbolsToIncludedHeaders": false,
                 "databaseFilename": ""
-            },
-            "configurationProvider": "ms-vscode.cmake-tools"
+            }
         }
     ],
     "version": 4
