@@ -8,13 +8,13 @@ struct Foos
     int i;
     int j;
 };
-
+#include <vector>
 void testMemory(bool forceDefrag)
 {
     ByteBuffer buff(8);
     buff.reserve(40);
+    PodVector<Foos> foos{ Foos{1000, 1000}, Foos{1002, 1200}} ;
 
-    PodVector<Foos> foos;
     for(int i = 0; i < 30; ++i)
     {
         foos.pushBack(Foos{i, i + 1});
@@ -49,6 +49,8 @@ void testStackString()
     SmallStackString str2 = "This should be string that will not fit!";
     printf("%s\n", str.getStr());
     printf("%s\n", str2.getStr());
+
+    printf("%c\n", str[2]);
 }
 
 void testingMemory()

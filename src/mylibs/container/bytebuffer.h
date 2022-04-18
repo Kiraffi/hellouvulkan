@@ -18,6 +18,7 @@ public:
     ~ByteBuffer();
     void clear();
     void copyFrom(const ByteBuffer &other);
+    void copyFromArray(uint8_t *arr, uint32_t count);
     void reserve(uint32_t indices);
     void resize(uint32_t dstIndiceCount);
     void resize(uint32_t newSize, uint8_t *defaultValue);

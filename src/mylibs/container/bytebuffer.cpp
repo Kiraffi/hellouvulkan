@@ -32,6 +32,13 @@ void ByteBuffer::copyFrom(const ByteBuffer &other)
     bufferData.size = other.bufferData.size;
 }
 
+void ByteBuffer::copyFromArray(uint8_t *arr, uint32_t count)
+{
+    reserve(count * bufferData.size);
+    memmove(getBegin(), arr, count * bufferData.dataTypeSize);
+
+    bufferData.size = count;
+}
 
 void ByteBuffer::reserve(uint32_t indices)
 {

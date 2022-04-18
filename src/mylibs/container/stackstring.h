@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/mytypes.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -17,7 +18,7 @@ public:
         str[size] = '\0';
     }
     template<uint32_t U>
-    StackString(StackString<U> &s)
+    StackString(const StackString<U> &s)
     {
         const char *s2 = s.getStr();
         if (s2 == str)
@@ -30,7 +31,7 @@ public:
     }
 
     template<uint32_t U>
-    void add(StackString<U> &s)
+    void add(const StackString<U> &s)
     {
         const char *s2 = s.getStr();
         if (s2 == str)
@@ -134,6 +135,13 @@ public:
         }
         str[size] = '\0';
     }
+    char &operator[] (uint32_t index) const
+    {
+        ASSERT(index < size);
+        if(index > size)
+            return (char &) (*str);
+        return (char &) (*(str + index));
+    }
 
     void clear()
     {
@@ -141,8 +149,10 @@ public:
         str[size] = '\0';
     }
 
+    bool empty() const { return size == 0; }
     const char *getStr() const { return str; }
     uint32_t getSize() const { return size; }
+    uint32_t length() const { return size; }
 private:
     char str[N] = {};
     static constexpr uint32_t MaxSize = N - 1;

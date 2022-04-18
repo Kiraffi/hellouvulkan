@@ -2,22 +2,35 @@
 
 #include "bytebuffer.h"
 #include <memory>
+#include <initializer_list>
+
+#define CHECK_POD_MACRO() \
+    static constexpr bool layout = std::is_standard_layout<T>(); \
+    /*static constexpr bool trivial = std::is_trivial<T>();*/ \
+    static constexpr bool trivialCopy = std::is_trivially_copyable<T>(); \
+    static_assert(layout && trivialCopy, "Not pod class!");
+
 
 template <typename T>
 class PodVector final
 {
 public:
-    PodVector() : buffer(sizeof(T))
-    {
-        static constexpr bool layout = std::is_standard_layout<T>();
-        //static constexpr bool trivial = std::is_trivial<T>();
-        static constexpr bool trivialCopy = std::is_trivially_copyable<T>();
-        static_assert(layout && trivialCopy, "Not pod class!");
-    }
+    PodVector();
+    // : buffer(sizeof(T))
+    //{
+    //    static constexpr bool layout = std::is_standard_layout<T>();
+    //    //static constexpr bool trivial = std::is_trivial<T>();
+    //    static constexpr bool trivialCopy = std::is_trivially_copyable<T>();
+    //    static_assert(layout && trivialCopy, "Not pod class!");
+    //}
     ~PodVector();
 
     PodVector(const PodVector<T> &vec);
     PodVector(PodVector<T> &&other);
+    PodVector(T t[]) : buffer(sizeof(T)) {}
+
+    PodVector(const std::initializer_list<T> &initializerList);
+
     PodVector& operator=(const PodVector<T> &vec);
 
     T &operator[] (uint32_t index) const;
@@ -31,9 +44,12 @@ public:
     void resize(uint32_t newSize, const T &defaultValue);
 
     void reserve(uint32_t newSize);
-    T* begin();
-    T* end();
-    uint32_t getSize() const;
+    T* begin() const;
+    T* end() const;
+    T* data() const;
+    T& back() const;
+
+    uint32_t size() const;
     uint32_t getCapasity() const;
 
 private:
@@ -41,41 +57,32 @@ private:
 };
 
 
-
+template <typename T>
+PodVector<T>::PodVector() : buffer(sizeof(T))
+{
+    CHECK_POD_MACRO();
+}
 template <typename T>
 PodVector<T>::~PodVector()
 {
     buffer.~ByteBuffer();
 }
 
-template <typename T>
-T* PodVector<T>::begin()
-{
-    return (T*)buffer.getBegin();
-}
-
-template <typename T>
-T* PodVector<T>::end()
-{
-    uint8_t *ptr = buffer.getBegin();
-    uint8_t *end = buffer.getEnd();
-    uint32_t bytes = sizeof(T) * buffer.getSize();
-    ptr += bytes;
-    if(ptr <= end)
-        return (T*)(ptr);
-    return (T*)(end);
-}
 
 
 template <typename T>
-PodVector<T>::PodVector(const PodVector<T> &vec)
+PodVector<T>::PodVector(const PodVector<T> &vec) : buffer(sizeof(T))
 {
+    CHECK_POD_MACRO();
+
     *this = vec;
 }
 
 template <typename T>
-PodVector<T>::PodVector(PodVector &&other)
+PodVector<T>::PodVector(PodVector &&other) : buffer(sizeof(T))
 {
+    CHECK_POD_MACRO();
+
     new (&buffer) ByteBuffer(sizeof(T));
     memcpy(buffer, other.buffer, sizeof(buffer));
 
@@ -83,8 +90,28 @@ PodVector<T>::PodVector(PodVector &&other)
 }
 
 template <typename T>
+PodVector<T>::PodVector(const std::initializer_list<T> &initializerList) : buffer(sizeof(T))
+{
+    CHECK_POD_MACRO();
+    uint32_t size = initializerList.size();
+    buffer.reserve(size);
+
+    uint32_t counter = 0;
+
+    for(const T &t : initializerList)
+    {
+        buffer.insertIndex(counter, (const uint8_t *)&t);
+        ++counter;
+    }
+}
+
+
+
+template <typename T>
 PodVector<T>& PodVector<T>::operator=(const PodVector<T> &vec)
 {
+    CHECK_POD_MACRO();
+
     if (&vec == this)
         return *this;
 
@@ -147,8 +174,50 @@ void PodVector<T>::removeIndex(uint32_t index)
     buffer.removeIndex(index);
 }
 
+
+
+
 template <typename T>
-uint32_t PodVector<T>::getSize() const
+T* PodVector<T>::begin() const
+{
+    return (T*)buffer.getBegin();
+}
+
+template <typename T>
+T* PodVector<T>::data() const
+{
+    return (T*)buffer.getBegin();
+}
+
+template <typename T>
+T* PodVector<T>::end() const
+{
+    uint8_t *ptr = buffer.getBegin();
+    uint8_t *end = buffer.getEnd();
+    uint32_t bytes = sizeof(T) * buffer.getSize();
+    ptr += bytes;
+    if(ptr <= end)
+        return (T*)(ptr);
+    return (T*)(end);
+}
+
+template <typename T>
+T& PodVector<T>::back() const
+{
+    if(buffer.getSize() == 0)
+        return nullptr;
+
+    uint8_t *ptr = buffer.getBegin();
+    ptr += sizeof(T) * (buffer.getSize() - 1);
+    return *(T*)(ptr);
+}
+
+
+
+
+
+template <typename T>
+uint32_t PodVector<T>::size() const
 {
     return buffer.getSize();
 }
