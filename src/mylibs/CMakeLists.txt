@@ -11,6 +11,8 @@ add_library(MyLibraries
 
 	"core/vulkan_app.cpp"
 
+    "container/bytebuffer.cpp"
+    "container/mymemory.cpp"
 
 	"myvulkan/myvulkan.cpp"
 	#"myvulkan/vulkandevice.cpp"

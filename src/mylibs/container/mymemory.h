@@ -5,17 +5,20 @@
 struct Memory;
 
 void initMemory();
-Memory allocateMemoryBytes(uint32_t size);
 
+[[nodiscard]] Memory allocateMemoryBytes(uint32_t size);
 bool deAllocateMemory(Memory memory);
+[[nodiscard]] Memory resizeMemory(Memory memory, uint32_t size);
 
 void defragMemory();
-bool isValidMemory(Memory memory);
 
+[[nodiscard]] bool isValidMemory(Memory memory);
+[[nodiscard]] uint8_t *getMemoryBegin(Memory memory);
+[[nodiscard]] uint8_t *getMemoryEnd(Memory memory);
 
 struct MemoryHandle
 {
-    uint32_t value;
+    uint32_t value = ~0u;
 };
 
 struct Memory

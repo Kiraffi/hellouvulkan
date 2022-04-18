@@ -21,7 +21,7 @@ static constexpr uint8_t DebugValue = 0xabu;
 
 struct MemoryArea
 {
-    uint32_t startIndex = 0;
+    uint32_t startLocation = 0;
     uint32_t size = 0;
 };
 
@@ -48,7 +48,7 @@ struct AllMemory
     uint32_t freedAllocationCount = 0;
     uint32_t allocationCount = 0;
 
-    uint32_t memoryPointer = 0;
+    uint32_t memoryUsed = 0;
 
     bool inited = false;
     bool needsDefrag = false;
@@ -116,10 +116,10 @@ Memory allocateMemoryBytes(uint32_t size)
         initMemory();
     }
 
-    if(MaxMemorySize - allMemory.memoryPointer < size)
+    if(MaxMemorySize - allMemory.memoryUsed < size)
     {
-        printf("All memory used: %u\n", allMemory.memoryPointer + size);
-        ASSERT(MaxMemorySize - allMemory.memoryPointer >= size);
+        printf("All memory used: %u\n", allMemory.memoryUsed + size);
+        ASSERT(MaxMemorySize - allMemory.memoryUsed >= size);
         exit(1);
     }
     uint32_t index = ~0u;
@@ -147,11 +147,11 @@ Memory allocateMemoryBytes(uint32_t size)
         exit(1);
     }
     MemoryArea &alloc = allMemory.memoryAreas[index];
-    alloc.startIndex = allMemory.memoryPointer;
+    alloc.startLocation = allMemory.memoryUsed;
     alloc.size = size;
-    allMemory.memoryPointer += size;
+    allMemory.memoryUsed += size;
 
-    printf("Memory: %u, size: %u\n", alloc.startIndex, alloc.size);
+    printf("Memory: %u, size: %u\n", alloc.startLocation, alloc.size);
 
     allMemory.usedAllocationIndices[allMemory.allocationCount] = index;
     allMemory.allocationCount++;
@@ -178,7 +178,7 @@ bool deAllocateMemory(Memory memory)
     if(handleIndex == allMemory.usedAllocationIndices[allMemory.allocationCount - 1])
     {
         MemoryArea &alloc = allMemory.memoryAreas[handleIndex];
-        allMemory.memoryPointer -= alloc.size;
+        allMemory.memoryUsed -= alloc.size;
 
         allMemory.usedAllocationIndices[allMemory.allocationCount - 1] = ~0u;
     }
@@ -204,7 +204,7 @@ bool deAllocateMemory(Memory memory)
             return false;
     }
     MemoryArea &alloc = allMemory.memoryAreas[handleIndex];
-    alloc.startIndex = 0;
+    alloc.startLocation = 0;
     alloc.size = 0;
 
     allMemory.handleIterations[handleIndex] = (allMemory.handleIterations[handleIndex] + 1) & 0xffu;
@@ -215,6 +215,58 @@ bool deAllocateMemory(Memory memory)
     printf("rmemoving allocations, allocations left: %u\n", allMemory.allocationCount);
     return true;
 }
+
+Memory resizeMemory(Memory memory, uint32_t size)
+{
+    printf("Reallocating!\n");
+    ASSERT(size < MaxMemorySize);
+    if(size >= MaxMemorySize)
+    {
+        printf("Trying to allocate too much memory!");
+        exit(1);
+    }
+
+    if(!isValidMemory(memory))
+    {
+        return allocateMemoryBytes(size);
+    }
+    uint32_t handleIndex = getHandleIndex(memory);
+    MemoryArea &oldArea = allMemory.memoryAreas[handleIndex];
+    if(oldArea.size < size)
+    {
+        return memory;
+    }
+    bool lastIndex = allMemory.usedAllocationIndices[allMemory.allocationCount - 1] == handleIndex;
+    if(lastIndex)
+    {
+        allMemory.memoryUsed += size - oldArea.size;
+        ASSERT(allMemory.memoryUsed <= MaxMemorySize);
+        if(allMemory.memoryUsed > MaxMemorySize)
+        {
+            printf("Trying to allocate too much memory!");
+            exit(1);
+        }
+        oldArea.size = size;
+    }
+    else
+    {
+        Memory newMemory = allocateMemoryBytes(size);
+        if(!isValidMemory(newMemory))
+        {
+            printf("Trying to allocate too much memory!");
+            exit(1);
+        }
+        uint32_t newHandle = getHandleIndex(newMemory);
+        MemoryArea &newArea = allMemory.memoryAreas[newHandle];
+        memmove(allMemory.memoryAligned + newArea.startLocation,
+            allMemory.memoryAligned + oldArea.startLocation, oldArea.size);
+
+        deAllocateMemory(memory);
+        memory = newMemory;
+    }
+    return memory;
+}
+
 
 void defragMemory()
 {
@@ -228,11 +280,11 @@ void defragMemory()
     {
         uint32_t index = allMemory.usedAllocationIndices[i];
         MemoryArea &area = allMemory.memoryAreas[index];
-        ASSERT(memoryCount <= area.startIndex);
-        if(memoryCount < area.startIndex)
+        ASSERT(memoryCount <= area.startLocation);
+        if(memoryCount < area.startLocation)
         {
-            memmove(allMemory.memoryAligned + memoryCount, allMemory.memoryAligned + area.startIndex, area.size);
-            area.startIndex = memoryCount;
+            memmove(allMemory.memoryAligned + memoryCount, allMemory.memoryAligned + area.startLocation, area.size);
+            area.startLocation = memoryCount;
         }
         memoryCount += area.size;
     }
@@ -240,12 +292,12 @@ void defragMemory()
 
     #if USE_DEBUGVALUE
     {
-        if(memoryCount < allMemory.memoryPointer)
-            memset(allMemory.memoryAligned + memoryCount, DebugValue, allMemory.memoryPointer - memoryCount);
+        if(memoryCount < allMemory.memoryUsed)
+            memset(allMemory.memoryAligned + memoryCount, DebugValue, allMemory.memoryUsed - memoryCount);
     }
     #endif
 
-    allMemory.memoryPointer = memoryCount;
+    allMemory.memoryUsed = memoryCount;
 }
 
 bool isValidMemory(Memory memory)
@@ -255,4 +307,30 @@ bool isValidMemory(Memory memory)
     if(handleIndex >= MaxAllocations)
         return false;
     return allMemory.handleIterations[handleIndex] == iteration;
+}
+
+uint8_t *getMemoryBegin(Memory memory)
+{
+    bool validMemory = isValidMemory(memory);
+    ASSERT(validMemory);
+    uint32_t handleIndex = getHandleIndex(memory);
+    bool isValidHandle = handleIndex < MaxAllocations;
+    ASSERT(isValidHandle);
+    if(!validMemory || !isValidHandle)
+        return nullptr;
+    const MemoryArea &area = allMemory.memoryAreas[handleIndex];
+    return allMemory.memoryAligned + area.startLocation;
+}
+
+uint8_t *getMemoryEnd(Memory memory)
+{
+    bool validMemory = isValidMemory(memory);
+    ASSERT(validMemory);
+    uint32_t handleIndex = getHandleIndex(memory);
+    bool isValidHandle = handleIndex < MaxAllocations;
+    ASSERT(isValidHandle);
+    if(!validMemory || !isValidHandle)
+        return nullptr;
+    const MemoryArea &area = allMemory.memoryAreas[handleIndex];
+    return allMemory.memoryAligned + area.startLocation + area.size;
 }
