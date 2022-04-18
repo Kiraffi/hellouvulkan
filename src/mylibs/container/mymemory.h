@@ -7,7 +7,7 @@ struct Memory;
 void initMemory();
 Memory allocateMemoryBytes(uint32_t size);
 
-bool deAllocate(Memory memory);
+bool deAllocateMemory(Memory memory);
 
 void defragMemory();
 bool isValidMemory(Memory memory);
@@ -26,7 +26,7 @@ struct Memory
 struct MemoryAutoRelease
 {
     MemoryAutoRelease(Memory m) : mem(m) {}
-    ~MemoryAutoRelease() { deAllocate(mem); }
+    ~MemoryAutoRelease() { deAllocateMemory(mem); }
     Memory mem;
 };
 
@@ -45,7 +45,7 @@ template<class T>
 struct MemoryAutoReleaseType
 {
     MemoryAutoReleaseType(MemoryType<T> m) : mem(m) {}
-    ~MemoryAutoReleaseType() { deAllocate(mem.mem); }
+    ~MemoryAutoReleaseType() { deAllocateMemory(mem.mem); }
     MemoryType<T> mem;
 };
 

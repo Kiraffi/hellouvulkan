@@ -86,9 +86,9 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
     {
         char moo[133];
     };
-
+    Memory mem33 = allocateMemoryBytes(1u);
     MemoryAutoReleaseType mem4 = allocateMemory<Moo>(9);
-
+    //deAllocateMemory(mem33);
 
     glfwSetErrorCallback(error_callback);
     int rc = glfwInit();

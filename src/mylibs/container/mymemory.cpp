@@ -16,6 +16,7 @@ static constexpr uint32_t MemoryAlignment = 4096u;
 
 // What to initialize originally the memory, probably not really useful, since
 // it would have to initialize that during freeing.
+#define USE_DEBUGVALUE 1
 static constexpr uint8_t DebugValue = 0xabu;
 
 struct MemoryArea
@@ -36,7 +37,7 @@ struct AllMemory
     }
 
     uint8_t *memory = nullptr;
-    uint8_t *memoryStart = nullptr;
+    uint8_t *memoryAligned = nullptr;
 
     MemoryArea memoryAreas[MaxAllocations] = {};
     uint32_t freedAllocationIndices[MaxAllocations] = {};
@@ -50,6 +51,7 @@ struct AllMemory
     uint32_t memoryPointer = 0;
 
     bool inited = false;
+    bool needsDefrag = false;
 };
 
 static AllMemory allMemory;
@@ -74,9 +76,10 @@ void initMemory()
     uint8_t *newAlignedData =
         (uint8_t *)((((uintptr_t)allMemory.memory) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
 
-    allMemory.memoryStart = newAlignedData;
+    allMemory.memoryAligned = newAlignedData;
     allMemory.inited = true;
 
+    #if USE_DEBUGVALUE
     {
         uint8_t *ptr = allMemory.memory;
 
@@ -85,6 +88,7 @@ void initMemory()
             *ptr++ = DebugValue;
         }
     }
+    #endif
     // Initialize freedallocations
     {
         for(uint32_t i = 0; i < MaxAllocations; ++i)
@@ -160,7 +164,7 @@ Memory allocateMemoryBytes(uint32_t size)
 }
 
 
-bool deAllocate(Memory memory)
+bool deAllocateMemory(Memory memory)
 {
     if(allMemory.allocationCount == 0)
         return false;
@@ -173,12 +177,10 @@ bool deAllocate(Memory memory)
     // just freed into stack.
     if(handleIndex == allMemory.usedAllocationIndices[allMemory.allocationCount - 1])
     {
-        allMemory.usedAllocationIndices[allMemory.allocationCount - 1] = ~0u;
-
         MemoryArea &alloc = allMemory.memoryAreas[handleIndex];
         allMemory.memoryPointer -= alloc.size;
-        alloc.startIndex = 0;
-        alloc.size = 0;
+
+        allMemory.usedAllocationIndices[allMemory.allocationCount - 1] = ~0u;
     }
     else
     {
@@ -195,11 +197,15 @@ bool deAllocate(Memory memory)
                     allMemory.usedAllocationIndices[i] = allMemory.usedAllocationIndices[i + 1];
                 }
                 allMemory.usedAllocationIndices[i] = ~0u;
+                allMemory.needsDefrag = true;
             }
         }
         if(!found)
             return false;
     }
+    MemoryArea &alloc = allMemory.memoryAreas[handleIndex];
+    alloc.startIndex = 0;
+    alloc.size = 0;
 
     allMemory.handleIterations[handleIndex] = (allMemory.handleIterations[handleIndex] + 1) & 0xffu;
 
@@ -212,22 +218,34 @@ bool deAllocate(Memory memory)
 
 void defragMemory()
 {
+    if(!allMemory.needsDefrag)
+        return;
+    allMemory.needsDefrag = false;
     printf("Defrag memory\n");
 
-    uint32_t memoryStart = 0u;
+    uint32_t memoryCount = 0u;
     for(uint32_t i = 0; i < allMemory.allocationCount; ++i)
     {
         uint32_t index = allMemory.usedAllocationIndices[i];
         MemoryArea &area = allMemory.memoryAreas[index];
-        ASSERT(memoryStart <= area.startIndex);
-        if(memoryStart < area.startIndex)
+        ASSERT(memoryCount <= area.startIndex);
+        if(memoryCount < area.startIndex)
         {
-            memmove(allMemory.memoryStart + memoryStart, allMemory.memoryStart + area.startIndex, area.size);
+            memmove(allMemory.memoryAligned + memoryCount, allMemory.memoryAligned + area.startIndex, area.size);
+            area.startIndex = memoryCount;
         }
-        memoryStart += area.size;
+        memoryCount += area.size;
     }
-    ASSERT(memoryStart < MaxMemorySize);
-    allMemory.memoryPointer = memoryStart;
+    ASSERT(memoryCount < MaxMemorySize);
+
+    #if USE_DEBUGVALUE
+    {
+        if(memoryCount < allMemory.memoryPointer)
+            memset(allMemory.memoryAligned + memoryCount, DebugValue, allMemory.memoryPointer - memoryCount);
+    }
+    #endif
+
+    allMemory.memoryPointer = memoryCount;
 }
 
 bool isValidMemory(Memory memory)
