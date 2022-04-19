@@ -29,8 +29,8 @@ set(GLSLC_EXECUTABLE glslc)
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/vulkan_new)
 
 #set(SPV_SHADERS
-#	${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag
-#	#${SHADER_DIR}/*.comp
+#    ${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag
+#    #${SHADER_DIR}/*.comp
 #)
 file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp
     #${SHADER_DIR}/*.geom ${SHADER_DIR}/*.tesc ${SHADER_DIR}/*.tese ${SHADER_DIR}/*.mesh ${SHADER_DIR}/*.task ${SHADER_DIR}/*.rgen ${SHADER_DIR}/*.rchit ${SHADER_DIR}/*.rmiss
@@ -38,8 +38,8 @@ file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DI
 
 foreach(SHADER IN LISTS SPV_SHADERS)
     get_filename_component(FILENAME ${SHADER} NAME)
-	message(STATUS "Compiling ${SHADER}")
-	execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.2 -o ${SHADER_DIR}/${FILENAME}.spv)
+    message(STATUS "Compiling ${SHADER}")
+    execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.2 -o ${SHADER_DIR}/${FILENAME}.spv)
 endForeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})

@@ -9,12 +9,12 @@ add_executable (draw_stuff_vulkan "src/main_draw_stuff_vulkan.cpp")
 
 add_dependencies(draw_stuff_vulkan shaders)
 
-target_link_libraries(draw_stuff_vulkan PRIVATE 
-	glfw
-	#${CMAKE_DL_LIBS} 
-	#${GLFW_LIBRARIES}
-	Vulkan::Vulkan
-	#meshoptimizer
-	MyLibraries
-	
-	)
+target_link_libraries(draw_stuff_vulkan PRIVATE
+    glfw
+    #${CMAKE_DL_LIBS}
+    #${GLFW_LIBRARIES}
+    Vulkan::Vulkan
+    #meshoptimizer
+    MyLibraries
+
+    )

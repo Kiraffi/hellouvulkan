@@ -9,11 +9,11 @@ add_executable (font_render_vulkan "src/main_font_renderer_vulkan.cpp")
 
 add_dependencies(font_render_vulkan shaders)
 
-target_link_libraries(font_render_vulkan PRIVATE 
-	glfw 
-	#${CMAKE_DL_LIBS} 
-	#${GLFW_LIBRARIES} 
-	Vulkan::Vulkan
-	#meshoptimizer
-	MyLibraries
-	)
+target_link_libraries(font_render_vulkan PRIVATE
+    glfw
+    #${CMAKE_DL_LIBS}
+    #${GLFW_LIBRARIES}
+    Vulkan::Vulkan
+    #meshoptimizer
+    MyLibraries
+    )

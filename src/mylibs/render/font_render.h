@@ -1,8 +1,8 @@
 #pragma once
 
 //#include "math/vector3.h"
+#include "container/podvector.h"
 #include "myvulkan/myvulkan.h"
-#include <vector>
 //#include "myvulkan/vulkanhelperfuncs.h"
 //#include "myvulkan/vulkanresource.h"
 
@@ -39,7 +39,7 @@ private:
         float padding[2];
     };
 
-    std::vector<GPUVertexData> vertData;
+    PodVector<GPUVertexData> vertData;
 
     VkShaderModule vertexShader = nullptr;
     VkShaderModule fragShader = nullptr;

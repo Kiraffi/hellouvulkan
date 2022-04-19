@@ -22,7 +22,6 @@
 
 #include <string>
 #include <thread>
-#include <vector>
 #include <string.h>
 
 ////////////////////////
@@ -50,7 +49,7 @@ void FontRenderSystem::deInit()
 
 bool FontRenderSystem::init(std::string_view fontFilename)
 {
-    std::vector<char> data;
+    PodVector<char> data;
     if (!loadBytes(fontFilename, data))
     {
         printf("Failed to load file: %s\n", fontFilename.data());
@@ -76,7 +75,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
         {
             uint32_t offset = 0;
-            std::vector<uint32_t> indices;
+            PodVector<uint32_t> indices;
             indices.resize(6 * MAX_LETTERS);
             for (int i = 0; i < MAX_LETTERS; ++i)
             {
@@ -95,7 +94,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     //Font image data
     {
-        std::vector<uint8_t> fontPic;
+        PodVector<uint8_t> fontPic;
         fontPic.resize((128 - 32) * 8 * 12 * 4);
 
         // Note save order is a bit messed up!!! Since the file has one char 8x12 then next
@@ -143,7 +142,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
     // Create pipelines
     {
         PipelineWithDescriptors &pipeline = pipelinesWithDescriptor;
-        pipeline.descriptorSetLayout = std::vector<DescriptorSetLayout>({
+        pipeline.descriptorSetLayout = PodVector<DescriptorSetLayout>({
                 DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
                 DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
                 DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u }
@@ -158,7 +157,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             vertexShader, fragShader,
             pipeline.pipeline.pipelineLayout, false);
 
-        pipeline.descriptorSetBinds = std::vector<DescriptorInfo>(
+        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
             DescriptorInfo(vulk.renderFrameBuffer.buffer, 0u, 64u * 1024u ),
             DescriptorInfo(letterDataBuffer.buffer, 0u, 64u * 1024u),

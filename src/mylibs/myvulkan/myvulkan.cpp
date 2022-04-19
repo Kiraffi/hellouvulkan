@@ -10,10 +10,9 @@
 
 #include <string>
 #include <set>
-#include <vector>
 #include <string.h>
 
-
+static uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
 
 static constexpr Formats defaultFormats[] = {
     { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
@@ -26,8 +25,8 @@ static bool createGraphics();
 struct SwapChainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
+    PodVector<VkSurfaceFormatKHR> formats;
+    PodVector<VkPresentModeKHR> presentModes;
 };
 
 
@@ -59,12 +58,12 @@ struct VulkanDeviceOptionals
 };
 
 
-std::vector<const char *>validationLayers =
+PodVector<const char *>validationLayers =
 {
     "VK_LAYER_KHRONOS_validation"
 };
 
-std::vector<const char *>deviceExtensions =
+PodVector<const char *>deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     //VK_KHR_MAINTENANCE1_EXTENSION_NAME
@@ -136,7 +135,7 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    PodVector<VkExtensionProperties> availableExtensions(extensionCount);
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
     VulkanDeviceOptionals result;
@@ -152,13 +151,13 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
 }
 
 
-static std::vector<const char*> getRequiredExtensions()
+static PodVector<const char*> getRequiredExtensions()
 {
     uint32_t glfwExtensionCount = 0u;
     const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-    std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    PodVector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
     //extensions.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
@@ -192,7 +191,7 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    PodVector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
     int i = 0;
@@ -404,17 +403,22 @@ static bool createSwapchain(GLFWwindow *window)
 static bool createInstance()
 {
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    appInfo.apiVersion = VK_API_VERSION_1_2;
+    appInfo.apiVersion = VulkanApiVersion;
     appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
 
 
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     createInfo.pApplicationInfo = &appInfo;
 
-    std::vector<const char*> extensions = getRequiredExtensions();
+    PodVector<const char*> extensions = getRequiredExtensions();
 
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledExtensionCount = (uint32_t)extensions.size();
+
+    for(auto ext : extensions)
+    {
+        printf("ext: %s\n", ext);
+    }
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
     if (enableValidationLayers)
@@ -460,7 +464,7 @@ static bool createPhysicalDevice()
         VkPhysicalDevice physicalDevice = devices[i];
         vkGetPhysicalDeviceProperties(physicalDevice, &prop);
 
-        if(prop.apiVersion < VK_API_VERSION_1_1)
+        if(prop.apiVersion < VulkanApiVersion)
             continue;
 
         if(!prop.limits.timestampComputeAndGraphics)
@@ -497,7 +501,7 @@ static bool createPhysicalDevice()
             uint32_t extensionCount;
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+            PodVector<VkExtensionProperties> availableExtensions(extensionCount);
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
             std::set<std::string> requiredExtensions;
@@ -607,7 +611,7 @@ static bool createDeviceWithQueues()
 
     ASSERT(vulk.computeColorFormat != VK_FORMAT_UNDEFINED);
 
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    PodVector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {
         vulk.queueFamilyIndices.graphicsFamily, vulk.queueFamilyIndices.presentFamily
     };
@@ -635,7 +639,7 @@ static bool createDeviceWithQueues()
     createInfo.pEnabledFeatures = &deviceFeatures;
 
 
-    std::vector<const char *> deviceExts = deviceExtensions;
+    PodVector<const char *> deviceExts = deviceExtensions;
 
     VulkanDeviceOptionals optionals = getDeviceOptionals(vulk.physicalDevice);
     if(optionals.canUseVulkanRenderdocExtensionMarker)
@@ -997,10 +1001,10 @@ static bool createGraphics()
 
 
 
-static VkDescriptorSetLayout createSetLayout(const std::vector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage)
+static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage)
 {
     ASSERT(descriptors.size() > 0);
-    std::vector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
+    PodVector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
     for(uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
     {
         setBindings[i].binding = descriptors[i].bindingIndex;
@@ -1020,7 +1024,7 @@ static VkDescriptorSetLayout createSetLayout(const std::vector<DescriptorSetLayo
     return setLayout;
 }
 
-Pipeline createPipelineLayout(const std::vector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage)
+Pipeline createPipelineLayout(const PodVector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage)
 {
     VkDescriptorSetLayout setLayout = 0;
     VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -1595,13 +1599,13 @@ VkBufferMemoryBarrier bufferBarrier(const Buffer &buffer, VkAccessFlags srcAcces
 
 
 
-Descriptor createDescriptor(const std::vector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout)
+Descriptor createDescriptor(const PodVector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout)
 {
     Descriptor result;
     if(descriptors.size() == 0)
         return result;
 
-    std::vector<VkDescriptorPoolSize> poolSizes(descriptors.size());
+    PodVector<VkDescriptorPoolSize> poolSizes(descriptors.size());
 
     for(uint32_t i = 0; i < descriptors.size(); ++i)
     {
@@ -1631,17 +1635,17 @@ Descriptor createDescriptor(const std::vector<DescriptorSetLayout> &descriptors,
     return result;
 }
 
-bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
-    const std::vector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet)
+bool setBindDescriptorSet(const PodVector<DescriptorSetLayout> &descriptors,
+    const PodVector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet)
 {
     uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
     if(writeDescriptorCount < 1u)
         return false;
 
-    std::vector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
-    std::vector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
+    PodVector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
+    PodVector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
 
-    std::vector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
+    PodVector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
 
     uint32_t writeIndex = 0u;
     uint32_t bufferCount = 0u;
@@ -1832,7 +1836,7 @@ void destroyPipeline(Pipeline &pipeline)
 
 VkShaderModule loadShader(std::string_view filename)
 {
-    std::vector<char> buffer;
+    PodVector<char> buffer;
     VkShaderModule shaderModule = 0;
 
     if (loadBytes(filename, buffer))

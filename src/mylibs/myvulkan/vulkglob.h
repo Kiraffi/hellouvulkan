@@ -1,9 +1,9 @@
 
 #pragma once
 
-#include <vector>
 #include <vulkan/vulkan_core.h>
 #include "core/mytypes.h"
+#include "container/podvector.h"
 
 struct QueueFamilyIndices
 {
@@ -55,7 +55,7 @@ struct SwapChain
 {
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 
-    std::vector<VkImage> images;
+    PodVector<VkImage> images;
 
     uint32_t width = 0;
     uint32_t height = 0;
@@ -195,8 +195,8 @@ struct PipelineWithDescriptors
     Pipeline pipeline;
 
     Descriptor descriptor;
-    std::vector<DescriptorSetLayout> descriptorSetLayout;
-    std::vector<DescriptorInfo> descriptorSetBinds;
+    PodVector<DescriptorSetLayout> descriptorSetLayout;
+    PodVector<DescriptorInfo> descriptorSetBinds;
 };
 
 

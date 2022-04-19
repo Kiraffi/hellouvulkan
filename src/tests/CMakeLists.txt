@@ -8,5 +8,5 @@ cmake_minimum_required (VERSION 3.15)
 add_executable (tests "main_test.cpp")
 
 target_link_libraries(tests PRIVATE
-	MyLibraries
-	)
+    MyLibraries
+    )

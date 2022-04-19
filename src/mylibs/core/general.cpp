@@ -22,7 +22,7 @@ float ffmaxf(float a, float b) { return (a > b) ? a : b; }
 
 //void myPrint(const char* ptr, )
 
-bool loadBytes(std::string_view fileName, std::vector<char>& dataOut)
+bool loadBytes(std::string_view fileName, PodVector<char>& dataOut)
 {
     #ifdef _WIN32
         char buf[1024] = {};

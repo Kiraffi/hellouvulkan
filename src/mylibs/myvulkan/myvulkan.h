@@ -1,9 +1,9 @@
 #pragma once
 
 #include <string_view>
-#include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "container/podvector.h"
 #include "core/mytypes.h"
 #include "math/vector3.h"
 
@@ -84,14 +84,14 @@ VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLay
 
 VkShaderModule loadShader(std::string_view filename);
 
-Pipeline createPipelineLayout(const std::vector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage);
+Pipeline createPipelineLayout(const PodVector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage);
 
 void destroyPipeline(Pipeline &pipeline);
 void destroyDescriptor(Descriptor &descriptor);
 
-Descriptor createDescriptor(const std::vector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout);
-bool setBindDescriptorSet(const std::vector<DescriptorSetLayout> &descriptors,
-    const std::vector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet);
+Descriptor createDescriptor(const PodVector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout);
+bool setBindDescriptorSet(const PodVector<DescriptorSetLayout> &descriptors,
+    const PodVector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet);
 
 
 
