@@ -12,7 +12,9 @@
             "name": "Linux",
             //"intelliSenseMode": "msvc-x64",
             "intelliSenseMode": "clang-x64",
-            "includePath": [ "${myDefaultIncludePath}" ],
+            "includePath": [
+                "${myDefaultIncludePath}"
+            ],
             //"compilerArgs": ["-Wpragma-once-outside-header"],
             //"macFrameworkPath": ["/System/Library/Frameworks"],
             "defines": [
@@ -32,7 +34,8 @@
                 ],
                 "limitSymbolsToIncludedHeaders": false,
                 "databaseFilename": ""
-            }
+            },
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

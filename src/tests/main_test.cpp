@@ -8,7 +8,6 @@ struct Foos
     int i;
     int j;
 };
-#include <vector>
 void testMemory(bool forceDefrag)
 {
     ByteBuffer buff(8);

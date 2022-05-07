@@ -1,16 +1,22 @@
 cmake_minimum_required(VERSION 3.0)
 
-if (CMAKE_VERSION VERSION_GREATER 3.15 OR CMAKE_VERSION VERSION_EQUAL 3.15)
+if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW) # Enables override of options from parent CMakeLists.txt
+endif()
+
+if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW) # Enables use of MSVC_RUNTIME_LIBRARY
+endif()
+if(POLICY CMP0092)
     cmake_policy(SET CMP0092 NEW) # Enables clean /W4 override for MSVC
 endif()
 
-project(meshoptimizer VERSION 0.13 LANGUAGES CXX)
+project(meshoptimizer VERSION 0.17 LANGUAGES CXX)
 
 option(MESHOPT_BUILD_DEMO "Build demo" OFF)
-option(MESHOPT_BUILD_TOOLS "Build tools" OFF)
+option(MESHOPT_BUILD_GLTFPACK "Build gltfpack" OFF)
 option(MESHOPT_BUILD_SHARED_LIBS "Build shared libraries" OFF)
-set(MESHOPT_BUILD_TOOLS_GLFW_FOLDER_NAME "" CACHE STRING "Custom folder to look for GLFW")
+set(MESHOPT_BASISU_PATH "" CACHE STRING "")
 
 set(SOURCES
     src/meshoptimizer.h
@@ -26,8 +32,26 @@ set(SOURCES
     src/vcacheanalyzer.cpp
     src/vcacheoptimizer.cpp
     src/vertexcodec.cpp
+    src/vertexfilter.cpp
     src/vfetchanalyzer.cpp
     src/vfetchoptimizer.cpp
+)
+
+set(GLTF_SOURCES
+    gltf/animation.cpp
+    gltf/basisenc.cpp
+    gltf/basislib.cpp
+    gltf/fileio.cpp
+    gltf/gltfpack.cpp
+    gltf/image.cpp
+    gltf/json.cpp
+    gltf/material.cpp
+    gltf/mesh.cpp
+    gltf/node.cpp
+    gltf/parseobj.cpp
+    gltf/parsegltf.cpp
+    gltf/stream.cpp
+    gltf/write.cpp
 )
 
 if(MSVC)
@@ -36,7 +60,12 @@ else()
     add_compile_options(-Wall -Wextra -Wshadow -Wno-missing-field-initializers -Werror)
 endif()
 
-add_library(meshoptimizer ${SOURCES})
+if(MESHOPT_BUILD_SHARED_LIBS)
+    add_library(meshoptimizer SHARED ${SOURCES})
+else()
+    add_library(meshoptimizer STATIC ${SOURCES})
+endif()
+
 target_include_directories(meshoptimizer INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 
 if(MESHOPT_BUILD_SHARED_LIBS)
@@ -54,12 +83,13 @@ endif()
 set(TARGETS meshoptimizer)
 
 if(MESHOPT_BUILD_DEMO)
-    add_executable(demo demo/main.cpp demo/miniz.cpp demo/tests.cpp tools/meshloader.cpp)
+    add_executable(demo demo/main.cpp demo/tests.cpp tools/meshloader.cpp)
     target_link_libraries(demo meshoptimizer)
 endif()
 
-if(MESHOPT_BUILD_TOOLS)
-    add_executable(gltfpack tools/gltfpack.cpp tools/meshloader.cpp tools/basistoktx.cpp)
+if(MESHOPT_BUILD_GLTFPACK)
+    add_executable(gltfpack ${GLTF_SOURCES} tools/meshloader.cpp)
+    set_target_properties(gltfpack PROPERTIES CXX_STANDARD 11)
     target_link_libraries(gltfpack meshoptimizer)
     list(APPEND TARGETS gltfpack)
 
@@ -68,22 +98,19 @@ if(MESHOPT_BUILD_TOOLS)
         set_target_properties(gltfpack PROPERTIES INSTALL_RPATH ${RPATH})
     endif()
 
-    if(NOT (MESHOPT_BUILD_TOOLS_GLFW_FOLDER_NAME STREQUAL ""))
-        message(STATUS "Using GLFW3 from: ${MESHOPT_BUILD_TOOLS_GLFW_FOLDER_NAME}")
-        set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "")
-        set(GLFW_BUILD_TESTS OFF CACHE BOOL "")
-        set(GLFW_BUILD_DOCS OFF CACHE BOOL "")
-        set(GLFW_INSTALL OFF CACHE BOOL "")
-        add_subdirectory(${MESHOPT_BUILD_TOOLS_GLFW_FOLDER_NAME})
-        set(glfw3_FOUND TRUE)
-        set(glfw3_LIBRARY glfw)
-    else()
-        find_package(glfw3 3.3 QUIET)
-    endif()
+    if(NOT MESHOPT_BASISU_PATH STREQUAL "")
+        get_filename_component(BASISU_PATH ${MESHOPT_BASISU_PATH} ABSOLUTE)
 
-    if (glfw3_FOUND)
-        add_executable(lodviewer tools/lodviewer.cpp tools/meshloader.cpp)
-        target_link_libraries(lodviewer ${glfw3_LIBRARY} meshoptimizer)
+        target_compile_definitions(gltfpack PRIVATE WITH_BASISU)
+        set_source_files_properties(gltf/basisenc.cpp gltf/basislib.cpp PROPERTIES INCLUDE_DIRECTORIES ${BASISU_PATH})
+
+        if(NOT MSVC AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+            set_source_files_properties(gltf/basislib.cpp PROPERTIES COMPILE_OPTIONS -msse4.1)
+        endif()
+
+        if(UNIX)
+            target_link_libraries(gltfpack pthread)
+        endif()
     endif()
 endif()
 

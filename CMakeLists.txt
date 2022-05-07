@@ -4,7 +4,6 @@
 cmake_minimum_required (VERSION 3.15)
 project ("hellouvulkan" VERSION 0.0.1)
 
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
@@ -41,7 +40,7 @@ foreach(SHADER IN LISTS SPV_SHADERS)
     message(STATUS "Compiling ${SHADER}")
     execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.2 -o ${SHADER_DIR}/${FILENAME}.spv)
 endForeach()
-
+ 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
 #set(SHOW_VARIABLES true)
@@ -64,10 +63,10 @@ ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
 ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
 include_directories("external/")
-include_directories("external/glfw-3.3.4/include/")
+include_directories("external/glfw/include/")
 include_directories("src/mylibs")
 
 #add_subdirectory("external/meshoptimizer")
-add_subdirectory("external/glfw-3.3.4")
+add_subdirectory("external/glfw")
 add_subdirectory("src")
 

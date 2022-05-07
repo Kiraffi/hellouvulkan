@@ -2,7 +2,7 @@
 # new/removed files.
 
 project ("hellouvulkan libs" VERSION 0.0.1)
-
+ 
 
 add_library(MyLibraries
     "core/general.cpp"
