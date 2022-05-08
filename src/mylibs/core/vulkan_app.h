@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/timer.h"
+#include "myvulkan/vulkaninitparameters.h"
 #include "render/font_render.h"
 
 struct GLFWwindow;
@@ -27,7 +28,7 @@ public:
     VulkanApp() {}
     virtual ~VulkanApp();
 
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight);
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters initParameters);
     virtual void run();
     virtual void update();
     virtual void resized() {}

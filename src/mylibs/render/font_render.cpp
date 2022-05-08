@@ -34,7 +34,7 @@ void FontRenderSystem::deInit()
     destroyImage(textImage);
 
     destroyDescriptor(pipelinesWithDescriptor.descriptor);
-    destroyPipeline(pipelinesWithDescriptor.pipeline);
+    destroyPipeline(pipelinesWithDescriptor);
 
     destroySampler(textureSampler);
 
@@ -142,7 +142,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
     // Create pipelines
     {
         PipelineWithDescriptors &pipeline = pipelinesWithDescriptor;
-        pipeline.descriptorSetLayout = PodVector<DescriptorSetLayout>({
+        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>({
                 DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
                 DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
                 DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u }
@@ -150,12 +150,16 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
 
 
-        pipeline.pipeline = createPipelineLayout(pipeline.descriptorSetLayout, VK_SHADER_STAGE_ALL_GRAPHICS);
+        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
+        {
+            printf("Failed to create pipelinelayout!\n");
+            return false;
+        }
 
 
-        pipeline.pipeline.pipeline = createGraphicsPipeline(vulk.renderPass,
+        pipeline.pipeline = createGraphicsPipeline(vulk.renderPass,
             vertexShader, fragShader,
-            pipeline.pipeline.pipelineLayout, false);
+            pipeline.pipelineLayout, false);
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
@@ -163,8 +167,9 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             DescriptorInfo(letterDataBuffer.buffer, 0u, 64u * 1024u),
             DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayout, pipeline.pipeline.descriptorSetLayout);
-        if(!setBindDescriptorSet(pipeline.descriptorSetLayout, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+
+        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
+        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
             return false;

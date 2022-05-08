@@ -24,7 +24,7 @@ static bool createGraphics();
 
 struct SwapChainSupportDetails
 {
-    VkSurfaceCapabilitiesKHR capabilities;
+    VkSurfaceCapabilitiesKHR capabilities = {};
     PodVector<VkSurfaceFormatKHR> formats;
     PodVector<VkPresentModeKHR> presentModes;
 };
@@ -58,23 +58,28 @@ struct VulkanDeviceOptionals
 };
 
 
-PodVector<const char *>validationLayers =
+static const PodVector<const char *>validationLayers =
 {
     "VK_LAYER_KHRONOS_validation"
 };
 
-PodVector<const char *>deviceExtensions =
+static const PodVector<const char *>deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     //VK_KHR_MAINTENANCE1_EXTENSION_NAME
 //    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
+    void* pUserData)
 {
-    bool errorMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0 || (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0;
-    bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0 || (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
+    bool errorMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0 ||
+        (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0;
+    bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0 ||
+        (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
 
 #if !SHOW_INFO_MESSAGES
     if(!errorMsg && !warningMsg)
@@ -96,8 +101,14 @@ VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
         return nullptr;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.messageSeverity = 
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType = 
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | 
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = debugReportCallback;
 
     VkDebugUtilsMessengerEXT debugMessenger = 0;
@@ -197,6 +208,13 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
     int i = 0;
     for (const auto& queueFamily : queueFamilies)
     {
+        uint32_t queueBits = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
+
+        // make everything into same queue
+        if ((queueFamily.queueFlags & queueBits) != queueBits)
+            continue;
+        indices.graphicsFamily = indices.transferFamily = indices.computeFamily = i;
+        /*
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             indices.graphicsFamily = i;
         else
@@ -209,7 +227,7 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
             indices.computeFamily = i;
         else
             continue;
-
+        */
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
 
@@ -269,8 +287,15 @@ static void destroySwapchain(SwapChain &swapchain)
 
 
 
-static bool createSwapchain(GLFWwindow *window)
+static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
 {
+    VkPresentModeKHR findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
+    switch (vsyncMode)
+    {
+        case VSyncType::FIFO_VSYNC: findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR; break;
+        case VSyncType::IMMEDIATE_NO_VSYNC: findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_IMMEDIATE_KHR; break;
+        case VSyncType::MAILBOX_VSYNC: findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR; break;
+    }
     {
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulk.physicalDevice, vulk.surface);
         ASSERT(swapChainSupport.formats.size() > 0);
@@ -294,17 +319,9 @@ static bool createSwapchain(GLFWwindow *window)
         ASSERT(found);
 
         VkPresentModeKHR presentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
-        #if VSYNC == 1
-            VkPresentModeKHR searchMode = presentMode;
-        #elif VSYNC == 2
-            VkPresentModeKHR searchMode = VK_PRESENT_MODE_MAILBOX_KHR;
-        #else
-            VkPresentModeKHR searchMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-        #endif
-
         for (const auto& availablePresentMode : swapChainSupport.presentModes)
         {
-            if (availablePresentMode == searchMode)
+            if (availablePresentMode == findPresentMode)
             {
                 presentMode = availablePresentMode;
                 break;
@@ -448,10 +465,10 @@ static bool createInstance()
 
 
 
-static bool createPhysicalDevice()
+static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 {
     VkPhysicalDevice devices[256] = {};
-    uint32_t count = ARRAYSIZE(devices);
+    uint32_t count = ARRAYSIZES(devices);
 
     VK_CHECK(vkEnumeratePhysicalDevices(vulk.instance, &count, devices));
 
@@ -476,7 +493,7 @@ static bool createPhysicalDevice()
             continue;
 
         uint32_t formatIndex = ~0u;
-        for (uint32_t j = 0; j < ARRAYSIZE(defaultFormats); ++j)
+        for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
         {
             VkFormatProperties formatProperties;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, defaultFormats[j].format, &formatProperties);
@@ -522,13 +539,7 @@ static bool createPhysicalDevice()
         if(!extensionsSupported)
             continue;
 
-        #if DISCRETE_GPU
-            static constexpr VkPhysicalDeviceType wantedDevice = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-        #else
-            static constexpr VkPhysicalDeviceType wantedDevice = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
-        #endif
-
-        if(prop.deviceType == wantedDevice)
+        if(prop.deviceType == wantedDeviceType)
         {
             primary = secondary = devices[i];
             break;
@@ -575,7 +586,7 @@ static bool createDeviceWithQueues()
     for(uint32_t i = 0; i < swapChainSupport.formats.size() && vulk.colorFormat == VK_FORMAT_UNDEFINED; ++i)
     {
 
-        for (uint32_t j = 0; j < ARRAYSIZE(defaultFormats); ++j)
+        for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
         {
             if(swapChainSupport.formats[i].colorSpace != defaultFormats[j].colorSpace)
                 continue;
@@ -597,7 +608,7 @@ static bool createDeviceWithQueues()
     ASSERT(vulk.colorFormat != VK_FORMAT_UNDEFINED);
 
 
-    for (uint32_t j = 0; j < ARRAYSIZE(defaultFormats); ++j)
+    for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
     {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(vulk.physicalDevice, defaultFormats[j].format, &formatProperties);
@@ -699,7 +710,7 @@ bool resizeSwapchain(GLFWwindow *window)
     VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
     SwapChain oldSwapchain = vulk.swapchain;
-    createSwapchain(window);
+    createSwapchain(window, vulk.initParams.vsync);
 
     destroySwapchain(oldSwapchain);
     return true;
@@ -765,7 +776,7 @@ static VkRenderPass createRenderPass(VkFormat colorFormat, VkFormat depthFormat)
     subpass.pDepthStencilAttachment = &depthAttachments;
 
     VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    createInfo.attachmentCount = ARRAYSIZE(attachments);
+    createInfo.attachmentCount = ARRAYSIZES(attachments);
     createInfo.pAttachments = attachments;
     createInfo.subpassCount = 1;
     createInfo.pSubpasses = &subpass;
@@ -823,8 +834,9 @@ static VkFence createFence()
 
 
 
-bool initVulkan(GLFWwindow *window)
+bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initParameters)
 {
+    vulk.initParams = initParameters;
     ASSERT(window);
     if(!window)
     {
@@ -848,7 +860,8 @@ bool initVulkan(GLFWwindow *window)
     }
 
 
-    if(!createPhysicalDevice())
+    if(!createPhysicalDevice(vulk.initParams.useIntegratedGpu ? 
+        VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))
     {
         printf("Failed to create vulkan physical device!\n");
         return false;
@@ -884,7 +897,7 @@ bool initVulkan(GLFWwindow *window)
         return false;
     }
 
-    bool scSuccess = createSwapchain(window);
+    bool scSuccess = createSwapchain(window, vulk.initParams.vsync);
     ASSERT(scSuccess);
     if(!scSuccess)
     {
@@ -1024,13 +1037,13 @@ static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout
     return setLayout;
 }
 
-Pipeline createPipelineLayout(const PodVector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage)
+bool createPipelineLayout(PipelineWithDescriptors& pipelineWithDescriptors, VkShaderStageFlags stage)
 {
     VkDescriptorSetLayout setLayout = 0;
     VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    if(descriptors.size() > 0)
-        setLayout = createSetLayout(descriptors, stage);
+    if(pipelineWithDescriptors.descriptorSetLayouts.size() > 0)
+        setLayout = createSetLayout(pipelineWithDescriptors.descriptorSetLayouts, stage);
 
 
     createInfo.setLayoutCount = setLayout ? 1 : 0;
@@ -1039,13 +1052,12 @@ Pipeline createPipelineLayout(const PodVector<DescriptorSetLayout> &descriptors,
     VkPipelineLayout layout = 0;
     VK_CHECK(vkCreatePipelineLayout(vulk.device, &createInfo, nullptr, &layout));
     ASSERT(layout);
+    if (!layout)
+        return false;
 
-    //vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
-
-    Pipeline result;
-    result.pipelineLayout = layout;
-    result.descriptorSetLayout = setLayout;
-    return result;
+    pipelineWithDescriptors.pipelineLayout = layout;
+    pipelineWithDescriptors.descriptorSetLayout = setLayout;
+    return true;
 }
 
 static void recreateSwapchainData()
@@ -1180,11 +1192,11 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
         VkImageMemoryBarrier imageBarriers[] =
         {
             imageBarrier(targetImage,
-                        VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
+                VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+            VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
 
     VkBufferImageCopy region{};
@@ -1208,7 +1220,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
     endSingleTimeCommands();
 
@@ -1371,16 +1383,16 @@ void present(GLFWwindow *window)
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
             imageBarrier(presentImage.image,
-                        presentImage.accessMask, presentImage.layout,
-                        VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
+                presentImage.accessMask, presentImage.layout,
+                VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 
-                    imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+            imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
+                0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(copyBeginBarriers), copyBeginBarriers);
+                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(copyBeginBarriers), copyBeginBarriers);
 
 
         insertDebugRegion("Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
@@ -1397,15 +1409,17 @@ void present(GLFWwindow *window)
         imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk.swapchain.width, ( int32_t ) vulk.swapchain.height, 1 };
 
 
-        vkCmdBlitImage(vulk.commandBuffer, presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        vulk.swapchain.images[ vulk.imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
+        vkCmdBlitImage(vulk.commandBuffer, 
+            presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            vulk.swapchain.images[ vulk.imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
     }
 
     // Prepare image for presenting.
     {
-        VkImageMemoryBarrier presentBarrier = imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
-                                                            VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                                            0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        VkImageMemoryBarrier presentBarrier = 
+            imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &presentBarrier);
@@ -1444,9 +1458,8 @@ void present(GLFWwindow *window)
         {
             vulk.needToResize = true;
             if (resizeSwapchain(window))
-            {
                 recreateSwapchainData();
-            }
+
             vulk.needToResize = false;
         }
         else
@@ -1481,9 +1494,12 @@ VkImageView createImageView(VkImage image, VkFormat format)
 {
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    if(format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-        format == VK_FORMAT_D24_UNORM_S8_UINT || format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
-        format == VK_FORMAT_D16_UNORM || format == VK_FORMAT_D16_UNORM_S8_UINT ||
+    if(format == VK_FORMAT_D32_SFLOAT || 
+        format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+        format == VK_FORMAT_D24_UNORM_S8_UINT || 
+        format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
+        format == VK_FORMAT_D16_UNORM || 
+        format == VK_FORMAT_D16_UNORM_S8_UINT ||
         format == VK_FORMAT_S8_UINT
     )
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1767,10 +1783,10 @@ VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, Vk
     VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamicInfo.pDynamicStates = dynamicStates;
-    dynamicInfo.dynamicStateCount = ARRAYSIZE(dynamicStates);
+    dynamicInfo.dynamicStateCount = ARRAYSIZES(dynamicStates);
 
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-    createInfo.stageCount = ARRAYSIZE(stageInfos);
+    createInfo.stageCount = ARRAYSIZES(stageInfos);
     createInfo.pStages = stageInfos;
     createInfo.pVertexInputState = &vertexInfo;
     createInfo.pInputAssemblyState = &assemblyInfo;
@@ -1816,7 +1832,7 @@ VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLay
 }
 
 
-void destroyPipeline(Pipeline &pipeline)
+void destroyPipeline(PipelineWithDescriptors &pipeline)
 {
     if(pipeline.pipeline)
         vkDestroyPipeline(vulk.device, pipeline.pipeline, nullptr);
@@ -1826,7 +1842,9 @@ void destroyPipeline(Pipeline &pipeline)
     if(pipeline.descriptorSetLayout)
         vkDestroyDescriptorSetLayout(vulk.device, pipeline.descriptorSetLayout, nullptr);
 
-    pipeline = Pipeline {};
+    pipeline.pipeline = nullptr;
+    pipeline.pipelineLayout = nullptr;
+    pipeline.descriptorSetLayout = nullptr;
 }
 
 
@@ -1977,34 +1995,8 @@ void endDebugRegion()
 
 void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWithDescriptors &pipelineWithDescriptor)
 {
-    vkCmdBindPipeline(vulk.commandBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipeline);
-    vkCmdBindDescriptorSets(vulk.commandBuffer, bindPoint, pipelineWithDescriptor.pipeline.pipelineLayout,
+    vkCmdBindPipeline(vulk.commandBuffer, bindPoint, pipelineWithDescriptor.pipeline);
+    vkCmdBindDescriptorSets(vulk.commandBuffer, bindPoint, pipelineWithDescriptor.pipelineLayout,
         0, 1, &pipelineWithDescriptor.descriptor.descriptorSet, 0, NULL);
 }
-
-Buffer &getRenderFrameBuffer()
-{
-    return vulk.renderFrameBuffer;
-}
-
-VkRenderPass getRenderPass()
-{
-    return vulk.renderPass;
-}
-
-VkCommandBuffer getCommandBuffer()
-{
-    return vulk.commandBuffer;
-}
-
-Buffer &getScratchBuffer()
-{
-    return vulk.scratchBuffer;
-}
-
-VkQueryPool getQueryPool()
-{
-    return vulk.queryPool;
-}
-
 

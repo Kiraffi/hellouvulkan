@@ -269,7 +269,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
             //"assets/models/chalet.obj"
         };
 
-        static_assert(ARRAYSIZE(modelNames) == NUM_MESH_TYPES);
+        static_assert(ARRAYSIZES(modelNames) == NUM_MESH_TYPES);
         size_t totalMeshIndices = 0;
 
         for (u32 i = 0; i < NUM_MESH_TYPES; ++i)
@@ -886,7 +886,7 @@ void VulkanTest::run()
                     };
                     // FULL FLUSH!!!!!!!
                     vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                        VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+                        VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
                 */
 
             }
@@ -913,7 +913,7 @@ void VulkanTest::run()
             };
             // FULL FLUSH!!!!!!!
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
         }
 
 
@@ -928,7 +928,7 @@ void VulkanTest::run()
             };
             // FULL FLUSH!!!!!!!
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
         }
 
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::COMPUTE_BEFORE_TRIANGLE_BUILD);
@@ -959,7 +959,7 @@ void VulkanTest::run()
 
             // FULL FLUSH!!!!!!!
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(renderBeginBarriers), renderBeginBarriers);
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(renderBeginBarriers), renderBeginBarriers);
 
 
 
@@ -972,7 +972,7 @@ void VulkanTest::run()
 
             // FULL FLUSH!!!!!!!
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
 
         }
 
@@ -996,7 +996,7 @@ void VulkanTest::run()
             passBeginInfo.framebuffer = targetFB;
             passBeginInfo.renderArea.extent.width = swapchain.width;
             passBeginInfo.renderArea.extent.height = swapchain.height;
-            passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
+            passBeginInfo.clearValueCount = ARRAYSIZES(clearValues);
             passBeginInfo.pClearValues = clearValues;
 
             vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -1066,7 +1066,7 @@ void VulkanTest::run()
             };
 
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, //COMPUTE_SHADER_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
 
             bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinesWithDescriptors[PIPELINE_COMPUTE_CARP_WRITE_NUMBER]);
             vkCmdDispatch(commandBuffer, 10, 2, 1);
@@ -1085,7 +1085,7 @@ void VulkanTest::run()
 
 
         uint64_t queryResults[TIME_POINTS::NUM_TIME_POINTS];
-        vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[0]), VK_QUERY_RESULT_64_BIT);
+        vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[0]), VK_QUERY_RESULT_64_BIT);
 
         //std::this_thread::sleep_for(std::chrono::milliseconds(1));
 

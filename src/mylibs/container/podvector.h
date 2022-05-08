@@ -29,7 +29,7 @@ public:
 
     PodVector(const T *b, const T* e);
     PodVector(const PodVector<T> &vec);
-    PodVector(PodVector<T> &&other);
+    PodVector(PodVector<T> &&other) noexcept;
 
     PodVector(const std::initializer_list<T> &initializerList);
 
@@ -107,7 +107,7 @@ PodVector<T>::PodVector(const PodVector<T> &vec) : buffer(sizeof(T))
 }
 
 template <typename T>
-PodVector<T>::PodVector(PodVector &&other) : buffer(sizeof(T))
+PodVector<T>::PodVector(PodVector &&other) noexcept : buffer(sizeof(T))
 {
     CHECK_POD_MACRO();
 

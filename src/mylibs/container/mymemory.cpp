@@ -19,6 +19,8 @@ static constexpr uint32_t MemoryAlignment = 4096u;
 #define USE_DEBUGVALUE 0
 static constexpr uint8_t DebugValue = 0xabu;
 
+#define USE_PRINTING 0
+
 struct MemoryArea
 {
     uint32_t startLocation = 0;
@@ -34,6 +36,8 @@ struct AllMemory
             printf("Allocations alive: %u\n", allocationCount);
         if(memory)
             delete[] memory;
+        memory = nullptr;
+        memoryAligned = nullptr;
     }
 
     uint8_t *memory = nullptr;
@@ -98,18 +102,26 @@ void initMemory()
         }
         allMemory.freedAllocationCount = MaxAllocations;
     }
-    printf("Start: %p - aligned start: %p\n", allMemory.memory, newAlignedData);
+    #if USE_PRINTING
+        printf("Start: %p - aligned start: %p\n", allMemory.memory, newAlignedData);
+    #endif
 }
 
 
 Memory allocateMemoryBytes(uint32_t size)
 {
-    printf("allocating: %u -> ", size);
+    #if USE_PRINTING
+        printf("allocating: %u -> ", size);
+    #endif
+
     if(size == 0)
         return Memory{ ~0u };
     size = (size + MinimumMemoryChunkSize - 1u) & (~(MinimumMemoryChunkSize - 1u));
 
-    printf(" turned into allocating: %u\n", size);
+    #if USE_PRINTING
+        printf(" turned into allocating: %u\n", size);
+    #endif
+
 
     if(!allMemory.inited)
     {
@@ -151,11 +163,15 @@ Memory allocateMemoryBytes(uint32_t size)
     alloc.size = size;
     allMemory.memoryUsed += size;
 
-    printf("Memory: %u, size: %u\n", alloc.startLocation, alloc.size);
+
 
     allMemory.usedAllocationIndices[allMemory.allocationCount] = index;
     allMemory.allocationCount++;
-    printf("adding allocations, allocations: %u\n", allMemory.allocationCount);
+
+    #if USE_PRINTING
+        printf("adding allocations, allocations: %u\n", allMemory.allocationCount);
+        printf("Memory: %u, size: %u\n", alloc.startLocation, alloc.size);
+    #endif
 
     allMemory.handleIterations[index] = (allMemory.handleIterations[index] + 1) & 0xffu;
 
@@ -212,13 +228,20 @@ bool deAllocateMemory(Memory memory)
     allMemory.freedAllocationIndices[allMemory.freedAllocationCount] = handleIndex;
     allMemory.freedAllocationCount += 1;
     allMemory.allocationCount -= 1;
-    printf("rmemoving allocations, allocations left: %u\n", allMemory.allocationCount);
+
+    #if USE_PRINTING
+        printf("rmemoving allocations, allocations left: %u\n", allMemory.allocationCount);
+    #endif
+
     return true;
 }
 
 Memory resizeMemory(Memory memory, uint32_t size)
 {
-    printf("Reallocating!\n");
+    #if USE_PRINTING
+        printf("Reallocating!\n");
+    #endif
+
     ASSERT(size < MaxMemorySize);
     if(size >= MaxMemorySize)
     {
@@ -273,7 +296,10 @@ void defragMemory()
     if(!allMemory.needsDefrag)
         return;
     allMemory.needsDefrag = false;
-    printf("Defrag memory\n");
+
+    #if USE_PRINTING
+        printf("Defrag memory\n");
+    #endif
 
     uint32_t memoryCount = 0u;
     for(uint32_t i = 0; i < allMemory.allocationCount; ++i)
@@ -302,6 +328,8 @@ void defragMemory()
 
 bool isValidMemory(Memory memory)
 {
+    if (allMemory.memory == nullptr || allMemory.memoryAligned == nullptr)
+        return false;
     uint32_t handleIndex = getHandleIndex(memory);
     uint32_t iteration = getHandleIteration(memory);
     if(handleIndex >= MaxAllocations)

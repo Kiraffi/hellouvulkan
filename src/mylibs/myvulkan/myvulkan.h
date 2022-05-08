@@ -9,6 +9,9 @@
 
 #include "vulkglob.h"
 
+
+
+
 struct GLFWwindow;
 constexpr uint32_t QUERY_COUNT = 128u;
 
@@ -20,7 +23,7 @@ constexpr uint32_t QUERY_COUNT = 128u;
 
 struct Image;
 
-bool initVulkan(GLFWwindow *window);
+bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
 bool startRender(GLFWwindow *window);
 void present(GLFWwindow *window);
@@ -84,9 +87,9 @@ VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLay
 
 VkShaderModule loadShader(std::string_view filename);
 
-Pipeline createPipelineLayout(const PodVector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage);
+bool createPipelineLayout(PipelineWithDescriptors &pipelineWithDescriptors, VkShaderStageFlags stage);
 
-void destroyPipeline(Pipeline &pipeline);
+void destroyPipeline(PipelineWithDescriptors& pipelineWithDescriptors);
 void destroyDescriptor(Descriptor &descriptor);
 
 Descriptor createDescriptor(const PodVector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout);

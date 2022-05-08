@@ -4,6 +4,7 @@
 #include <vulkan/vulkan_core.h>
 #include "core/mytypes.h"
 #include "container/podvector.h"
+#include "vulkaninitparameters.h"
 
 struct QueueFamilyIndices
 {
@@ -64,26 +65,29 @@ struct SwapChain
 };
 
 
+
 struct VulkGlob
 {
+    VulkanInitializationParameters initParams;
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    QueueFamilyIndices queueFamilyIndices;
+
     VkDebugUtilsMessengerEXT debugCallBack = nullptr;
     VkInstance instance = nullptr;
     VkPhysicalDevice physicalDevice = nullptr;
     VkDevice device = nullptr;
     VkSurfaceKHR surface = nullptr;
 
-    VkPhysicalDeviceMemoryProperties memoryProperties;
 
     VkQueue graphicsQueue = nullptr;
     VkQueue presentQueue = nullptr;
     VkQueue computeQueue = nullptr;
 
-    QueueFamilyIndices queueFamilyIndices;
 
     Buffer scratchBuffer;
     Buffer renderFrameBuffer;
 
-    // Do I need this??
+    // Do I need this?? This should be somewhere else
     VkRenderPass renderPass = nullptr;
     VkQueryPool queryPool = nullptr;
 
@@ -91,14 +95,10 @@ struct VulkGlob
     VkSemaphore releaseSemaphore = nullptr;
 
     VkFence fence = nullptr;
-    bool waitForFence = true;
     VkCommandPool commandPool = nullptr;
 
     VkCommandBuffer commandBuffer = nullptr;
     VkFramebuffer targetFB = nullptr;
-
-
-    VkPipelineCache pipelineCache = nullptr;
 
 
     VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
@@ -111,8 +111,10 @@ struct VulkGlob
     Image mainColorRenderTarget;
     Image mainDepthRenderTarget;
 
-    bool needToResize = false;
     uint32_t imageIndex = 0u;
+
+    bool needToResize = false;
+    bool waitForFence = true;
 };
 
 extern VulkGlob vulk;
@@ -183,19 +185,14 @@ struct DescriptorInfo
 
 
 
-struct Pipeline
+struct PipelineWithDescriptors
 {
     VkPipeline pipeline;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-};
-
-struct PipelineWithDescriptors
-{
-    Pipeline pipeline;
 
     Descriptor descriptor;
-    PodVector<DescriptorSetLayout> descriptorSetLayout;
+    PodVector<DescriptorSetLayout> descriptorSetLayouts;
     PodVector<DescriptorInfo> descriptorSetBinds;
 };
 

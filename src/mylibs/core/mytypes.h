@@ -102,6 +102,6 @@ do \
     #define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
 #endif
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#ifndef ARRAYSIZES
+    #define ARRAYSIZES(arr) (sizeof(arr) / sizeof(arr[0]))
 #endif

@@ -667,9 +667,9 @@ void SpaceShooter::run()
                 };
 
                 vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                     VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZE(bar), bar, 0, nullptr);
+                                     VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
 
-                offset += memOffsets[ARRAYSIZE(memOffsets) - 1];
+                offset += memOffsets[ARRAYSIZES(memOffsets) - 1];
             }
         }
 
@@ -694,7 +694,7 @@ void SpaceShooter::run()
             };
 
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+                                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
         }
 
         // Drawingg
@@ -708,7 +708,7 @@ void SpaceShooter::run()
             passBeginInfo.framebuffer = targetFB;
             passBeginInfo.renderArea.extent.width = swapchain.width;
             passBeginInfo.renderArea.extent.height = swapchain.height;
-            passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
+            passBeginInfo.clearValueCount = ARRAYSIZES(clearValues);
             passBeginInfo.pClearValues = clearValues;
 
             vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -747,7 +747,7 @@ void SpaceShooter::run()
 
 
         uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-        vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
+        vkGetQueryPoolResults(device, queryPool, 0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
 
 
         struct TimeValues

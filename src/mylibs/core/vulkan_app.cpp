@@ -74,7 +74,7 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 
 
 
-bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters initParameters)
 {
     initMemory();
 
@@ -102,7 +102,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
     glfwGetFramebufferSize(window, &w, &h);
     resizeWindow(w, h);
 
-    if(!initVulkan(window))
+    if(!initVulkan(window, initParameters))
     {
         printf("Failed to initialize vulkan\n");
         return false;
@@ -206,7 +206,7 @@ uint32_t VulkanApp::updateRenderFrameBuffer()
 void VulkanApp::present(Image &presentImage)
 {
     ::present(window, presentImage);
-    for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
+    for (int i = 0; i < ARRAYSIZES(keyDowns); ++i)
     {
         keyDowns[ i ].pressCount = 0u;
     }
@@ -230,7 +230,7 @@ void VulkanApp::run()
 
 void VulkanApp::update()
 {
-    for (int i = 0; i < ARRAYSIZE(keyDowns); ++i)
+    for (int i = 0; i < ARRAYSIZES(keyDowns); ++i)
     {
         keyDowns[ i ].pressCount = 0u;
     }

@@ -47,7 +47,7 @@ public:
     VulkanFontRender() {}
     virtual ~VulkanFontRender() override;
 
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters params) override;
     virtual void update() override;
 
     void updateText(std::string& str);
@@ -67,9 +67,9 @@ VulkanFontRender::~VulkanFontRender()
 
 }
 
-bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters params)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
 
     glfwSetWindowUserPointer(window, this);
@@ -191,7 +191,7 @@ void VulkanFontRender::update()
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZE(imageBarriers), imageBarriers);
+                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
 
     // Drawingg
@@ -205,7 +205,7 @@ void VulkanFontRender::update()
         passBeginInfo.framebuffer = vulk.targetFB;
         passBeginInfo.renderArea.extent.width = vulk.swapchain.width;
         passBeginInfo.renderArea.extent.height = vulk.swapchain.height;
-        passBeginInfo.clearValueCount = ARRAYSIZE(clearValues);
+        passBeginInfo.clearValueCount = ARRAYSIZES(clearValues);
         passBeginInfo.pClearValues = clearValues;
 
         vkCmdBeginRenderPass(vulk.commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -238,7 +238,7 @@ void VulkanFontRender::update()
 
 
     uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-    vkGetQueryPoolResults(vulk.device, vulk.queryPool, 0, ARRAYSIZE(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
+    vkGetQueryPoolResults(vulk.device, vulk.queryPool, 0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
 
 
     static double timeDuration[TIME_POINTS::NUM_TIME_POINTS] = {};
@@ -276,8 +276,13 @@ void VulkanFontRender::update()
 int main(int argCount, char **argv)
 {
     VulkanFontRender app;
-    if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT))
-//        && createGraphics())
+    if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT, 
+        VulkanInitializationParameters{
+            .useHDR = false,
+            .useIntegratedGpu = true,
+            .useVulkanDebugMarkersRenderDoc = false,
+            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+        }))
     {
         app.run();
     }
