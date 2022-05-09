@@ -63,6 +63,7 @@ static const PodVector<const char *>validationLayers =
     "VK_LAYER_KHRONOS_validation"
 };
 
+
 static const PodVector<const char *>deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -81,10 +82,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
     bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0 ||
         (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
 
-#if !SHOW_INFO_MESSAGES
-    if(!errorMsg && !warningMsg)
+    if(!vulk.initParams.showInfoMessages && !errorMsg && !warningMsg)
         return VK_FALSE;
-#endif
+
     const char *type = errorMsg ? "Error" : (warningMsg  ? "Warning" : "Info");
 
     printf("Type:%s, message: %s\n\n", type, pCallbackData->pMessage);
@@ -97,7 +97,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
 
 VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
 {
-    if (!enableValidationLayers)
+    if (!vulk.initParams.useValidationLayers)
         return nullptr;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -154,7 +154,7 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
     for (const auto& extension : availableExtensions)
     {
         //printf("%s\n", extension.extensionName);
-        if(useVulkanDebugMarkersRenderDoc && strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
+        if(vulk.initParams.useVulkanDebugMarkersRenderDoc && strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
             result.canUseVulkanRenderdocExtensionMarker = true;
     }
 
@@ -172,7 +172,7 @@ static PodVector<const char*> getRequiredExtensions()
 
     //extensions.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
-    if (enableValidationLayers)
+    if (vulk.initParams.useValidationLayers)
     {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         //extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -438,7 +438,7 @@ static bool createInstance()
     }
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    if (enableValidationLayers)
+    if (vulk.initParams.useValidationLayers)
     {
         createInfo.ppEnabledLayerNames = validationLayers.data();
         createInfo.enabledLayerCount = uint32_t(validationLayers.size());
@@ -661,7 +661,7 @@ static bool createDeviceWithQueues()
     createInfo.ppEnabledExtensionNames = deviceExts.data();
 
 
-    if (enableValidationLayers)
+    if (vulk.initParams.useValidationLayers)
     {
         createInfo.enabledLayerCount = uint32_t(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -1912,13 +1912,14 @@ void deinitVulkan()
     }
     vkDestroySurfaceKHR(vulk.instance, vulk.surface, nullptr);
 
-    if (enableValidationLayers)
+    if (vulk.initParams.useValidationLayers)
     {
         auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulk.instance, "vkDestroyDebugUtilsMessengerEXT");
         dest(vulk.instance, vulk.debugCallBack, nullptr);
     }
     vkDestroyInstance(vulk.instance, nullptr);
 
+    vulk.~VulkGlob();
 
 }
 

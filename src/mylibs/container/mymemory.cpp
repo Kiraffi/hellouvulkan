@@ -3,6 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#if _MSC_VER
+    #include <intrin.h>
+    #define returnAddress _AddressOfReturnAddress()
+#else
+    #define returnAddress __builtin_frame_address(0)
+#endif
+
+
 #include "mymemory.h"
 #include "core/mytypes.h"
 
@@ -25,6 +33,7 @@ struct MemoryArea
 {
     uint32_t startLocation = 0;
     uint32_t size = 0;
+    void* ptrOfAddress = nullptr;
 };
 
 struct AllMemory
@@ -32,8 +41,14 @@ struct AllMemory
     ~AllMemory()
     {
         printf("Deleting memory!\n");
-        if(allocationCount > 0)
+        if (allocationCount > 0)
+        {
             printf("Allocations alive: %u\n", allocationCount);
+            for (int i = 0; i < allocationCount; ++i)
+            {
+                printf("Allocation pointer: %p\n", memoryAreas[i].ptrOfAddress);
+            }
+        }
         if(memory)
             delete[] memory;
         memory = nullptr;
@@ -72,7 +87,8 @@ static uint32_t getHandleIteration(Memory memory)
     return iteration;
 }
 
-void initMemory()
+
+static void initMemoryReal()
 {
     if(allMemory.inited)
         return;
@@ -107,9 +123,17 @@ void initMemory()
     #endif
 }
 
+void initMemory()
+{
+    printf("Allocations at init memory: %u\n", allMemory.allocationCount);
+    initMemoryReal();
+}
 
 Memory allocateMemoryBytes(uint32_t size)
 {
+    void* pvAddressOfReturnAddress = returnAddress;
+    printf("Allocated %p\n", pvAddressOfReturnAddress);
+
     #if USE_PRINTING
         printf("allocating: %u -> ", size);
     #endif
@@ -125,7 +149,7 @@ Memory allocateMemoryBytes(uint32_t size)
 
     if(!allMemory.inited)
     {
-        initMemory();
+        initMemoryReal();
     }
 
     if(MaxMemorySize - allMemory.memoryUsed < size)
@@ -161,6 +185,7 @@ Memory allocateMemoryBytes(uint32_t size)
     MemoryArea &alloc = allMemory.memoryAreas[index];
     alloc.startLocation = allMemory.memoryUsed;
     alloc.size = size;
+    alloc.ptrOfAddress = pvAddressOfReturnAddress;
     allMemory.memoryUsed += size;
 
 
@@ -178,7 +203,6 @@ Memory allocateMemoryBytes(uint32_t size)
     Memory result = Memory{ index | (allMemory.handleIterations[index] << 24u) };
     return result;
 }
-
 
 bool deAllocateMemory(Memory memory)
 {
@@ -219,9 +243,13 @@ bool deAllocateMemory(Memory memory)
         if(!found)
             return false;
     }
+
     MemoryArea &alloc = allMemory.memoryAreas[handleIndex];
     alloc.startLocation = 0;
     alloc.size = 0;
+
+    printf("deleted: %p\n", alloc.ptrOfAddress);
+    alloc.ptrOfAddress = nullptr;
 
     allMemory.handleIterations[handleIndex] = (allMemory.handleIterations[handleIndex] + 1) & 0xffu;
 

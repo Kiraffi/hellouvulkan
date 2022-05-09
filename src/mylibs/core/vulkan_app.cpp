@@ -296,8 +296,8 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
         camera.yaw += rotationSpeed;
     }
 
-    camera.pitch = clamp(camera.pitch, -0.499f * pii, 0.4999f * pii);
-    camera.yaw = ffmodf(camera.yaw, 2.0f * pii);
+    camera.pitch = clamp(camera.pitch, -0.499f * PI, 0.4999f * PI);
+    camera.yaw = ffmodf(camera.yaw, 2.0f * PI);
 
     Vec3 rightDir;
     Vec3 upDir;

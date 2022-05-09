@@ -32,7 +32,7 @@ add_library(MyLibraries
     #"core/json.cpp"
 
 
-     "myvulkan/vulkaninitparameters.h")
+     "myvulkan/vulkaninitparameters.h" "myvulkan/vulkanresources.h")
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
     )

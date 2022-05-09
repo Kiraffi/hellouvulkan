@@ -1,7 +1,7 @@
 #pragma once
 
-//#include "math/vector3.h"
 #include "container/podvector.h"
+#include "math/vector3.h"
 #include "myvulkan/myvulkan.h"
 //#include "myvulkan/vulkanhelperfuncs.h"
 //#include "myvulkan/vulkanresource.h"

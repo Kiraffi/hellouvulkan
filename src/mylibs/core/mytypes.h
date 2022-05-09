@@ -19,24 +19,6 @@ float ffmodf(float a, float b);
 float ffminf(float a, float b);
 float ffmaxf(float a, float b);
 
-const float pii = 3.1415926265359f;
-
-
-
-#if USE_GPU_DEBUG_VALIDATION
-    const bool enableValidationLayers = true;
-#else
-    const bool enableValidationLayers = false;
-#endif
-
-
-
-
-
-
-
-
-
 static constexpr float PI = 3.14159265358979323846264338f;
 
 void printOutBuffer(const char *buffer);
