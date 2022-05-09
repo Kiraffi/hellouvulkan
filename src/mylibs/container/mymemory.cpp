@@ -28,12 +28,16 @@ static constexpr uint32_t MemoryAlignment = 4096u;
 static constexpr uint8_t DebugValue = 0xabu;
 
 #define USE_PRINTING 0
+#define PRINT_ALLOCATION_ADDRESS 0
 
 struct MemoryArea
 {
     uint32_t startLocation = 0;
     uint32_t size = 0;
-    void* ptrOfAddress = nullptr;
+    #if PRINT_ALLOCATION_ADDRESS
+        void* ptrOfAddress = nullptr;
+    #endif // PRINT_ALLOCATION_ADDRESS
+
 };
 
 struct AllMemory
@@ -44,10 +48,12 @@ struct AllMemory
         if (allocationCount > 0)
         {
             printf("Allocations alive: %u\n", allocationCount);
+            #if PRINT_ALLOCATION_ADDRESS
             for (int i = 0; i < allocationCount; ++i)
             {
                 printf("Allocation pointer: %p\n", memoryAreas[i].ptrOfAddress);
             }
+            #endif //PRINT_ALLOCATION_ADDRESS
         }
         if(memory)
             delete[] memory;
@@ -131,9 +137,10 @@ void initMemory()
 
 Memory allocateMemoryBytes(uint32_t size)
 {
-    void* pvAddressOfReturnAddress = returnAddress;
-    printf("Allocated %p\n", pvAddressOfReturnAddress);
-
+    #if PRINT_ALLOCATION_ADDRESS
+        void* pvAddressOfReturnAddress = returnAddress;
+        printf("Allocated %p\n", pvAddressOfReturnAddress);
+    #endif // PRINT_ALLOCATION_ADDRESS
     #if USE_PRINTING
         printf("allocating: %u -> ", size);
     #endif
@@ -185,7 +192,11 @@ Memory allocateMemoryBytes(uint32_t size)
     MemoryArea &alloc = allMemory.memoryAreas[index];
     alloc.startLocation = allMemory.memoryUsed;
     alloc.size = size;
-    alloc.ptrOfAddress = pvAddressOfReturnAddress;
+
+    #if PRINT_ALLOCATION_ADDRESS
+        alloc.ptrOfAddress = pvAddressOfReturnAddress;
+    #endif // PRINT_ALLOCATION_ADDRESS
+
     allMemory.memoryUsed += size;
 
 
@@ -248,9 +259,10 @@ bool deAllocateMemory(Memory memory)
     alloc.startLocation = 0;
     alloc.size = 0;
 
-    printf("deleted: %p\n", alloc.ptrOfAddress);
-    alloc.ptrOfAddress = nullptr;
-
+    #if PRINT_ALLOCATION_ADDRESS
+        printf("deleted: %p\n", alloc.ptrOfAddress);
+        alloc.ptrOfAddress = nullptr;
+    #endif // PRINT_ALLOCATION_ADDRESS
     allMemory.handleIterations[handleIndex] = (allMemory.handleIterations[handleIndex] + 1) & 0xffu;
 
     allMemory.freedAllocationIndices[allMemory.freedAllocationCount] = handleIndex;

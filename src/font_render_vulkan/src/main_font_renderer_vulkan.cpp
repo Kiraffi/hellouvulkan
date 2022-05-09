@@ -227,7 +227,9 @@ void VulkanFontRender::update()
     }
 
     vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
-
+    
+    vulk.mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    vulk.mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     present(window);
 
     ////////////////////////
@@ -277,7 +279,7 @@ int main(int argCount, char **argv)
 {
     VulkanFontRender app;
     if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
-        VulkanInitializationParameters{
+        {
             .showInfoMessages = false,
             .useHDR = false,
             .useIntegratedGpu = true,

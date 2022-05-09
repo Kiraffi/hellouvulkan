@@ -205,9 +205,10 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
     PodVector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
-    int i = 0;
+    int i = -1;
     for (const auto& queueFamily : queueFamilies)
     {
+        ++i;
         uint32_t queueBits = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
 
         // make everything into same queue
@@ -238,8 +239,6 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
 
         if (indices.isValid())
             break;
-
-        i++;
     }
     return indices;
 }
@@ -387,6 +386,9 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
         }
         VK_CHECK(res);
         vulk.swapchain.swapchain = swapchain;
+
+        vulk.colorSpace = surfaceFormat.colorSpace;
+        vulk.colorFormat = surfaceFormat.format;
     }
 
 
@@ -560,7 +562,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
     vulk.physicalDevice = primary ? primary : secondary;
 
     VkPhysicalDeviceProperties prop;
-    vkGetPhysicalDeviceProperties(secondary, &prop);
+    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &prop);
 
     const char *typeText = prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? "discrete" : "integrated";
     printf("Picking %s device: %s\n", typeText, prop.deviceName);
@@ -582,6 +584,7 @@ static bool createDeviceWithQueues()
     vulk.colorFormat = VK_FORMAT_UNDEFINED;
     vulk.depthFormat = defaultFormats[0].depth;
     vulk.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    vulk.computeColorFormat = VK_FORMAT_UNDEFINED;
 
     for(uint32_t i = 0; i < swapChainSupport.formats.size() && vulk.colorFormat == VK_FORMAT_UNDEFINED; ++i)
     {
@@ -1377,14 +1380,12 @@ bool startRender(GLFWwindow *window)
 void present(GLFWwindow *window)
 {
     Image &presentImage = vulk.mainColorRenderTarget;
-
     // Copy final image to swap chain target
     {
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
             imageBarrier(presentImage.image,
-                0, VK_IMAGE_LAYOUT_UNDEFINED,
-                //presentImage.accessMask,, presentImage.layout,
+                presentImage.accessMask, presentImage.layout,
                 VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 
             imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
