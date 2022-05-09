@@ -12,7 +12,7 @@
 #include <set>
 #include <string.h>
 
-static uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
+static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
 
 static constexpr Formats defaultFormats[] = {
     { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
@@ -72,9 +72,9 @@ static const PodVector<const char *>deviceExtensions =
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
     bool errorMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0 ||
@@ -101,13 +101,13 @@ VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
         return nullptr;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    createInfo.messageSeverity = 
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
+    createInfo.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = 
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | 
+    createInfo.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = debugReportCallback;
 
@@ -493,12 +493,12 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             continue;
 
         uint32_t formatIndex = ~0u;
+        uint32_t optimalFormatFeatures = VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
         for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
         {
             VkFormatProperties formatProperties;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, defaultFormats[j].format, &formatProperties);
-            if((formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) != 0u &&
-                 (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0u)
+            if((formatProperties.optimalTilingFeatures & optimalFormatFeatures) == optimalFormatFeatures)
             {
                 formatIndex = j;
                 goto formatIndexFound;
@@ -860,7 +860,7 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
     }
 
 
-    if(!createPhysicalDevice(vulk.initParams.useIntegratedGpu ? 
+    if(!createPhysicalDevice(vulk.initParams.useIntegratedGpu ?
         VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))
     {
         printf("Failed to create vulkan physical device!\n");
@@ -1383,7 +1383,8 @@ void present(GLFWwindow *window)
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
             imageBarrier(presentImage.image,
-                presentImage.accessMask, presentImage.layout,
+                0, VK_IMAGE_LAYOUT_UNDEFINED,
+                //presentImage.accessMask,, presentImage.layout,
                 VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 
             imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
@@ -1409,14 +1410,14 @@ void present(GLFWwindow *window)
         imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk.swapchain.width, ( int32_t ) vulk.swapchain.height, 1 };
 
 
-        vkCmdBlitImage(vulk.commandBuffer, 
+        vkCmdBlitImage(vulk.commandBuffer,
             presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             vulk.swapchain.images[ vulk.imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
     }
 
     // Prepare image for presenting.
     {
-        VkImageMemoryBarrier presentBarrier = 
+        VkImageMemoryBarrier presentBarrier =
             imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -1494,11 +1495,11 @@ VkImageView createImageView(VkImage image, VkFormat format)
 {
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    if(format == VK_FORMAT_D32_SFLOAT || 
+    if(format == VK_FORMAT_D32_SFLOAT ||
         format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-        format == VK_FORMAT_D24_UNORM_S8_UINT || 
+        format == VK_FORMAT_D24_UNORM_S8_UINT ||
         format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
-        format == VK_FORMAT_D16_UNORM || 
+        format == VK_FORMAT_D16_UNORM ||
         format == VK_FORMAT_D16_UNORM_S8_UINT ||
         format == VK_FORMAT_S8_UINT
     )
@@ -1918,8 +1919,6 @@ void deinitVulkan()
         dest(vulk.instance, vulk.debugCallBack, nullptr);
     }
     vkDestroyInstance(vulk.instance, nullptr);
-
-    vulk.~VulkGlob();
 
 }
 

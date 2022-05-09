@@ -3,6 +3,7 @@
 
 #include <vulkan/vulkan_core.h>
 #include "core/mytypes.h"
+#include <vector>
 #include "container/podvector.h"
 #include "vulkaninitparameters.h"
 
@@ -56,7 +57,7 @@ struct SwapChain
 {
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 
-    PodVector<VkImage> images;
+    std::vector<VkImage> images;
 
     uint32_t width = 0;
     uint32_t height = 0;

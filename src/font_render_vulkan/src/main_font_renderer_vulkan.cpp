@@ -276,7 +276,7 @@ void VulkanFontRender::update()
 int main(int argCount, char **argv)
 {
     VulkanFontRender app;
-    if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT, 
+    if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
         VulkanInitializationParameters{
             .showInfoMessages = false,
             .useHDR = false,
