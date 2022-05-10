@@ -123,26 +123,6 @@ VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
     return debugMessenger;
 }
 
-
-
-
-static uint32_t selectMemoryType(const VkPhysicalDeviceMemoryProperties &memoryProperties, uint32_t memoryTypeBits, VkMemoryPropertyFlags flags)
-{
-    for(uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
-    {
-        bool isUsed = (memoryTypeBits & (1 << i)) != 0u;
-        uint32_t foundFlags = (memoryProperties.memoryTypes[i].propertyFlags & flags);
-
-        //printf("Memory %u: Used: %u, flags: %u\n", i, isUsed, foundFlags);
-
-        if(isUsed && foundFlags == flags)
-            return i;
-    }
-//1, 3, 6,7, 10, 11
-    ASSERT(!"No compatible memory found!");
-    return ~0u;
-}
-
 static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
 {
     uint32_t extensionCount;
@@ -1159,25 +1139,6 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
     VK_CHECK(vmaCreateImage(vulk.allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
-/*
-    VK_CHECK(vkCreateImage(vulk.device, &createInfo, nullptr, &result.image));
-    ASSERT(result.image);
-
-
-    VkMemoryRequirements memoryRequirements;
-    vkGetImageMemoryRequirements(vulk.device, result.image, &memoryRequirements);
-
-    uint32_t memoryTypeIndex = selectMemoryType(vulk.memoryProperties, memoryRequirements.memoryTypeBits, memoryFlags);
-    ASSERT(memoryTypeIndex != ~0u);
-
-    VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    allocateInfo.allocationSize = memoryRequirements.size;
-    allocateInfo.memoryTypeIndex = memoryTypeIndex;
-
-    VK_CHECK(vkAllocateMemory(vulk.device, &allocateInfo, nullptr, &result.deviceMemory));
-    ASSERT(result.deviceMemory);
-    VK_CHECK(vkBindImageMemory(vulk.device, result.image, result.deviceMemory, 0));
-*/
 
     result.deviceMemory = result.allocation->GetMemory();
     result.imageView = createImageView(result.image, format);
@@ -1299,25 +1260,7 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
 
     VmaAllocation allocation; 
     VK_CHECK(vmaCreateBuffer(vulk.allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
-    /*
-    VK_CHECK(vkCreateBuffer(vulk.device, &createInfo, nullptr, &result.buffer));
-    ASSERT(result.buffer);
 
-    VkMemoryRequirements memoryRequirements;
-    vkGetBufferMemoryRequirements(vulk.device, result.buffer, &memoryRequirements);
-
-    uint32_t memoryTypeIndex = selectMemoryType(vulk.memoryProperties, memoryRequirements.memoryTypeBits, memoryFlags);
-    ASSERT(memoryTypeIndex != ~0u);
-
-    VkMemoryAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    allocateInfo.allocationSize = memoryRequirements.size;
-    allocateInfo.memoryTypeIndex = memoryTypeIndex;
-
-    VK_CHECK(vkAllocateMemory(vulk.device, &allocateInfo, nullptr, &result.deviceMemory));
-    ASSERT(result.deviceMemory);
-
-    VK_CHECK(vkBindBufferMemory(vulk.device, result.buffer, result.deviceMemory, 0));
-    */
     result.deviceMemory = allocation->GetMemory();
     void *data = nullptr;
     if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
