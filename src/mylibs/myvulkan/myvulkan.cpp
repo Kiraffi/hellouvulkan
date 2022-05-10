@@ -7,6 +7,8 @@
 #include "math/vector3.h"
 
 #include <vulkan/vulkan_core.h>
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 #include <string>
 #include <set>
@@ -878,6 +880,20 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
     }
 
     {
+        VmaVulkanFunctions vulkanFunctions = {};
+        vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+        vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+        VmaAllocatorCreateInfo allocatorCreateInfo = {};
+        allocatorCreateInfo.vulkanApiVersion = VulkanApiVersion;
+        allocatorCreateInfo.physicalDevice = vulk.physicalDevice;
+        allocatorCreateInfo.device = vulk.device;
+        allocatorCreateInfo.instance = vulk.instance;
+        allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+        vmaCreateAllocator(&allocatorCreateInfo, &vulk.allocator);
+    }
+    {
         VkPhysicalDeviceSubgroupProperties subgroupProperties;
         subgroupProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
         subgroupProperties.pNext = NULL;
@@ -1139,8 +1155,14 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
     createInfo.pQueueFamilyIndices = &vulk.queueFamilyIndices.graphicsFamily;
     Image result;
 
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VK_CHECK(vmaCreateImage(vulk.allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
+/*
     VK_CHECK(vkCreateImage(vulk.device, &createInfo, nullptr, &result.image));
     ASSERT(result.image);
+
 
     VkMemoryRequirements memoryRequirements;
     vkGetImageMemoryRequirements(vulk.device, result.image, &memoryRequirements);
@@ -1154,9 +1176,10 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
 
     VK_CHECK(vkAllocateMemory(vulk.device, &allocateInfo, nullptr, &result.deviceMemory));
     ASSERT(result.deviceMemory);
-
     VK_CHECK(vkBindImageMemory(vulk.device, result.image, result.deviceMemory, 0));
+*/
 
+    result.deviceMemory = result.allocation->GetMemory();
     result.imageView = createImageView(result.image, format);
     ASSERT(result.imageView);
 
@@ -1240,9 +1263,11 @@ VkSampler createSampler(const VkSamplerCreateInfo &info)
 void destroyImage(Image &image)
 {
     vkDestroyImageView(vulk.device, image.imageView, nullptr);
+    vmaDestroyImage(vulk.allocator, image.image, image.allocation);
+    /*
     vkDestroyImage(vulk.device, image.image, nullptr);
     vkFreeMemory(vulk.device, image.deviceMemory, nullptr);
-
+    */
     image = Image{};
 }
 
@@ -1265,7 +1290,16 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     createInfo.size = size;
     createInfo.usage = usage;
+    
+    VmaAllocationCreateInfo allocInfo = {};
+    if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+        allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;// VMA_MEMORY_USAGE_AUTO;
+    else
+        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
+    VmaAllocation allocation; 
+    VK_CHECK(vmaCreateBuffer(vulk.allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
+    /*
     VK_CHECK(vkCreateBuffer(vulk.device, &createInfo, nullptr, &result.buffer));
     ASSERT(result.buffer);
 
@@ -1283,18 +1317,22 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     ASSERT(result.deviceMemory);
 
     VK_CHECK(vkBindBufferMemory(vulk.device, result.buffer, result.deviceMemory, 0));
-
+    */
+    result.deviceMemory = allocation->GetMemory();
     void *data = nullptr;
     if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        VK_CHECK(vkMapMemory(vulk.device, result.deviceMemory, 0, size, 0, &data));
+        VK_CHECK(vkMapMemory(vulk.device, allocation->GetMemory(), 0, size, 0, &data));
+
+        //VK_CHECK(vkMapMemory(vulk.device, result.deviceMemory, 0, size, 0, &data));
         ASSERT(data);
     }
     result.data = data;
     result.size = size;
 
-
     setObjectName((uint64_t)result.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, bufferName);
+    
+    result.allocation = allocation;
     result.bufferName = bufferName;
 
     return result;
@@ -1344,12 +1382,16 @@ void uploadScratchBufferToGpuBuffer(Buffer &gpuBuffer, size_t size)
 
 void destroyBuffer(Buffer &buffer)
 {
+    vmaDestroyBuffer(vulk.allocator, buffer.buffer, buffer.allocation);
+    /*
     vkDestroyBuffer(vulk.device, buffer.buffer, nullptr);
     vkFreeMemory(vulk.device, buffer.deviceMemory, nullptr);
+    */
     buffer.buffer = 0;
     buffer.data = nullptr;
     buffer.deviceMemory = 0;
     buffer.size = 0ll;
+    buffer.allocation = nullptr;
 }
 
 
@@ -1909,7 +1951,9 @@ void deinitVulkan()
         vkDestroyFence(vulk.device, vulk.fence, nullptr);
         vkDestroySemaphore(vulk.device, vulk.acquireSemaphore, nullptr);
         vkDestroySemaphore(vulk.device, vulk.releaseSemaphore, nullptr);
-
+        if(vulk.allocator)
+            vmaDestroyAllocator(vulk.allocator);
+        vulk.allocator = nullptr;
         vkDestroyDevice(vulk.device, nullptr);
     }
     vkDestroySurfaceKHR(vulk.instance, vulk.surface, nullptr);

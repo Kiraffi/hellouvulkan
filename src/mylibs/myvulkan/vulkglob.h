@@ -4,6 +4,7 @@
 #include <vulkan/vulkan_core.h>
 #include "core/mytypes.h"
 #include <vector>
+#include <vk_mem_alloc.h>
 #include "container/podvector.h"
 #include "vulkaninitparameters.h"
 
@@ -38,6 +39,8 @@ struct Buffer
     VkDeviceMemory deviceMemory = 0;
     VkBuffer buffer = 0;
     size_t size = 0ull;
+    VmaAllocation allocation = nullptr;
+
 };
 
 struct Image
@@ -50,14 +53,15 @@ struct Image
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     uint32_t width = 0u;
     uint32_t height = 0u;
+    VmaAllocation allocation = nullptr;
 };
 
 
 struct SwapChain
 {
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-
-    std::vector<VkImage> images;
+    // Cos Swapchain is in VulkGlob, and VulkGlob instance is static, this podvector gets deleted after main.
+    PodVector<VkImage> images;
 
     uint32_t width = 0;
     uint32_t height = 0;
@@ -100,6 +104,7 @@ struct VulkGlob
 
     VkCommandBuffer commandBuffer = nullptr;
     VkFramebuffer targetFB = nullptr;
+    VmaAllocator allocator = nullptr;
 
 
     VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
@@ -111,7 +116,6 @@ struct VulkGlob
 
     Image mainColorRenderTarget;
     Image mainDepthRenderTarget;
-
     uint32_t imageIndex = 0u;
 
     bool needToResize = false;

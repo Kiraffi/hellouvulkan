@@ -32,8 +32,8 @@ if (NOT Vulkan_FOUND)
 else()
 	message(STATUS "Using vulkan lib at: ${Vulkan_LIBRARIES}")
 endif()
-
-include_directories(${Vulkan_INCLUDE_DIR})
+ 
+#include_directories(${Vulkan_INCLUDE_DIR})
 include_directories(${Vulkan_INCLUDE_DIRS})
 
 
@@ -80,8 +80,9 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" )
 include_directories("external/")
 include_directories("external/glfw/include/")
 include_directories("src/mylibs")
+include_directories("external/VulkanMemoryAllocator/include")
 
-#add_subdirectory("external/meshoptimizer")
+add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")
 add_subdirectory("src")
 
