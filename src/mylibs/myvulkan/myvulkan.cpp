@@ -1384,8 +1384,7 @@ void present(GLFWwindow *window)
     {
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
-            imageBarrier(presentImage.image,
-                presentImage.accessMask, presentImage.layout,
+            imageBarrier(presentImage,
                 VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 
             imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
@@ -1530,29 +1529,30 @@ VkImageView createImageView(VkImage image, VkFormat format)
 }
 
 
-VkImageMemoryBarrier imageBarrier(Image &image,
+VkImageMemoryBarrier imageBarrier(Image& image,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout,
     VkImageAspectFlags aspectMask)
 {
-    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-    barrier.srcAccessMask = image.accessMask;
-    barrier.dstAccessMask = dstAccessMask;
-    barrier.oldLayout = image.layout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image.image;
-    barrier.subresourceRange.aspectMask = aspectMask;
-    // Andoird error?
-    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-
+    VkImageMemoryBarrier barrier =
+        imageBarrier(image.image, image.accessMask, image.layout, dstAccessMask, newLayout, aspectMask);
     image.accessMask = dstAccessMask;
     image.layout = newLayout;
     return barrier;
 }
 
+VkImageMemoryBarrier imageBarrier(Image& image,
+    VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
+    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
+    VkImageAspectFlags aspectMask)
+{
+
+    VkImageMemoryBarrier barrier =
+        imageBarrier(image.image, srcAccessMask, oldLayout, dstAccessMask, newLayout, aspectMask);
+    image.accessMask = dstAccessMask;
+    image.layout = newLayout;
+    return barrier;
+}
 
 VkImageMemoryBarrier imageBarrier(VkImage image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,

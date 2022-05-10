@@ -31,6 +31,11 @@ VkImageMemoryBarrier imageBarrier(Image& image,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout,
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
 
+VkImageMemoryBarrier imageBarrier(Image& image,
+    VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
+    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
+    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
+
 VkImageMemoryBarrier imageBarrier(VkImage image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout,

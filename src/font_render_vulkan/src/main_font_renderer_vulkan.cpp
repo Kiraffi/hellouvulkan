@@ -180,14 +180,16 @@ void VulkanFontRender::update()
     {
         VkImageMemoryBarrier imageBarriers[] =
         {
-            imageBarrier(vulk.mainColorRenderTarget.image,
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
 
-            imageBarrier(vulk.mainDepthRenderTarget.image,
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                        VK_IMAGE_ASPECT_DEPTH_BIT),
+            imageBarrier(vulk.mainColorRenderTarget,
+                0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
+
+            imageBarrier(vulk.mainDepthRenderTarget,
+                0, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_ASPECT_DEPTH_BIT),
+
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
@@ -228,8 +230,6 @@ void VulkanFontRender::update()
 
     vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
     
-    vulk.mainColorRenderTarget.accessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    vulk.mainColorRenderTarget.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     present(window);
 
     ////////////////////////
