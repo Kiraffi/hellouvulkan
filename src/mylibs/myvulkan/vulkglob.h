@@ -8,6 +8,9 @@
 #include "container/podvector.h"
 #include "vulkaninitparameters.h"
 
+struct VmaAllocation_T;
+struct VmaAllocator_T;
+
 struct QueueFamilyIndices
 {
     uint32_t graphicsFamily = ~0u;
