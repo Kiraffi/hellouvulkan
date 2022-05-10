@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_core.h>
 #include "core/mytypes.h"
 #include <vector>
-#include <vk_mem_alloc.h>
+
 #include "container/podvector.h"
 #include "vulkaninitparameters.h"
 
@@ -39,7 +39,7 @@ struct Buffer
     VkDeviceMemory deviceMemory = 0;
     VkBuffer buffer = 0;
     size_t size = 0ull;
-    VmaAllocation allocation = nullptr;
+    VmaAllocation_T *allocation = nullptr;
 
 };
 
@@ -53,7 +53,7 @@ struct Image
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     uint32_t width = 0u;
     uint32_t height = 0u;
-    VmaAllocation allocation = nullptr;
+    VmaAllocation_T *allocation = nullptr;
 };
 
 
@@ -104,7 +104,7 @@ struct VulkGlob
 
     VkCommandBuffer commandBuffer = nullptr;
     VkFramebuffer targetFB = nullptr;
-    VmaAllocator allocator = nullptr;
+    VmaAllocator_T *allocator = nullptr;
 
 
     VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
