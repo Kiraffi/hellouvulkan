@@ -169,7 +169,7 @@ void VulkanFontRender::update()
     vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
     vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
 
-    uint32_t offset = updateRenderFrameBuffer();
+    updateRenderFrameBuffer();
 
 
     ////////////////////////

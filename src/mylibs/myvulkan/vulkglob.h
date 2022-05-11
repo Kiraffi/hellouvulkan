@@ -7,9 +7,12 @@
 
 #include "container/podvector.h"
 #include "vulkaninitparameters.h"
+#include "uniformbuffermanager.h"
 
-struct VmaAllocation_T;
-struct VmaAllocator_T;
+//struct VmaAllocation_T;
+//struct VmaAllocator_T;
+
+#include <vk_mem_alloc.h>
 
 struct QueueFamilyIndices
 {
@@ -36,13 +39,16 @@ struct Formats
 // resource
 struct Buffer
 {
+    VkBuffer buffer = 0;
     // cpu mapped memory for cpu accessbuffers
     void *data = nullptr;
-    const char *bufferName;
+    const char *bufferName = nullptr;
+    /*
     VkDeviceMemory deviceMemory = 0;
-    VkBuffer buffer = 0;
     size_t size = 0ull;
-    VmaAllocation_T *allocation = nullptr;
+    */
+    //VmaAllocation_T *allocation = nullptr;
+    VmaAllocation allocation = nullptr;
 
 };
 
@@ -50,13 +56,16 @@ struct Image
 {
     VkImage image = 0;
     VkImageView imageView = 0;
+    const char* imageName = nullptr;
+    /*
     VkDeviceMemory deviceMemory = 0;
-    const char *imageName;
+    */
     VkAccessFlags accessMask = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     uint32_t width = 0u;
     uint32_t height = 0u;
-    VmaAllocation_T *allocation = nullptr;
+    //VmaAllocation_T *allocation = nullptr;
+    VmaAllocation allocation = nullptr;
 };
 
 
@@ -93,7 +102,10 @@ struct VulkGlob
 
 
     Buffer scratchBuffer;
-    Buffer renderFrameBuffer;
+    Buffer uniformBuffer;
+    uint32_t scratchBufferOffset = 0u;
+    UniformBufferManager uniformBufferManager;
+    UniformBufferHandle renderFrameBufferHandle;
 
     // Do I need this?? This should be somewhere else
     VkRenderPass renderPass = nullptr;
@@ -107,7 +119,7 @@ struct VulkGlob
 
     VkCommandBuffer commandBuffer = nullptr;
     VkFramebuffer targetFB = nullptr;
-    VmaAllocator_T *allocator = nullptr;
+    VmaAllocator allocator = nullptr;
 
 
     VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
@@ -167,7 +179,7 @@ struct DescriptorInfo
         NOT_VALID
     };
 
-    DescriptorInfo(VkImageView imageView, VkImageLayout layout, VkSampler sampler)
+    DescriptorInfo(const VkImageView imageView, const VkImageLayout layout, const VkSampler sampler)
     {
         imageInfo.imageView = imageView;
         imageInfo.imageLayout = layout;
@@ -176,12 +188,24 @@ struct DescriptorInfo
     }
 
     //
-    DescriptorInfo(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range)
+    DescriptorInfo(const VkBuffer buffer, const VkDeviceSize offset, const VkDeviceSize range)
     {
         ASSERT(range > 0u);
         bufferInfo.buffer = buffer;
         bufferInfo.offset = offset;
         bufferInfo.range = range;
+        type = DescriptorType::BUFFER;
+    }
+    DescriptorInfo(const UniformBufferHandle handle)
+    {
+        ASSERT(handle.manager);
+        ASSERT(handle.manager->buffer);
+        ASSERT(handle.manager->buffer->buffer);
+        ASSERT(handle.isValid());
+
+        bufferInfo.buffer = handle.manager->buffer->buffer;
+        bufferInfo.offset = handle.getOffset();
+        bufferInfo.range = 65536u;
         type = DescriptorType::BUFFER;
     }
 

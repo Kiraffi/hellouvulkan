@@ -3,6 +3,7 @@
 #include "container/podvector.h"
 #include "math/vector3.h"
 #include "myvulkan/myvulkan.h"
+#include "myvulkan/uniformbuffermanager.h"
 //#include "myvulkan/vulkanhelperfuncs.h"
 //#include "myvulkan/vulkanresource.h"
 
@@ -18,7 +19,7 @@ public:
     //void update(VkDevice device, VkCommandBuffer commandBuffer,
     //    VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer);
     // return offset to scratch buffer
-    uint32_t update(Vector2 renderAreaSize, uint32_t offset);
+    void update();
     void render();
 
     void addText(std::string_view text, Vector2 pos,
@@ -44,7 +45,7 @@ private:
     VkShaderModule vertexShader = nullptr;
     VkShaderModule fragShader = nullptr;
 
-    Buffer letterDataBuffer;
+    UniformBufferHandle letterDataBufferHandle;
     Buffer letterIndexBuffer;
 
     Image textImage;

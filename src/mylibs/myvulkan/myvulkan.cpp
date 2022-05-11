@@ -197,20 +197,7 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
         if ((queueFamily.queueFlags & queueBits) != queueBits)
             continue;
         indices.graphicsFamily = indices.transferFamily = indices.computeFamily = i;
-        /*
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            indices.graphicsFamily = i;
-        else
-            continue;
-        if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
-            indices.transferFamily = i;
-        else
-            continue;
-        if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-            indices.computeFamily = i;
-        else
-            continue;
-        */
+
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
 
@@ -966,10 +953,12 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
-        vulk.renderFrameBuffer = createBuffer(64u * 1024 * 1024,
+        vulk.uniformBuffer = createBuffer(64u * 1024 * 1024,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
 
+        vulk.uniformBufferManager.init(vulk.uniformBuffer);
+        vulk.renderFrameBufferHandle = vulk.uniformBufferManager.reserveHandle();
     }
     createGraphics();
 
@@ -1140,7 +1129,6 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
 
     VK_CHECK(vmaCreateImage(vulk.allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
 
-    result.deviceMemory = result.allocation->GetMemory();
     result.imageView = createImageView(result.image, format);
     ASSERT(result.imageView);
 
@@ -1167,9 +1155,12 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
     Image &targetImage,
     uint32_t dataSize, void *data)
 {
+    
     ASSERT(data != nullptr || dataSize > 0u);
-    ASSERT(vulk.scratchBuffer.data);
-    ASSERT(vulk.scratchBuffer.size >= width * height * pixelSize);
+    VkDeviceSize size = vulk.scratchBuffer.allocation->GetSize();
+    ASSERT(size);
+    
+    ASSERT(size >= width * height * pixelSize);
     ASSERT(targetImage.image);
 
     uint32_t offset = 0u;
@@ -1225,10 +1216,6 @@ void destroyImage(Image &image)
 {
     vkDestroyImageView(vulk.device, image.imageView, nullptr);
     vmaDestroyImage(vulk.allocator, image.image, image.allocation);
-    /*
-    vkDestroyImage(vulk.device, image.image, nullptr);
-    vkFreeMemory(vulk.device, image.deviceMemory, nullptr);
-    */
     image = Image{};
 }
 
@@ -1261,7 +1248,6 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     VmaAllocation allocation; 
     VK_CHECK(vmaCreateBuffer(vulk.allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
 
-    result.deviceMemory = allocation->GetMemory();
     void *data = nullptr;
     if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
@@ -1271,7 +1257,6 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
         ASSERT(data);
     }
     result.data = data;
-    result.size = size;
 
     setObjectName((uint64_t)result.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, bufferName);
     
@@ -1285,7 +1270,8 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
 {
     ASSERT(vulk.scratchBuffer.data);
     ASSERT(size);
-    ASSERT(vulk.scratchBuffer.size >= size);
+    
+    ASSERT(vulk.scratchBuffer.allocation->GetSize() >= size);
 
     memcpy((unsigned char*)vulk.scratchBuffer.data + offset, data, size);
     offset += size;
@@ -1307,8 +1293,8 @@ void uploadBufferToImage(Image &gpuImage, Buffer &scratchBuffer,
 void uploadScratchBufferToGpuBuffer(Buffer &gpuBuffer, size_t size)
 {
     ASSERT(vulk.scratchBuffer.data);
-    ASSERT(vulk.scratchBuffer.size >= size);
-    ASSERT(gpuBuffer.size >= size);
+    ASSERT(vulk.scratchBuffer.allocation->GetSize() >= size);
+    ASSERT(gpuBuffer.allocation->GetSize() >= size);
 
     beginSingleTimeCommands();
 
@@ -1326,14 +1312,8 @@ void uploadScratchBufferToGpuBuffer(Buffer &gpuBuffer, size_t size)
 void destroyBuffer(Buffer &buffer)
 {
     vmaDestroyBuffer(vulk.allocator, buffer.buffer, buffer.allocation);
-    /*
-    vkDestroyBuffer(vulk.device, buffer.buffer, nullptr);
-    vkFreeMemory(vulk.device, buffer.deviceMemory, nullptr);
-    */
     buffer.buffer = 0;
     buffer.data = nullptr;
-    buffer.deviceMemory = 0;
-    buffer.size = 0ll;
     buffer.allocation = nullptr;
 }
 
@@ -1345,6 +1325,13 @@ bool startRender(GLFWwindow *window)
         return false;
     VkResult res = ( vkAcquireNextImageKHR(vulk.device, vulk.swapchain.swapchain, UINT64_MAX,
         vulk.acquireSemaphore, VK_NULL_HANDLE, &vulk.imageIndex) );
+
+    if (vulk.scratchBufferOffset > 32 * 1024 * 1024)
+        vulk.scratchBufferOffset = 0u;
+    else
+        vulk.scratchBufferOffset = 32 * 1024 * 1024u;
+
+
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
         if (resizeSwapchain(window))
@@ -1359,6 +1346,8 @@ bool startRender(GLFWwindow *window)
         return true;
 
     VK_CHECK(res);
+
+
     return false;
 }
 
@@ -1576,7 +1565,7 @@ VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask
 
 VkBufferMemoryBarrier bufferBarrier(const Buffer &buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask)
 {
-    return bufferBarrier(buffer.buffer, srcAccessMask, dstAccessMask, buffer.size);
+    return bufferBarrier(buffer.buffer, srcAccessMask, dstAccessMask, buffer.allocation->GetSize());
 }
 
 
@@ -1880,7 +1869,7 @@ void deinitVulkan()
     if(vulk.device)
     {
         destroyBuffer(vulk.scratchBuffer);
-        destroyBuffer(vulk.renderFrameBuffer);
+        destroyBuffer(vulk.uniformBuffer);
 
         deleteFrameTargets();
 

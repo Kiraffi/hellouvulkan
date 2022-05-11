@@ -15,6 +15,7 @@ add_library(MyLibraries
     "container/mymemory.cpp"
 
     "myvulkan/myvulkan.cpp"
+    "myvulkan/uniformbuffermanager.cpp"
 
     #"myvulkan/vulkandevice.cpp"
     #"myvulkan/vulkanmemorymanager.cpp"
@@ -32,7 +33,7 @@ add_library(MyLibraries
     #"core/json.cpp"
 
 
-     "myvulkan/vulkaninitparameters.h" "myvulkan/vulkanresources.h")
+     "myvulkan/vulkaninitparameters.h" "myvulkan/vulkanresources.h" "myvulkan/uniformbuffermanager.cpp" "myvulkan/uniformbuffermanager.h")
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
     )

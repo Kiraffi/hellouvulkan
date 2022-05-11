@@ -33,8 +33,7 @@ public:
     virtual void update();
     virtual void resized() {}
 
-    // Returns offset to scratch buffer
-    uint32_t updateRenderFrameBuffer();
+    void updateRenderFrameBuffer();
 
     void resizeWindow(int w, int h);
     void setVsyncEnabled(bool enable);

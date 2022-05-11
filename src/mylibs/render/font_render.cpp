@@ -4,6 +4,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+
 //#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 #include "font_render.h"
 
@@ -18,6 +19,8 @@
 //#include "myvulkan/vulkanresource.h"
 //#include "myvulkan/vulkanshader.h"
 //#include "myvulkan/vulkanswapchain.h"
+
+
 
 
 #include <string>
@@ -38,7 +41,6 @@ void FontRenderSystem::deInit()
 
     destroySampler(textureSampler);
 
-    destroyBuffer(letterDataBuffer);
     destroyBuffer(letterIndexBuffer);
 
     destroyShaderModule(vertexShader);
@@ -64,10 +66,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         fragShader = loadShader("assets/shader/vulkan_new/texturedquad.frag.spv");
         ASSERT(fragShader);
 
-        letterDataBuffer = createBuffer(64u * 1024,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Uniform buffer2");
+        letterDataBufferHandle = vulk.uniformBufferManager.reserveHandle();
 
         letterIndexBuffer = createBuffer(1 * 1024 * 1024,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -163,8 +162,8 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
-            DescriptorInfo(vulk.renderFrameBuffer.buffer, 0u, 64u * 1024u ),
-            DescriptorInfo(letterDataBuffer.buffer, 0u, 64u * 1024u),
+            DescriptorInfo(vulk.renderFrameBufferHandle),
+            DescriptorInfo(letterDataBufferHandle),
             DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
 
@@ -210,33 +209,37 @@ void FontRenderSystem::addText(std::string_view text, Vector2 pos, Vec2 charSize
 }
 
 
-uint32_t FontRenderSystem::update(Vector2 renderAreaSize, uint32_t offset)
+void FontRenderSystem::update()
 {
     if (vertData.size() == 0)
-        return offset;
+        return;
 
     VkCommandBuffer commandBuffer = vulk.commandBuffer;
     if(!commandBuffer)
-        return offset;
+        return;
 
     // use scratch buffer to unifrom buffer transfer
     uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
 
-    memcpy((void*)((char*)vulk.scratchBuffer.data + offset), vertData.data(), vertDataSize);
+    memcpy((void*)((uint8_t*)vulk.scratchBuffer.data + vulk.scratchBufferOffset), vertData.data(), vertDataSize);
 
-    VkBufferCopy region = { offset, 0, VkDeviceSize(vertDataSize) };
-    vkCmdCopyBuffer(commandBuffer, vulk.scratchBuffer.buffer, letterDataBuffer.buffer, 1, &region);
+    VkBufferCopy region = { 
+        vulk.scratchBufferOffset, 
+        letterDataBufferHandle.getOffset(), 
+        VkDeviceSize(vertDataSize)
+    };
+    vkCmdCopyBuffer(commandBuffer, vulk.scratchBuffer.buffer, vulk.uniformBuffer.buffer, 1, &region);
 
 
     VkBufferMemoryBarrier bar[]
     {
-        bufferBarrier(letterDataBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize)
+        bufferBarrier(vulk.uniformBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize)
     };
 
     vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
-
-    return offset + vertDataSize;
+    
+    vulk.scratchBufferOffset += vertDataSize;
 }
 
 
