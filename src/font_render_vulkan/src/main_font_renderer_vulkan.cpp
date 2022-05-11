@@ -47,7 +47,8 @@ public:
     VulkanFontRender() {}
     virtual ~VulkanFontRender() override;
 
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters params) override;
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, 
+        const VulkanInitializationParameters &params) override;
     virtual void update() override;
 
     void updateText(std::string& str);
@@ -67,7 +68,8 @@ VulkanFontRender::~VulkanFontRender()
 
 }
 
-bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters params)
+bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight, 
+    const VulkanInitializationParameters &params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;

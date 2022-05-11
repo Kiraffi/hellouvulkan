@@ -74,7 +74,8 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 
 
 
-bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight, VulkanInitializationParameters initParameters)
+bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight, 
+    const VulkanInitializationParameters &initParameters)
 {
     initMemory();
 

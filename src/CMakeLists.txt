@@ -6,7 +6,7 @@ cmake_minimum_required (VERSION 3.15)
 project ("hellouvulkan" VERSION 0.0.1)
 
 add_subdirectory("mylibs")
-#add_subdirectory ("font_draw_vulkan")
+add_subdirectory ("font_draw_vulkan")
 add_subdirectory ("font_render_vulkan")
 add_subdirectory ("tests")
 #add_subdirectory ("space_shooter_vulkan")
