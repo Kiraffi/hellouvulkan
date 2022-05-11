@@ -1262,7 +1262,7 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     
     result.allocation = allocation;
     result.bufferName = bufferName;
-
+    result.size = size;
     return result;
 }
 

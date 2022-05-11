@@ -48,8 +48,9 @@ struct Buffer
     size_t size = 0ull;
     */
     //VmaAllocation_T *allocation = nullptr;
-    VmaAllocation allocation = nullptr;
 
+    size_t size = 0ull;
+    VmaAllocation allocation = nullptr;
 };
 
 struct Image

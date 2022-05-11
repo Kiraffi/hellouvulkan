@@ -228,9 +228,10 @@ void VulkanApp::run()
         update();
         defragMemory();
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        VK_CHECK(vkDeviceWaitIdle(vulk.device));
+        //VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
     }
+    VK_CHECK(vkDeviceWaitIdle(vulk.device));
 }
 
 void VulkanApp::update()

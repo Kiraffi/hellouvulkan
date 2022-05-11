@@ -1,6 +1,9 @@
 #pragma once
 
 #include "bytebuffer.h"
+
+#include <core/mytypes.h>
+
 #include <memory>
 #include <initializer_list>
 #include <string.h>
@@ -234,9 +237,7 @@ T* PodVector<T>::end() const
 template <typename T>
 T& PodVector<T>::back() const
 {
-    if(buffer.getSize() == 0)
-        return nullptr;
-
+    ASSERT(buffer.getSize() > 0);
     uint8_t *ptr = buffer.getBegin();
     ptr += sizeof(T) * (buffer.getSize() - 1);
     return *(T*)(ptr);
