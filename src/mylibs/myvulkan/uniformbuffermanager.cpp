@@ -3,7 +3,7 @@
 void UniformBufferManager::init(Buffer &buf)
 { 
     buffer = &buf;
-    usedIndices.resize(64 * 1024 * 1024 / 8, 0);
+    usedIndices.resize(1024 / (sizeof(MemoryIndexType)), 0);
     inited = true;
 }
 
@@ -20,13 +20,16 @@ void UniformBufferManager::freeHandle(UniformBufferHandle handle)
     MemoryIndexType bit = 
         (MemoryIndexType(1) << MemoryIndexType(index % (sizeof(MemoryIndexType) * 8)));
     
-    if(usedIndices[slot] & bit)
+    if((usedIndices[slot] & bit) == 0)
     {
-        ASSERT(usedIndices[slot] & bit == 0);
+        // notice the index is off by one.
+        printf("Seems that the slot is already freed: %u\n", index);
+        ASSERT((usedIndices[slot] & bit) != 0);
         return;
     }
-
     usedIndices[slot] &= ~bit;
+
+    printf("removing: %u\n", handle.index);
 }
 
 UniformBufferHandle UniformBufferManager::reserveHandle()
@@ -58,6 +61,6 @@ UniformBufferHandle UniformBufferManager::reserveHandle()
     
     result.manager = this;
     result.size = 65536u;
-    
+    printf("reserving: %u\n", result.index);
     return result;
 };

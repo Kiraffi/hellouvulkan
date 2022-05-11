@@ -3,6 +3,8 @@
 #include "container/stackstring.h"
 #include "core/mytypes.h"
 
+#include "myvulkan/uniformbuffermanager.h"
+
 struct Foos
 {
     int i;
@@ -80,10 +82,36 @@ void testMemoryStackString()
     }
 }
 
+void testUniformBufferManager()
+{
+    UniformBufferManager manager;
+    // Bit illegal but...
+    manager.init((Buffer &)manager);
+
+    PodVector<UniformBufferHandle> handles;
+
+    for (uint32_t i = 0; i < 100; ++i)
+    {
+        handles.pushBack(manager.reserveHandle());
+    }
+    manager.freeHandle(handles[70]);
+    // will assert
+    //manager.freeHandle(handles[70]);
+
+    handles.removeIndex(70);
+
+    for (uint32_t i = 0; i < handles.size(); ++i)
+    {
+        printf("%i: Handle: %u\n", i, handles[i].index);
+    }
+    handles.pushBack(manager.reserveHandle());
+}
+
 int main()
 {
     testingMemory();
     testStackString();
     testMemoryStackString();
+    testUniformBufferManager();
     return 0;
 }
