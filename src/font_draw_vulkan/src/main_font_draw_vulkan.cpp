@@ -503,8 +503,8 @@ void VulkanFontDraw::update()
 
 
     uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-    vkGetQueryPoolResults(vulk.device, vulk.queryPool, 
-        0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT);
+    VK_CHECK(vkGetQueryPoolResults(vulk.device, vulk.queryPool, 
+        0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT));
 
 
     struct TimeValues
