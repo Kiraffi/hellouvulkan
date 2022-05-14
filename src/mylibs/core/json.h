@@ -2,6 +2,9 @@
 
 #include "mytypes.h"
 
+#include <container/arraysliceview.h>
+#include <container/podvector.h>
+
 #include <string>
 #include <vector>
 
@@ -18,7 +21,7 @@ struct JSONBlock
         BOOL_TYPE = 1 << 6
     };
 
-    bool parseJSON(const std::vector<char> &data);
+    bool parseJSON(const ArraySliceView<char> &data);
 
     bool isValid() const { return ( jType & VALID_TYPE ) == VALID_TYPE; }
     bool isArray() const { return jType == (VALID_TYPE | ARRAY_TYPE); }
@@ -38,7 +41,7 @@ struct JSONBlock
     bool parseNumber(float& outFloat) const;
 
     bool parseBool(bool &outBool) const;
-    bool parseBuffer(std::vector<uint8_t> &outBuffer) const;
+    bool parseBuffer(PodVector<uint8_t> &outBuffer) const;
 
     bool hasChild(std::string_view childName) const;
 

@@ -14,8 +14,8 @@ struct JSONMarker
     int currentIndex = 0;
 };
 
-static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
-static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
+static bool parseObject(const ArraySliceView <char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
+static bool parseValue(const ArraySliceView <char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock);
 
 static bool printBlock(const JSONBlock &bl, int spaces = 0)
 {
@@ -100,32 +100,32 @@ static bool printBlock(const JSONBlock &bl, int spaces = 0)
 }
 
 
-static bool skipWord(const std::vector<char> &buffer, JSONMarker &marker)
+static bool skipWord(const ArraySliceView<char> &buffer, JSONMarker &marker)
 {
     int &index = marker.currentIndex;
     int sz = marker.endIndex;
-    while(index < sz && !isspace(buffer [index]))
+    while(index < sz && !isspace(buffer.data[index]))
         ++index;
 
     return index < sz;
 }
 
 
-static bool skipWhiteSpace(const std::vector<char> &buffer, JSONMarker &marker)
+static bool skipWhiteSpace(const ArraySliceView<char> &buffer, JSONMarker &marker)
 {
     int &index = marker.currentIndex;
     int sz = marker.endIndex;
-    while(index < sz && isspace(buffer [index]))
+    while(index < sz && isspace(buffer.data[index]))
         ++index;
 
     return index < sz;
 }
-bool parseBetweenMarkers(const std::vector<char> &buffer, JSONMarker &marker, char beginChar, char endChar, bool ignoreBackSlashedChar = true)
+bool parseBetweenMarkers(const ArraySliceView<char> &buffer, JSONMarker &marker, char beginChar, char endChar, bool ignoreBackSlashedChar = true)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
 
-    if(buffer [index] != beginChar)
+    if(buffer.data[index] != beginChar)
         return false;
     ++index;
 
@@ -160,7 +160,7 @@ bool parseBetweenMarkers(const std::vector<char> &buffer, JSONMarker &marker, ch
     return false;
 }
 
-static bool parseString(const std::vector<char> &buffer, JSONMarker &marker, std::string &outStr)
+static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, std::string &outStr)
 {
     int &index = marker.currentIndex;
 
@@ -184,7 +184,7 @@ static bool parseString(const std::vector<char> &buffer, JSONMarker &marker, std
     return true;
 }
 
-static int parseInt(const std::vector<char> &buffer, JSONMarker &marker, int64_t &outResult)
+static int parseInt(const ArraySliceView<char> &buffer, JSONMarker &marker, int64_t &outResult)
 {
     int numCount = 0;
     int &index = marker.currentIndex;
@@ -233,7 +233,7 @@ bool isNum(char c)
     return(( c >= '0' && c <= '9' ));
 }
 
-bool getNumber(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
+bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -301,7 +301,7 @@ bool getNumber(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &i
     return true;
 }
 
-bool tryParseBoolean(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
+bool tryParseBoolean(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -328,7 +328,7 @@ bool tryParseBoolean(const std::vector<char> &buffer, JSONMarker &marker, JSONBl
     return true;
 }
 
-static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
+static bool parseValue(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -406,7 +406,7 @@ static bool parseValue(const std::vector<char> &buffer, JSONMarker &marker, JSON
 }
 
 
-static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
+static bool parseObject(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -452,7 +452,7 @@ static bool parseObject(const std::vector<char> &buffer, JSONMarker &marker, JSO
 
 
 
-bool JSONBlock::parseJSON(const std::vector<char> &data)
+bool JSONBlock::parseJSON(const ArraySliceView<char> &data)
 {
     if(data.size() <= 2)
         return false;
@@ -555,7 +555,7 @@ bool JSONBlock::parseBool(bool &outBool) const
 }
 
 
-bool JSONBlock::parseBuffer(std::vector<uint8_t> &outBuffer) const
+bool JSONBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
 {
     if(!isString())
         return false;

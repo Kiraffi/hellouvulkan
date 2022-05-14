@@ -30,10 +30,10 @@ add_library(MyLibraries
     "render/font_render.cpp"
     #"myvulkan/vulkanmemorymanager.cpp"
 
-    #"core/json.cpp"
+    "core/json.cpp"
 
-
-     "myvulkan/vulkaninitparameters.h" "myvulkan/vulkanresources.h" "myvulkan/uniformbuffermanager.cpp" "myvulkan/uniformbuffermanager.h")
+    #"myvulkan/vulkaninitparameters.h" "myvulkan/vulkanresources.h"  "myvulkan/uniformbuffermanager.h" "container/arraysliceview.h" 
+    "myvulkan/uniformbuffermanager.cpp")
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
     )
