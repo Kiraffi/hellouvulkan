@@ -9,10 +9,10 @@
 #include "vulkaninitparameters.h"
 #include "uniformbuffermanager.h"
 
-//struct VmaAllocation_T;
-//struct VmaAllocator_T;
+struct VmaAllocation_T;
+struct VmaAllocator_T;
 
-#include <vk_mem_alloc.h>
+//#include <vk_mem_alloc.h>
 
 struct QueueFamilyIndices
 {
@@ -47,10 +47,10 @@ struct Buffer
     VkDeviceMemory deviceMemory = 0;
     size_t size = 0ull;
     */
-    //VmaAllocation_T *allocation = nullptr;
 
     size_t size = 0ull;
-    VmaAllocation allocation = nullptr;
+    //VmaAllocation allocation = nullptr;
+    VmaAllocation_T *allocation = nullptr;
 };
 
 struct Image
@@ -65,8 +65,8 @@ struct Image
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     uint32_t width = 0u;
     uint32_t height = 0u;
-    //VmaAllocation_T *allocation = nullptr;
-    VmaAllocation allocation = nullptr;
+    VmaAllocation_T *allocation = nullptr;
+    //VmaAllocation allocation = nullptr;
 };
 
 
@@ -120,7 +120,7 @@ struct VulkGlob
 
     VkCommandBuffer commandBuffer = nullptr;
     VkFramebuffer targetFB = nullptr;
-    VmaAllocator allocator = nullptr;
+    VmaAllocator_T *allocator = nullptr;
 
 
     VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
