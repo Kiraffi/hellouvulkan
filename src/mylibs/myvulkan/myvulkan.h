@@ -18,7 +18,7 @@
 
 struct GLFWwindow;
 constexpr uint32_t QUERY_COUNT = 128u;
-static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
+static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_3;
 
 bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
