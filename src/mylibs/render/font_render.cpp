@@ -143,10 +143,12 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             return false;
         }
 
-
-        pipeline.pipeline = createGraphicsPipeline(vulk.renderPass,
+        pipeline.pipeline = createGraphicsPipeline(
             vertexShader, fragShader,
-            pipeline.pipelineLayout, false);
+            pipeline.pipelineLayout,
+            { vulk.defaultColorFormat },
+            {}
+        );
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
@@ -232,15 +234,48 @@ void FontRenderSystem::update()
 
 
 
-void FontRenderSystem::render()
+void FontRenderSystem::render(Image &image)
 {
-    VkCommandBuffer commandBuffer = vulk.commandBuffer;
-    if (vertData.size() > 0 && commandBuffer)
-    {
-        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptor);
-        vkCmdBindIndexBuffer(commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
-    }
+    if (vertData.size() == 0 || vulk.commandBuffer == nullptr)
+        return;
+
+    VkRect2D renderArea = { .extent = {.width = vulk.swapchain.width, .height = vulk.swapchain.height } };
+    VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
+    VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
+
+
+    const VkRenderingAttachmentInfo colorAttachmentInfo[]{
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+            .imageView = image.imageView,
+            .imageLayout = image.layout,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        },
+
+    };
+
+    const VkRenderingInfo renderInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+        .renderArea = renderArea,
+        .layerCount = 1,
+        .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
+        .pColorAttachments = colorAttachmentInfo,
+        .pDepthAttachment = nullptr,
+    };
+
+    vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
+
+    insertDebugRegion("FontRender", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+    vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
+    vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
+
+    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptor);
+    vkCmdBindIndexBuffer(vulk.commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
+
+    vkCmdEndRendering(vulk.commandBuffer);
+
     vertData.clear();
 }
 

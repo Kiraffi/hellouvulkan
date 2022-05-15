@@ -29,11 +29,11 @@ public:
     virtual ~VulkanApp();
 
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight, 
-        const VulkanInitializationParameters &initParameters);
-    virtual void run();
-    virtual void update();
-    virtual void resized() {}
+        const VulkanInitializationParameters &initParameters) = 0;
+    virtual void update() = 0;
+    virtual void resized() = 0;
 
+    void run();
     void updateRenderFrameBuffer();
 
     void resizeWindow(int w, int h);

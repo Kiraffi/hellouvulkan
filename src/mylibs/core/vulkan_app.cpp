@@ -1,5 +1,9 @@
 #include "vulkan_app.h"
 
+#if _MSC_VER
+    #include <Windows.h> // begintimeperiod
+#endif
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -111,7 +115,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     glfwGetFramebufferSize(window, &w, &h);
     resizeWindow(w, h);
 
-    if(!initVulkan(window, initParameters))
+    if(!initVulkan(*this, initParameters))
     {
         printf("Failed to initialize vulkan\n");
         return false;
@@ -125,6 +129,8 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     }
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     glfwSetKeyCallback(window, keyboardHandlerCallback);
+    glfwSetWindowUserPointer(window, this);
+    resized();
     return true;
 
 }
@@ -145,7 +151,7 @@ void VulkanApp::resizeWindow(int w, int h)
 {
     windowWidth = w;
     windowHeight = h;
-    printf("Window size: %i: %i\n", w, h);
+    //printf("Window size: %i: %i\n", w, h);
 }
 
 void VulkanApp::setVsyncEnabled(bool enable)
@@ -215,27 +221,21 @@ void VulkanApp::updateRenderFrameBuffer()
     fontSystem.update();
 }
 
-/*
-void VulkanApp::present(Image &presentImage)
-{
-    ::present(window, presentImage);
-    for (int i = 0; i < ARRAYSIZES(keyDowns); ++i)
-    {
-        keyDowns[ i ].pressCount = 0u;
-    }
-    bufferedPressesCount = 0u;
-    dt = timer.getLapDuration();
-}
-*/
 
 void VulkanApp::run()
 {
-
     while (!glfwWindowShouldClose(window))
     {
         update();
         defragMemory();
+
+        #if _MSC_VER
+            timeBeginPeriod(1);
+        #endif
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        #if _MSC_VER
+            timeEndPeriod(1);
+        #endif
         //VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
     }

@@ -86,8 +86,11 @@ public:
 
     bool initRun();
     virtual void update() override;
+    virtual void resized() override;
 
 public:
+    Image renderColorImage;
+
     VkShaderModule vertShaderModule;
     VkShaderModule fragShaderModule;
 
@@ -118,6 +121,8 @@ VulkanFontDraw::~VulkanFontDraw()
 
     destroyDescriptor(graphicsPipeline.descriptor);
     destroyPipeline(graphicsPipeline);
+
+    destroyImage(renderColorImage);
 
     destroyBuffer(quadBuffer);
     destroyBuffer(indexDataBuffer);
@@ -189,9 +194,12 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
             return false;
         }
 
-        pipeline.pipeline = createGraphicsPipeline(vulk.renderPass,
+        pipeline.pipeline = createGraphicsPipeline(
             vertShaderModule, fragShaderModule,
-            pipeline.pipelineLayout, false);
+            pipeline.pipelineLayout,
+            { vulk.defaultColorFormat },
+            {  }
+        );
 
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
@@ -280,6 +288,21 @@ bool VulkanFontDraw::initRun()
     return true;
 }
 
+
+void VulkanFontDraw::resized()
+{
+    destroyImage(renderColorImage);
+
+    // create color and depth images
+    renderColorImage = createImage(
+        vulk.swapchain.width, vulk.swapchain.height,
+        vulk.defaultColorFormat,
+
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main color target image");
+
+}
 
 void VulkanFontDraw::update()
 {
@@ -399,7 +422,7 @@ void VulkanFontDraw::update()
     //
     ////////////////////////
 
-    if (!startRender(window))
+    if (!startRender())
         return;
 
     beginSingleTimeCommands();
@@ -441,14 +464,9 @@ void VulkanFontDraw::update()
     {
         VkImageMemoryBarrier imageBarriers[] =
         {
-            imageBarrier(vulk.mainColorRenderTarget,
+            imageBarrier(renderColorImage,
                         0, VK_IMAGE_LAYOUT_UNDEFINED,
                         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-
-            imageBarrier(vulk.mainDepthRenderTarget,
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                        VK_IMAGE_ASPECT_DEPTH_BIT),
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
@@ -456,20 +474,35 @@ void VulkanFontDraw::update()
     }
 
     // Drawingg
+   
     {
-        VkClearValue clearValues[ 2 ] = {};
-        clearValues[ 0 ].color = VkClearColorValue{ {0.0f, 0.5f, 1.0f, 1.0f } };
-        clearValues[ 1 ].depthStencil = { 0.0f, 0 };
+        const SwapChain& swapchain = vulk.swapchain;
 
-        VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-        passBeginInfo.renderPass = vulk.renderPass;
-        passBeginInfo.framebuffer = vulk.targetFB;
-        passBeginInfo.renderArea.extent.width = vulk.swapchain.width;
-        passBeginInfo.renderArea.extent.height = vulk.swapchain.height;
-        passBeginInfo.clearValueCount = ARRAYSIZES(clearValues);
-        passBeginInfo.pClearValues = clearValues;
+        static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
+        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
 
-        vkCmdBeginRenderPass(vulk.commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        const VkRenderingAttachmentInfo colorAttachmentInfo[]{
+            {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+                .imageView = renderColorImage.imageView,
+                .imageLayout = renderColorImage.layout,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = colorClear
+            },
+
+        };
+
+        const VkRenderingInfo renderInfo{
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+            .renderArea = renderArea,
+            .layerCount = 1,
+            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
+            .pColorAttachments = colorAttachmentInfo,
+            .pDepthAttachment = nullptr,
+        };
+        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
 
         VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
         VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
@@ -486,12 +519,12 @@ void VulkanFontDraw::update()
             vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 
         }
-        vkCmdEndRenderPass(vulk.commandBuffer);
+        vkCmdEndRendering(vulk.commandBuffer);
     }
 
     vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
 
-    present(window);
+    present(renderColorImage);
 
     ////////////////////////
     //

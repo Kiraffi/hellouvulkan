@@ -3,8 +3,7 @@
 #include <string_view>
 #include <vulkan/vulkan_core.h>
 
-
-#include <container/podvector.h>
+#include <container/arraysliceview.h>
 #include <core/mytypes.h>
 #include <math/vector3.h>
 #include <myvulkan/vulkglob.h>
@@ -15,16 +14,25 @@
     #define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
 #endif
 
+class VulkanApp;
+
+struct DepthTest
+{
+    VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+    VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
+    bool useDepthTest = false;
+    bool writeDepth = false;
+};
 
 struct GLFWwindow;
 constexpr uint32_t QUERY_COUNT = 128u;
 static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_3;
 
-bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initParameters);
+bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
-bool resizeSwapchain(GLFWwindow *window);
-bool startRender(GLFWwindow *window);
-void present(GLFWwindow *window);
+bool resizeSwapchain();
+bool startRender();
+void present(Image &imageToPresent);
 
 void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name);
 void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
@@ -43,8 +51,8 @@ void endSingleTimeCommands();
 
 
 
-VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
-    bool depthTest);
+VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
+    const ArraySliceView<VkFormat> &colorFormats, const DepthTest& depthTest);
 
 VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLayout);
 

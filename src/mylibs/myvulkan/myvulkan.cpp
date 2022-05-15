@@ -4,13 +4,14 @@
 
 #include "myvulkan.h"
 
-#include <vulkan/vulkan_core.h>
-
+#include <container/podvector.h>
 #include <core/general.h>
 #include <core/mytypes.h>
-
+#include <core/vulkan_app.h>
 #include <math/vector3.h>
 #include <myvulkan/vulkanresources.h>
+
+#include <vulkan/vulkan_core.h>
 
 #include <string>
 #include <set>
@@ -23,7 +24,6 @@ static constexpr Formats defaultFormats[] = {
     { VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_HDR10_ST2084_EXT },
 };
 
-static bool createGraphics();
 
 struct SwapChainSupportDetails
 {
@@ -63,7 +63,8 @@ struct VulkanDeviceOptionals
 
 static const PodVector<const char *>validationLayers =
 {
-    "VK_LAYER_KHRONOS_validation"
+    "VK_LAYER_KHRONOS_validation",
+    "VK_LAYER_LUNARG_monitor",
 };
 
 
@@ -71,6 +72,14 @@ static const PodVector<const char *>deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     // VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    // VK_KHR_MAINTENANCE1_EXTENSION_NAME
+    // VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+};
+
+static const PodVector<const char*>checkDeviceExtensions =
+{
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
     // VK_KHR_MAINTENANCE1_EXTENSION_NAME
     // VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
@@ -257,7 +266,7 @@ static void destroySwapchain(SwapChain &swapchain)
 
 
 
-static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
+static bool createSwapchain(VSyncType vsyncMode)
 {
     VkPresentModeKHR findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
     switch (vsyncMode)
@@ -273,7 +282,7 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
         bool found = false;
         for (const auto& availableFormat : swapChainSupport.formats)
         {
-            if (availableFormat.format == vulk.colorFormat && availableFormat.colorSpace == vulk.colorSpace)
+            if (availableFormat.format == vulk.presentColorFormat && availableFormat.colorSpace == vulk.colorSpace)
             {
                 surfaceFormat = availableFormat;
                 found = true;
@@ -283,7 +292,7 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
         if(!found && swapChainSupport.formats.size() == 1 && swapChainSupport.formats[0].format == VK_FORMAT_UNDEFINED)
         {
             surfaceFormat.colorSpace = vulk.colorSpace;
-            surfaceFormat.format = vulk.colorFormat;
+            surfaceFormat.format = vulk.presentColorFormat;
             found = true;
         }
         ASSERT(found);
@@ -302,7 +311,7 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
         if (swapChainSupport.capabilities.currentExtent.width == UINT32_MAX)
         {
             int width, height;
-            glfwGetFramebufferSize(window, &width, &height);
+            glfwGetFramebufferSize(vulk.vulkanApp->window, &width, &height);
 
             extent.width = uint32_t(width);
             extent.height = uint32_t(height);
@@ -359,7 +368,7 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
         vulk.swapchain.swapchain = swapchain;
 
         vulk.colorSpace = surfaceFormat.colorSpace;
-        vulk.colorFormat = surfaceFormat.format;
+        vulk.presentColorFormat = surfaceFormat.format;
     }
 
 
@@ -375,7 +384,7 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
     int32_t width = 0;
     int32_t height = 0;
 
-    glfwGetWindowSize(window, &width, &height);
+    glfwGetWindowSize(vulk.vulkanApp->window, &width, &height);
     vulk.swapchain.width = uint32_t(width);
     vulk.swapchain.height = uint32_t(height);
     return true;
@@ -495,7 +504,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
             std::set<std::string> requiredExtensions;
-            for (const char *str : deviceExtensions)
+            for (const char *str : checkDeviceExtensions)
             {
                 requiredExtensions.insert(str);
             }
@@ -503,7 +512,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 
             for (const auto& extension : availableExtensions)
             {
-                printf("available extension: %s\n", extension.extensionName);
+                //printf("available extension: %s\n", extension.extensionName);
                 requiredExtensions.erase(extension.extensionName);
             }
 
@@ -554,12 +563,12 @@ static bool createDeviceWithQueues()
     if(!swapChainAdequate)
         return false;
 
-    vulk.colorFormat = VK_FORMAT_UNDEFINED;
+    vulk.presentColorFormat = VK_FORMAT_UNDEFINED;
     vulk.depthFormat = defaultFormats[0].depth;
     vulk.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    vulk.computeColorFormat = VK_FORMAT_UNDEFINED;
+    vulk.defaultColorFormat = VK_FORMAT_UNDEFINED;
 
-    for(uint32_t i = 0; i < swapChainSupport.formats.size() && vulk.colorFormat == VK_FORMAT_UNDEFINED; ++i)
+    for(uint32_t i = 0; i < swapChainSupport.formats.size() && vulk.presentColorFormat == VK_FORMAT_UNDEFINED; ++i)
     {
 
         for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
@@ -568,20 +577,20 @@ static bool createDeviceWithQueues()
                 continue;
             if(swapChainSupport.formats[i].format != defaultFormats[j].format)
                 continue;
-            vulk.colorFormat = defaultFormats[j].format;
+            vulk.presentColorFormat = defaultFormats[j].format;
             vulk.depthFormat = defaultFormats[j].depth;
 
             vulk.colorSpace = defaultFormats[j].colorSpace;
         }
     }
 
-    if(vulk.colorFormat == VK_FORMAT_UNDEFINED && swapChainSupport.formats.size() == 1 && swapChainSupport.formats[0].format == VK_FORMAT_UNDEFINED)
+    if(vulk.presentColorFormat == VK_FORMAT_UNDEFINED && swapChainSupport.formats.size() == 1 && swapChainSupport.formats[0].format == VK_FORMAT_UNDEFINED)
     {
-        vulk.colorFormat = defaultFormats[0].format;
+        vulk.presentColorFormat = defaultFormats[0].format;
         vulk.colorSpace = defaultFormats[0].colorSpace;
         vulk.depthFormat = defaultFormats[0].depth;
     }
-    ASSERT(vulk.colorFormat != VK_FORMAT_UNDEFINED);
+    ASSERT(vulk.presentColorFormat != VK_FORMAT_UNDEFINED);
 
     static constexpr uint32_t flagBits =
         VK_FORMAT_FEATURE_BLIT_SRC_BIT |
@@ -593,12 +602,12 @@ static bool createDeviceWithQueues()
         vkGetPhysicalDeviceFormatProperties(vulk.physicalDevice, defaultFormats[j].format, &formatProperties);
         if((formatProperties.optimalTilingFeatures & flagBits) == flagBits)
         {
-            vulk.computeColorFormat = defaultFormats[j].format;
+            vulk.defaultColorFormat = defaultFormats[j].format;
             break;
         }
     }
 
-    ASSERT(vulk.computeColorFormat != VK_FORMAT_UNDEFINED);
+    ASSERT(vulk.defaultColorFormat != VK_FORMAT_UNDEFINED);
 
     PodVector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {
@@ -616,18 +625,20 @@ static bool createDeviceWithQueues()
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    static VkPhysicalDeviceFeatures deviceFeatures = {
-        .samplerAnisotropy = VK_FALSE,
-    };
-    static VkPhysicalDeviceVulkan13Features deviceFeatures13 = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .dynamicRendering = VK_TRUE,
-    };
     VulkanDeviceOptionals optionals = getDeviceOptionals(vulk.physicalDevice);
+    // createdeviceinfo
     {
-        static VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 {
+        static constexpr VkPhysicalDeviceFeatures deviceFeatures = {
+            .samplerAnisotropy = VK_FALSE,
+        };
+        static constexpr  VkPhysicalDeviceVulkan13Features deviceFeatures13 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+            .dynamicRendering = VK_TRUE,
+        };
+
+        static constexpr  VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-            .pNext = &deviceFeatures13,
+            .pNext = (void *)&deviceFeatures13,
             .features = deviceFeatures,
         };
         
@@ -679,40 +690,6 @@ static bool createDeviceWithQueues()
     return true;
 }
 
-
-
-
-
-
-static void deleteFrameTargets()
-{
-    vkDestroyFramebuffer(vulk.device, vulk.targetFB, nullptr);
-    vulk.targetFB = nullptr;
-    destroyImage(vulk.mainColorRenderTarget);
-    destroyImage(vulk.mainDepthRenderTarget);
-}
-
-static bool createGraphics()
-{
-    // create color and depth images
-    vulk.mainColorRenderTarget = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.computeColorFormat,
-
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color target image");
-
-    vulk.mainDepthRenderTarget = createImage(
-        vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main depth target image");
-    vulk.targetFB = createFramebuffer(vulk.renderPass,
-        { vulk.mainColorRenderTarget.imageView }, vulk.mainDepthRenderTarget.imageView,
-        vulk.swapchain.width, vulk.swapchain.height);
-
-    return true;
-}
 
 
 
@@ -838,35 +815,23 @@ static VkFence createFence()
 }
 
 
-static void recreateSwapchainData()
+
+
+
+
+
+
+
+
+
+
+
+bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters)
 {
-    deleteFrameTargets();
-    createGraphics();
-    vulk.needToResize = false;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initParameters)
-{
+    vulk.vulkanApp = &app;
     vulk.initParams = initParameters;
-    ASSERT(window);
-    if(!window)
+    ASSERT(app.window);
+    if(!app.window)
     {
         printf("Empty window!\n");
         return false;
@@ -879,7 +844,7 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
 
     vulk.debugCallBack = registerDebugCallback(vulk.instance);
 
-    VK_CHECK(glfwCreateWindowSurface(vulk.instance, window, nullptr, &vulk.surface));
+    VK_CHECK(glfwCreateWindowSurface(vulk.instance, app.window, nullptr, &vulk.surface));
     ASSERT(vulk.surface);
     if(!vulk.surface)
     {
@@ -924,15 +889,8 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
         printf("subgroup operations: %u\n", subgroupProperties.supportedOperations);
 
     }
-    vulk.renderPass = createRenderPass(vulk.computeColorFormat, vulk.depthFormat);
-    ASSERT(vulk.renderPass);
-    if(!vulk.renderPass)
-    {
-        printf("Failed to create render pass!\n");
-        return false;
-    }
 
-    bool scSuccess = createSwapchain(window, vulk.initParams.vsync);
+    bool scSuccess = createSwapchain(vulk.initParams.vsync);
     ASSERT(scSuccess);
     if(!scSuccess)
     {
@@ -1009,7 +967,6 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
         vulk.uniformBufferManager.init(vulk.uniformBuffer);
         vulk.renderFrameBufferHandle = vulk.uniformBufferManager.reserveHandle();
     }
-    createGraphics();
 
     return true;
 }
@@ -1024,15 +981,12 @@ void deinitVulkan()
         destroyBuffer(vulk.scratchBuffer);
         destroyBuffer(vulk.uniformBuffer);
 
-        deleteFrameTargets();
-
         vkDestroyCommandPool(vulk.device, vulk.commandPool, nullptr);
 
         vkDestroyQueryPool(vulk.device, vulk.queryPool, nullptr);
 
         destroySwapchain(vulk.swapchain);
 
-        vkDestroyRenderPass(vulk.device, vulk.renderPass, nullptr);
         vkDestroyFence(vulk.device, vulk.fence, nullptr);
         vkDestroySemaphore(vulk.device, vulk.acquireSemaphore, nullptr);
         vkDestroySemaphore(vulk.device, vulk.releaseSemaphore, nullptr);
@@ -1052,15 +1006,15 @@ void deinitVulkan()
 
 
 
-bool resizeSwapchain(GLFWwindow* window)
+bool resizeSwapchain()
 {
     int width = 0;
     int height = 0;
-    glfwGetFramebufferSize(window, &width, &height);
+    glfwGetFramebufferSize(vulk.vulkanApp->window, &width, &height);
     while (width == 0 || height == 0)
     {
         glfwWaitEvents();
-        glfwGetFramebufferSize(window, &width, &height);
+        glfwGetFramebufferSize(vulk.vulkanApp->window, &width, &height);
     }
 
     uint32_t newWidth = uint32_t(width);
@@ -1072,9 +1026,12 @@ bool resizeSwapchain(GLFWwindow* window)
     VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
     SwapChain oldSwapchain = vulk.swapchain;
-    createSwapchain(window, vulk.initParams.vsync);
+    createSwapchain(vulk.initParams.vsync);
 
     destroySwapchain(oldSwapchain);
+
+    vulk.vulkanApp->resized();
+    vulk.needToResize = false;
     return true;
 }
 
@@ -1156,7 +1113,7 @@ void endSingleTimeCommands()
 
 
 
-bool startRender(GLFWwindow *window)
+bool startRender()
 {
     VK_CHECK(vkWaitForFences(vulk.device, 1, &vulk.fence, VK_TRUE, UINT64_MAX));
     if (vulk.acquireSemaphore == VK_NULL_HANDLE)
@@ -1172,11 +1129,9 @@ bool startRender(GLFWwindow *window)
 
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        if (resizeSwapchain(window))
+        if (resizeSwapchain())
         {
-            recreateSwapchainData();
             VK_CHECK(vkDeviceWaitIdle(vulk.device));
-            vulk.needToResize = false;
         }
         return false;
     }
@@ -1189,14 +1144,13 @@ bool startRender(GLFWwindow *window)
     return false;
 }
 
-void present(GLFWwindow *window)
+void present(Image & imageToPresent)
 {
-    Image &presentImage = vulk.mainColorRenderTarget;
     // Copy final image to swap chain target
     {
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
-            imageBarrier(presentImage,
+            imageBarrier(imageToPresent,
                 VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 
             imageBarrier(vulk.swapchain.images[ vulk.imageIndex ],
@@ -1223,7 +1177,7 @@ void present(GLFWwindow *window)
 
 
         vkCmdBlitImage(vulk.commandBuffer,
-            presentImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            imageToPresent.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             vulk.swapchain.images[ vulk.imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
     }
 
@@ -1269,10 +1223,7 @@ void present(GLFWwindow *window)
         VkResult res = ( vkQueuePresentKHR(vulk.presentQueue, &presentInfo) );
         if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || vulk.needToResize)
         {
-            vulk.needToResize = true;
-            if (resizeSwapchain(window))
-                recreateSwapchainData();
-
+            resizeSwapchain();
             vulk.needToResize = false;
         }
         else
@@ -1307,23 +1258,28 @@ void present(GLFWwindow *window)
 
 
 
-VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
-    bool depthTest)
+VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
+    const ArraySliceView<VkFormat> &colorFormats, const DepthTest &depthTest)
 {
-    VkPipelineShaderStageCreateInfo stageInfos[2] = {};
-    stageInfos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stageInfos[0].module = vs;
-    stageInfos[0].pName = "main";
+    VkPipelineShaderStageCreateInfo stageInfos[2] = {
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_VERTEX_BIT,
+            .module = vs,
+            .pName = "main",
+        },
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .module = fs,
+            .pName = "main",
+        },
+    };
+    
 
-    stageInfos[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stageInfos[1].module = fs;
-    stageInfos[1].pName = "main";
+    VkPipelineVertexInputStateCreateInfo vertexInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
-    VkPipelineVertexInputStateCreateInfo vertexInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-
-    VkPipelineInputAssemblyStateCreateInfo assemblyInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    VkPipelineInputAssemblyStateCreateInfo assemblyInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     assemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     assemblyInfo.primitiveRestartEnable = VK_FALSE;
 
@@ -1340,25 +1296,31 @@ VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, Vk
     multiSampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineDepthStencilStateCreateInfo depthInfo = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-    if (depthTest)
-    {
-        depthInfo.depthTestEnable = VK_TRUE;
-        depthInfo.depthWriteEnable = VK_TRUE;
-    }
-    depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthInfo.depthTestEnable = depthTest.useDepthTest ? VK_TRUE : VK_FALSE;
+    depthInfo.depthWriteEnable = depthTest.writeDepth ? VK_TRUE : VK_FALSE;
+    depthInfo.depthCompareOp = depthTest.depthCompareOp;
 
     VkPipelineColorBlendAttachmentState colorAttachmentState = {};
     colorAttachmentState.colorWriteMask = 
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-    VkPipelineColorBlendStateCreateInfo blendInfo = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    blendInfo.pAttachments = &colorAttachmentState;
-    blendInfo.attachmentCount = 1;
+    VkPipelineColorBlendStateCreateInfo blendInfo = { 
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &colorAttachmentState,
+    };
 
     VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamicInfo.pDynamicStates = dynamicStates;
     dynamicInfo.dynamicStateCount = ARRAYSIZES(dynamicStates);
+
+    const VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+        .colorAttachmentCount = colorFormats.size(),
+        .pColorAttachmentFormats = colorFormats.data,
+        .depthAttachmentFormat = depthTest.depthFormat,
+    };
 
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     createInfo.stageCount = ARRAYSIZES(stageInfos);
@@ -1371,9 +1333,11 @@ VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, Vk
     createInfo.pDepthStencilState = &depthInfo;
     createInfo.pColorBlendState = &blendInfo;
     createInfo.pDynamicState = &dynamicInfo;
-    createInfo.renderPass = renderPass;
+    createInfo.renderPass = VK_NULL_HANDLE;
     createInfo.layout = pipelineLayout;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
+    
+    createInfo.pNext = &pipelineRenderingCreateInfo;
 
     VkPipeline pipeline = 0;
     VK_CHECK(vkCreateGraphicsPipelines(vulk.device, nullptr, 1, &createInfo, nullptr, &pipeline));

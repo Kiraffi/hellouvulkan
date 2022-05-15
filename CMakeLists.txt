@@ -85,4 +85,3 @@ include_directories("external/VulkanMemoryAllocator/include")
 add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")
 add_subdirectory("src")
-

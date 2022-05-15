@@ -24,8 +24,18 @@ add_library(MyLibraries
     "myvulkan/vulkanresources.cpp"
 
     "render/font_render.cpp"
+    "model/gltf.h"
+    "model/gltf.cpp"
 )
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
     )
+
+
+target_link_libraries(MyLibraries PUBLIC
+    glfw   
+    Vulkan::Vulkan
+    winMM.Lib
+    #meshoptimizer
+)

@@ -210,15 +210,18 @@ VkSampler createSampler(const VkSamplerCreateInfo& info)
 
 void destroyImage(Image& image)
 {
-    vkDestroyImageView(vulk.device, image.imageView, nullptr);
-    vmaDestroyImage(vulk.allocator, image.image, image.allocation);
+    if(image.imageView)
+        vkDestroyImageView(vulk.device, image.imageView, nullptr);
+    if(image.image)
+        vmaDestroyImage(vulk.allocator, image.image, image.allocation);
     image = Image{};
 }
 
 
 void destroySampler(VkSampler sampler)
 {
-    vkDestroySampler(vulk.device, sampler, nullptr);
+    if(sampler)
+        vkDestroySampler(vulk.device, sampler, nullptr);
 }
 
 

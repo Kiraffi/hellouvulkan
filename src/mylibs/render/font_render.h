@@ -20,7 +20,7 @@ public:
     //    VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer);
     // return offset to scratch buffer
     void update();
-    void render();
+    void render(Image& image);
 
     void addText(std::string_view text, Vector2 pos,
         Vector2 charSize = Vector2(8.0f, 12.0f), const Vector4 &color = Vector4(1.0f, 1.0f, 1.0f, 1.0f));

@@ -12,6 +12,8 @@
 struct VmaAllocation_T;
 struct VmaAllocator_T;
 
+class VulkanApp;
+
 //#include <vk_mem_alloc.h>
 
 struct QueueFamilyIndices
@@ -108,8 +110,6 @@ struct VulkGlob
     UniformBufferManager uniformBufferManager;
     UniformBufferHandle renderFrameBufferHandle;
 
-    // Do I need this?? This should be somewhere else
-    VkRenderPass renderPass = nullptr;
     VkQueryPool queryPool = nullptr;
 
     VkSemaphore acquireSemaphore = nullptr;
@@ -119,20 +119,19 @@ struct VulkGlob
     VkCommandPool commandPool = nullptr;
 
     VkCommandBuffer commandBuffer = nullptr;
-    VkFramebuffer targetFB = nullptr;
     VmaAllocator_T *allocator = nullptr;
 
 
-    VkFormat computeColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
-    VkFormat colorFormat = VkFormat::VK_FORMAT_UNDEFINED;
+    VkFormat defaultColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
+    VkFormat presentColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
     VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;
     VkColorSpaceKHR colorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_MAX_ENUM_KHR;
 
     SwapChain swapchain;
 
-    Image mainColorRenderTarget;
-    Image mainDepthRenderTarget;
     uint32_t imageIndex = 0u;
+
+    VulkanApp* vulkanApp = nullptr;
 
     bool needToResize = false;
     bool waitForFence = true;

@@ -10,7 +10,7 @@ class ArraySliceView final
 public:
     ArraySliceView(const T* const data, uint32_t length) : data(data), length(length) {}
     ArraySliceView(const std::initializer_list<T>& initializerList) : 
-        data(initializerList.begin()), length(initializerList.size()) {}
+        data(initializerList.size() ? initializerList.begin() : nullptr), length(initializerList.size()) {}
     const T& operator[] (uint32_t index) const
     {
         ASSERT(index < length);

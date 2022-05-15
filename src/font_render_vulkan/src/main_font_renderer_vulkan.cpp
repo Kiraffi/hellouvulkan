@@ -43,10 +43,13 @@ public:
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight, 
         const VulkanInitializationParameters &params) override;
     virtual void update() override;
+    virtual void resized() override;
 
     void updateText(std::string& str);
+
 private:
     Vector2 fontSize = Vector2(8.0f, 12.0f);
+    Image renderColorImage;
 };
 
 
@@ -58,7 +61,7 @@ private:
 
 VulkanFontRender::~VulkanFontRender()
 {
-
+    destroyImage(renderColorImage);
 }
 
 bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight, 
@@ -81,6 +84,21 @@ void VulkanFontRender::updateText(std::string &str)
 
     fontSystem.addText(tmpStr, Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     fontSystem.addText(str, Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
+void VulkanFontRender::resized()
+{
+    destroyImage(renderColorImage);
+
+    // create color and depth images
+    renderColorImage = createImage(
+        vulk.swapchain.width, vulk.swapchain.height,
+        vulk.defaultColorFormat,
+
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main color target image");
+
 }
 
 
@@ -145,7 +163,7 @@ void VulkanFontRender::update()
     //
     ////////////////////////
 
-    if (!startRender(window))
+    if (!startRender())
         return;
 
     beginSingleTimeCommands();
@@ -164,36 +182,44 @@ void VulkanFontRender::update()
         VkImageMemoryBarrier imageBarriers[] =
         {
 
-            imageBarrier(vulk.mainColorRenderTarget,
+            imageBarrier(renderColorImage,
                 0, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-
-            imageBarrier(vulk.mainDepthRenderTarget,
-                0, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_ASPECT_DEPTH_BIT),
-
         };
 
         vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
                                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
 
-    // Drawingg
+    // Drawingg, just to change background color....
     {
-        VkClearValue clearValues[ 2 ] = {};
-        clearValues[ 0 ].color = VkClearColorValue{ {48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
-        clearValues[ 1 ].depthStencil = { 0.0f, 0 };
+        const SwapChain& swapchain = vulk.swapchain;
 
-        VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-        passBeginInfo.renderPass = vulk.renderPass;
-        passBeginInfo.framebuffer = vulk.targetFB;
-        passBeginInfo.renderArea.extent.width = vulk.swapchain.width;
-        passBeginInfo.renderArea.extent.height = vulk.swapchain.height;
-        passBeginInfo.clearValueCount = ARRAYSIZES(clearValues);
-        passBeginInfo.pClearValues = clearValues;
+        static constexpr VkClearValue colorClear = { .color{48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
+        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
 
-        vkCmdBeginRenderPass(vulk.commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        const VkRenderingAttachmentInfo colorAttachmentInfo[]{
+            {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+                .imageView = renderColorImage.imageView,
+                .imageLayout = renderColorImage.layout,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = colorClear
+            },
+
+        };
+
+        const VkRenderingInfo renderInfo{
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+            .renderArea = renderArea,
+            .layerCount = 1,
+            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
+            .pColorAttachments = colorAttachmentInfo,
+            .pDepthAttachment = nullptr,
+        };
+        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
 
         VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
         VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
@@ -202,18 +228,18 @@ void VulkanFontRender::update()
         vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
         vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
 
-
-        fontSystem.render();
         // draw calls here
         // Render
         {
         }
-        vkCmdEndRenderPass(vulk.commandBuffer);
+        vkCmdEndRendering(vulk.commandBuffer);
+
+        fontSystem.render(renderColorImage);
     }
 
     vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
     
-    present(window);
+    present(renderColorImage);
 
     ////////////////////////
     //
