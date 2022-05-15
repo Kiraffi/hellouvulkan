@@ -27,7 +27,7 @@ bool loadBytes(std::string_view fileName, PodVector<char>& dataOut)
     #ifdef _WIN32
         char buf[1024] = {};
         GetCurrentDirectory(1024, buf);
-        LOG("Buf: %s\n", buf);
+        //LOG("Buf: %s\n", buf);
     #endif
 
     if (std::filesystem::exists(fileName))
@@ -42,7 +42,7 @@ bool loadBytes(std::string_view fileName, PodVector<char>& dataOut)
 
         f.read(dataOut.data(), s);
 
-        printf("filesize: %u\n", s);
+        //printf("filesize: %u\n", s);
         return true;
     }
     return false;

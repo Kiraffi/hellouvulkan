@@ -89,7 +89,6 @@ struct SwapChain
 struct VulkGlob
 {
     VulkanInitializationParameters initParams;
-    VkPhysicalDeviceMemoryProperties memoryProperties;
     QueueFamilyIndices queueFamilyIndices;
 
     VkDebugUtilsMessengerEXT debugCallBack = nullptr;

@@ -29,7 +29,7 @@ void UniformBufferManager::freeHandle(UniformBufferHandle handle)
     }
     usedIndices[slot] &= ~bit;
 
-    printf("removing: %u\n", handle.index);
+    //printf("removing uniformbufferslot: %u\n", handle.index);
 }
 
 UniformBufferHandle UniformBufferManager::reserveHandle()
@@ -61,6 +61,6 @@ UniformBufferHandle UniformBufferManager::reserveHandle()
     
     result.manager = this;
     result.size = 65536u;
-    printf("reserving: %u\n", result.index);
+    //printf("reserving uniform buffer slot: %u\n", result.index);
     return result;
 };

@@ -953,9 +953,6 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
 
 
     {
-        // Create buffers
-        vkGetPhysicalDeviceMemoryProperties(vulk.physicalDevice, &vulk.memoryProperties);
-
         vulk.scratchBuffer = createBuffer(64 * 1024 * 1024,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
