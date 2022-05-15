@@ -511,9 +511,7 @@ void SpaceShooter::updateLogic()
             float origSpeed = fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
             float dec = dddt * 0.001f * origSpeed;
             float speed = ffmaxf(origSpeed - dec, 0.0f);
-            float slowDown = 0.95f; //origSpeed > 0.01f ? speed / std::max(origSpeed, 1.0f) : 0.0f;
-            playerEntity.speedX *= slowDown;
-            playerEntity.speedY *= slowDown;
+            
 
             playerEntity.posX += playerEntity.speedX * dddt;
             playerEntity.posY += playerEntity.speedY * dddt;
@@ -559,6 +557,9 @@ void SpaceShooter::updateLogic()
 
         dtSplit -= dddt;
     }
+    const float slowDown = std::max(0.0, 1.0 - 10.0 * dt);
+    playerEntity.speedX *= slowDown;
+    playerEntity.speedY *= slowDown;
 
     while (playerEntity.posX > windowWidth)
     {
