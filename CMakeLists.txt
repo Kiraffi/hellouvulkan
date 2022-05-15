@@ -58,14 +58,7 @@ endForeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
  
-#set(SHOW_VARIABLES true)
-if (SHOW_VARIABLES)
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
-endif (SHOW_VARIABLES)
+
 
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" )
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" )
@@ -82,6 +75,17 @@ include_directories("external/glfw/include/")
 include_directories("src/mylibs")
 include_directories("external/VulkanMemoryAllocator/include")
 
-add_subdirectory("external/meshoptimizer")
+#add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")
 add_subdirectory("src")
+
+
+
+#set(SHOW_VARIABLES true)
+if (SHOW_VARIABLES)
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+endif (SHOW_VARIABLES)

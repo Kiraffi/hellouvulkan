@@ -1238,7 +1238,7 @@ void present(Image & imageToPresent)
         }
     }
 
-    VK_CHECK(vkDeviceWaitIdle(vulk.device));
+    //VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
 }
 

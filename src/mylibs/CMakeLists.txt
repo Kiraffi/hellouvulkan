@@ -32,10 +32,16 @@ target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
     )
 
+if (WIN32)
+    set(WINMM_LIB winMM.Lib)
+else()
+    set(WINMM_LIB  "")
+endif()
 
 target_link_libraries(MyLibraries PUBLIC
     glfw   
     Vulkan::Vulkan
-    winMM.Lib
+    ${WINMM_LIB}
     #meshoptimizer
 )
+
