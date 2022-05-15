@@ -1,6 +1,6 @@
 #include "vulkan_app.h"
 
-#if _MSC_VER
+#if _WIN32
     #include <Windows.h> // begintimeperiod
 #endif
 
@@ -86,7 +86,7 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 
 
 
-bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight, 
+bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters &initParameters)
 {
     initMemory();
@@ -207,11 +207,11 @@ void VulkanApp::run()
         update();
         defragMemory();
 
-        #if _MSC_VER
+        #if _WIN32
             timeBeginPeriod(1);
         #endif
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        #if _MSC_VER
+        #if _WIN32
             timeEndPeriod(1);
         #endif
         //VK_CHECK(vkDeviceWaitIdle(vulk.device));
@@ -241,6 +241,11 @@ void VulkanApp::setTitle(const char *str)
 double VulkanApp::getDeltaTime()
 {
     return dt;
+}
+
+double VulkanApp::getTime()
+{
+    return glfwGetTime();
 }
 
 MouseState VulkanApp::getMouseState()

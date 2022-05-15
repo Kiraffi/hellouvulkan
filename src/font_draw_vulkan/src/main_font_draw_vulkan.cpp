@@ -1,5 +1,4 @@
 
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -80,7 +79,7 @@ class VulkanFontDraw : public VulkanApp
 public:
     virtual ~VulkanFontDraw() override;
     //bool initApp(const std::string &fontFilename);
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, 
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters &params) override;
 
     bool initRun();
@@ -134,8 +133,6 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-
-    glfwSetWindowUserPointer(window, this);
 
     vertShaderModule = loadShader("assets/shader/vulkan_new/coloredquad.vert.spv");
     ASSERT(vertShaderModule);
@@ -314,7 +311,7 @@ void VulkanFontDraw::update()
 
     static uint32_t gpuframeCount = 0u;
     static double gpuTime = 0.0;
-    static double cpuTimeStamp = glfwGetTime();
+    static double cpuTimeStamp = getTime();
 
     MouseState mouseState = getMouseState();
     {
@@ -429,7 +426,7 @@ void VulkanFontDraw::update()
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
     flushBarriers();
     // Drawingg
-   
+
     {
         const SwapChain& swapchain = vulk.swapchain;
 
@@ -510,7 +507,7 @@ void VulkanFontDraw::update()
     gpuTime += ( double(queryResults[ TIME_POINTS::NUM_TIME_POINTS - 1 ]) - double(queryResults[ 0 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
 
     ++gpuframeCount;
-    double currTime = glfwGetTime();
+    double currTime = getTime();
     if (currTime - cpuTimeStamp >= 1.0)
     {
         double d = 1000.0 / gpuframeCount;

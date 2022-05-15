@@ -18,7 +18,7 @@
 #include <core/timer.h>
 
 
-///// THIS IS NOT TO WORK WITH MULTIPLE THREADS!
+///// THIS WILL NOT TO WORK WITH MULTIPLE THREADS!
 static constexpr uint32_t MaxAllocations = 1024;
 static constexpr uint32_t MaxMemorySize = 1024 * 1024 * 1024;
 static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u;

@@ -6,8 +6,22 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkglob.h>
 
+#ifdef __clang__
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wtautological-compare" // comparison of unsigned expression < 0 is always false
+    #pragma clang diagnostic ignored "-Wunused-private-field"
+    #pragma clang diagnostic ignored "-Wunused-parameter"
+    #pragma clang diagnostic ignored "-Wmissing-field-initializers"
+    #pragma clang diagnostic ignored "-Wnullability-completeness"
+#endif
+
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
+
+#ifdef __clang__
+    #pragma clang diagnostic pop
+#endif
+
 
 bool initializeVMA()
 {
@@ -410,10 +424,10 @@ bool flushBarriers()
         return true;
     const VkImageMemoryBarrier* imageBarrier = vulk.imageMemoryBarriers.size() > 0 ? vulk.imageMemoryBarriers.data() : nullptr;
     const VkBufferMemoryBarrier* bufferBarrier = vulk.bufferMemoryBarriers.size() > 0 ? vulk.bufferMemoryBarriers.data() : nullptr;
-    
+
     vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_DEPENDENCY_BY_REGION_BIT, 
-        0, nullptr, 
+        VK_DEPENDENCY_BY_REGION_BIT,
+        0, nullptr,
         vulk.bufferMemoryBarriers.size(), bufferBarrier,
         vulk.imageMemoryBarriers.size(), imageBarrier);
 

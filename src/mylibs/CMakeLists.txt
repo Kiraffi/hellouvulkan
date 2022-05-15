@@ -2,7 +2,7 @@
 # new/removed files.
 
 project ("hellouvulkan libs" VERSION 0.0.1)
- 
+
 
 add_library(MyLibraries
 
@@ -24,7 +24,6 @@ add_library(MyLibraries
     "myvulkan/vulkanresources.cpp"
 
     "render/font_render.cpp"
-    "model/gltf.h"
     "model/gltf.cpp"
 )
 
@@ -39,7 +38,7 @@ else()
 endif()
 
 target_link_libraries(MyLibraries PUBLIC
-    glfw   
+    glfw
     Vulkan::Vulkan
     ${WINMM_LIB}
     #meshoptimizer

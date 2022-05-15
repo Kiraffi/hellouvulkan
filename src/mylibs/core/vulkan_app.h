@@ -28,7 +28,7 @@ public:
     VulkanApp() {}
     virtual ~VulkanApp();
 
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, 
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters &initParameters) = 0;
     virtual void update() = 0;
     virtual void resized() = 0;
@@ -44,6 +44,7 @@ public:
     void checkCameraKeypresses(float dt, Camera& camera);
 
     double getDeltaTime();
+    double getTime();
     MouseState getMouseState();
 
     bool isPressed(int keyCode);

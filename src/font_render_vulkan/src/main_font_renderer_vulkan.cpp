@@ -40,7 +40,7 @@ public:
     VulkanFontRender() {}
     virtual ~VulkanFontRender() override;
 
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight, 
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters &params) override;
     virtual void update() override;
     virtual void resized() override;
@@ -64,13 +64,12 @@ VulkanFontRender::~VulkanFontRender()
     destroyImage(renderColorImage);
 }
 
-bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight, 
+bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters &params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
 
-    glfwSetWindowUserPointer(window, this);
     return true;
 }
 
@@ -218,7 +217,7 @@ void VulkanFontRender::update()
     }
 
     vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
-    
+
     present(renderColorImage);
 
     ////////////////////////

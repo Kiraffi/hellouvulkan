@@ -177,12 +177,8 @@ bool SpaceShooter::init(const char *windowStr, int screenWidth, int screenHeight
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
 
-    glfwSetWindowUserPointer(window, this);
-
     vertShaderModule = loadShader("assets/shader/vulkan_new/space_ship_2d_model.vert.spv");
     fragShaderModule = loadShader("assets/shader/vulkan_new/space_ship_2d_model.frag.spv");
-
-
 
     modelVerticesBuffer = createBuffer(1024u * 1024u * 16u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -222,7 +218,7 @@ bool SpaceShooter::createPipelines()
             printf("Failed to create pipelinelayout!\n");
             return false;
         }
-        
+
         pipeline.pipeline = createGraphicsPipeline(
             vertShaderModule, fragShaderModule,
             pipeline.pipelineLayout,
@@ -348,7 +344,7 @@ bool SpaceShooter::initRun()
 
 
 
-    
+
 
     // Building models.
     {
@@ -509,7 +505,7 @@ void SpaceShooter::updateLogic()
             float origSpeed = fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
             float dec = dddt * 0.001f * origSpeed;
             float speed = ffmaxf(origSpeed - dec, 0.0f);
-            
+
 
             playerEntity.posX += playerEntity.speedX * dddt;
             playerEntity.posY += playerEntity.speedY * dddt;
@@ -610,7 +606,7 @@ void SpaceShooter::update()
     static double cpuTimeStamp = glfwGetTime();
 
     updateLogic();
-    
+
     // This could be moved to be done in gpu compute shader (and probably should be, could also include culling). Then using indirect drawing to render the stuff out, instead of
     // building the index buffer every frame on cpu then copying it on gpu. The instance buffer could be used to update the data more smartly perhaps? But just easy way out.
     {
@@ -623,9 +619,7 @@ void SpaceShooter::update()
 
         ASSERT(gpuModelInstances.size() < (1 << 16u));
     }
-
     fontSystem.addText(text, Vector2(100.0f, 10.0f), Vec2(8.0f, 12.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-
 
     if (!startRender())
         return;
@@ -701,7 +695,7 @@ void SpaceShooter::update()
 
 
     uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool, 
+    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool,
         0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[ 0 ]), VK_QUERY_RESULT_64_BIT));
 
     if (res != VK_SUCCESS)
