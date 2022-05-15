@@ -2,8 +2,8 @@
 #include "model.h"
 
 
-#include "core/mytypes.h"
-#include "core/timer.h"
+#include <core/mytypes.h>
+#include <core/timer.h>
 
 #include <stb/stb_image.h>
 

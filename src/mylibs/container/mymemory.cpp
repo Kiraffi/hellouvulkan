@@ -12,7 +12,7 @@
 
 
 #include "mymemory.h"
-#include "core/mytypes.h"
+#include <core/mytypes.h>
 
 ///// THIS IS NOT TO WORK WITH MULTIPLE THREADS!
 static constexpr uint32_t MaxAllocations = 1024;

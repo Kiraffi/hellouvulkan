@@ -1,26 +1,19 @@
-
-#include "core/timer.h"
-#include "core/general.h"
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-//#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
+#include <core/general.h>
+#include <core/timer.h>
+#include <core/mytypes.h>
+#include <core/vulkan_app.h>
 
-#include "core/vulkan_app.h"
+#include <math/general_math.h>
+#include <math/matrix.h>
+#include <math/plane.h>
+#include <math/quaternion.h>
+#include <math/vector3.h>
 
-#include "core/timer.h"
-#include "core/mytypes.h"
-
-#include "myvulkan/myvulkan.h"
-
-#include "math/general_math.h"
-#include "math/matrix.h"
-#include "math/plane.h"
-#include "math/quaternion.h"
-#include "math/vector3.h"
-
-#include "render/font_render.h"
+#include <myvulkan/myvulkan.h>
+#include <myvulkan/vulkanresources.h>
 
 #include <chrono>
 #include <string>
@@ -103,21 +96,9 @@ void VulkanFontRender::update()
     //
     ////////////////////////
 
-    static double previousFrameTime = glfwGetTime();
-    static uint32_t framesSinceLastDelta = 0u;
-    static double deltaTime = 0.0;
-
     static uint32_t gpuframeCount = 0u;
     static double gpuTime = 0.0;
     static double cpuTimeStamp = glfwGetTime();
-
-    if (++framesSinceLastDelta > 10)
-    {
-        double newTime = glfwGetTime();
-        deltaTime = ( newTime - previousFrameTime ) / framesSinceLastDelta;
-        previousFrameTime = newTime;
-        framesSinceLastDelta = 0u;
-    }
 
     {
         bool textNeedsUpdate = false;

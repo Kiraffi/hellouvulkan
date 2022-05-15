@@ -1,26 +1,14 @@
-#include "core/timer.h"
-#include "core/general.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <core/general.h>
+#include <core/timer.h>
+#include <core/mytypes.h>
+#include <core/vulkan_app.h>
 
-//#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
-#include "font_render.h"
-
-#include "core/vulkan_app.h"
-
-#include "core/timer.h"
-#include "core/mytypes.h"
-
-#include "myvulkan/myvulkan.h"
-//#include "myvulkan/vulkandevice.h"
-//#include "myvulkan/vulkanhelperfuncs.h"
-//#include "myvulkan/vulkanresource.h"
-//#include "myvulkan/vulkanshader.h"
-//#include "myvulkan/vulkanswapchain.h"
-
-
+#include <myvulkan/myvulkan.h>
+#include <myvulkan/vulkanresources.h>
 
 
 #include <string>

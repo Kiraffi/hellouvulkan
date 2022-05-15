@@ -78,11 +78,6 @@ do \
 
 
 
-#ifdef NDEBUG
-    #define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call ;} while(0)
-#else
-    #define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
-#endif
 
 #ifndef ARRAYSIZES
     #define ARRAYSIZES(arr) (sizeof(arr) / sizeof(arr[0]))

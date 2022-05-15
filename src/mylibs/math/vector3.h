@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/mytypes.h"
+#include <core/mytypes.h>
 
 struct Vector2
 {

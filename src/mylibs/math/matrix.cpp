@@ -1,6 +1,6 @@
 #include "matrix.h"
-#include "math/quaternion.h"
-#include "math/general_math.h"
+#include <math/quaternion.h>
+#include <math/general_math.h>
 
 #define MATRIX_ADD_ROW_MULT(row, col) (a._##row##0 * b._0##col + a._##row##1 * b._1##col + a._##row##2 * b._2##col + a._##row##3 * b._3##col)
 #define MATRIX_SET(row, col) (result._##row##col)  = MATRIX_ADD_ROW_MULT(row, col)

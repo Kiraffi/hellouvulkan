@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/mytypes.h"
-#include "math/vector3.h"
+#include <core/mytypes.h>
+#include <math/vector3.h>
 
 struct Quaternion;
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/timer.h"
+#include <core/timer.h>
 #include "myvulkan/vulkaninitparameters.h"
-#include "render/font_render.h"
+#include <render/font_render.h>
 
 struct GLFWwindow;
 struct Camera;

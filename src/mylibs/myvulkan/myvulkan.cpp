@@ -1,20 +1,21 @@
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "myvulkan.h"
 
-#include <GLFW/glfw3.h>
-#include "core/general.h"
-#include "core/mytypes.h"
-
-#include "math/vector3.h"
-
 #include <vulkan/vulkan_core.h>
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
+
+#include <core/general.h>
+#include <core/mytypes.h>
+
+#include <math/vector3.h>
+#include <myvulkan/vulkanresources.h>
 
 #include <string>
 #include <set>
 #include <string.h>
 
-static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
 
 static constexpr Formats defaultFormats[] = {
     { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
@@ -662,35 +663,64 @@ static bool createDeviceWithQueues()
 
 
 
-bool resizeSwapchain(GLFWwindow *window)
+
+static void deleteFrameTargets()
 {
-    int width = 0;
-    int height = 0;
-    glfwGetFramebufferSize(window, &width, &height);
-    while (width == 0 || height == 0)
-    {
-        glfwWaitEvents();
-        glfwGetFramebufferSize(window, &width, &height);
-    }
+    vkDestroyFramebuffer(vulk.device, vulk.targetFB, nullptr);
+    vulk.targetFB = nullptr;
+    destroyImage(vulk.mainColorRenderTarget);
+    destroyImage(vulk.mainDepthRenderTarget);
+}
 
-    uint32_t newWidth = uint32_t(width);
-    uint32_t newHeight = uint32_t(height);
+static bool createGraphics()
+{
+    // create color and depth images
+    vulk.mainColorRenderTarget = createImage(
+        vulk.swapchain.width, vulk.swapchain.height,
+        vulk.computeColorFormat,
+        //vulk.colorFormat,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main color target image");
 
-    if (vulk.swapchain.width == newWidth && vulk.swapchain.height == newHeight)
-        return false;
+    vulk.mainDepthRenderTarget = createImage(
+        vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main depth target image");
+    vulk.targetFB = createFramebuffer(vulk.renderPass,
+        { vulk.mainColorRenderTarget.imageView }, vulk.mainDepthRenderTarget.imageView,
+        vulk.swapchain.width, vulk.swapchain.height);
 
-    VK_CHECK(vkDeviceWaitIdle(vulk.device));
-
-    SwapChain oldSwapchain = vulk.swapchain;
-    createSwapchain(window, vulk.initParams.vsync);
-
-    destroySwapchain(oldSwapchain);
     return true;
 }
 
 
 
 
+
+
+static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout>& descriptors, VkShaderStageFlags stage)
+{
+    ASSERT(descriptors.size() > 0);
+    PodVector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
+    for (uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
+    {
+        setBindings[i].binding = descriptors[i].bindingIndex;
+        setBindings[i].descriptorType = descriptors[i].descriptorType; // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        setBindings[i].descriptorCount = 1;
+        setBindings[i].stageFlags = stage; // VK_SHADER_STAGE_VERTEX_BIT;
+    }
+
+    VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+    //    createInfo.flags =  VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+    createInfo.bindingCount = uint32_t(setBindings.size());
+    createInfo.pBindings = setBindings.data();
+
+    VkDescriptorSetLayout setLayout = 0;
+    VK_CHECK(vkCreateDescriptorSetLayout(vulk.device, &createInfo, nullptr, &setLayout));
+    ASSERT(setLayout);
+    return setLayout;
+}
 
 
 static VkSemaphore createSemaphore()
@@ -788,6 +818,12 @@ static VkFence createFence()
 }
 
 
+static void recreateSwapchainData()
+{
+    deleteFrameTargets();
+    createGraphics();
+    vulk.needToResize = false;
+}
 
 
 
@@ -841,25 +877,18 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
     ASSERT(vulk.physicalDevice);
 
 
-    if(!createDeviceWithQueues())
+    if (!createDeviceWithQueues())
     {
         printf("Failed to create vulkan device!\n");
+        return false;
     }
 
+    if (!initializeVMA())
     {
-        VmaVulkanFunctions vulkanFunctions = {};
-        vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-        vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
-
-        VmaAllocatorCreateInfo allocatorCreateInfo = {};
-        allocatorCreateInfo.vulkanApiVersion = VulkanApiVersion;
-        allocatorCreateInfo.physicalDevice = vulk.physicalDevice;
-        allocatorCreateInfo.device = vulk.device;
-        allocatorCreateInfo.instance = vulk.instance;
-        allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-
-        vmaCreateAllocator(&allocatorCreateInfo, &vulk.allocator);
+        printf("Failed to initialize VMA!\n");
+        return false;
     }
+
     {
         VkPhysicalDeviceSubgroupProperties subgroupProperties;
         subgroupProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
@@ -965,65 +994,71 @@ bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initPa
     return true;
 }
 
-static void deleteFrameTargets()
+
+
+
+void deinitVulkan()
 {
-    vkDestroyFramebuffer(vulk.device, vulk.targetFB, nullptr);
-    vulk.targetFB = nullptr;
-    destroyImage(vulk.mainColorRenderTarget);
-    destroyImage(vulk.mainDepthRenderTarget);
+    if (vulk.device)
+    {
+        destroyBuffer(vulk.scratchBuffer);
+        destroyBuffer(vulk.uniformBuffer);
+
+        deleteFrameTargets();
+
+        vkDestroyCommandPool(vulk.device, vulk.commandPool, nullptr);
+
+        vkDestroyQueryPool(vulk.device, vulk.queryPool, nullptr);
+
+        destroySwapchain(vulk.swapchain);
+
+        vkDestroyRenderPass(vulk.device, vulk.renderPass, nullptr);
+        vkDestroyFence(vulk.device, vulk.fence, nullptr);
+        vkDestroySemaphore(vulk.device, vulk.acquireSemaphore, nullptr);
+        vkDestroySemaphore(vulk.device, vulk.releaseSemaphore, nullptr);
+        deinitVMA();
+        vkDestroyDevice(vulk.device, nullptr);
+    }
+    vkDestroySurfaceKHR(vulk.instance, vulk.surface, nullptr);
+
+    if (vulk.initParams.useValidationLayers)
+    {
+        auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulk.instance, "vkDestroyDebugUtilsMessengerEXT");
+        dest(vulk.instance, vulk.debugCallBack, nullptr);
+    }
+    vkDestroyInstance(vulk.instance, nullptr);
+
 }
 
-static bool createGraphics()
+
+
+bool resizeSwapchain(GLFWwindow* window)
 {
-    // create color and depth images
-    vulk.mainColorRenderTarget = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        //deviceWithQueues.computeColorFormat,
-        vulk.colorFormat,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color target image");
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    while (width == 0 || height == 0)
+    {
+        glfwWaitEvents();
+        glfwGetFramebufferSize(window, &width, &height);
+    }
 
-    vulk.mainDepthRenderTarget = createImage(
-        vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main depth target image");
+    uint32_t newWidth = uint32_t(width);
+    uint32_t newHeight = uint32_t(height);
 
-    vulk.targetFB = createFramebuffer(vulk.renderPass,
-        vulk.mainColorRenderTarget.imageView, vulk.mainDepthRenderTarget.imageView,
-        vulk.swapchain.width, vulk.swapchain.height);
+    if (vulk.swapchain.width == newWidth && vulk.swapchain.height == newHeight)
+        return false;
 
+    VK_CHECK(vkDeviceWaitIdle(vulk.device));
+
+    SwapChain oldSwapchain = vulk.swapchain;
+    createSwapchain(window, vulk.initParams.vsync);
+
+    destroySwapchain(oldSwapchain);
     return true;
 }
 
 
-
-
-
-
-
-static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout> &descriptors, VkShaderStageFlags stage)
-{
-    ASSERT(descriptors.size() > 0);
-    PodVector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
-    for(uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
-    {
-        setBindings[i].binding = descriptors[i].bindingIndex;
-        setBindings[i].descriptorType = descriptors[i].descriptorType; // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        setBindings[i].descriptorCount = 1;
-        setBindings[i].stageFlags = stage; // VK_SHADER_STAGE_VERTEX_BIT;
-    }
-
-    VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-//    createInfo.flags =  VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-    createInfo.bindingCount = uint32_t(setBindings.size());
-    createInfo.pBindings = setBindings.data();
-
-    VkDescriptorSetLayout setLayout = 0;
-    VK_CHECK(vkCreateDescriptorSetLayout(vulk.device, &createInfo, nullptr, &setLayout));
-    ASSERT(setLayout);
-    return setLayout;
-}
 
 bool createPipelineLayout(PipelineWithDescriptors& pipelineWithDescriptors, VkShaderStageFlags stage)
 {
@@ -1048,12 +1083,6 @@ bool createPipelineLayout(PipelineWithDescriptors& pipelineWithDescriptors, VkSh
     return true;
 }
 
-static void recreateSwapchainData()
-{
-    deleteFrameTargets();
-    createGraphics();
-    vulk.needToResize = false;
-}
 
 
 
@@ -1105,217 +1134,6 @@ void endSingleTimeCommands()
 
 
 
-
-Image createImage(uint32_t width, uint32_t height, VkFormat format,
-    VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char *imageName)
-{
-
-    VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    createInfo.imageType = VK_IMAGE_TYPE_2D;
-    createInfo.format = format;
-    createInfo.extent = { width, height, 1 };
-    createInfo.mipLevels = 1;
-    createInfo.arrayLayers = 1;
-    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    createInfo.usage = usage;
-    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    createInfo.queueFamilyIndexCount = 1;
-    createInfo.pQueueFamilyIndices = &vulk.queueFamilyIndices.graphicsFamily;
-    Image result;
-
-    VmaAllocationCreateInfo allocInfo = {};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-
-    VK_CHECK(vmaCreateImage(vulk.allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
-
-    result.imageView = createImageView(result.image, format);
-    ASSERT(result.imageView);
-
-/*
-    // If cpu image access?
-    void *data = nullptr;
-    if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-    {
-        VK_CHECK(vkMapMemory(device, result.deviceMemory, 0, size, 0, &data));
-        ASSERT(data);
-    }
-    result.data = data;
-    result.size = size;
-*/
-    setObjectName((uint64_t)result.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, imageName);
-    result.imageName = imageName;
-
-    return result;
-}
-
-
-
-void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
-    Image &targetImage,
-    uint32_t dataSize, void *data)
-{
-    
-    ASSERT(data != nullptr || dataSize > 0u);
-    VkDeviceSize size = vulk.scratchBuffer.allocation->GetSize();
-    ASSERT(size);
-    
-    ASSERT(size >= width * height * pixelSize);
-    ASSERT(targetImage.image);
-
-    uint32_t offset = 0u;
-    offset = uploadToScratchbuffer(data, dataSize, offset);
-    beginSingleTimeCommands();
-    {
-        VkImageMemoryBarrier imageBarriers[] =
-        {
-            imageBarrier(targetImage,
-                VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
-    }
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { width, height, 1 };
-
-    vkCmdCopyBufferToImage(vulk.commandBuffer, vulk.scratchBuffer.buffer, targetImage.image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    {
-        VkImageMemoryBarrier imageBarriers[] =
-        {
-            imageBarrier(targetImage,
-                        VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
-    }
-    endSingleTimeCommands();
-
-    return;
-}
-
-VkSampler createSampler(const VkSamplerCreateInfo &info)
-{
-    VkSampler sampler = nullptr;
-    VK_CHECK(vkCreateSampler(vulk.device, &info, nullptr, &sampler));
-    return sampler;
-}
-
-void destroyImage(Image &image)
-{
-    vkDestroyImageView(vulk.device, image.imageView, nullptr);
-    vmaDestroyImage(vulk.allocator, image.image, image.allocation);
-    image = Image{};
-}
-
-
-void destroySampler(VkSampler sampler)
-{
-    vkDestroySampler(vulk.device, sampler, nullptr);
-}
-
-void destroyShaderModule(VkShaderModule shaderModule)
-{
-    vkDestroyShaderModule(vulk.device, shaderModule, nullptr);
-}
-
-
-Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char *bufferName)
-{
-    Buffer result;
-
-    VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    createInfo.size = size;
-    createInfo.usage = usage;
-    
-    VmaAllocationCreateInfo allocInfo = {};
-    if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-        allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;// VMA_MEMORY_USAGE_AUTO;
-    else
-        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-
-    VmaAllocation allocation; 
-    VK_CHECK(vmaCreateBuffer(vulk.allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
-
-    void *data = nullptr;
-    if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-    {
-        VK_CHECK(vkMapMemory(vulk.device, allocation->GetMemory(), 0, size, 0, &data));
-
-        //VK_CHECK(vkMapMemory(vulk.device, result.deviceMemory, 0, size, 0, &data));
-        ASSERT(data);
-    }
-    result.data = data;
-
-    setObjectName((uint64_t)result.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, bufferName);
-    
-    result.allocation = allocation;
-    result.bufferName = bufferName;
-    result.size = size;
-    return result;
-}
-
-size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
-{
-    ASSERT(vulk.scratchBuffer.data);
-    ASSERT(size);
-    
-    ASSERT(vulk.scratchBuffer.allocation->GetSize() >= size);
-
-    memcpy((unsigned char*)vulk.scratchBuffer.data + offset, data, size);
-    offset += size;
-
-    return offset;
-}
-
-void uploadBufferToImage(Image &gpuImage, Buffer &scratchBuffer,
-                         uint32_t width, uint32_t height, uint32_t bytesPerPixel, uint32_t bufferOffset)
-{
-
-
-    //    endSingleTimeCommands(device, commandBuffer, queue);
-
-}
-
-
-
-void uploadScratchBufferToGpuBuffer(Buffer &gpuBuffer, size_t size)
-{
-    ASSERT(vulk.scratchBuffer.data);
-    ASSERT(vulk.scratchBuffer.allocation->GetSize() >= size);
-    ASSERT(gpuBuffer.allocation->GetSize() >= size);
-
-    beginSingleTimeCommands();
-
-    VkBufferCopy region = { 0, 0, VkDeviceSize(size) };
-    vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, gpuBuffer.buffer, 1, &region);
-
-    VkBufferMemoryBarrier copyBarrier = bufferBarrier(gpuBuffer.buffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, size);
-    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyBarrier, 0, nullptr);
-
-    endSingleTimeCommands();
-
-}
-
-void destroyBuffer(Buffer &buffer)
-{
-    vmaDestroyBuffer(vulk.allocator, buffer.buffer, buffer.allocation);
-    buffer.buffer = 0;
-    buffer.data = nullptr;
-    buffer.allocation = nullptr;
-}
 
 
 bool startRender(GLFWwindow *window)
@@ -1448,125 +1266,6 @@ void present(GLFWwindow *window)
 }
 
 
-VkFramebuffer createFramebuffer(VkRenderPass renderPass,
-    VkImageView colorView, VkImageView depthView, uint32_t width, uint32_t height)
-{
-    VkImageView attachMents[] = { colorView, depthView };
-    VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-    createInfo.renderPass = renderPass;
-    createInfo.attachmentCount = 2;
-    createInfo.layers = 1;
-    createInfo.pAttachments = attachMents;
-    createInfo.width = width;
-    createInfo.height = height;
-
-    VkFramebuffer framebuffer = 0;
-    VK_CHECK(vkCreateFramebuffer(vulk.device, &createInfo, nullptr, &framebuffer));
-    return framebuffer;
-}
-
-VkImageView createImageView(VkImage image, VkFormat format)
-{
-    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    if(format == VK_FORMAT_D32_SFLOAT ||
-        format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-        format == VK_FORMAT_D24_UNORM_S8_UINT ||
-        format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
-        format == VK_FORMAT_D16_UNORM ||
-        format == VK_FORMAT_D16_UNORM_S8_UINT ||
-        format == VK_FORMAT_S8_UINT
-    )
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-    VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    createInfo.image = image;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = format;
-
-    createInfo.components.r = VK_COMPONENT_SWIZZLE_R; // VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.g = VK_COMPONENT_SWIZZLE_G; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.b = VK_COMPONENT_SWIZZLE_B; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.a = VK_COMPONENT_SWIZZLE_A; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.subresourceRange.aspectMask = aspectMask;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount = 1;
-
-
-    VkImageView view = 0;
-    VK_CHECK(vkCreateImageView(vulk.device, &createInfo, nullptr, &view));
-
-    ASSERT(view);
-    return view;
-}
-
-
-VkImageMemoryBarrier imageBarrier(Image& image,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask)
-{
-
-    VkImageMemoryBarrier barrier =
-        imageBarrier(image.image, image.accessMask, image.layout, dstAccessMask, newLayout, aspectMask);
-    image.accessMask = dstAccessMask;
-    image.layout = newLayout;
-    return barrier;
-}
-
-VkImageMemoryBarrier imageBarrier(Image& image,
-    VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask)
-{
-
-    VkImageMemoryBarrier barrier =
-        imageBarrier(image.image, srcAccessMask, oldLayout, dstAccessMask, newLayout, aspectMask);
-    image.accessMask = dstAccessMask;
-    image.layout = newLayout;
-    return barrier;
-}
-
-VkImageMemoryBarrier imageBarrier(VkImage image,
-    VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask)
-{
-    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-    barrier.srcAccessMask = srcAccessMask;
-    barrier.dstAccessMask = dstAccessMask;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = aspectMask;
-    // Andoird error?
-    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-    return barrier;
-}
-
-VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size, size_t offset)
-{
-    ASSERT(size > 0);
-    VkBufferMemoryBarrier copyBarrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-    copyBarrier.srcAccessMask = srcAccessMask;
-    copyBarrier.dstAccessMask = dstAccessMask;
-    copyBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    copyBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    copyBarrier.buffer = buffer;
-    copyBarrier.offset = offset;
-    copyBarrier.size = size;
-    return copyBarrier;
-}
-
-VkBufferMemoryBarrier bufferBarrier(const Buffer &buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask)
-{
-    return bufferBarrier(buffer.buffer, srcAccessMask, dstAccessMask, buffer.allocation->GetSize());
-}
 
 
 
@@ -1586,127 +1285,6 @@ VkBufferMemoryBarrier bufferBarrier(const Buffer &buffer, VkAccessFlags srcAcces
 
 
 
-
-
-
-
-
-Descriptor createDescriptor(const PodVector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout)
-{
-    Descriptor result;
-    if(descriptors.size() == 0)
-        return result;
-
-    PodVector<VkDescriptorPoolSize> poolSizes(descriptors.size());
-
-    for(uint32_t i = 0; i < descriptors.size(); ++i)
-    {
-        poolSizes[i].type = descriptors[i].descriptorType;
-        poolSizes[i].descriptorCount = 1;
-    }
-
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = uint32_t(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1; // NOTE ????
-
-    VK_CHECK(vkCreateDescriptorPool(vulk.device, &poolInfo, nullptr, &result.pool));
-
-    VkDescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = result.pool;
-    allocInfo.descriptorSetCount = 1u;
-    allocInfo.pSetLayouts = &descriptorSetLayout;
-
-    VkDescriptorSet descriptorSet = 0;
-    VK_CHECK(vkAllocateDescriptorSets(vulk.device, &allocInfo, &descriptorSet));
-    ASSERT(descriptorSet);
-
-    result.descriptorSet = descriptorSet;
-    return result;
-}
-
-bool setBindDescriptorSet(const PodVector<DescriptorSetLayout> &descriptors,
-    const PodVector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet)
-{
-    uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
-    if(writeDescriptorCount < 1u)
-        return false;
-
-    PodVector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
-    PodVector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
-
-    PodVector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
-
-    uint32_t writeIndex = 0u;
-    uint32_t bufferCount = 0u;
-    uint32_t imageCount = 0u;
-    for(uint32_t i = 0; i < descriptorInfos.size(); ++i)
-    {
-        if(descriptorInfos[ i ].type == DescriptorInfo::DescriptorType::BUFFER)
-        {
-            const VkDescriptorBufferInfo &bufferInfo = descriptorInfos[ i ].bufferInfo;
-            ASSERT(bufferInfo.buffer);
-            ASSERT(bufferInfo.range > 0u);
-            bufferInfos[bufferCount] = {};
-            bufferInfos[bufferCount].buffer = bufferInfo.buffer;
-            bufferInfos[bufferCount].offset = bufferInfo.offset;
-            bufferInfos[bufferCount].range = bufferInfo.range;
-            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
-            writeDescriptorSets[writeIndex].dstArrayElement = 0;
-            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
-            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
-            writeDescriptorSets[writeIndex].pBufferInfo = &bufferInfos[bufferCount];
-            writeDescriptorSets[writeIndex].descriptorCount = 1;
-
-            ++bufferCount;
-            ++writeIndex;
-        }
-        else if(descriptorInfos[ i ].type == DescriptorInfo::DescriptorType::IMAGE)
-        {
-            const VkDescriptorImageInfo &imageInfo = descriptorInfos[ i ].imageInfo;
-            ASSERT(imageInfo.sampler);
-            ASSERT(imageInfo.imageView);
-            ASSERT(imageInfo.imageLayout);
-
-            imageInfos[imageCount] = {};
-            imageInfos[imageCount].sampler = imageInfo.sampler;
-            imageInfos[imageCount].imageView = imageInfo.imageView;
-            imageInfos[imageCount].imageLayout = imageInfo.imageLayout;
-
-            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
-            writeDescriptorSets[writeIndex].dstArrayElement = 0;
-            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
-            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
-            writeDescriptorSets[writeIndex].pImageInfo = &imageInfos[imageCount];
-            writeDescriptorSets[writeIndex].descriptorCount = 1;
-            ++writeIndex;
-            ++imageCount;
-        }
-        else
-        {
-            ASSERT(true);
-            return false;
-        }
-    }
-
-    if(writeDescriptorSets.size() > 0)
-    {
-        vkUpdateDescriptorSets(vulk.device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
-    }
-    return true;
-}
-
-
-void destroyDescriptor(Descriptor &descriptor)
-{
-    vkDestroyDescriptorPool(vulk.device, descriptor.pool, nullptr);
-    descriptor.pool = 0;
-    descriptor.descriptorSet = 0;
-}
 
 
 VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
@@ -1808,25 +1386,6 @@ VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLay
 }
 
 
-void destroyPipeline(PipelineWithDescriptors &pipeline)
-{
-    if(pipeline.pipeline)
-        vkDestroyPipeline(vulk.device, pipeline.pipeline, nullptr);
-    if(pipeline.pipelineLayout)
-        vkDestroyPipelineLayout(vulk.device, pipeline.pipelineLayout, nullptr );
-
-    if(pipeline.descriptorSetLayout)
-        vkDestroyDescriptorSetLayout(vulk.device, pipeline.descriptorSetLayout, nullptr);
-
-    pipeline.pipeline = nullptr;
-    pipeline.pipelineLayout = nullptr;
-    pipeline.descriptorSetLayout = nullptr;
-}
-
-
-
-
-
 
 VkShaderModule loadShader(std::string_view filename)
 {
@@ -1847,57 +1406,166 @@ VkShaderModule loadShader(std::string_view filename)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void deinitVulkan()
+void destroyShaderModule(VkShaderModule shaderModule)
 {
-    if(vulk.device)
-    {
-        destroyBuffer(vulk.scratchBuffer);
-        destroyBuffer(vulk.uniformBuffer);
-
-        deleteFrameTargets();
-
-        vkDestroyCommandPool(vulk.device, vulk.commandPool, nullptr);
-
-        vkDestroyQueryPool(vulk.device, vulk.queryPool, nullptr);
-
-        destroySwapchain(vulk.swapchain);
-
-        vkDestroyRenderPass(vulk.device, vulk.renderPass, nullptr);
-        vkDestroyFence(vulk.device, vulk.fence, nullptr);
-        vkDestroySemaphore(vulk.device, vulk.acquireSemaphore, nullptr);
-        vkDestroySemaphore(vulk.device, vulk.releaseSemaphore, nullptr);
-        if(vulk.allocator)
-            vmaDestroyAllocator(vulk.allocator);
-        vulk.allocator = nullptr;
-        vkDestroyDevice(vulk.device, nullptr);
-    }
-    vkDestroySurfaceKHR(vulk.instance, vulk.surface, nullptr);
-
-    if (vulk.initParams.useValidationLayers)
-    {
-        auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulk.instance, "vkDestroyDebugUtilsMessengerEXT");
-        dest(vulk.instance, vulk.debugCallBack, nullptr);
-    }
-    vkDestroyInstance(vulk.instance, nullptr);
-
+    vkDestroyShaderModule(vulk.device, shaderModule, nullptr);
 }
+
+
+void destroyPipeline(PipelineWithDescriptors &pipeline)
+{
+    if(pipeline.pipeline)
+        vkDestroyPipeline(vulk.device, pipeline.pipeline, nullptr);
+    if(pipeline.pipelineLayout)
+        vkDestroyPipelineLayout(vulk.device, pipeline.pipelineLayout, nullptr );
+
+    if(pipeline.descriptorSetLayout)
+        vkDestroyDescriptorSetLayout(vulk.device, pipeline.descriptorSetLayout, nullptr);
+
+    pipeline.pipeline = nullptr;
+    pipeline.pipelineLayout = nullptr;
+    pipeline.descriptorSetLayout = nullptr;
+}
+
+void destroyDescriptor(Descriptor& descriptor)
+{
+    vkDestroyDescriptorPool(vulk.device, descriptor.pool, nullptr);
+    descriptor.pool = 0;
+    descriptor.descriptorSet = 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Descriptor createDescriptor(const PodVector<DescriptorSetLayout>& descriptors, VkDescriptorSetLayout descriptorSetLayout)
+{
+    Descriptor result;
+    if (descriptors.size() == 0)
+        return result;
+
+    PodVector<VkDescriptorPoolSize> poolSizes(descriptors.size());
+
+    for (uint32_t i = 0; i < descriptors.size(); ++i)
+    {
+        poolSizes[i].type = descriptors[i].descriptorType;
+        poolSizes[i].descriptorCount = 1;
+    }
+
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = uint32_t(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = 1; // NOTE ????
+
+    VK_CHECK(vkCreateDescriptorPool(vulk.device, &poolInfo, nullptr, &result.pool));
+
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = result.pool;
+    allocInfo.descriptorSetCount = 1u;
+    allocInfo.pSetLayouts = &descriptorSetLayout;
+
+    VkDescriptorSet descriptorSet = 0;
+    VK_CHECK(vkAllocateDescriptorSets(vulk.device, &allocInfo, &descriptorSet));
+    ASSERT(descriptorSet);
+
+    result.descriptorSet = descriptorSet;
+    return result;
+}
+
+bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
+    const PodVector<DescriptorInfo>& descriptorInfos, VkDescriptorSet descriptorSet)
+{
+    uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
+    if (writeDescriptorCount < 1u)
+        return false;
+
+    PodVector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
+    PodVector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
+
+    PodVector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
+
+    uint32_t writeIndex = 0u;
+    uint32_t bufferCount = 0u;
+    uint32_t imageCount = 0u;
+    for (uint32_t i = 0; i < descriptorInfos.size(); ++i)
+    {
+        if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::BUFFER)
+        {
+            const VkDescriptorBufferInfo& bufferInfo = descriptorInfos[i].bufferInfo;
+            ASSERT(bufferInfo.buffer);
+            ASSERT(bufferInfo.range > 0u);
+            bufferInfos[bufferCount] = {};
+            bufferInfos[bufferCount].buffer = bufferInfo.buffer;
+            bufferInfos[bufferCount].offset = bufferInfo.offset;
+            bufferInfos[bufferCount].range = bufferInfo.range;
+            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
+            writeDescriptorSets[writeIndex].dstArrayElement = 0;
+            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
+            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
+            writeDescriptorSets[writeIndex].pBufferInfo = &bufferInfos[bufferCount];
+            writeDescriptorSets[writeIndex].descriptorCount = 1;
+
+            ++bufferCount;
+            ++writeIndex;
+        }
+        else if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::IMAGE)
+        {
+            const VkDescriptorImageInfo& imageInfo = descriptorInfos[i].imageInfo;
+            ASSERT(imageInfo.sampler);
+            ASSERT(imageInfo.imageView);
+            ASSERT(imageInfo.imageLayout);
+
+            imageInfos[imageCount] = {};
+            imageInfos[imageCount].sampler = imageInfo.sampler;
+            imageInfos[imageCount].imageView = imageInfo.imageView;
+            imageInfos[imageCount].imageLayout = imageInfo.imageLayout;
+
+            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
+            writeDescriptorSets[writeIndex].dstArrayElement = 0;
+            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
+            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
+            writeDescriptorSets[writeIndex].pImageInfo = &imageInfos[imageCount];
+            writeDescriptorSets[writeIndex].descriptorCount = 1;
+            ++writeIndex;
+            ++imageCount;
+        }
+        else
+        {
+            ASSERT(true);
+            return false;
+        }
+    }
+
+    if (writeDescriptorSets.size() > 0)
+    {
+        vkUpdateDescriptorSets(vulk.device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+    }
+    return true;
+}
+
+
+
+
 
 
 // From sasha wilems debugmarker

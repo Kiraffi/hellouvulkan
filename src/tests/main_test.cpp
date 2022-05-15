@@ -1,7 +1,7 @@
 #include "container/bytebuffer.h"
 #include "container/podvector.h"
 #include "container/stackstring.h"
-#include "core/mytypes.h"
+#include <core/mytypes.h>
 
 #include "myvulkan/uniformbuffermanager.h"
 

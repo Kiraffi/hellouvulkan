@@ -2,16 +2,24 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#include <core/camera.h>
+#include <core/general.h>
+#include <core/timer.h>
+#include <core/mytypes.h>
+#include <core/vulkan_app.h>
+
+#include <container/mymemory.h>
+
+#include <math/general_math.h>
+
+#include <myvulkan/myvulkan.h>
+#include <myvulkan/vulkanresources.h>
+
+
 #include <chrono>
 #include <thread>
 #include <string.h>
-
-#include "myvulkan/myvulkan.h"
-#include "container/mymemory.h"
-#include "core/camera.h"
-
-#include "math/general_math.h"
-#include "math/quaternion.h"
 
 
 static double timer_frequency = 0.0;

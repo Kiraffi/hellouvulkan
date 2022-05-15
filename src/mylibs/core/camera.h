@@ -1,10 +1,9 @@
 #pragma once
 
-#include "math/vector3.h"
-#include "math/matrix.h"
+#include <math/vector3.h>
 
 class FontRenderSystem;
-
+class Matrix;
 struct Camera
 {
     Matrix perspectiveProjectionRH();

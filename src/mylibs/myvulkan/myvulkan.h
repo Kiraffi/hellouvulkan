@@ -3,23 +3,26 @@
 #include <string_view>
 #include <vulkan/vulkan_core.h>
 
-#include "vulkglob.h"
-#include "vulkanresources.h"
 
 #include <container/podvector.h>
 #include <core/mytypes.h>
-
 #include <math/vector3.h>
+#include <myvulkan/vulkglob.h>
+
+#ifdef NDEBUG
+    #define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call; } while(0)
+#else
+    #define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
+#endif
 
 
 struct GLFWwindow;
 constexpr uint32_t QUERY_COUNT = 128u;
-
-
-struct Image;
+static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
 
 bool initVulkan(GLFWwindow *window, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
+bool resizeSwapchain(GLFWwindow *window);
 bool startRender(GLFWwindow *window);
 void present(GLFWwindow *window);
 
@@ -39,6 +42,7 @@ void endSingleTimeCommands();
 
 
 
+
 VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
     bool depthTest);
 
@@ -49,19 +53,13 @@ VkShaderModule loadShader(std::string_view filename);
 
 bool createPipelineLayout(PipelineWithDescriptors &pipelineWithDescriptors, VkShaderStageFlags stage);
 
+void destroyShaderModule(VkShaderModule shaderModule);
 void destroyPipeline(PipelineWithDescriptors& pipelineWithDescriptors);
 void destroyDescriptor(Descriptor &descriptor);
 
 Descriptor createDescriptor(const PodVector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout);
 bool setBindDescriptorSet(const PodVector<DescriptorSetLayout> &descriptors,
     const PodVector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet);
-
-
-
-
-// Swapchain stuff...
-bool resizeSwapchain(GLFWwindow *window);
-
 
 
 void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWithDescriptors &pipelineWithDescriptor);

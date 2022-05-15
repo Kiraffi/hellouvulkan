@@ -1,8 +1,8 @@
 #pragma once
 
 #include "container/podvector.h"
-#include "math/vector3.h"
-#include "myvulkan/myvulkan.h"
+#include <math/vector3.h>
+#include <myvulkan/myvulkan.h>
 #include "myvulkan/uniformbuffermanager.h"
 //#include "myvulkan/vulkanhelperfuncs.h"
 //#include "myvulkan/vulkanresource.h"

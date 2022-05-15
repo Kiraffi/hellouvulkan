@@ -1,10 +1,10 @@
 
 #include "camera.h"
-#include "math/matrix.h"
-#include "math/general_math.h"
-#include "math/quaternion.h"
+#include <math/matrix.h>
+#include <math/general_math.h>
+#include <math/quaternion.h>
 
-#include "render/font_render.h"
+#include <render/font_render.h>
 
 #include <math.h>
 #include <stdio.h>

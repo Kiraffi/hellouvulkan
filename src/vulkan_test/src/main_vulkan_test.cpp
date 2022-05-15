@@ -15,11 +15,11 @@
 
 //#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 
-#include "core/vulkan_app.h"
+#include <core/vulkan_app.h>
 
-#include "core/timer.h"
-#include "core/transform.h"
-#include "core/mytypes.h"
+#include <core/timer.h>
+#include <core/transform.h>
+#include <core/mytypes.h>
 
 #include "myvulkan/vulkandevice.h"
 #include "myvulkan/vulkanhelperfuncs.h"
@@ -27,16 +27,16 @@
 #include "myvulkan/vulkanshader.h"
 #include "myvulkan/vulkanswapchain.h"
 
-#include "math/general_math.h"
-#include "math/matrix.h"
-#include "math/plane.h"
-#include "math/quaternion.h"
-#include "math/vector3.h"
+#include <math/general_math.h>
+#include <math/matrix.h>
+#include <math/plane.h>
+#include <math/quaternion.h>
+#include <math/vector3.h>
  // testign22
 
 
 #include "model.h"
-#include "core/camera.h"
+#include <core/camera.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"

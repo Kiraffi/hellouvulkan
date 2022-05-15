@@ -1,5 +1,5 @@
 #include "bytebuffer.h"
-#include "core/mytypes.h"
+#include <core/mytypes.h>
 
 #include <string.h>
 

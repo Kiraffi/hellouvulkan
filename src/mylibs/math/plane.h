@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/mytypes.h"
+#include <core/mytypes.h>
 
-#include "math/vector3.h"
+#include <math/vector3.h>
 
 /*
 struct Plane
