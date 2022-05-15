@@ -126,9 +126,7 @@ public:
     Buffer instanceBuffer;
     Buffer indexDataBufferModels;
 
-    DescriptorSet descriptorSet;
     PipelineWithDescriptors graphicsPipeline;
-
 
     Entity playerEntity;
 

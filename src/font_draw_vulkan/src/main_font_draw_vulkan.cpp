@@ -96,7 +96,6 @@ public:
     Buffer quadBuffer;
     Buffer indexDataBuffer;
 
-    DescriptorSet descriptorSet;
     PipelineWithDescriptors graphicsPipeline;
 
     std::string fontFilename;

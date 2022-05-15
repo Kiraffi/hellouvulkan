@@ -410,8 +410,8 @@ bool flushBarriers()
         return true;
     const VkImageMemoryBarrier* imageBarrier = vulk.imageMemoryBarriers.size() > 0 ? vulk.imageMemoryBarriers.data() : nullptr;
     const VkBufferMemoryBarrier* bufferBarrier = vulk.bufferMemoryBarriers.size() > 0 ? vulk.bufferMemoryBarriers.data() : nullptr;
-
-    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    
+    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_DEPENDENCY_BY_REGION_BIT, 
         0, nullptr, 
         vulk.bufferMemoryBarriers.size(), bufferBarrier,
