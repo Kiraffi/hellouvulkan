@@ -236,16 +236,6 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
     return offset;
 }
 
-void uploadBufferToImage(Image& gpuImage, Buffer& scratchBuffer,
-    uint32_t width, uint32_t height, uint32_t bytesPerPixel, uint32_t bufferOffset)
-{
-
-
-    //    endSingleTimeCommands(device, commandBuffer, queue);
-
-}
-
-
 
 void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
 {

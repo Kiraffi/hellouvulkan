@@ -70,9 +70,9 @@ static const PodVector<const char *>validationLayers =
 static const PodVector<const char *>deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    //VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-    //VK_KHR_MAINTENANCE1_EXTENSION_NAME
-//    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+    // VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    // VK_KHR_MAINTENANCE1_EXTENSION_NAME
+    // VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
 
 static PodVector<const char*> getRequiredInstanceExtensions()
@@ -325,7 +325,7 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
         createInfo.imageExtent = extent;
         createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        createInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;// | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         createInfo.oldSwapchain = vulk.swapchain.swapchain;
 
         QueueFamilyIndices indices = findQueueFamilies(vulk.physicalDevice, vulk.surface);
@@ -349,13 +349,13 @@ static bool createSwapchain(GLFWwindow *window, VSyncType vsyncMode)
 
         VkSwapchainKHR swapchain = 0;
     //    PreCallValidateCreateSwapchainKHR()
-        [[maybe_unused]] VkResult res = vkCreateSwapchainKHR(vulk.device, &createInfo, nullptr, &swapchain);
+        VkResult res = vkCreateSwapchainKHR(vulk.device, &createInfo, nullptr, &swapchain);
+        VK_CHECK(res);
         if (res != VK_SUCCESS)
         {
             LOG("Failed to initialize swapchain\n");
             return false;
         }
-        VK_CHECK(res);
         vulk.swapchain.swapchain = swapchain;
 
         vulk.colorSpace = surfaceFormat.colorSpace;
