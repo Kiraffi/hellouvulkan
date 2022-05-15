@@ -70,9 +70,27 @@ static const PodVector<const char *>validationLayers =
 static const PodVector<const char *>deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    //VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
     //VK_KHR_MAINTENANCE1_EXTENSION_NAME
 //    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
+
+static PodVector<const char*> getRequiredInstanceExtensions()
+{
+    uint32_t glfwExtensionCount = 0u;
+    const char** glfwExtensions;
+    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    PodVector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+    extensions.pushBack(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    if (vulk.initParams.useValidationLayers)
+    {
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        //extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    }
+    return extensions;
+}
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -98,7 +116,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
     return VK_FALSE;
 }
 
-VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
+static VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
 {
     if (!vulk.initParams.useValidationLayers)
         return nullptr;
@@ -145,23 +163,6 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
 }
 
 
-static PodVector<const char*> getRequiredExtensions()
-{
-    uint32_t glfwExtensionCount = 0u;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    PodVector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-    //extensions.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
-
-    if (vulk.initParams.useValidationLayers)
-    {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        //extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-    }
-    return extensions;
-}
 
 
 static void acquireDeviceDebugRenderdocFunctions(VkDevice device)
@@ -399,14 +400,14 @@ static bool createInstance()
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     createInfo.pApplicationInfo = &appInfo;
 
-    PodVector<const char*> extensions = getRequiredExtensions();
+    PodVector<const char*> extensions = getRequiredInstanceExtensions();
 
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledExtensionCount = (uint32_t)extensions.size();
 
     for(auto ext : extensions)
     {
-        printf("ext: %s\n", ext);
+        printf("instance ext: %s\n", ext);
     }
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -499,8 +500,10 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
                 requiredExtensions.insert(str);
             }
 
+
             for (const auto& extension : availableExtensions)
             {
+                printf("available extension: %s\n", extension.extensionName);
                 requiredExtensions.erase(extension.extensionName);
             }
 
@@ -580,13 +583,15 @@ static bool createDeviceWithQueues()
     }
     ASSERT(vulk.colorFormat != VK_FORMAT_UNDEFINED);
 
-
+    static constexpr uint32_t flagBits =
+        VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+        VK_FORMAT_FEATURE_BLIT_DST_BIT |
+        VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
     for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
     {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(vulk.physicalDevice, defaultFormats[j].format, &formatProperties);
-        if((formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) != 0u &&
-             (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0u)
+        if((formatProperties.optimalTilingFeatures & flagBits) == flagBits)
         {
             vulk.computeColorFormat = defaultFormats[j].format;
             break;
@@ -611,41 +616,54 @@ static bool createDeviceWithQueues()
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceFeatures deviceFeatures = {};
-    deviceFeatures.samplerAnisotropy = VK_FALSE;
-
-    VkDeviceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-
-    createInfo.pEnabledFeatures = &deviceFeatures;
-
-
-    PodVector<const char *> deviceExts = deviceExtensions;
-
+    static VkPhysicalDeviceFeatures deviceFeatures = {
+        .samplerAnisotropy = VK_FALSE,
+    };
+    static VkPhysicalDeviceVulkan13Features deviceFeatures13 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .dynamicRendering = VK_TRUE,
+    };
     VulkanDeviceOptionals optionals = getDeviceOptionals(vulk.physicalDevice);
-    if(optionals.canUseVulkanRenderdocExtensionMarker)
     {
-        deviceExts.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    }
-    createInfo.enabledExtensionCount = uint32_t(deviceExts.size());
-    createInfo.ppEnabledExtensionNames = deviceExts.data();
+        static VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+            .pNext = &deviceFeatures13,
+            .features = deviceFeatures,
+        };
+        
+
+        VkDeviceCreateInfo createInfo = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+        createInfo.pNext = &physicalDeviceFeatures2;
+
+        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+        createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
 
-    if (vulk.initParams.useValidationLayers)
-    {
-        createInfo.enabledLayerCount = uint32_t(validationLayers.size());
-        createInfo.ppEnabledLayerNames = validationLayers.data();
-    }
-    else
-    {
-        createInfo.enabledLayerCount = 0;
-    }
 
-    VK_CHECK(vkCreateDevice(vulk.physicalDevice, &createInfo, nullptr, &vulk.device));
-    ASSERT(vulk.device);
+        createInfo.pEnabledFeatures = nullptr; // &deviceFeatures;
+        
+        PodVector<const char*> deviceExts = deviceExtensions;
+        if (optionals.canUseVulkanRenderdocExtensionMarker)
+        {
+            deviceExts.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        }
+        createInfo.enabledExtensionCount = uint32_t(deviceExts.size());
+        createInfo.ppEnabledExtensionNames = deviceExts.data();
+
+
+        if (vulk.initParams.useValidationLayers)
+        {
+            createInfo.enabledLayerCount = uint32_t(validationLayers.size());
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+        }
+        else
+        {
+            createInfo.enabledLayerCount = 0;
+        }
+
+        VK_CHECK(vkCreateDevice(vulk.physicalDevice, &createInfo, nullptr, &vulk.device));
+        ASSERT(vulk.device);
+    }
 
     vkGetDeviceQueue(vulk.device, vulk.queueFamilyIndices.graphicsFamily, 0, &vulk.graphicsQueue);
     vkGetDeviceQueue(vulk.device, vulk.queueFamilyIndices.presentFamily, 0, &vulk.presentQueue);
@@ -653,6 +671,8 @@ static bool createDeviceWithQueues()
     ASSERT(vulk.graphicsQueue);
     ASSERT(vulk.presentQueue);
     ASSERT(vulk.computeQueue);
+
+    
 
     if(optionals.canUseVulkanRenderdocExtensionMarker)
         acquireDeviceDebugRenderdocFunctions(vulk.device);
@@ -678,7 +698,7 @@ static bool createGraphics()
     vulk.mainColorRenderTarget = createImage(
         vulk.swapchain.width, vulk.swapchain.height,
         vulk.computeColorFormat,
-        //vulk.colorFormat,
+
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
@@ -1328,7 +1348,8 @@ VkPipeline createGraphicsPipeline(VkRenderPass renderPass, VkShaderModule vs, Vk
     depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
     VkPipelineColorBlendAttachmentState colorAttachmentState = {};
-    colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorAttachmentState.colorWriteMask = 
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
     VkPipelineColorBlendStateCreateInfo blendInfo = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
     blendInfo.pAttachments = &colorAttachmentState;

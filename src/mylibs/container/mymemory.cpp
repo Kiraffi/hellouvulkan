@@ -131,7 +131,8 @@ static void initMemoryReal()
 
 void initMemory()
 {
-    printf("Allocations at init memory: %u\n", allMemory.allocationCount);
+    if(allMemory.inited)
+        printf("Allocations at init memory: %u\n", allMemory.allocationCount);
     initMemoryReal();
 }
 

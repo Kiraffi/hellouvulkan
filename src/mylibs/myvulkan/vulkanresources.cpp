@@ -37,7 +37,7 @@ void deinitVMA()
 }
 
 VkFramebuffer createFramebuffer(VkRenderPass renderPass,
-    const PodVector<VkImageView> &colorView, const VkImageView depthView, 
+    const ArraySliceView<VkImageView> &colorView, const VkImageView depthView,
     uint32_t width, uint32_t height)
 {
 

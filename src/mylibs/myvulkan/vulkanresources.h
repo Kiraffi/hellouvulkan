@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <container/podvector.h>
+#include <container/arraysliceview.h>
 #include <core/mytypes.h>
 
 struct Buffer;
@@ -30,7 +30,7 @@ void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t sizes);
 
 
 VkFramebuffer createFramebuffer(VkRenderPass renderPass,
-    const PodVector<VkImageView> &colorView, const VkImageView depthView,
+    const ArraySliceView<VkImageView> &colorView, const VkImageView depthView,
     uint32_t width, uint32_t height);
 
 
