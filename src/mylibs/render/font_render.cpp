@@ -204,32 +204,7 @@ void FontRenderSystem::update()
     if (vertData.size() == 0)
         return;
 
-    VkCommandBuffer commandBuffer = vulk.commandBuffer;
-    if(!commandBuffer)
-        return;
-
-    // use scratch buffer to unifrom buffer transfer
-    uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
-
-    memcpy((void*)((uint8_t*)vulk.scratchBuffer.data + vulk.scratchBufferOffset), vertData.data(), vertDataSize);
-
-    VkBufferCopy region = { 
-        vulk.scratchBufferOffset, 
-        letterDataBufferHandle.getOffset(), 
-        VkDeviceSize(vertDataSize)
-    };
-    vkCmdCopyBuffer(commandBuffer, vulk.scratchBuffer.buffer, vulk.uniformBuffer.buffer, 1, &region);
-
-
-    VkBufferMemoryBarrier bar[]
-    {
-        bufferBarrier(vulk.uniformBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize)
-    };
-
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
-    
-    vulk.scratchBufferOffset += vertDataSize;
+    addToCopylist(sliceFromPodVector( vertData ), letterDataBufferHandle);
 }
 
 

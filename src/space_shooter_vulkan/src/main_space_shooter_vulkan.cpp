@@ -627,80 +627,16 @@ void SpaceShooter::update()
 
     fontSystem.addText(text, Vector2(100.0f, 10.0f), Vec2(8.0f, 12.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
 
-    ////////////////////////
-    //
-    // RENDER PASSES START
-    // WRITING VALUES INTO
-    // "CONSTANT BUFFEERS"
-    //
-    ////////////////////////
 
     if (!startRender())
         return;
 
-    beginSingleTimeCommands();
-    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
-
-
-
-    {
-        updateRenderFrameBuffer();
-        fontSystem.update();
-        uint32_t offset = vulk.scratchBufferOffset;
-
-        // Copy to uniform buffers
-        {
-            // use scratch buffer to unifrom buffer transfer
-            uint32_t instanceBuffserSize = uint32_t(gpuModelInstances.size() * sizeof(GpuModelInstance));
-            uint32_t modelIndicesSize = uint32_t(gpuModelIndices.size() * sizeof(uint32_t));
-
-            uint32_t memOffsets[] = { offset, offset + instanceBuffserSize };
-
-            memcpy(( void * ) ( ( char * ) vulk.scratchBuffer.data + memOffsets[0] ), gpuModelInstances.data(), instanceBuffserSize);
-            memcpy(( void * ) ( ( char * ) vulk.scratchBuffer.data + memOffsets[1] ), gpuModelIndices.data(), modelIndicesSize);
-
-            {
-                VkBufferCopy region = { memOffsets[ 0 ], 0, VkDeviceSize(instanceBuffserSize) };
-                vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, instanceBuffer.buffer, 1, &region);
-            }
-            {
-                VkBufferCopy region = { memOffsets[ 1 ], 0, VkDeviceSize( modelIndicesSize) };
-                vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, indexDataBufferModels.buffer, 1, &region);
-            }
-
-            VkBufferMemoryBarrier bar[]
-            {
-                bufferBarrier(instanceBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, instanceBuffserSize),
-                bufferBarrier(indexDataBufferModels.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, modelIndicesSize),
-            };
-
-            vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                    VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
-
-            offset += memOffsets[ARRAYSIZES(memOffsets) - 1];
-            vulk.scratchBufferOffset = offset;
-        }
-    }
-
-
-
-    ////////////////////////
-    //
-    // MAIN RENDER
-    //
-    ////////////////////////
-    {
-        VkImageMemoryBarrier imageBarriers[] =
-        {
-            imageBarrier(renderColorImage,
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
-    }
+    addToCopylist(sliceFromPodVector( gpuModelInstances ), instanceBuffer.buffer, 0);
+    addToCopylist(sliceFromPodVector(gpuModelIndices ), indexDataBufferModels.buffer, 0);
+    addImageBarrier(imageBarrier(renderColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    flushBarriers();
 
     // Drawingg
     {

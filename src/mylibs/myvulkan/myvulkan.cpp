@@ -1135,13 +1135,19 @@ bool startRender()
         }
         return false;
     }
-    else if (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR)
-        return true;
+    else if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
+    {
+        VK_CHECK(res);
+        return false;
+    }
 
-    VK_CHECK(res);
+    beginSingleTimeCommands();
+    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
+    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, 0);
 
+    vulk.vulkanApp->updateRenderFrameBuffer();
 
-    return false;
+    return true;
 }
 
 void present(Image & imageToPresent)
@@ -1318,7 +1324,7 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
     const VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
         .colorAttachmentCount = colorFormats.size(),
-        .pColorAttachmentFormats = colorFormats.data,
+        .pColorAttachmentFormats = colorFormats.data(),
         .depthAttachmentFormat = depthTest.depthFormat,
     };
 

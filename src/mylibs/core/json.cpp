@@ -104,7 +104,7 @@ static bool skipWord(const ArraySliceView<char> &buffer, JSONMarker &marker)
 {
     int &index = marker.currentIndex;
     int sz = marker.endIndex;
-    while(index < sz && !isspace(buffer.data[index]))
+    while(index < sz && !isspace(buffer.ptr[index]))
         ++index;
 
     return index < sz;
@@ -115,7 +115,7 @@ static bool skipWhiteSpace(const ArraySliceView<char> &buffer, JSONMarker &marke
 {
     int &index = marker.currentIndex;
     int sz = marker.endIndex;
-    while(index < sz && isspace(buffer.data[index]))
+    while(index < sz && isspace(buffer.ptr[index]))
         ++index;
 
     return index < sz;
@@ -125,7 +125,7 @@ bool parseBetweenMarkers(const ArraySliceView<char> &buffer, JSONMarker &marker,
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
 
-    if(buffer.data[index] != beginChar)
+    if(buffer.ptr[index] != beginChar)
         return false;
     ++index;
 

@@ -166,30 +166,10 @@ void VulkanFontRender::update()
     if (!startRender())
         return;
 
-    beginSingleTimeCommands();
-    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
-
-    updateRenderFrameBuffer();
-
-
-    ////////////////////////
-    //
-    // MAIN RENDER
-    //
-    ////////////////////////
-    {
-        VkImageMemoryBarrier imageBarriers[] =
-        {
-
-            imageBarrier(renderColorImage,
-                0, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
-    }
+    addImageBarrier(imageBarrier(renderColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    flushBarriers();
 
     // Drawingg, just to change background color....
     {

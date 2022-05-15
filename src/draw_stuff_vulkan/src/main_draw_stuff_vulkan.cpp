@@ -707,18 +707,18 @@ void VulkanDrawStuff::update()
         Matrix mvp;
         Matrix padding;
     };
-    FrameBuffer b;
+    FrameBuffer frameBufferData;
 
 
-    b.camMat = camera.getCameraMatrix();
+    frameBufferData.camMat = camera.getCameraMatrix();
 
     camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
     camera.fovY = 90.0f;
     camera.zFar = 200.0f;
     camera.zNear = 0.001f;
 
-    b.viewProj = camera.perspectiveProjectionRH();
-    b.mvp = b.camMat * b.viewProj;
+    frameBufferData.viewProj = camera.perspectiveProjectionRH();
+    frameBufferData.mvp = frameBufferData.camMat * frameBufferData.viewProj;
 
     Transform trans;
     trans.pos = Vec3(3.0f, 3.0f, 13.0f);
@@ -738,59 +738,16 @@ void VulkanDrawStuff::update()
 
     if (!startRender())
         return;
-
-    beginSingleTimeCommands();
-    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
-
-
-    {
-
-        updateRenderFrameBuffer();
-        uint32_t offset = vulk.scratchBufferOffset;
-        // use scratch buffer to unifrom buffer transfer
-        uint32_t bufSize = sizeof(FrameBuffer);
-        memcpy(( void * )( ( char * )vulk.scratchBuffer.data + offset ), &b, bufSize);
-
-        {
-            VkBufferCopy region = { offset, uniformDataHandle.getOffset(), VkDeviceSize(bufSize)};
-            vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, vulk.uniformBuffer.buffer, 1, &region);
-        }
-
-        VkBufferMemoryBarrier bar[ ]
-        {
-            bufferBarrier(vulk.uniformBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, bufSize),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
-
-        vulk.scratchBufferOffset += bufSize;
-    }
-
-
-
-    ////////////////////////
-    //
-    // MAIN RENDER
-    //
-    ////////////////////////
-    {
-        VkImageMemoryBarrier imageBarriers[ ] =
-        {
-            imageBarrier(renderColorImage,
-                0, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-
-            imageBarrier(renderDepthImage,
-                0, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_ASPECT_DEPTH_BIT),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-            VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
-    }
+    
+    addToCopylist(frameBufferData, uniformDataHandle);
+    addImageBarrier(imageBarrier(renderColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    addImageBarrier(imageBarrier(renderDepthImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_ASPECT_DEPTH_BIT));
+    flushBarriers();
 
     // Drawingg
     {

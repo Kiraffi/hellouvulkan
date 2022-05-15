@@ -18,12 +18,11 @@
 #include <myvulkan/vulkanresources.h>
 
 #include <chrono>
-#include <string>
-#include <thread>
-#include <vector>
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <string.h>
+#include <thread>
 
 
 static constexpr int SCREEN_WIDTH  = 640;
@@ -105,7 +104,7 @@ public:
     char buffData[12] = {};
     int32_t chosenLetter = 'a';
 
-    std::vector<GPUVertexData> vertData;
+    PodVector<GPUVertexData> vertData;
     PodVector<char> characterData;
 };
 
@@ -163,7 +162,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
     {
         uint32_t offset = 0;
-        std::vector<uint32_t> indices;
+        PodVector<uint32_t> indices;
         indices.resize(6 * 10240);
         for (int i = 0; i < 10240; ++i)
         {
@@ -425,54 +424,11 @@ void VulkanFontDraw::update()
     if (!startRender())
         return;
 
-    beginSingleTimeCommands();
-    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vulk.queryPool, TIME_POINTS::START_POINT);
-
-
-    {
-        updateRenderFrameBuffer();
-
-        uint32_t offset = vulk.scratchBufferOffset;
-        // use scratch buffer to unifrom buffer transfer
-        uint32_t vertDataSize = uint32_t(vertData.size() * sizeof(GPUVertexData));
-        memcpy(( void * ) ( ( char * ) vulk.scratchBuffer.data + offset), vertData.data(), vertDataSize);
-
-        {
-            VkBufferCopy region = { offset, 0, VkDeviceSize(vertDataSize) };
-            vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, quadBuffer.buffer, 1, &region);
-        }
-
-        VkBufferMemoryBarrier bar[]
-        {
-            bufferBarrier(quadBuffer.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, vertDataSize),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, ARRAYSIZES(bar), bar, 0, nullptr);
-        vulk.scratchBufferOffset += vertDataSize;
-
-    }
-
-
-
-    ////////////////////////
-    //
-    // MAIN RENDER
-    //
-    ////////////////////////
-    {
-        VkImageMemoryBarrier imageBarriers[] =
-        {
-            imageBarrier(renderColorImage,
-                        0, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
-        };
-
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
-    }
-
+    addToCopylist(sliceFromPodVector( vertData ), quadBuffer.buffer, 0);
+    addImageBarrier(imageBarrier(renderColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    flushBarriers();
     // Drawingg
    
     {
@@ -590,7 +546,6 @@ void VulkanFontDraw::update()
 
 int main(int argCount, char **argv)
 {
-    std::vector<char> data;
     std::string filename;
     if (argCount < 2)
     {

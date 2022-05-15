@@ -132,7 +132,8 @@ struct VulkGlob
     uint32_t imageIndex = 0u;
 
     VulkanApp* vulkanApp = nullptr;
-
+    PodVector< VkBufferMemoryBarrier > bufferMemoryBarriers;
+    PodVector< VkImageMemoryBarrier > imageMemoryBarriers;
     bool needToResize = false;
     bool waitForFence = true;
 };

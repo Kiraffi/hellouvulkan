@@ -1,9 +1,11 @@
-#include "container/bytebuffer.h"
-#include "container/podvector.h"
-#include "container/stackstring.h"
+#include <container/arraysliceview.h>
+#include <container/bytebuffer.h>
+#include <container/podvector.h>
+#include <container/stackstring.h>
+
 #include <core/mytypes.h>
 
-#include "myvulkan/uniformbuffermanager.h"
+#include <myvulkan/uniformbuffermanager.h>
 
 struct Foos
 {
@@ -107,11 +109,43 @@ void testUniformBufferManager()
     handles.pushBack(manager.reserveHandle());
 }
 
+struct TempStr
+{
+    int foo = 0;
+    int faa = 1;
+
+};
+void printSlice(const ArraySliceView<TempStr>& slice)
+{
+    printf("slice ptr: %p\n", slice.data());
+    printf("slice size: %u\n", slice.size());
+
+}
+
+void testArraySliceView()
+{
+
+    printSlice({});
+    ArraySliceView<TempStr> foo = {};
+    printf("ptr: %p\n", foo.data());
+    printf("size: %u\n", foo.size());
+
+
+    PodVector<uint32_t> uints;
+    for(uint32_t i = 0; i < 32; ++i)
+        uints.pushBack(i);
+
+    auto slice = sliceFromPodVector(uints);
+    for (auto v : slice)
+        printf("value: %u\n", v);
+}
+
 int main()
 {
     testingMemory();
     testStackString();
     testMemoryStackString();
     testUniformBufferManager();
+    testArraySliceView();
     return 0;
 }

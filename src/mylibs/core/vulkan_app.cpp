@@ -193,9 +193,9 @@ void VulkanApp::updateRenderFrameBuffer()
         Vector2 areaSize;
         float tmp[6 + 8];
     };
-
     Buff buff{ Vector2(windowWidth, windowHeight) };
-
+    addToCopylist(buff, vulk.renderFrameBufferHandle);
+/*
     // use scratch buffer to unifrom buffer transfer
     uint32_t buffSize = uint32_t(sizeof(Buff));
     memcpy(((uint8_t *)vulk.scratchBuffer.data) + vulk.scratchBufferOffset, &buff, buffSize);
@@ -217,7 +217,7 @@ void VulkanApp::updateRenderFrameBuffer()
         VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, bar, 0, nullptr);
     
     vulk.scratchBufferOffset += buffSize;
-
+    */
     fontSystem.update();
 }
 

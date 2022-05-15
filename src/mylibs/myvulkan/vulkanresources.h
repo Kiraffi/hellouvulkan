@@ -4,6 +4,8 @@
 
 #include <container/arraysliceview.h>
 #include <core/mytypes.h>
+#include <myvulkan/uniformbuffermanager.h>
+#include <myvulkan/vulkglob.h>
 
 struct Buffer;
 struct Image;
@@ -55,4 +57,37 @@ VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask
 VkBufferMemoryBarrier bufferBarrier(const Buffer& buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask);
 
 
+template <typename T>
+bool addToCopylist(const ArraySliceView<T>& objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
+{
+    ASSERT(objectToCopy.isValid());
 
+    if (!objectToCopy.isValid())
+        return false;
+
+    uint32_t objectSize = VkDeviceSize(sizeof(T)) * objectToCopy.size();
+    return addToCopylist(objectToCopy.data(), objectSize, targetBuffer, targetOffset);
+}
+
+template <typename T>
+bool addToCopylist(const ArraySliceView<T> &objectToCopy, UniformBufferHandle handle)
+{
+    return addToCopylist(objectToCopy, handle.manager->buffer->buffer, handle.getOffset());
+}
+
+
+template <typename T>
+bool addToCopylist(const T& objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
+{
+    return addToCopylist(&objectToCopy, VkDeviceSize(sizeof(T)), targetBuffer, targetOffset);
+}
+
+template <typename T>
+bool addToCopylist(const T& objectToCopy, UniformBufferHandle handle)
+{
+    return addToCopylist(&objectToCopy, VkDeviceSize(sizeof(T)), handle.manager->buffer->buffer, handle.getOffset());
+}
+
+bool addToCopylist(const void *objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset);
+bool addImageBarrier(VkImageMemoryBarrier barrier);
+bool flushBarriers();

@@ -374,3 +374,50 @@ VkBufferMemoryBarrier bufferBarrier(const Buffer& buffer, VkAccessFlags srcAcces
 }
 
 
+bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset)
+{
+    ASSERT(objectToCopy);
+    ASSERT(objectSize);
+    ASSERT(targetBuffer);
+    ASSERT(vulk.scratchBufferOffset + objectSize < vulk.scratchBuffer.size);
+    if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr)
+        return false;
+
+    memcpy(((uint8_t*)vulk.scratchBuffer.data) + vulk.scratchBufferOffset, objectToCopy, objectSize);
+    {
+        VkBufferCopy region = {
+            vulk.scratchBufferOffset,
+            targetOffset,
+            objectSize
+        };
+        vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, targetBuffer, 1, &region);
+    }
+    vulk.bufferMemoryBarriers.pushBack(
+        bufferBarrier(targetBuffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, objectSize, targetOffset));
+    vulk.scratchBufferOffset += objectSize;
+    return true;
+}
+
+bool addImageBarrier(VkImageMemoryBarrier barrier)
+{
+    vulk.imageMemoryBarriers.pushBack(barrier);
+    return true;
+}
+
+bool flushBarriers()
+{
+    if (vulk.bufferMemoryBarriers.size() == 0 && vulk.imageMemoryBarriers.size() == 0)
+        return true;
+    const VkImageMemoryBarrier* imageBarrier = vulk.imageMemoryBarriers.size() > 0 ? vulk.imageMemoryBarriers.data() : nullptr;
+    const VkBufferMemoryBarrier* bufferBarrier = vulk.bufferMemoryBarriers.size() > 0 ? vulk.bufferMemoryBarriers.data() : nullptr;
+
+    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_DEPENDENCY_BY_REGION_BIT, 
+        0, nullptr, 
+        vulk.bufferMemoryBarriers.size(), bufferBarrier,
+        vulk.imageMemoryBarriers.size(), imageBarrier);
+
+    vulk.bufferMemoryBarriers.clear();
+    vulk.imageMemoryBarriers.clear();
+    return true;
+}
