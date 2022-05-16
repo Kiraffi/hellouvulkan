@@ -443,10 +443,10 @@ void SpaceShooter::logicUpdate()
     currentTime = glfwGetTime();
 
     Timer updateDurTimer;
-    double dtSplit = dt;
-
+    static double dtSplit = 0.0;
+    dtSplit += dt;
     // Update position, definitely not accurate physics, if dt is big this doesn't work properly, trying to split it into several updates.
-    while (dtSplit > 0.0f)
+    while (dtSplit > 0.005f)
     {
         double dddt = ffminf(dtSplit, 0.005f);
         float origSpeed = 1.0f * fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
