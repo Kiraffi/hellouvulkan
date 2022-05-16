@@ -207,7 +207,10 @@ void FontRenderSystem::update()
     addToCopylist(sliceFromPodVector( vertData ), letterDataBufferHandle);
 }
 
-
+void FontRenderSystem::reset()
+{
+    vertData.clear();
+}
 
 void FontRenderSystem::render(Image &image)
 {
@@ -250,8 +253,6 @@ void FontRenderSystem::render(Image &image)
     vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 
     vkCmdEndRendering(vulk.commandBuffer);
-
-    vertData.clear();
 }
 
 

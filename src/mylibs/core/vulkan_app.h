@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/timer.h>
-#include "myvulkan/vulkaninitparameters.h"
+#include <myvulkan/vulkaninitparameters.h>
 #include <render/font_render.h>
 
 struct GLFWwindow;
@@ -30,14 +30,15 @@ public:
 
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters &initParameters) = 0;
-    virtual void update() = 0;
+    virtual void logicUpdate() = 0;
+    virtual void renderUpdate() = 0;
+    virtual void renderDraw() = 0;
     virtual void resized() = 0;
 
     void run();
-    void updateRenderFrameBuffer();
 
     void resizeWindow(int w, int h);
-    void setVsyncEnabled(bool enable);
+    void setVsync(VSyncType vSyncType);
     void setClearColor(float r, float g, float b, float a);
     void setTitle(const char *str);
 
@@ -51,23 +52,29 @@ public:
     bool isReleased(int keyCode);
     bool isDown(int keyCode);
     bool isUp(int keyCode);
-
+    uint32_t writeStamp(VkPipelineStageFlagBits stage);
 public:
-
     GLFWwindow *window = nullptr;
+
+    KeyState keyDowns[512] = {};
+    uint32_t bufferedPresses[128] = {};
+    uint32_t bufferedPressesCount = 0u;
+
+    double dt = 0.0;
+
     int windowWidth = 0;
     int windowHeight = 0;
-    bool vSync = true;
+    uint32_t timeStampCount = 0u;
+    VSyncType vSync = VSyncType::FIFO_VSYNC;
     bool inited = false;
     bool needToResize = false;
 
-    KeyState keyDowns[512] = {};
-    uint32_t bufferedPresses[ 128 ] = {};
-    uint32_t bufferedPressesCount = 0u;
+    float cpuFps = 0.0f;
+    float gpuFps = 0.0f;
 
 protected:
     FontRenderSystem fontSystem;
 
     Timer timer;
-    double dt = 0.0;
+
 };

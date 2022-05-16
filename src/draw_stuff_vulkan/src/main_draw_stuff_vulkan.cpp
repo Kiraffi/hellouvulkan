@@ -33,16 +33,6 @@ static constexpr int SCREEN_HEIGHT = 540;
 
 
 
-enum TIME_POINTS
-{
-    START_POINT,
-    DRAW_FINISHED,
-
-    NUM_TIME_POINTS
-};
-
-
-
 class VulkanDrawStuff : public VulkanApp
 {
 public:
@@ -51,7 +41,9 @@ public:
     //bool initApp(const std::string &fontFilename);
     virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters& params) override;
-    virtual void update() override;
+    virtual void logicUpdate() override;
+    virtual void renderUpdate() override;
+    virtual void renderDraw() override;
     virtual void resized() override;
 
     bool createPipelines();
@@ -218,47 +210,13 @@ void VulkanDrawStuff::resized()
 
 }
 
-
-void VulkanDrawStuff::update()
+void VulkanDrawStuff::logicUpdate()
 {
-    VulkanApp::update();
-
-    static uint32_t gpuframeCount = 0u;
-    static double gpuTime = 0.0;
-    static double cpuTimeStamp = getTime();
-
+    VulkanApp::logicUpdate();
 
     MouseState mouseState = getMouseState();
 
     checkCameraKeypresses(dt, camera);
-    ////////////////////////
-    //
-    // RENDER PASSES START
-    // WRITING VALUES INTO
-    // "CONSTANT BUFFEERS"
-    //
-    ////////////////////////
-    SwapChain &swapchain = vulk.swapchain;
-
-    struct FrameBuffer
-    {
-        Matrix camMat;
-        Matrix viewProj;
-        Matrix mvp;
-        Matrix padding;
-    };
-    FrameBuffer frameBufferData;
-
-
-    frameBufferData.camMat = camera.getCameraMatrix();
-
-    camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
-    camera.fovY = 90.0f;
-    camera.zFar = 200.0f;
-    camera.zNear = 0.001f;
-
-    frameBufferData.viewProj = camera.perspectiveProjectionRH();
-    frameBufferData.mvp = frameBufferData.camMat * frameBufferData.viewProj;
 
     Transform trans;
     trans.pos = Vec3(3.0f, 3.0f, 13.0f);
@@ -275,18 +233,49 @@ void VulkanDrawStuff::update()
     //b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
 
     camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
+}
 
-    if (!startRender())
-        return;
+void VulkanDrawStuff::renderUpdate()
+{
+    VulkanApp::renderUpdate();
+
+
+    struct FrameBuffer
+    {
+        Matrix camMat;
+        Matrix viewProj;
+        Matrix mvp;
+        Matrix padding;
+    };
+    FrameBuffer frameBufferData;
+
+
+
+    frameBufferData.camMat = camera.getCameraMatrix();
+
+    const SwapChain &swapchain = vulk.swapchain;
+    camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
+    camera.fovY = 90.0f;
+    camera.zFar = 200.0f;
+    camera.zNear = 0.001f;
+
+    frameBufferData.viewProj = camera.perspectiveProjectionRH();
+    frameBufferData.mvp = frameBufferData.camMat * frameBufferData.viewProj;
 
     addToCopylist(frameBufferData, uniformDataHandle);
     addImageBarrier(imageBarrier(renderColorImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+}
+
+void VulkanDrawStuff::renderDraw()
+{
+    const SwapChain& swapchain = vulk.swapchain;
     addImageBarrier(imageBarrier(renderDepthImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         VK_IMAGE_ASPECT_DEPTH_BIT));
+    
     flushBarriers();
 
     // Drawingg
@@ -345,66 +334,9 @@ void VulkanDrawStuff::update()
         fontSystem.render(renderColorImage);
     }
 
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
+    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     present(renderColorImage);
-
-    ////////////////////////
-    //
-    // END PASS, COLLECT TIMINGS
-    //
-    ////////////////////////
-
-
-    uint64_t queryResults [TIME_POINTS::NUM_TIME_POINTS];
-    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool,
-        0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[0]), VK_QUERY_RESULT_64_BIT));
-
-    if (res != VK_SUCCESS)
-        return;
-
-    struct TimeValues
-    {
-        double timeDuration [TIME_POINTS::NUM_TIME_POINTS];
-    };
-
-    VkPhysicalDeviceProperties props = { };
-    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
-
-    static TimeValues timeValues = { };
-    for(uint32_t i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
-        timeValues.timeDuration [i] += ( double(queryResults [i]) - double(queryResults [i - 1]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-    gpuTime += ( double(queryResults [TIME_POINTS::NUM_TIME_POINTS - 1]) - double(queryResults [0]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-    ++gpuframeCount;
-    if(getTime() - cpuTimeStamp >= 1.0)
-    {
-        double d = 1000.0 / gpuframeCount;
-        double e = gpuframeCount;
-        double currTime = getTime();
-        double cpuTime = currTime - cpuTimeStamp;
-        cpuTimeStamp += 1.0f;
-
-        printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
-            ( float )( gpuTime * d ), ( float )( cpuTime * d ),
-            ( float )( timeValues.timeDuration [DRAW_FINISHED] * d ),
-            e / gpuTime, e / cpuTime);
-        gpuframeCount = 0u;
-
-        for(uint32_t i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
-            timeValues.timeDuration [i] = 0.0;
-
-        gpuTime = 0.0;
-    }
-
-
-    char str [100];
-    float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
-    sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
-        float(dt * 1000.0), fps,
-        mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown);
-    setTitle(str);
 }
 
 

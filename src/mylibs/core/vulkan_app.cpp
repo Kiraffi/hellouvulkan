@@ -27,6 +27,7 @@
 
 
 static double timer_frequency = 0.0;
+static void printStats(VulkanApp& app);
 
 static void error_callback(int error, const char* description)
 {
@@ -120,7 +121,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
         printf("Failed to initialize vulkan\n");
         return false;
     }
-
+    setVsync(initParameters.vsync);
     if (!fontSystem.init("assets/font/new_font.dat"))
 
     {
@@ -154,11 +155,16 @@ void VulkanApp::resizeWindow(int w, int h)
     //printf("Window size: %i: %i\n", w, h);
 }
 
-void VulkanApp::setVsyncEnabled(bool enable)
+void VulkanApp::setVsync(VSyncType vSyncType)
 {
-    vSync = enable;
-    // Use v-sync
+    if (vSync == vSyncType)
+        return;
+
+    vSync = vSyncType;
+    vulk.initParams.vsync = vSync;
+    vulk.needToResize = true;
 }
+
 bool VulkanApp::isPressed(int keyCode)
 {
     if (keyCode >= 0 && keyCode < 512)
@@ -186,8 +192,15 @@ bool VulkanApp::isUp(int keyCode)
     return false;
 }
 
-void VulkanApp::updateRenderFrameBuffer()
+void VulkanApp::renderUpdate()
 {
+    timeStampCount = 0u;
+
+    beginSingleTimeCommands();
+    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
+
+    writeStamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+
     struct Buff
     {
         Vector2 areaSize;
@@ -204,7 +217,13 @@ void VulkanApp::run()
 {
     while (!glfwWindowShouldClose(window))
     {
-        update();
+        logicUpdate();
+        if (startRender())
+        {
+            renderUpdate();
+            renderDraw();
+            printStats(*this);
+        }
         defragMemory();
 
         #if _WIN32
@@ -220,8 +239,10 @@ void VulkanApp::run()
     VK_CHECK(vkDeviceWaitIdle(vulk.device));
 }
 
-void VulkanApp::update()
+void VulkanApp::logicUpdate()
 {
+    fontSystem.reset();
+
     for (int i = 0; i < ARRAYSIZES(keyDowns); ++i)
     {
         keyDowns[ i ].pressCount = 0u;
@@ -328,4 +349,82 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     {
         camera.position = camera.position + upDir * moveSpeed;
     }
+}
+
+uint32_t VulkanApp::writeStamp(VkPipelineStageFlagBits stage)
+{
+    uint32_t result = timeStampCount;
+    vkCmdWriteTimestamp(vulk.commandBuffer, stage, vulk.queryPool, result);
+    ++timeStampCount;
+    return result;
+}
+
+static void printStats(VulkanApp& app)
+{
+    static uint32_t gpuframeCount = 0u;
+    static double gpuTime = 0.0;
+    static double cpuTimeStamp = app.getTime();
+
+    if (app.timeStampCount < 2u)
+        return;
+
+    uint64_t queryResults[QUERY_COUNT];
+    static constexpr size_t querySize = sizeof(uint64_t);
+    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool,
+        0, app.timeStampCount, querySize * app.timeStampCount, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
+
+    if (res != VK_SUCCESS)
+        return;
+
+    struct TimeValues
+    {
+        double timeDuration[QUERY_COUNT];
+    };
+
+    VkPhysicalDeviceProperties props = {};
+    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
+
+    static TimeValues timeValues = {};
+    for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)
+        timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
+
+    gpuTime += (double(queryResults[app.timeStampCount - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
+
+    ++gpuframeCount;
+    double currTime = app.getTime();
+    
+    double d = 1000.0 / gpuframeCount;
+    double e = gpuframeCount;
+
+    double cpuTime = currTime - cpuTimeStamp;
+    app.gpuFps = e / gpuTime;
+    app.cpuFps = e / cpuTime;
+    
+    if (currTime - cpuTimeStamp >= 1.0)
+    {
+
+        cpuTimeStamp += 1.0f;
+
+        printf("Gpu: %.3fms, cpu: %.3fms.  GpuFps:%.1f, CpuFps:%.1f\n",
+            float(gpuTime* d), (float)(cpuTime * d),
+            app.gpuFps, app.cpuFps);
+        gpuframeCount = 0u;
+
+        for (uint32_t i = 0; i < QUERY_COUNT; ++i)
+            timeValues.timeDuration[i] = 0.0;
+
+        gpuTime = 0.0;
+
+    }
+
+    MouseState mouseState = app.getMouseState();
+
+    char str[100];
+    float fps = app.dt > 0.0 ? float(1.0 / app.dt) : 0.0f;
+
+    sprintf(str, "%2.2fms, fps: %4.2f, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
+        float(app.dt * 1000.0), app.cpuFps, app.gpuFps, mouseState.x, mouseState.y,
+        mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown
+    );
+    app.setTitle(str);
 }

@@ -24,15 +24,6 @@
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
-enum TIME_POINTS
-{
-    START_POINT,
-    DRAW_FINISHED,
-
-    NUM_TIME_POINTS
-};
-
-
 
 class VulkanFontRender : public VulkanApp
 {
@@ -42,7 +33,9 @@ public:
 
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters &params) override;
-    virtual void update() override;
+    virtual void logicUpdate() override;
+    virtual void renderUpdate() override;
+    virtual void renderDraw() override;
     virtual void resized() override;
 
     void updateText(std::string& str);
@@ -100,49 +93,37 @@ void VulkanFontRender::resized()
 
 }
 
-
-void VulkanFontRender::update()
+void VulkanFontRender::logicUpdate()
 {
-    VulkanApp::update();
+    VulkanApp::logicUpdate();
     static std::string txt = "Test";
-
-    ////////////////////////
-    //
-    // MAIN LOOP START
-    // UPDATING ENGINE STATE
-    //
-    ////////////////////////
-
-    static uint32_t gpuframeCount = 0u;
-    static double gpuTime = 0.0;
-    static double cpuTimeStamp = glfwGetTime();
 
     {
         bool textNeedsUpdate = false;
         for (int i = 0; i < bufferedPressesCount; ++i)
         {
-            txt += char( bufferedPresses[i] );
+            txt += char(bufferedPresses[i]);
             textNeedsUpdate = true;
         }
 
-        if (keyDowns[ GLFW_KEY_LEFT ].isDown)
+        if (keyDowns[GLFW_KEY_LEFT].isDown)
         {
             fontSize.x--;
             if (fontSize.x < 2)
                 ++fontSize.x;
             textNeedsUpdate = true;
         }
-        if (keyDowns[ GLFW_KEY_RIGHT ].isDown)
+        if (keyDowns[GLFW_KEY_RIGHT].isDown)
         {
             fontSize.x++;
             textNeedsUpdate = true;
         }
-        if (keyDowns[ GLFW_KEY_DOWN ].isDown)
+        if (keyDowns[GLFW_KEY_DOWN].isDown)
         {
             fontSize.y++;
             textNeedsUpdate = true;
         }
-        if (keyDowns[ GLFW_KEY_UP ].isDown)
+        if (keyDowns[GLFW_KEY_UP].isDown)
         {
             fontSize.y--;
             if (fontSize.y < 2)
@@ -152,24 +133,20 @@ void VulkanFontRender::update()
 
         updateText(txt);
     }
+}
 
+void VulkanFontRender::renderUpdate()
+{
+    VulkanApp::renderUpdate();
+}
 
-    ////////////////////////
-    //
-    // RENDER PASSES START
-    // WRITING VALUES INTO
-    // "CONSTANT BUFFEERS"
-    //
-    ////////////////////////
-
-    if (!startRender())
-        return;
-
+void VulkanFontRender::renderDraw()
+{
     addImageBarrier(imageBarrier(renderColorImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-    flushBarriers();
 
+    flushBarriers();
     // Drawingg, just to change background color....
     {
         const SwapChain& swapchain = vulk.swapchain;
@@ -216,54 +193,9 @@ void VulkanFontRender::update()
         fontSystem.render(renderColorImage);
     }
 
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
+    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     present(renderColorImage);
-
-    ////////////////////////
-    //
-    // END PASS, COLLECT TIMINGS
-    //
-    ////////////////////////
-
-
-    uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool,
-        0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[0]), VK_QUERY_RESULT_64_BIT));
-
-    if (res != VK_SUCCESS)
-        return;
-
-    static double timeDuration[TIME_POINTS::NUM_TIME_POINTS] = {};
-
-    VkPhysicalDeviceProperties props = {};
-    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
-
-    for (uint32_t i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
-        timeDuration[ i ] += ( double(queryResults[ i ]) - double(queryResults[ i - 1 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-    gpuTime += ( double(queryResults[ TIME_POINTS::NUM_TIME_POINTS - 1 ]) - double(queryResults[ 0 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-    ++gpuframeCount;
-    if (glfwGetTime() - cpuTimeStamp >= 1.0)
-    {
-        double d = 1000.0 / gpuframeCount;
-        double e = gpuframeCount;
-        double currTime = glfwGetTime();
-        double cpuTime = currTime - cpuTimeStamp;
-        cpuTimeStamp += 1.0f;
-
-        printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
-                ( float ) ( gpuTime * d ), ( float ) ( cpuTime * d ),
-                ( float ) ( timeDuration[ DRAW_FINISHED ] * d ),
-                e / gpuTime, e / cpuTime);
-        gpuframeCount = 0u;
-
-        for (uint32_t i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
-            timeDuration[ i ] = 0.0;
-
-        gpuTime = 0.0;
-    }
 }
 
 int main(int argCount, char **argv)

@@ -1,11 +1,9 @@
 #pragma once
 
-#include "container/podvector.h"
+#include <container/podvector.h>
 #include <math/vector3.h>
 #include <myvulkan/myvulkan.h>
-#include "myvulkan/uniformbuffermanager.h"
-//#include "myvulkan/vulkanhelperfuncs.h"
-//#include "myvulkan/vulkanresource.h"
+#include <myvulkan/uniformbuffermanager.h>
 
 static constexpr uint32_t MAX_LETTERS = 10000 * 4;
 
@@ -20,6 +18,7 @@ public:
     //    VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer);
     // return offset to scratch buffer
     void update();
+    void reset();
     void render(Image& image);
 
     void addText(std::string_view text, Vector2 pos,

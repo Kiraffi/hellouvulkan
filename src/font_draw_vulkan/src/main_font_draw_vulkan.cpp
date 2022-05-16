@@ -64,16 +64,6 @@ bool saveFontData(const std::string &filename, const PodVector<char> &data)
 }
 
 
-
-enum TIME_POINTS
-{
-    START_POINT,
-    DRAW_FINISHED,
-
-    NUM_TIME_POINTS
-};
-
-
 class VulkanFontDraw : public VulkanApp
 {
 public:
@@ -83,7 +73,9 @@ public:
         const VulkanInitializationParameters &params) override;
 
     bool initRun();
-    virtual void update() override;
+    virtual void logicUpdate() override;
+    virtual void renderUpdate() override;
+    virtual void renderDraw() override;
     virtual void resized() override;
 
 public:
@@ -299,19 +291,9 @@ void VulkanFontDraw::resized()
 
 }
 
-void VulkanFontDraw::update()
+void VulkanFontDraw::logicUpdate()
 {
-    VulkanApp::update();
-    ////////////////////////
-    //
-    // MAIN LOOP START
-    // UPDATING ENGINE STATE
-    //
-    ////////////////////////
-
-    static uint32_t gpuframeCount = 0u;
-    static double gpuTime = 0.0;
-    static double cpuTimeStamp = getTime();
+    VulkanApp::logicUpdate();
 
     MouseState mouseState = getMouseState();
     {
@@ -327,37 +309,37 @@ void VulkanFontDraw::update()
         if (isPressed(GLFW_KEY_UP))
             chosenLetter -= 8;
 
-        bool isControlDown = keyDowns[ GLFW_KEY_LEFT_CONTROL ].isDown || keyDowns[ GLFW_KEY_RIGHT_CONTROL ].isDown;
+        bool isControlDown = keyDowns[GLFW_KEY_LEFT_CONTROL].isDown || keyDowns[GLFW_KEY_RIGHT_CONTROL].isDown;
 
         for (int i = 0; i < bufferedPressesCount; ++i)
         {
-            if (!isControlDown && bufferedPresses[ i ] >= 32 && bufferedPresses[ i ] < 128)
+            if (!isControlDown && bufferedPresses[i] >= 32 && bufferedPresses[i] < 128)
             {
-                chosenLetter = ( int ) bufferedPresses[ i ];
+                chosenLetter = (int)bufferedPresses[i];
             }
         }
 
-        if (keyDowns[ GLFW_KEY_S ].isDown && keyDowns[ GLFW_KEY_S ].pressCount > 0u && isControlDown)
+        if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
             saveFontData(fontFilename, characterData);
 
-        if (keyDowns[ GLFW_KEY_L ].isDown && keyDowns[ GLFW_KEY_L ].pressCount > 0u && isControlDown)
+        if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
             loadBytes(fontFilename, characterData);
 
-        if (keyDowns[ GLFW_KEY_C ].isDown && keyDowns[ GLFW_KEY_C ].pressCount > 0u && isControlDown)
+        if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {
             for (int i = 0; i < 12; ++i)
             {
-                uint32_t ind = ( chosenLetter - 32 ) * 12 + i;
-                buffData[ i ] = characterData[ ind ];
+                uint32_t ind = (chosenLetter - 32) * 12 + i;
+                buffData[i] = characterData[ind];
             }
         }
 
-        if (keyDowns[ GLFW_KEY_V ].isDown && keyDowns[ GLFW_KEY_V ].pressCount > 0u && isControlDown)
+        if (keyDowns[GLFW_KEY_V].isDown && keyDowns[GLFW_KEY_V].pressCount > 0u && isControlDown)
         {
             for (int i = 0; i < 12; ++i)
             {
-                uint32_t ind = ( chosenLetter - 32 ) * 12 + i;
-                characterData[ ind ] = char(buffData[ i ]);
+                uint32_t ind = (chosenLetter - 32) * 12 + i;
+                characterData[ind] = char(buffData[i]);
             }
         }
 
@@ -371,59 +353,57 @@ void VulkanFontDraw::update()
 
             for (int i = 0; i < 8; ++i)
             {
-                float offX = float(( i - 4 ) * ( borderSizes + buttonSize )) + windowWidth * 0.5f;
-                float offY = float(( j - 6 ) * ( borderSizes + buttonSize )) + windowHeight * 0.5f;
+                float offX = float((i - 4) * (borderSizes + buttonSize)) + windowWidth * 0.5f;
+                float offY = float((j - 6) * (borderSizes + buttonSize)) + windowHeight * 0.5f;
 
-                bool insideRect = mouseState.x > offX - ( borderSizes + buttonSize ) * 0.5f &&
-                    mouseState.x < offX + ( borderSizes + buttonSize ) * 0.5f &&
-                    mouseState.y > offY - ( borderSizes + buttonSize ) * 0.5f &&
-                    mouseState.y < offY + ( borderSizes + buttonSize ) * 0.5f;
+                bool insideRect = mouseState.x > offX - (borderSizes + buttonSize) * 0.5f &&
+                    mouseState.x < offX + (borderSizes + buttonSize) * 0.5f &&
+                    mouseState.y > offY - (borderSizes + buttonSize) * 0.5f &&
+                    mouseState.y < offY + (borderSizes + buttonSize) * 0.5f;
 
                 offX -= 0.5f * buttonSize;
                 offY -= 0.5f * buttonSize;
 
-                uint32_t indx = ( chosenLetter - 32 ) * 12 + j;
+                uint32_t indx = (chosenLetter - 32) * 12 + j;
 
                 if (mouseState.leftButtonDown && insideRect)
-                    characterData[ indx ] |= ( 1 << i );
+                    characterData[indx] |= (1 << i);
                 else if (mouseState.rightButtonDown && insideRect)
-                    characterData[ indx ] &= ~( char(1 << i) );
+                    characterData[indx] &= ~(char(1 << i));
 
-                bool isVisible = ( (characterData[ indx ] >> i ) & 1 ) == 1;
+                bool isVisible = ((characterData[indx] >> i) & 1) == 1;
 
-                vertData[ i + size_t(j) * 8 + 1 ].color = isVisible ? ~0u : 0u;
-                vertData[ i + size_t(j) * 8 + 1 ].posX = uint16_t(offX);
-                vertData[ i + size_t(j) * 8 + 1 ].posY = uint16_t(offY);
-                vertData[ ( size_t(indx) + 12 ) * 8 + i + 1 ].color = isVisible ? ~0u : 0u;
+                vertData[i + size_t(j) * 8 + 1].color = isVisible ? ~0u : 0u;
+                vertData[i + size_t(j) * 8 + 1].posX = uint16_t(offX);
+                vertData[i + size_t(j) * 8 + 1].posY = uint16_t(offY);
+                vertData[(size_t(indx) + 12) * 8 + i + 1].color = isVisible ? ~0u : 0u;
 
             }
 
         }
-        uint32_t xOff = ( chosenLetter - 32 ) % 8;
-        uint32_t yOff = ( chosenLetter - 32 ) / 8;
+        uint32_t xOff = (chosenLetter - 32) % 8;
+        uint32_t yOff = (chosenLetter - 32) / 8;
 
-        vertData[ 0 ].posX = 10.0f + ( xOff * 8 ) * smallButtonSize + xOff * 2 - 2;
-        vertData[ 0 ].posY = 10.0f + ( yOff * 12 ) * smallButtonSize + yOff * 2 - 2;
+        vertData[0].posX = 10.0f + (xOff * 8) * smallButtonSize + xOff * 2 - 2;
+        vertData[0].posY = 10.0f + (yOff * 12) * smallButtonSize + yOff * 2 - 2;
     }
 
     ASSERT(vertData.size() * sizeof(GPUVertexData) < QuadBufferSize);
+}
 
+void VulkanFontDraw::renderUpdate()
+{
+    VulkanApp::renderUpdate();
 
-    ////////////////////////
-    //
-    // RENDER PASSES START
-    // WRITING VALUES INTO
-    // "CONSTANT BUFFEERS"
-    //
-    ////////////////////////
+    addToCopylist(sliceFromPodVector(vertData), quadBuffer.buffer, 0);
+}
 
-    if (!startRender())
-        return;
-
-    addToCopylist(sliceFromPodVector( vertData ), quadBuffer.buffer, 0);
+void VulkanFontDraw::renderDraw()
+{
     addImageBarrier(imageBarrier(renderColorImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+
     flushBarriers();
     // Drawingg
 
@@ -474,68 +454,10 @@ void VulkanFontDraw::update()
         vkCmdEndRendering(vulk.commandBuffer);
     }
 
-    vkCmdWriteTimestamp(vulk.commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, vulk.queryPool, TIME_POINTS::DRAW_FINISHED);
+    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     present(renderColorImage);
 
-    ////////////////////////
-    //
-    // END PASS, COLLECT TIMINGS
-    //
-    ////////////////////////
-
-
-    uint64_t queryResults[ TIME_POINTS::NUM_TIME_POINTS ];
-    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool,
-        0, ARRAYSIZES(queryResults), sizeof(queryResults), queryResults, sizeof(queryResults[0]), VK_QUERY_RESULT_64_BIT));
-
-    if (res != VK_SUCCESS)
-        return;
-
-    struct TimeValues
-    {
-        double timeDuration[ TIME_POINTS::NUM_TIME_POINTS ];
-    };
-
-    VkPhysicalDeviceProperties props = {};
-    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
-
-    static TimeValues timeValues = {};
-    for (uint32_t i = TIME_POINTS::NUM_TIME_POINTS - 1; i > 0; --i)
-        timeValues.timeDuration[ i ] += ( double(queryResults[ i ]) - double(queryResults[ i - 1 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-    gpuTime += ( double(queryResults[ TIME_POINTS::NUM_TIME_POINTS - 1 ]) - double(queryResults[ 0 ]) ) * props.limits.timestampPeriod * 1.0e-9f;
-
-    ++gpuframeCount;
-    double currTime = getTime();
-    if (currTime - cpuTimeStamp >= 1.0)
-    {
-        double d = 1000.0 / gpuframeCount;
-        double e = gpuframeCount;
-        double cpuTime = currTime - cpuTimeStamp;
-        cpuTimeStamp += 1.0f;
-
-        printf("Gpu: %.3fms, cpu: %.3fms, draw: %.3fms. GpuFps:%.1f, CpuFps:%.1f\n",
-                ( float ) ( gpuTime * d ), ( float ) ( cpuTime * d ),
-                ( float ) ( timeValues.timeDuration[ DRAW_FINISHED ] * d ),
-                e / gpuTime, e / cpuTime);
-        gpuframeCount = 0u;
-
-        for (uint32_t i = 0; i < TIME_POINTS::NUM_TIME_POINTS; ++i)
-            timeValues.timeDuration[ i ] = 0.0;
-
-        gpuTime = 0.0;
-    }
-
-
-    char str[ 100 ];
-    char renderLetter = chosenLetter != 127 ? char(chosenLetter) : ' ';
-    float fps = dt > 0.0 ? float(1.0 / dt) : 0.0f;
-    sprintf(str, "%2.2fms, fps: %4.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i, Letter: %c",
-        float(dt * 1000.0), fps,
-        mouseState.x, mouseState.y, mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown,
-        renderLetter);
-    setTitle(str);
 }
 
 

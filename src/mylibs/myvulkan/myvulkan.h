@@ -34,6 +34,7 @@ bool resizeSwapchain();
 bool startRender();
 void present(Image &imageToPresent);
 
+
 void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name);
 void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
 void beginDebugRegion(std::string_view pMarkerName, Vec4 color);
