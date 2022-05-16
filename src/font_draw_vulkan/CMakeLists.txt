@@ -3,6 +3,9 @@
 #
 cmake_minimum_required (VERSION 3.15)
 
+include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
+#print_variables()
+
 # Add source to this project's executable.
 add_executable (font_draw_vulkan "src/main_font_draw_vulkan.cpp")
 

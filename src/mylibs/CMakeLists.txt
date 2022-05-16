@@ -3,6 +3,8 @@
 
 project ("hellouvulkan libs" VERSION 0.0.1)
 
+include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
+#print_variables()
 
 add_library(MyLibraries
 

@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.15)
 
+include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
+#print_variables()
 
 # Add source to this project's executable.
 add_executable (space_shooter_vulkan "src/main_space_shooter_vulkan.cpp")

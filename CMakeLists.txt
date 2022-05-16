@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
 ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 
+include(${PROJECT_SOURCE_DIR}/cmake/my_cmake.cmake)
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
 
@@ -32,7 +33,7 @@ if (NOT Vulkan_FOUND)
 else()
 	message(STATUS "Using vulkan lib at: ${Vulkan_LIBRARIES}")
 endif()
- 
+
 #include_directories(${Vulkan_INCLUDE_DIR})
 include_directories(${Vulkan_INCLUDE_DIRS})
 
@@ -57,7 +58,7 @@ foreach(SHADER IN LISTS SPV_SHADERS)
 endForeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
- 
+
 
 
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" )
@@ -79,13 +80,7 @@ include_directories("external/VulkanMemoryAllocator/include")
 add_subdirectory("external/glfw")
 add_subdirectory("src")
 
+#print_variables()
 
 
-#set(SHOW_VARIABLES true)
-if (SHOW_VARIABLES)
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
-endif (SHOW_VARIABLES)
+
