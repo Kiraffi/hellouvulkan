@@ -38,6 +38,7 @@ struct JSONBlock
     bool parseInt(int &outInt) const;
     bool parseUInt(uint32_t &outInt) const;
 
+    bool parseNumber(double& outDouble) const;
     bool parseNumber(float& outFloat) const;
 
     bool parseBool(bool &outBool) const;

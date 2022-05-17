@@ -245,58 +245,58 @@ bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock
         neg = true;
         ++index;
     }
-    int64_t v = -1;
-    int numCount = parseInt(buffer, marker, v);
+    int64_t integerPart = -1;
+    int numCount = parseInt(buffer, marker, integerPart);
     if(numCount <= 0 || index > marker.endIndex)
         return false;
 
-    inOutBlock.valueInt = neg ? -v : v;
-    inOutBlock.valueDbl = neg ? -v : v;
+    inOutBlock.valueInt = neg ? -integerPart : integerPart;
+    inOutBlock.valueDbl = neg ? -integerPart : integerPart;
 
     if(buffer [index] == '.')
     {
         ++index;
-        double d = v;
 
-        numCount = parseInt(buffer, marker, v);
-        if(numCount <= 0 || index > marker.endIndex || v < 0)
+        int64_t remainderPart = 0;
+        numCount = parseInt(buffer, marker, remainderPart);
+        if(numCount <= 0 || index > marker.endIndex || remainderPart < 0)
             return false;
 
-        double div = 1.0;
+        double origDiv = 1.0;
         for(int i = 0; i < numCount; ++i)
-            div *= 10.0;
+            origDiv *= 10.0;
 
-        d += ( double )v / div;
-
+        double eMultip = 1.0;
+        double eDiv = 1.0;
         if(buffer [index] == 'e')
         {
             ++index;
-            numCount = parseInt(buffer, marker, v);
+            int64_t eValue = 0;
+            numCount = parseInt(buffer, marker, eValue);
             if(numCount <= 0 || index > marker.endIndex)
                 return false;
-            div = 1.0;
-            if(v > 0)
+            if(eValue > 0)
             {
-                for(int i = 0; i < v; ++i)
-                    div *= 10.0;
-                d *= div;
+                for(int64_t i = 0; i < eValue; ++i)
+                    eDiv *= 10.0;
             }
             else
             {
-                for(int i = 0; i > v; --i)
-                    div *= 10.0;
-                d /= div;
+                for(int64_t i = 0; i > eValue; --i)
+                    eMultip *= 10.0;
             }
 
         }
+        double result = (double(integerPart) +
+            (double(remainderPart) / origDiv)) * eMultip * eDiv;
 
         inOutBlock.jType |= JSONBlock::DOUBLE_TYPE | JSONBlock::VALID_TYPE;
-        inOutBlock.valueDbl = neg ? -d : d;
+        inOutBlock.valueDbl = neg ? -result : result;
     }
     else
     {
         inOutBlock.jType |= JSONBlock::INT_TYPE | JSONBlock::VALID_TYPE;
-        inOutBlock.valueInt = neg ? -v : v;
+        inOutBlock.valueInt = neg ? -integerPart : integerPart;
     }
     return true;
 }
@@ -534,13 +534,19 @@ bool JSONBlock::parseUInt(uint32_t &outInt) const
 }
 
 
-bool JSONBlock::parseNumber(float& outFloat) const
+bool JSONBlock::parseNumber(double& outNumber) const
 {
     if(!isInt() && !isDouble())
         return false;
 
-    outFloat = (float)valueDbl;
-        return true;
+    outNumber = valueDbl;
+    return true;
+}
+
+bool JSONBlock::parseNumber(float& outNumber) const
+{
+    double v = 1234.0;
+    return float(parseNumber(v));
 }
 
 
@@ -630,6 +636,7 @@ bool JSONBlock::hasChild(std::string_view childName) const
 
 }
 
+
 const JSONBlock &JSONBlock::getChild(int index) const
 {
     if(index < 0 || index >= children.size())
@@ -648,6 +655,8 @@ const JSONBlock &JSONBlock::getChild(std::string_view childName) const
 
     return emptyBlock;
 }
+
+
 
 bool JSONBlock::print() const
 {
