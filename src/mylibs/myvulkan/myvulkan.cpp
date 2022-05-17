@@ -65,10 +65,12 @@ static const PodVector<const char *>validationLayers =
 {
     "VK_LAYER_KHRONOS_validation",
     "VK_LAYER_LUNARG_monitor",
+
+    //"VK_LAYER_LUNARG_api_dump"
 };
 
 
-static const PodVector<const char *>deviceExtensions =
+static const PodVector<const char *> deviceExtensions =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     // VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
@@ -76,12 +78,11 @@ static const PodVector<const char *>deviceExtensions =
     // VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
 
-static const PodVector<const char*>checkDeviceExtensions =
+static const PodVector<const char*> addCheckDeviceExtensions =
 {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    // if this extension is put into device extensions, it throws some validation errors, 
+    // warning about it being incomplete?
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-    // VK_KHR_MAINTENANCE1_EXTENSION_NAME
-    // VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
 
 static PodVector<const char*> getRequiredInstanceExtensions()
@@ -504,11 +505,11 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
             std::set<std::string> requiredExtensions;
-            for (const char *str : checkDeviceExtensions)
-            {
+            for (const char *str : deviceExtensions)
                 requiredExtensions.insert(str);
-            }
 
+            for(const char *str : addCheckDeviceExtensions)
+                requiredExtensions.insert(str);
 
             for (const auto& extension : availableExtensions)
             {

@@ -386,6 +386,8 @@ bool isValidMemory(Memory memory)
 uint8_t *getMemoryBegin(Memory memory)
 {
     bool validMemory = isValidMemory(memory);
+    if(!validMemory)
+        return nullptr;
     ASSERT(validMemory);
     uint32_t handleIndex = getHandleIndex(memory);
     bool isValidHandle = handleIndex < MaxAllocations;
@@ -399,6 +401,8 @@ uint8_t *getMemoryBegin(Memory memory)
 uint8_t *getMemoryEnd(Memory memory)
 {
     bool validMemory = isValidMemory(memory);
+    if(!validMemory)
+        return nullptr;
     ASSERT(validMemory);
     uint32_t handleIndex = getHandleIndex(memory);
     bool isValidHandle = handleIndex < MaxAllocations;
