@@ -25,7 +25,6 @@
 #include <chrono>
 #include <string>
 #include <thread>
-#include <vector>
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 640;
@@ -275,7 +274,7 @@ void VulkanDrawStuff::renderDraw()
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         VK_IMAGE_ASPECT_DEPTH_BIT));
-    
+
     flushBarriers();
 
     // Drawingg
