@@ -85,8 +85,7 @@ Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T))
     T *ptr = &begin();
     while(b < e)
     {
-        new (ptr)(T);
-        *ptr = *b;
+        new (ptr)T(*b);
         ++ptr;
         ++b;
     }
@@ -121,8 +120,7 @@ Vector<T>::Vector(const std::initializer_list<T> &initializerList) : VectorBase(
     T* ptr = (T *)buffer.getDataIndex(0);
     for(const T &t : initializerList)
     {
-        new(ptr)(T);
-        *ptr = t;
+        new(ptr)T(t);
         ++ptr;
     }
 }
@@ -147,8 +145,7 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
     T* ptr = (T *)this->buffer.getDataIndex(0);
     for(T &value : vec)
     {
-        new(ptr)(T);
-        *ptr = value;
+        new(ptr)T(value);
         ptr++;
     }
     return *this;
@@ -181,8 +178,7 @@ void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
     T* ptr = (T *)buffer.getDataIndex(currSize);
     while(currSize < newSize)
     {
-        new(ptr)(T);
-        *ptr = defaultValue;
+        new(ptr)T(defaultValue);
         ++ptr;
         ++currSize;
     }
@@ -196,8 +192,7 @@ template <typename T>
 void Vector<T>::pushBack(const T &obj)
 {
     this->buffer.insertIndex(this->buffer.getSize());
-    new(&back())(T);
-    back() = obj;
+    new(&back())T(obj);
 }
 
 
@@ -207,8 +202,7 @@ void Vector<T>::insertIndex(uint32_t index, const T &obj)
 {
     ASSERT(index < getSize());
     this->buffer.insertIndex(index);
-    new(buffer.getDataIndex(index))(T);
-    *((T *)buffer.getDataIndex(index))  = obj;
+    new(buffer.getDataIndex(index))T(obj);
 }
 
 template <typename T>
@@ -225,7 +219,7 @@ void Vector<T>::clear()
 {
     for(T &t : *this)
     {
-        t->~T();
+        t.~T();
     }
     doClear();
 }

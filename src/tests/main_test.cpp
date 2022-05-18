@@ -55,6 +55,7 @@ void testMemory(bool forceDefrag)
 
 
     defragMemory();
+    foos.clear();
 }
 
 void testStackString()
@@ -187,6 +188,8 @@ void testVector()
     printvector(vectorOfPodVectors);
     printvector(v);
 
+    vectorOfPodVectors.clear();
+    printvector(vectorOfPodVectors);
 }
 
 int main()
