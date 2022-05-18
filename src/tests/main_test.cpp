@@ -2,6 +2,7 @@
 #include <container/bytebuffer.h>
 #include <container/podvector.h>
 #include <container/stackstring.h>
+#include <container/vector.h>
 
 #include <core/mytypes.h>
 
@@ -140,12 +141,60 @@ void testArraySliceView()
         printf("value: %u\n", v);
 }
 
+void printUints(const PodVector<uint32_t> &vec)
+{
+    for(const auto v : vec)
+        printf("%u, ", v);
+    printf("\n");
+}
+
+void printvector(const Vector<PodVector<uint32_t>> &vectorOfPodVectors)
+{
+    for(const auto &vec : vectorOfPodVectors)
+    {
+        printUints(vec);
+    }
+    printf("\n");
+}
+void testVector()
+{
+    Vector<PodVector<uint32_t>> vectorOfPodVectors{{1}, {2, 99, 43, 3}};
+    vectorOfPodVectors.pushBack({1, 2, 3});
+    vectorOfPodVectors.pushBack({4, 5, 60});
+    vectorOfPodVectors.pushBack({7, 8, 9});
+    printvector(vectorOfPodVectors);
+
+    vectorOfPodVectors.insertIndex(1, {4, 4, 4, 1, 2, 3});
+    printvector(vectorOfPodVectors);
+
+    vectorOfPodVectors.removeIndex(2);
+    printvector(vectorOfPodVectors);
+    vectorOfPodVectors.removeIndex(3);
+    printvector(vectorOfPodVectors);
+    vectorOfPodVectors.removeIndex(0);
+    printvector(vectorOfPodVectors);
+
+    for(uint32_t i = 0; i < vectorOfPodVectors.getSize(); ++i)
+        printUints(vectorOfPodVectors[i]);
+
+    Vector<PodVector<uint32_t>> v = vectorOfPodVectors;
+    printvector(v);
+    vectorOfPodVectors.removeIndex(1);
+    v.removeIndex(0);
+    printvector(vectorOfPodVectors);
+    printvector(v);
+
+}
+
 int main()
 {
-    testingMemory();
-    testStackString();
-    testMemoryStackString();
-    testUniformBufferManager();
-    testArraySliceView();
+    initMemory();
+    //testingMemory();
+    //testStackString();
+    //testMemoryStackString();
+    //testUniformBufferManager();
+    //testArraySliceView();
+
+    testVector();
     return 0;
 }

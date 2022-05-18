@@ -30,7 +30,7 @@ public:
 
     uint32_t getSize() const { return bufferData.size; }
     uint32_t getCapasity() const { return bufferData.capasity; }
-
+    uint32_t getDataSize() const { return bufferData.dataTypeSize; }
 private:
     ByteBufferData bufferData;
 };
