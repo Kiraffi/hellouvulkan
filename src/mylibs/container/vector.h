@@ -171,16 +171,26 @@ template <typename T>
 void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
 {
     uint32_t currSize = getSize();
-    if(currSize >= newSize)
-        return;
-
     this->buffer.resize(newSize);
-    T* ptr = (T *)buffer.getDataIndex(currSize);
-    while(currSize < newSize)
+    if(currSize < newSize)
     {
-        new(ptr)T(defaultValue);
-        ++ptr;
-        ++currSize;
+        T* ptr = (T *)buffer.getDataIndex(currSize);
+        while(currSize < newSize)
+        {
+            new(ptr)T(defaultValue);
+            ++ptr;
+            ++currSize;
+        }
+    }
+    else if(newSize < currSize)
+    {
+        T* ptr = (T *)buffer.getDataIndex(newSize);
+        while(newSize < currSize)
+        {
+            ptr->~T();
+            ++ptr;
+            ++newSize;
+        }
     }
 }
 
