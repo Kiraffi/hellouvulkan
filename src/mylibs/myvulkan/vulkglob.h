@@ -146,13 +146,13 @@ extern VulkGlob vulk;
 // Shaders...
 struct DescriptorSetLayout
 {
-    VkDescriptorType descriptorType;
+    VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
     uint32_t bindingIndex = ~0u;
 };
 
 struct DescriptorSet
 {
-    VkDescriptorType descriptorType;
+    VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
     uint32_t bindingIndex = ~0u;
     const Buffer *buffer = nullptr;
     VkDeviceSize offset = 0;
@@ -160,7 +160,7 @@ struct DescriptorSet
     VkImage image = 0;
     VkImageView imageView = 0;
     VkSampler sampler = 0;
-    VkImageLayout layout;
+    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
 struct Descriptor
@@ -219,7 +219,7 @@ struct DescriptorInfo
 
 struct PipelineWithDescriptors
 {
-    VkPipeline pipeline;
+    VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 
