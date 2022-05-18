@@ -16,13 +16,10 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <string.h>
-#include <thread>
-
 
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;

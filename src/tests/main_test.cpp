@@ -135,13 +135,6 @@ void printSlice(const ArraySliceView<TempStr>& slice)
 
 void testArraySliceView()
 {
-
-    printSlice({});
-    ArraySliceView<TempStr> foo = {};
-    printf("ptr: %p\n", foo.data());
-    printf("size: %u\n", foo.size());
-
-
     PodVector<uint32_t> uints;
     for(uint32_t i = 0; i < 32; ++i)
         uints.pushBack(i);

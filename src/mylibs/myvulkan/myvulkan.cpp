@@ -13,7 +13,7 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <string>
+#include <string_view>
 #include <set>
 #include <string.h>
 
@@ -80,7 +80,7 @@ static const PodVector<const char *> deviceExtensions =
 
 static const PodVector<const char*> addCheckDeviceExtensions =
 {
-    // if this extension is put into device extensions, it throws some validation errors, 
+    // if this extension is put into device extensions, it throws some validation errors,
     // warning about it being incomplete?
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 };
@@ -504,7 +504,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             PodVector<VkExtensionProperties> availableExtensions(extensionCount);
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
-            std::set<std::string> requiredExtensions;
+            std::set<std::string_view> requiredExtensions;
             for (const char *str : deviceExtensions)
                 requiredExtensions.insert(str);
 
@@ -642,7 +642,7 @@ static bool createDeviceWithQueues()
             .pNext = (void *)&deviceFeatures13,
             .features = deviceFeatures,
         };
-        
+
 
         VkDeviceCreateInfo createInfo = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
         createInfo.pNext = &physicalDeviceFeatures2;
@@ -653,7 +653,7 @@ static bool createDeviceWithQueues()
 
 
         createInfo.pEnabledFeatures = nullptr; // &deviceFeatures;
-        
+
         PodVector<const char*> deviceExts = deviceExtensions;
         if (optionals.canUseVulkanRenderdocExtensionMarker)
         {
@@ -684,7 +684,7 @@ static bool createDeviceWithQueues()
     ASSERT(vulk.presentQueue);
     ASSERT(vulk.computeQueue);
 
-    
+
 
     if(optionals.canUseVulkanRenderdocExtensionMarker)
         acquireDeviceDebugRenderdocFunctions(vulk.device);
@@ -1258,7 +1258,7 @@ void present(Image & imageToPresent)
 
 
 VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
-    const ArraySliceView<VkFormat> &colorFormats, const DepthTest &depthTest)
+    const PodVector<VkFormat> &colorFormats, const DepthTest &depthTest)
 {
     VkPipelineShaderStageCreateInfo stageInfos[2] = {
         {
@@ -1274,7 +1274,7 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
             .pName = "main",
         },
     };
-    
+
 
     VkPipelineVertexInputStateCreateInfo vertexInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
@@ -1300,10 +1300,10 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
     depthInfo.depthCompareOp = depthTest.depthCompareOp;
 
     VkPipelineColorBlendAttachmentState colorAttachmentState = {};
-    colorAttachmentState.colorWriteMask = 
+    colorAttachmentState.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-    VkPipelineColorBlendStateCreateInfo blendInfo = { 
+    VkPipelineColorBlendStateCreateInfo blendInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .attachmentCount = 1,
         .pAttachments = &colorAttachmentState,
@@ -1335,7 +1335,7 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
     createInfo.renderPass = VK_NULL_HANDLE;
     createInfo.layout = pipelineLayout;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
-    
+
     createInfo.pNext = &pipelineRenderingCreateInfo;
 
     VkPipeline pipeline = 0;

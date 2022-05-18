@@ -15,9 +15,7 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <chrono>
 #include <string>
-#include <thread>
 #include <filesystem>
 #include <fstream>
 
@@ -38,7 +36,7 @@ public:
     virtual void renderDraw() override;
     virtual void resized() override;
 
-    void updateText(std::string& str);
+    void updateText(std::string_view str);
 
 private:
     Vector2 fontSize = Vector2(8.0f, 12.0f);
@@ -67,7 +65,7 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 }
 
 
-void VulkanFontRender::updateText(std::string &str)
+void VulkanFontRender::updateText(std::string_view str)
 {
     std::string tmpStr = "w";
     tmpStr += std::to_string(int32_t(fontSize.x));

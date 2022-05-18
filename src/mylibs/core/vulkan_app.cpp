@@ -21,7 +21,7 @@
 #include <myvulkan/vulkanresources.h>
 
 
-#include <chrono>
+//#include <chrono>
 #include <thread>
 #include <string.h>
 
@@ -392,14 +392,14 @@ static void printStats(VulkanApp& app)
 
     ++gpuframeCount;
     double currTime = app.getTime();
-    
+
     double d = 1000.0 / gpuframeCount;
     double e = gpuframeCount;
 
     double cpuTime = currTime - cpuTimeStamp;
     app.gpuFps = e / gpuTime;
     app.cpuFps = e / cpuTime;
-    
+
     if (currTime - cpuTimeStamp >= 1.0)
     {
 

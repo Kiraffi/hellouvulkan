@@ -1,8 +1,8 @@
 #pragma once
 #include <core/mytypes.h>
 #include <container/podvector.h>
+#include <container/vector.h>
 
-#include <initializer_list>
 #include <stdint.h>
 
 template <typename T>
@@ -10,9 +10,9 @@ class ArraySliceView final
 {
 public:
     ArraySliceView(const T* const ptrData, uint32_t length) : ptr(ptrData), length(ptrData ? length : 0) {}
-    ArraySliceView(const std::initializer_list<T>& initializerList) : 
-        ptr(initializerList.size() ? initializerList.begin() : nullptr), length(initializerList.size()) {}
-   
+    //ArraySliceView(const std::initializer_list<T>& initializerList) :
+    //    ptr(initializerList.size() ? initializerList.begin() : nullptr), length(initializerList.size()) {}
+
     const T* begin() const { return ptr; }
     const T* end() const { return ptr + length; }
 
@@ -38,8 +38,11 @@ public:
 template <typename T>
 ArraySliceView<T> sliceFromPodVector(const PodVector<T>& v)
 {
-    ArraySliceView<T> view{};
-    view.ptr = v.size() > 0 ? v.data() : nullptr;
-    view.length = v.size();
-    return view;
+    return {v.data(), v.size()};
+}
+
+template <typename T>
+ArraySliceView<T> sliceFromPodVector(const Vector<T>& v)
+{
+    return {v.data(), v.size()};
 }

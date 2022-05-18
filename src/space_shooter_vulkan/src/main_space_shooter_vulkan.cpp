@@ -23,9 +23,7 @@
 
 #include <render/font_render.h>
 
-#include <chrono>
-#include <string>
-#include <thread>
+#include <string_view>
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 800;
@@ -133,7 +131,7 @@ public:
 
     PodVector< uint32_t > gpuModelIndices;
 
-    std::string text = "Space shooter!";
+    std::string_view text = "Space shooter!";
 
 
     double lastShot = 0.0;

@@ -10,9 +10,6 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-
-#include <string>
-#include <thread>
 #include <string.h>
 
 ////////////////////////

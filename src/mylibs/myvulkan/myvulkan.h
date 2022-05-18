@@ -53,7 +53,7 @@ void endSingleTimeCommands();
 
 
 VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
-    const ArraySliceView<VkFormat> &colorFormats, const DepthTest& depthTest);
+    const PodVector<VkFormat> &colorFormats, const DepthTest& depthTest);
 
 VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLayout);
 

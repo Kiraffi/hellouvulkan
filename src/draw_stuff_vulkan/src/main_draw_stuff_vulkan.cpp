@@ -22,9 +22,6 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <chrono>
-#include <string>
-#include <thread>
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 640;
@@ -37,7 +34,6 @@ class VulkanDrawStuff : public VulkanApp
 public:
     VulkanDrawStuff() { }
     virtual ~VulkanDrawStuff() override;
-    //bool initApp(const std::string &fontFilename);
     virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters& params) override;
     virtual void logicUpdate() override;
@@ -57,8 +53,6 @@ public:
     Buffer indexDataBuffer;
 
     PipelineWithDescriptors graphicsPipeline;
-
-    std::string fontFilename;
 
     Image renderColorImage;
     Image renderDepthImage;
