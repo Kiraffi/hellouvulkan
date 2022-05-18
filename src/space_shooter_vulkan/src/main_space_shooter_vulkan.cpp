@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 //#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
+#include <container/vector.h>
 
 #include <core/general.h>
 #include <core/mytypes.h>
@@ -26,7 +27,6 @@
 #include <string>
 #include <thread>
 #include <string.h>
-#include <vector>
 
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
@@ -129,7 +129,7 @@ public:
     PodVector< GpuModelInstance > gpuModelInstances;
 
     PodVector< GpuModelVertex > vertices;
-    std::vector< EntityModel > entityModels;
+    Vector< EntityModel > entityModels;
 
     PodVector< uint32_t > gpuModelIndices;
 
@@ -272,7 +272,7 @@ static uint32_t getPackedSizeRot(float sz, float rotInRad)
 }
 
 
-static void updateGpuEntity(const Entity &ent, const std::vector<EntityModel> &entityModels,
+static void updateGpuEntity(const Entity &ent, const Vector<EntityModel> &entityModels,
     PodVector< GpuModelInstance > &gpuModelInstances, PodVector< uint32_t > &gpuModelIndices)
 {
     const EntityModel &model = entityModels[ ent.entityModelIndex ];
@@ -293,7 +293,7 @@ static void updateGpuEntity(const Entity &ent, const std::vector<EntityModel> &e
     }
 }
 
-static void updateGpuEntities(const PodVector<Entity> &entities, const std::vector<EntityModel> &entityModels,
+static void updateGpuEntities(const PodVector<Entity> &entities, const Vector<EntityModel> &entityModels,
     PodVector< GpuModelInstance > &gpuModelInstances, PodVector< uint32_t > &gpuModelIndices)
 {
     for (uint32_t entityIndex = 0u; entityIndex < entities.size(); ++entityIndex)
@@ -320,24 +320,8 @@ static Entity spawnAsteroidEntity(double spawnTime)
 
 bool SpaceShooter::initRun()
 {
-    //std::vector < Entity > asteroidEntities;
-    //std::vector < Entity > bulletEntities;
-
-    //std::vector< GpuModelInstance > gpuModelInstances;
     gpuModelInstances.reserve(1u << 16u);
-
-    //std::vector < GpuModelVertex > vertices;
-    //std::vector< EntityModel > entityModels;
-
-    //std::vector< uint32_t > gpuModelIndices;
     gpuModelIndices.reserve(1u << 20u);
-
-
-
-
-
-
-
 
     // Building models.
     {
@@ -613,7 +597,7 @@ void SpaceShooter::renderDraw()
     addImageBarrier(imageBarrier(renderColorImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-    
+
     flushBarriers();
 
     // Drawingg
