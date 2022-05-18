@@ -36,6 +36,8 @@ public:
     void resize(uint32_t newSize);
     void resize(uint32_t newSize, const T &defaultValue);
 
+    void clear() { doClear(); }
+
     T* begin() const { return (T*)(getBegin()); }
     T* data() const  { return (T*)(getBegin()); }
     T* end() const   { return (T*)(getEnd()  ); }

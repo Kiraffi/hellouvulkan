@@ -11,6 +11,7 @@ ByteBuffer::ByteBuffer(uint32_t dataTypeSize)
          .memory = Memory{}
     }
 {
+    //printf("ds: %u, ", dataTypeSize);
 }
 
 ByteBuffer::~ByteBuffer()
@@ -69,8 +70,7 @@ void ByteBuffer::resize(uint32_t newSize, uint8_t *defaultValue)
     }
 }
 
-
-void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
+void ByteBuffer::insertIndex(uint32_t index)
 {
     if(bufferData.size + 1 >= bufferData.capasity)
     {
@@ -87,8 +87,14 @@ void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
         memmove(startPtr + bufferData.dataTypeSize, startPtr,
             bufferData.dataTypeSize * (bufferData.size - index));
     }
-    memmove(startPtr, obj, bufferData.dataTypeSize);
     bufferData.size += 1;
+}
+
+void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
+{
+    insertIndex(index);
+    uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
+    memmove(startPtr, obj, bufferData.dataTypeSize);
 }
 
 void ByteBuffer::removeIndex(uint32_t index)

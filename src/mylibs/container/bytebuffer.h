@@ -7,7 +7,7 @@ struct ByteBufferData
     uint32_t size = 0;
     uint32_t capasity = 0;
     uint32_t dataTypeSize = 0;
-    Memory memory;
+    Memory memory {};
 };
 
 class ByteBuffer
@@ -23,6 +23,8 @@ public:
     void resize(uint32_t dstIndiceCount);
     void resize(uint32_t newSize, uint8_t *defaultValue);
     void insertIndex(uint32_t index, const uint8_t *obj);
+    void insertIndex(uint32_t index);
+
     void removeIndex(uint32_t index);
     uint8_t *getDataIndex(uint32_t index) const;
     uint8_t *getBegin() const;
@@ -32,5 +34,5 @@ public:
     uint32_t getCapasity() const { return bufferData.capasity; }
     uint32_t getDataSize() const { return bufferData.dataTypeSize; }
 private:
-    ByteBufferData bufferData;
+    ByteBufferData bufferData {};
 };

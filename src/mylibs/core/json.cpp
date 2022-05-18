@@ -24,7 +24,7 @@ static bool printBlock(const JSONBlock &bl, int spaces = 0)
         printf("  ");
 
     if(!bl.blockName.empty())
-        printf("%s: ", bl.blockName.c_str());
+        printf("%s: ", bl.blockName.cbegin());
 
     if(!bl.isValid())
     {
@@ -82,13 +82,13 @@ static bool printBlock(const JSONBlock &bl, int spaces = 0)
     }
     else if(bl.isString())
     {
-        std::string s;
+        std::string_view s;
         if(!bl.parseString(s))
         {
             printf("FAILED PARSE STRING\n");
             return false;
         }
-        printf("Str %s\n", s.c_str());
+        printf("Str %s\n", &s[0]);
     }
     else
     {
@@ -160,7 +160,7 @@ bool parseBetweenMarkers(const ArraySliceView<char> &buffer, JSONMarker &marker,
     return false;
 }
 
-static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, std::string &outStr)
+static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, std::string_view &outStr)
 {
     int &index = marker.currentIndex;
 
@@ -169,15 +169,11 @@ static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, 
         return false;
 
     int l = marker.currentIndex - startIndex;
-
-    outStr.resize(l);
-    for(int i = 0; i < l; ++i)
-    {
-        outStr [i] = buffer [startIndex + i];
-    }
-
     if(l < 0 || index >= marker.endIndex || buffer [index] != '"')
         return false;
+
+    outStr = std::string_view(&buffer[startIndex], &buffer[startIndex] + l);
+
     ++index;
     if(index + 1 < marker.endIndex && buffer[index] == ',')
         ++index;
@@ -467,7 +463,7 @@ bool JSONBlock::parseJSON(const ArraySliceView<char> &data)
     return parseObject(data, marker, *this);
 }
 
-bool JSONBlock::parseString(std::string &outString) const
+bool JSONBlock::parseString(std::string_view &outString) const
 {
     if(!isString())
         return false;
@@ -571,7 +567,7 @@ bool JSONBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
     if(strLen < 37)
         return false;
 
-    if(memcmp(valueStr.c_str(), "data:application/octet-stream;base64,", 37) != 0)
+    if(memcmp(&valueStr[0], "data:application/octet-stream;base64,", 37) != 0)
         return false;
 
     outBuffer.reserve(strLen - 37);

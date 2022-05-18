@@ -13,7 +13,13 @@ struct GltfMemoryRange
 };
 
 template<typename T>
-GltfMemoryRange getMemoryRange(const std::vector<T> &vec)
+GltfMemoryRange getMemoryRange(const PodVector<T> &vec)
+{
+    return { .start = ( uint8_t * )( &*vec.begin() ), .end = ( uint8_t * )( &*vec.begin() + vec.size() ) };
+}
+
+template<typename T>
+GltfMemoryRange getMemoryRange(const Vector<T> &vec)
 {
     return { .start = ( uint8_t * )( &*vec.begin() ), .end = ( uint8_t * )( &*vec.begin() + vec.size() ) };
 }
@@ -60,17 +66,17 @@ enum class GltfBufferComponentType
 
 struct GltfSceneNode
 {
-    std::string name;
+    std::string_view name;
     Quat rot;
     Vec3 trans;
     uint32_t meshIndex = ~0u;
     uint32_t skinIndex = ~0u;
-    std::vector<uint32_t> childNodeIndices;
+    PodVector<uint32_t> childNodeIndices;
 };
 
 struct GltfMeshNode
 {
-    std::string name;
+    std::string_view name;
     uint32_t positionIndex = ~0u;
     uint32_t normalIndex = ~0u;
     uint32_t uvIndex = ~0u;
@@ -83,11 +89,11 @@ struct GltfMeshNode
 
 struct GltfSkinNode
 {
-    std::string name;
-    std::vector<uint32_t> joints;
+    std::string_view name;
+    PodVector<uint32_t> joints;
     uint32_t inverseMatricesIndex = ~0u;
 
-    std::vector<Matrix> inverseMatrices;
+    PodVector<Matrix> inverseMatrices;
 };
 
 struct GltfAnimationNode
@@ -117,9 +123,9 @@ struct GltfAnimationNode
         Interpolation interpolationType = Interpolation::NONE;
 
     };
-    std::vector<Channel> channels;
-    std::vector<Sampler> samplers;
-    std::string name;
+    PodVector<Channel> channels;
+    PodVector<Sampler> samplers;
+    std::string_view name;
 };
 
 struct GltfBufferView
@@ -135,23 +141,23 @@ struct GltfBufferAccessor
     uint32_t count = 0u;
     GltfBufferComponentCountType countType;
     GltfBufferComponentType componentType;
-    std::vector<double> mins;
-    std::vector<double> maxs;
+    PodVector<double> mins;
+    PodVector<double> maxs;
     bool normalized = false;
     bool useMinMax = false;
 };
 
 struct GltfData
 {
-    std::vector<GltfSceneNode> nodes;
-    std::vector<GltfMeshNode> meshes;
-    std::vector<GltfSkinNode> skins;
-    std::vector<GltfAnimationNode> animationNodes;
+    Vector<GltfSceneNode> nodes;
+    PodVector<GltfMeshNode> meshes;
+    Vector<GltfSkinNode> skins;
+    Vector<GltfAnimationNode> animationNodes;
 
-    std::vector<GltfBufferAccessor> accessors;
-    std::vector<GltfBufferView> bufferViews;
+    Vector<GltfBufferAccessor> accessors;
+    PodVector<GltfBufferView> bufferViews;
 
-    std::vector<PodVector<uint8_t>> buffers;
+    Vector<PodVector<uint8_t>> buffers;
 };
 
 
@@ -340,7 +346,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 {
     GltfData data;
 
-    std::string fName = std::string(filename);
+    std::string_view fName(filename);
     PodVector<char> buffer;
 
     if(!loadBytes(fName, buffer))
@@ -408,7 +414,6 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             return false;
 
         data.nodes.resize(nodeBlock.getChildCount());
-
         for(int i = 0; i < nodeBlock.getChildCount(); ++i)
         {
             const JSONBlock &child = nodeBlock.children [i];
@@ -533,7 +538,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                         return false;
                     if(!channelBlock.getChild("target").getChild("node").parseUInt(channel.nodeIndex))
                         return false;
-                    std::string pathStr;
+                    std::string_view pathStr;
                     if(!channelBlock.getChild("target").getChild("path").parseString(pathStr))
                         return false;
                     if(pathStr == "translation")
@@ -559,7 +564,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                     if(!samplerBlock.getChild("output").parseUInt(sampler.outputIndex))
                         return false;
 
-                    std::string interpolationStr;
+                    std::string_view interpolationStr;
                     if(!samplerBlock.getChild("interpolation").parseString(interpolationStr))
                         return false;
                     if(interpolationStr == "LINEAR")
@@ -613,7 +618,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                 return false;
 
             uint32_t componentType = ~0u;
-            std::string s;
+            std::string_view s;
             if(!accessorBlock.getChild("bufferView").parseUInt(accessor.bufferViewIndex)
                 || !accessorBlock.getChild("componentType").parseUInt(componentType)
                 || !accessorBlock.getChild("count").parseUInt(accessor.count)
@@ -749,7 +754,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             verticesMemoryRange))
             return false;
 
-        
+
         if(!gltfReadIntoBuffer(data, node.indicesIndex, 0, sizeof(uint32_t),
             getMemoryRange(outModel.indices)))
             return false;
@@ -793,8 +798,8 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 
             if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
                 return false;
-            
-            std::vector<Matrix> &matrices = skinNode.inverseMatrices;
+
+            PodVector<Matrix> &matrices = skinNode.inverseMatrices;
             matrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
 
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
@@ -804,8 +809,12 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 
         }
 
+
         {
-            std::vector<float> floats;
+
+        }
+        {
+            PodVector<float> floats;
             floats.resize(data.accessors[8].count);
             if(data.accessors[8].countType != GltfBufferComponentCountType::SCALAR)
                 return false;

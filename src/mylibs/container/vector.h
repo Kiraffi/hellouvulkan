@@ -4,11 +4,10 @@
 #include "vectorbase.h"
 
 #define CHECK_NO_POD_MACRO() \
-    static constexpr bool layout = !std::is_standard_layout<T>(); \
+    static constexpr bool layout = std::is_standard_layout<T>(); \
     /*static constexpr bool trivial = std::is_trivial<T>();*/ \
-    static constexpr bool trivialCopy = !std::is_trivially_copyable<T>(); \
-    static_assert(layout && trivialCopy, "Pod class!");
-
+    static constexpr bool trivialCopy = std::is_trivially_copyable<T>(); \
+    static_assert(!(layout && trivialCopy), "Pod class!");
 
 template <typename T>
 class Vector : public VectorBase
@@ -37,6 +36,8 @@ public:
     void resize(uint32_t newSize);
     void resize(uint32_t newSize, const T &defaultValue);
 
+    void clear();
+
     T* begin() const { return (T*)(getBegin()); }
     T* data() const  { return (T*)(getBegin()); }
     T* end() const   { return (T*)(getEnd()  ); }
@@ -49,15 +50,13 @@ public:
 template <typename T>
 Vector<T>::~Vector()
 {
-    if(buffer.getSize() == 0)
-        return;
-
-    T *ptr = (T *)this->buffer.getDataIndex(0);
+    T *ptr = (T *)this->buffer.getBegin();
     for(uint32_t i = 0; i < buffer.getSize(); ++i)
     {
         ptr->~T();
         ++ptr;
     }
+    VectorBase::~VectorBase();
 }
 
 
@@ -71,7 +70,8 @@ template <typename T>
 Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T))
 {
     CHECK_NO_POD_MACRO();
-    this->buffer.resize(size);
+    resize(size);
+
 }
 
 template <typename T>
@@ -140,6 +140,9 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
     this->~Vector<T>();
 
     new (&this->buffer) ByteBuffer(sizeof(T));
+    ASSERT(sizeof(T) == buffer.getDataSize());
+    if(vec.size() == 0)
+        return *this;
     buffer.resize(vec.size());
     T* ptr = (T *)this->buffer.getDataIndex(0);
     for(T &value : vec)
@@ -164,9 +167,7 @@ T & Vector<T>::operator[] (uint32_t index) const
 template <typename T>
 void Vector<T>::resize(uint32_t newSize)
 {
-    if(getSize() >= newSize)
-        return;
-    this->buffer.resize(newSize);
+    resize(newSize, T());
 }
 
 template <typename T>
@@ -176,10 +177,11 @@ void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
     if(currSize >= newSize)
         return;
 
-    resize(newSize);
-    T* ptr = &buffer.getDataIndex(currSize);
+    this->buffer.resize(newSize);
+    T* ptr = (T *)buffer.getDataIndex(currSize);
     while(currSize < newSize)
     {
+        new(ptr)(T);
         *ptr = defaultValue;
         ++ptr;
         ++currSize;
@@ -193,7 +195,7 @@ void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
 template <typename T>
 void Vector<T>::pushBack(const T &obj)
 {
-    this->buffer.insertIndex(this->buffer.getSize(), (uint8_t *)&obj);
+    this->buffer.insertIndex(this->buffer.getSize());
     new(&back())(T);
     back() = obj;
 }
@@ -204,7 +206,7 @@ template <typename T>
 void Vector<T>::insertIndex(uint32_t index, const T &obj)
 {
     ASSERT(index < getSize());
-    this->buffer.insertIndex(index, (const uint8_t *)&obj);
+    this->buffer.insertIndex(index);
     new(buffer.getDataIndex(index))(T);
     *((T *)buffer.getDataIndex(index))  = obj;
 }
@@ -218,3 +220,12 @@ void Vector<T>::removeIndex(uint32_t index)
     this->buffer.removeIndex(index);
 }
 
+template <typename T>
+void Vector<T>::clear()
+{
+    for(T &t : *this)
+    {
+        t->~T();
+    }
+    doClear();
+}

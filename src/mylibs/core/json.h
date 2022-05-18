@@ -4,9 +4,9 @@
 
 #include <container/arraysliceview.h>
 #include <container/podvector.h>
+#include <container/vector.h>
 
-#include <string>
-#include <vector>
+#include <string_view>
 
 struct JSONBlock
 {
@@ -31,7 +31,7 @@ struct JSONBlock
     bool isDouble() const { return jType == (VALID_TYPE | DOUBLE_TYPE); }
     bool isBool() const { return jType == (VALID_TYPE | BOOL_TYPE); }
 
-    bool parseString(std::string &outString) const;
+    bool parseString(std::string_view &outString) const;
     bool parseDouble(double &outDouble) const;
     bool parseFloat(float &outFloat) const;
     bool parseInt(int64_t &outInt) const;
@@ -52,13 +52,13 @@ struct JSONBlock
 
     bool print() const;
 
-    std::vector< JSONBlock > children;
-    std::string blockName;
+    Vector< JSONBlock > children;
+    std::string_view blockName;
 
     bool named = false;
 
     bool valueBool = false;
-    std::string valueStr;
+    std::string_view valueStr;
     double valueDbl = -1.0;
     int64_t valueInt = -1;
 

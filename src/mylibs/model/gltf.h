@@ -1,6 +1,7 @@
 #pragma once
 
-#include <vector>
+#include <container/podvector.h>
+#include <container/vector.h>
 #include <math/vector3.h>
 
 struct RenderModel
@@ -26,12 +27,12 @@ struct RenderModel
         float timePoint = 0.0f;
     };
 
-    std::vector<Vertex> vertices;
-    std::vector<AnimationVertex> animationVertices;
-    std::vector<uint32_t> indices;
+    PodVector<Vertex> vertices;
+    PodVector<AnimationVertex> animationVertices;
+    PodVector<uint32_t> indices;
 
 
-    std::vector<std::vector<AnimationPoint>> animationData;
+    Vector<PodVector<AnimationPoint>> animationData;
 };
 
 bool readGLTF(const char *filename, RenderModel &outModel);
