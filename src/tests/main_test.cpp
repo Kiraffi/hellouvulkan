@@ -44,6 +44,16 @@ void testMemory(bool forceDefrag)
         ++counter;
     }
 
+    PodVector<Foos> faas = foos;
+    foos.removeIndex(0);
+    counter = 0;
+    for(Foos &f : faas)
+    {
+        printf("counter-copy: %i: i: %i, j: %i\n", counter, f.i, f.j);
+        ++counter;
+    }
+
+
     defragMemory();
 }
 
@@ -189,11 +199,11 @@ void testVector()
 int main()
 {
     initMemory();
-    //testingMemory();
-    //testStackString();
-    //testMemoryStackString();
-    //testUniformBufferManager();
-    //testArraySliceView();
+    testingMemory();
+    testStackString();
+    testMemoryStackString();
+    testUniformBufferManager();
+    testArraySliceView();
 
     testVector();
     return 0;
