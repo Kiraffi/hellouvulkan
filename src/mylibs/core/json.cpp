@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <string>
 
 const JSONBlock JSONBlock::emptyBlock = { };
 
@@ -26,7 +27,10 @@ static bool printBlock(const JSONBlock &bl, int spaces = 0)
         printf("  ");
 
     if(!bl.blockName.empty())
-        printf("%s: ", &*bl.blockName.cbegin());
+    {
+        std::string s(bl.blockName);
+        printf("%s: ", s.c_str());
+    }
 
     if(!bl.isValid())
     {
