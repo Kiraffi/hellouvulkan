@@ -82,7 +82,7 @@ void ByteBuffer::insertIndex(uint32_t index)
     }
     uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
     // move everything forward, if not adding to last
-    if(index + 1 < bufferData.size)
+    if(index < bufferData.size)
     {
         memmove(startPtr + bufferData.dataTypeSize, startPtr,
             bufferData.dataTypeSize * (bufferData.size - index));
