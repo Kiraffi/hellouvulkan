@@ -1,4 +1,6 @@
 #include "json.h"
+
+#include <ctype.h>
 #include <string.h>
 
 const JSONBlock JSONBlock::emptyBlock = { };
@@ -24,7 +26,7 @@ static bool printBlock(const JSONBlock &bl, int spaces = 0)
         printf("  ");
 
     if(!bl.blockName.empty())
-        printf("%s: ", bl.blockName.cbegin());
+        printf("%s: ", &*bl.blockName.cbegin());
 
     if(!bl.isValid())
     {
