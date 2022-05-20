@@ -58,25 +58,6 @@ VkBufferMemoryBarrier bufferBarrier(const Buffer& buffer, VkAccessFlags srcAcces
 
 
 template <typename T>
-bool addToCopylist(const ArraySliceView<T>& objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
-{
-    ASSERT(objectToCopy.isValid());
-
-    if (!objectToCopy.isValid())
-        return false;
-
-    uint32_t objectSize = VkDeviceSize(sizeof(T)) * objectToCopy.size();
-    return addToCopylist(objectToCopy.data(), objectSize, targetBuffer, targetOffset);
-}
-
-template <typename T>
-bool addToCopylist(const ArraySliceView<T> &objectToCopy, UniformBufferHandle handle)
-{
-    return addToCopylist(objectToCopy, handle.manager->buffer->buffer, handle.getOffset());
-}
-
-
-template <typename T>
 bool addToCopylist(const T& objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
 {
     return addToCopylist(&objectToCopy, VkDeviceSize(sizeof(T)), targetBuffer, targetOffset);
@@ -88,6 +69,10 @@ bool addToCopylist(const T& objectToCopy, UniformBufferHandle handle)
     return addToCopylist(&objectToCopy, VkDeviceSize(sizeof(T)), handle.manager->buffer->buffer, handle.getOffset());
 }
 
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle);
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset);
+
 bool addToCopylist(const void *objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset);
 bool addImageBarrier(VkImageMemoryBarrier barrier);
-bool flushBarriers();
+bool flushBarriers(VkPipelineStageFlagBits srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);

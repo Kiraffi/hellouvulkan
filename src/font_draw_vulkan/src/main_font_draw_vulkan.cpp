@@ -392,7 +392,7 @@ void VulkanFontDraw::renderUpdate()
 {
     VulkanApp::renderUpdate();
 
-    addToCopylist(sliceFromPodVector(vertData), quadBuffer.buffer, 0);
+    addToCopylist(sliceFromPodVectorBytes(vertData), quadBuffer.buffer, 0);
 }
 
 void VulkanFontDraw::renderDraw()

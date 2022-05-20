@@ -21,6 +21,7 @@ add_library(MyLibraries
     "math/quaternion.cpp"
     "math/vector3.cpp"
 
+    "myvulkan/myvma.cpp"
     "myvulkan/myvulkan.cpp"
     "myvulkan/uniformbuffermanager.cpp"
     "myvulkan/vulkanresources.cpp"

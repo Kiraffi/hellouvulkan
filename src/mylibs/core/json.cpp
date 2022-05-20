@@ -178,7 +178,7 @@ static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, 
     if(l < 0 || index >= marker.endIndex || buffer [index] != '"')
         return false;
 
-    outStr = std::string_view(&buffer[startIndex], &buffer[startIndex] + l);
+    outStr = std::string_view(&buffer[startIndex], l);
 
     ++index;
     if(index + 1 < marker.endIndex && buffer[index] == ',')

@@ -6,22 +6,7 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkglob.h>
 
-#ifdef __clang__
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wtautological-compare" // comparison of unsigned expression < 0 is always false
-    #pragma clang diagnostic ignored "-Wunused-private-field"
-    #pragma clang diagnostic ignored "-Wunused-parameter"
-    #pragma clang diagnostic ignored "-Wmissing-field-initializers"
-    #pragma clang diagnostic ignored "-Wnullability-completeness"
-#endif
-
-#define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-
-#ifdef __clang__
-    #pragma clang diagnostic pop
-#endif
-
 
 bool initializeVMA()
 {
@@ -143,7 +128,9 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     void* data = nullptr;
     if (memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        VK_CHECK(vkMapMemory(vulk.device, allocation->GetMemory(), 0, size, 0, &data));
+        VK_CHECK(vmaMapMemory(vulk.allocator, allocation, &data));
+//        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
+        //VK_CHECK(vkMapMemory(vulk.device, allocation->GetMemory(), 0, size, 0, &data));
 
         //VK_CHECK(vkMapMemory(vulk.device, result.deviceMemory, 0, size, 0, &data));
         ASSERT(data);
@@ -165,7 +152,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
 {
 
     ASSERT(data != nullptr || dataSize > 0u);
-    VkDeviceSize size = vulk.scratchBuffer.allocation->GetSize();
+    VkDeviceSize size = vulk.scratchBuffer.size;
     ASSERT(size);
 
     ASSERT(size >= width * height * pixelSize);
@@ -245,7 +232,7 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
     ASSERT(vulk.scratchBuffer.data);
     ASSERT(size);
 
-    ASSERT(vulk.scratchBuffer.allocation->GetSize() >= size);
+    ASSERT(vulk.scratchBuffer.size >= size);
 
     memcpy((unsigned char*)vulk.scratchBuffer.data + offset, data, size);
     offset += size;
@@ -257,8 +244,8 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
 void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
 {
     ASSERT(vulk.scratchBuffer.data);
-    ASSERT(vulk.scratchBuffer.allocation->GetSize() >= size);
-    ASSERT(gpuBuffer.allocation->GetSize() >= size);
+    ASSERT(vulk.scratchBuffer.size >= size);
+    ASSERT(gpuBuffer.size >= size);
 
     beginSingleTimeCommands();
 
@@ -275,6 +262,8 @@ void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
 
 void destroyBuffer(Buffer& buffer)
 {
+    if(buffer.data)
+        vmaUnmapMemory(vulk.allocator, buffer.allocation);
     vmaDestroyBuffer(vulk.allocator, buffer.buffer, buffer.allocation);
     buffer.buffer = 0;
     buffer.data = nullptr;
@@ -384,9 +373,24 @@ VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask
 
 VkBufferMemoryBarrier bufferBarrier(const Buffer& buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask)
 {
-    return bufferBarrier(buffer.buffer, srcAccessMask, dstAccessMask, buffer.allocation->GetSize());
+    return bufferBarrier(buffer.buffer, srcAccessMask, dstAccessMask, buffer.size);
 }
 
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
+{
+    ASSERT(objectToCopy.isValid());
+
+    if (!objectToCopy.isValid())
+        return false;
+
+    uint32_t objectSize = VkDeviceSize(objectToCopy.dataTypeSize) * objectToCopy.size();
+    return addToCopylist(objectToCopy.data(), objectSize, targetBuffer, targetOffset);
+}
+
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle)
+{
+    return addToCopylist(objectToCopy, handle.manager->buffer->buffer, handle.getOffset());
+}
 
 bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset)
 {
@@ -418,14 +422,14 @@ bool addImageBarrier(VkImageMemoryBarrier barrier)
     return true;
 }
 
-bool flushBarriers()
+bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits dstStageMask)
 {
     if (vulk.bufferMemoryBarriers.size() == 0 && vulk.imageMemoryBarriers.size() == 0)
         return true;
     const VkImageMemoryBarrier* imageBarrier = vulk.imageMemoryBarriers.size() > 0 ? vulk.imageMemoryBarriers.data() : nullptr;
     const VkBufferMemoryBarrier* bufferBarrier = vulk.bufferMemoryBarriers.size() > 0 ? vulk.bufferMemoryBarriers.data() : nullptr;
 
-    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    vkCmdPipelineBarrier(vulk.commandBuffer, srcStageMask, dstStageMask,
         VK_DEPENDENCY_BY_REGION_BIT,
         0, nullptr,
         vulk.bufferMemoryBarriers.size(), bufferBarrier,

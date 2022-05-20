@@ -56,7 +56,6 @@ Vector<T>::~Vector()
         ptr->~T();
         ++ptr;
     }
-    VectorBase::~VectorBase();
 }
 
 

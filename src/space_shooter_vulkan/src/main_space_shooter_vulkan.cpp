@@ -586,8 +586,8 @@ void SpaceShooter::renderUpdate()
 
     fontSystem.addText(text, Vector2(100.0f, 10.0f), Vec2(8.0f, 12.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
 
-    addToCopylist(sliceFromPodVector(gpuModelInstances), instanceBuffer.buffer, 0);
-    addToCopylist(sliceFromPodVector(gpuModelIndices), indexDataBufferModels.buffer, 0);
+    addToCopylist(sliceFromPodVectorBytes(gpuModelInstances), instanceBuffer.buffer, 0);
+    addToCopylist(sliceFromPodVectorBytes(gpuModelIndices), indexDataBufferModels.buffer, 0);
 }
 
 void SpaceShooter::renderDraw()

@@ -201,7 +201,7 @@ void FontRenderSystem::update()
     if (vertData.size() == 0)
         return;
 
-    addToCopylist(sliceFromPodVector( vertData ), letterDataBufferHandle);
+    addToCopylist(sliceFromPodVectorBytes( vertData ), letterDataBufferHandle);
 }
 
 void FontRenderSystem::reset()
