@@ -1,34 +1,18 @@
 #include "gltf.h"
 
+#include <container/arraysliceview.h>
+
 #include <core/general.h>
 #include <core/json.h>
 
 #include <math/matrix.h>
 #include <math/quaternion.h>
 
-struct GltfMemoryRange
-{
-    uint8_t *start = nullptr;
-    uint8_t *end = nullptr;
-};
-
-template<typename T>
-static GltfMemoryRange getMemoryRange(const PodVector<T> &vec)
-{
-    return { .start = ( uint8_t * )( &*vec.begin() ), .end = ( uint8_t * )( &*vec.begin() + vec.size() ) };
-}
-
-template<typename T>
-static GltfMemoryRange getMemoryRange(const Vector<T> &vec)
-{
-    return { .start = ( uint8_t * )( &*vec.begin() ), .end = ( uint8_t * )( &*vec.begin() + vec.size() ) };
-}
 
 struct GltfData;
 
 static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
-        uint32_t writeStartOffsetInBytes, uint32_t writeStrideInBytes,
-        GltfMemoryRange memoryRange);
+        uint32_t writeStartOffsetInBytes, ArraySliceViewBytes memoryRange);
 
 static uint32_t findAccessorIndexAndParseTimeStamps(
     const GltfData &data, uint32_t samplerIndex,
@@ -197,7 +181,6 @@ static bool parseAnimationChannel(const GltfData &data,
 
     uint32_t animationValueOffset = offsetof(T, value);
     uint32_t timeStampOffset = offsetof(T, timeStamp);
-    uint32_t stride = sizeof(T);
 
     for(const GltfAnimationNode &node : data.animationNodes)
     {
@@ -233,18 +216,16 @@ static bool parseAnimationChannel(const GltfData &data,
             return false;
 
         outVector.resize(timeStampAccessor.count);
-        GltfMemoryRange memoryRange = getMemoryRange(outVector);
+        ArraySliceViewBytes memoryRange = sliceFromPodVectorBytes(outVector);
         if(!gltfReadIntoBuffer(data, sampler.outputIndex,
-            animationValueOffset, stride,
-            memoryRange))
+            animationValueOffset, memoryRange))
             return false;
         if(!gltfReadIntoBuffer(data, sampler.inputIndex,
-            animationValueOffset, stride,
-            memoryRange))
+            timeStampOffset, memoryRange))
             return false;
 
-        return true;
     }
+    return true;
 }
 
 
@@ -275,8 +256,7 @@ static uint32_t findAccessorIndexAndParseTimeStamps(
         timeStamps.resize(accessor.count);
 
         if(!gltfReadIntoBuffer(data, sampler.inputIndex,
-            0, sizeof(float),
-            getMemoryRange(timeStamps)))
+            0, sliceFromPodVectorBytes(timeStamps)))
             return ~0u;
 
         // merge the timestamps
@@ -325,8 +305,7 @@ static uint32_t findAccessorIndexAndParseTimeStamps(
 // Reads u32, from u8, u16, u32
 // doesnt handle i8, i16 nor i32 reading, should probably just read them into i32.
 static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
-        uint32_t writeStartOffsetInBytes, uint32_t writeStrideInBytes,
-        GltfMemoryRange memoryRange)
+        uint32_t writeStartOffsetInBytes, ArraySliceViewBytes memoryRange)
 {
     if(index >= data.accessors.size())
         return false;
@@ -383,15 +362,15 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
             return false;
     }
 
-    uint8_t *bufferOut = memoryRange.start + writeStartOffsetInBytes;
+    uint8_t *bufferOut = memoryRange.begin() + writeStartOffsetInBytes;
     if(accessor.count == 0u)
         return false;
 
     // Since we write either float or uint32_t size of them is 4, check if we would write out of
     // buffer.
-    uint8_t *countedLast = bufferOut + ( accessor.count - 1 ) * writeStrideInBytes +
+    uint8_t *countedLast = bufferOut + ( accessor.count - 1 ) * memoryRange.dataTypeSize +
         sizeof(uint32_t) * componentCount;
-    if(countedLast > memoryRange.end)
+    if(countedLast > memoryRange.end())
         return false;
 
     // Reading f32, normalized u16 and normalized u8 as float.
@@ -410,7 +389,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
                     return false;
                 }
                 // float* ptr + 1 adds 4
-                if(writeValue + 1 > ( void * )memoryRange.end)
+                if(writeValue + 1 > ( void * )memoryRange.end())
                 {
                     ASSERT(false && "Trying to write past writeBufferEnd");
                     return false;
@@ -436,7 +415,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
                 ++writeValue;
                 ptr += componentTypeBitCount;
             }
-            bufferOut += writeStrideInBytes;
+            bufferOut += memoryRange.dataTypeSize;
         }
     }
     // i8, u8, i16, u16, i32, u32. as uint32_t
@@ -456,7 +435,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
                 if(ptr + componentTypeBitCount > endPtr)
                     return false;
                 // uint32_t* ptr + 1 adds 4
-                if(writeValue + 1 > (void *)memoryRange.end)
+                if(writeValue + 1 > (void *)memoryRange.end())
                     return false;
 
                 if(componentTypeBitCount == 4)
@@ -478,7 +457,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
                 ptr += componentTypeBitCount;
                 ++writeValue;
             }
-            bufferOut += writeStrideInBytes;
+            bufferOut += memoryRange.dataTypeSize;
         }
     }
     else
@@ -895,25 +874,25 @@ bool readGLTF(const char *filename, RenderModel &outModel)
         outModel.vertices.resize(vertexCount);
         outModel.indices.resize(indicesCount);
 
-        GltfMemoryRange verticesMemoryRange = getMemoryRange(outModel.vertices);
+        ArraySliceViewBytes verticesMemoryRange = sliceFromPodVectorBytes(outModel.vertices);
         if(!gltfReadIntoBuffer(data, node.positionIndex,
-            offsetof(RenderModel::Vertex, pos), sizeof(RenderModel::Vertex),
+            offsetof(RenderModel::Vertex, pos),
             verticesMemoryRange))
             return false;
 
         if(!gltfReadIntoBuffer(data, node.normalIndex,
-            offsetof(RenderModel::Vertex, norm), sizeof(RenderModel::Vertex),
+            offsetof(RenderModel::Vertex, norm),
             verticesMemoryRange))
             return false;
 
         if(!gltfReadIntoBuffer(data, node.colorIndex,
-            offsetof(RenderModel::Vertex, color), sizeof(RenderModel::Vertex),
+            offsetof(RenderModel::Vertex, color),
             verticesMemoryRange))
             return false;
 
 
-        if(!gltfReadIntoBuffer(data, node.indicesIndex, 0, sizeof(uint32_t),
-            getMemoryRange(outModel.indices)))
+        if(!gltfReadIntoBuffer(data, node.indicesIndex, 0,
+            sliceFromPodVectorBytes(outModel.indices)))
             return false;
 
         // Animation vertices?
@@ -937,13 +916,13 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                 return false;
 
             if(!gltfReadIntoBuffer(data, node.weightIndex,
-                offsetof(RenderModel::AnimationVertex, weights), sizeof(RenderModel::AnimationVertex),
-                getMemoryRange(outModel.animationVertices)))
+                offsetof(RenderModel::AnimationVertex, weights),
+                sliceFromPodVectorBytes(outModel.animationVertices)))
                 return false;
 
             if(!gltfReadIntoBuffer(data, node.jointsIndex,
-                offsetof(RenderModel::AnimationVertex, boneIndices), sizeof(RenderModel::AnimationVertex),
-                getMemoryRange(outModel.animationVertices)))
+                offsetof(RenderModel::AnimationVertex, boneIndices),
+                sliceFromPodVectorBytes(outModel.animationVertices)))
                 return false;
 
         }
@@ -960,8 +939,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             matrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
 
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
-                0, sizeof(Matrix),
-                getMemoryRange(matrices)))
+                0, sliceFromPodVectorBytes(matrices)))
                 return false;
 
         }
@@ -1008,10 +986,37 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                 }
             }
         }
+        outModel.animStartTime = 1e10;
+        outModel.animEndTime = -1e10;
+
+        for(const auto& bones : outModel.animationPosData)
         {
+            for(const auto& anim : bones)
+            {
+                outModel.animStartTime = std::min(outModel.animStartTime, anim.timeStamp);
+                outModel.animEndTime = std::max(outModel.animEndTime, anim.timeStamp);
+            }
+        }
+
+        for(const auto& bones : outModel.animationRotData)
+        {
+            for(const auto& anim : bones)
+            {
+                outModel.animStartTime = std::min(outModel.animStartTime, anim.timeStamp);
+                outModel.animEndTime = std::max(outModel.animEndTime, anim.timeStamp);
+            }
+        }
+
+        for(const auto& bones : outModel.animationScaleData)
+        {
+            for(const auto& anim : bones)
+            {
+                outModel.animStartTime = std::min(outModel.animStartTime, anim.timeStamp);
+                outModel.animEndTime = std::max(outModel.animEndTime, anim.timeStamp);
+            }
         }
     }
-
+/*
     const ArraySliceView<RenderModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
     for(uint32_t i = 0; i < vertices.size(); ++i)
     {
@@ -1052,6 +1057,58 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             printf("Matrix: %i\n", j);
             printMatrix(skin.inverseMatrices[j], "");
         }
+    }
+*/
+    return true;
+}
+
+
+bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
+    PodVector<Matrix> &outMatrices)
+{
+    time -= model.animStartTime;
+    if(time < 0.0f)
+        return false;
+
+    if(model.animStartTime < model.animEndTime)
+    {
+        while(time > model.animEndTime)
+            time -= model.animEndTime - model.animStartTime;
+    }
+    else
+    {
+        time = model.animStartTime;
+    }
+
+    outMatrices.resize(model.animationPosData.size());
+
+    Vec3 pos;
+    Quat rot;
+    Vec3 scale;
+    //auto lam = [](float prevTime, float currTime)
+    for(uint32_t boneIndex = 0u; boneIndex < model.animationPosData.size(); ++boneIndex)
+    {
+        const PodVector<RenderModel::BoneAnimationPosOrScale> &posTime = model.animationPosData[boneIndex];
+        for(uint32_t i = 0; i < posTime.size(); ++i)
+        {
+            uint32_t nextI = std::min(i + 1, posTime.size() - 1);
+            const RenderModel::BoneAnimationPosOrScale &prev = posTime[i];
+            const RenderModel::BoneAnimationPosOrScale &next = posTime[nextI];
+            if(next.timeStamp <= time || i == nextI)
+            {
+                // laske min time, laske erotus, laske osamäärä
+                time = std::max(prev.timeStamp, time);
+                time = std::min(next.timeStamp, time);
+                float duration = (next.timeStamp - prev.timeStamp);
+
+                float frac = duration > 0.0f ? (time - prev.timeStamp) / duration : 1.0f;
+                pos = prev.value * (1.0f - frac) + next.value * frac;
+                break;
+            }
+        }
+        uint32_t startIndex = 0u;
+        uint32_t endIndex = 0u;
+
     }
 
     return true;

@@ -2,6 +2,8 @@
 
 #include <container/podvector.h>
 #include <container/vector.h>
+#include <math/matrix.h>
+#include <math/quaternion.h>
 #include <math/vector3.h>
 
 struct RenderModel
@@ -25,7 +27,7 @@ struct RenderModel
     };
     struct BoneAnimationRot
     {
-        Vec4 value;
+        Quat value;
         float timeStamp = 0.0f;
     };
 
@@ -37,6 +39,13 @@ struct RenderModel
     Vector<PodVector<BoneAnimationRot>> animationRotData;
     Vector<PodVector<BoneAnimationPosOrScale>> animationScaleData;
     uint32_t boneCount = 0u;
+
+    float animStartTime = 0.0f;
+    float animEndTime = 0.0f;
 };
+
+bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
+    PodVector<Matrix> &outMatrices);
+
 
 bool readGLTF(const char *filename, RenderModel &outModel);

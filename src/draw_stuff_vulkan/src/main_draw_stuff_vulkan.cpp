@@ -47,9 +47,12 @@ public:
     Camera camera;
 
     UniformBufferHandle uniformDataHandle;
+    UniformBufferHandle animVertexDataHandle;
     VkShaderModule vertShaderModule = { };
     VkShaderModule fragShaderModule = { };
-    Buffer quadBuffer;
+
+    Buffer vertexBuffer;
+    Buffer animationVertexBuffer;
     Buffer indexDataBuffer;
 
     PipelineWithDescriptors graphicsPipeline;
@@ -72,7 +75,8 @@ VulkanDrawStuff::~VulkanDrawStuff()
     destroyDescriptor(graphicsPipeline.descriptor);
     destroyPipeline(graphicsPipeline);
 
-    destroyBuffer(quadBuffer);
+    destroyBuffer(vertexBuffer);
+    destroyBuffer(animationVertexBuffer);
     destroyBuffer(indexDataBuffer);
 
     destroyImage(renderColorImage);
@@ -95,24 +99,32 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     //bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
     //bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
-    bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
+    //bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
+    bool readSuccess = readGLTF("assets/models/animatedthing_resaved.gltf", renderModel);
 
     printf("gltf read success: %i\n", readSuccess);
     if (!readSuccess)
         return false;
 
-    vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d.vert.spv");
+    //vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d.vert.spv");
+    //ASSERT(vertShaderModule);
+    vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv");
     ASSERT(vertShaderModule);
 
     fragShaderModule = loadShader("assets/shader/vulkan_new/basic3d.frag.spv");
     ASSERT(fragShaderModule);
 
     uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
-
-    quadBuffer = createBuffer(8u * 1024u * 1024u,
+    animVertexDataHandle = vulk.uniformBufferManager.reserveHandle();
+    vertexBuffer = createBuffer(8u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
+
+    animationVertexBuffer = createBuffer(8u * 1024u * 1024u,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Animation vertex buffer");
 
     indexDataBuffer = createBuffer(32 * 1024 * 1024,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -124,14 +136,15 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
 
     {
-        uint32_t offset = 0;
-        offset = uploadToScratchbuffer(( void * )renderModel.indices.data(), size_t(sizeof(renderModel.indices[0]) * renderModel.indices.size()), offset);
-        uploadScratchBufferToGpuBuffer(indexDataBuffer, offset);
 
-        offset = 0;
-        offset = uploadToScratchbuffer((void*)renderModel.vertices.data(), size_t(sizeof(renderModel.vertices[0]) * renderModel.vertices.size()), offset);
-        uploadScratchBufferToGpuBuffer(quadBuffer, offset);
+        beginSingleTimeCommands();
 
+        addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, 0u);
+        addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, 0u);
+        addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 0u);
+        flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+        endSingleTimeCommands();
 
         indicesCount = renderModel.indices.size();
     }
@@ -149,7 +162,10 @@ bool VulkanDrawStuff::createPipelines()
     {
         DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
         DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
-        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u },
+        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u },
+
+        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3u },
+        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4u },
     });
 
     if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
@@ -170,7 +186,10 @@ bool VulkanDrawStuff::createPipelines()
         {
             DescriptorInfo(vulk.renderFrameBufferHandle),
             DescriptorInfo(uniformDataHandle),
-            DescriptorInfo(quadBuffer.buffer, 0u, quadBuffer.size),
+            DescriptorInfo(animVertexDataHandle),
+
+            DescriptorInfo(vertexBuffer.buffer, 0u, vertexBuffer.size),
+            DescriptorInfo(animationVertexBuffer.buffer, 0u, animationVertexBuffer.size),
         });
 
     pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
@@ -256,14 +275,22 @@ void VulkanDrawStuff::renderUpdate()
     frameBufferData.mvp = frameBufferData.camMat * frameBufferData.viewProj;
 
     addToCopylist(frameBufferData, uniformDataHandle);
-    addImageBarrier(imageBarrier(renderColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+
+
+    PodVector<Matrix> animationMatrices;
+    animationMatrices.resize(256, Matrix());
+
+    addToCopylist(sliceFromPodVectorBytes(animationMatrices), animVertexDataHandle);
 }
 
 void VulkanDrawStuff::renderDraw()
 {
     const SwapChain& swapchain = vulk.swapchain;
+
+    addImageBarrier(imageBarrier(renderColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+
     addImageBarrier(imageBarrier(renderDepthImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
