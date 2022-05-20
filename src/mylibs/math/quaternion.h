@@ -21,10 +21,17 @@ struct Quaternion
 
 };
 
+Quaternion operator*(const Quaternion &q, float t);
+Quaternion operator*(float t, const Quaternion &q);
+
 Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle);
 Quaternion getQuaternionFromNormalizedVectors(const Vector3 &from, const Vector3 &toVector);
 
+
 Vector3 rotateVector(const Vector3 &v, const Quaternion &q);
+
+float dot(const Quaternion &q1, const Quaternion &q2);
+Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t);
 
 void printQuaternion(const Quaternion &q, const char name[]);
 

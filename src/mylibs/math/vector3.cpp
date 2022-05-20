@@ -133,10 +133,13 @@ float len(const Vector3 &a)
 Vector3 normalize(const Vector3 &a)
 {
     float l = len(a);
-    ASSERT(l != 0.0f);
-    float perLen = 1.0f / l;
-    Vector3 result(a.x * perLen, a.y * perLen, a.z * perLen);
-
+    Vector3 result;
+    if(l > 0.0f)
+    {
+        //ASSERT(l != 0.0f);
+        float perLen = 1.0f / l;
+        result = Vec3(a.x * perLen, a.y * perLen, a.z * perLen);
+    }
     return result;
 }
 

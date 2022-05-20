@@ -43,6 +43,8 @@ struct Matrix
 
 Matrix getMatrixFromRotation(const Vector3 &r, const Vector3 &u, const Vector3 &f);
 Matrix getMatrixFromQuaternion(const Quaternion &quat);
+Matrix getMatrixFromQuaternionLH(const Quaternion &quat);
+
 Matrix getMatrixFromScale(const Vector3 &scale);
 Matrix getMatrixFromTranslation(const Vector3 &pos);
 Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPlane);

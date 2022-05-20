@@ -52,15 +52,16 @@ void main()
 {
     VData data = vertexValues[gl_VertexIndex];
     AnimationVData animData = animationVertexValues[gl_VertexIndex];
+    vec4 pos = vec4(data.pos.xyz, 1.0f);
 
     mat4 boneTransform = animationVertices[animData.boneIndices.x] * animData.weights.x;
     boneTransform += animationVertices[animData.boneIndices.y] * animData.weights.y;
     boneTransform += animationVertices[animData.boneIndices.z] * animData.weights.z;
     boneTransform += animationVertices[animData.boneIndices.w] * animData.weights.w;
-
-    mat4 finalMat = mvp * matrix_padding * boneTransform;
-    gl_Position = finalMat * vec4(data.pos.xyz, 1.0f);
-    vec3 norm =  (matrix_padding * vec4(data.nor.xyz, 0.0f)).xyz;
+    pos = boneTransform * vec4(pos.xyz, 1.0f);
+    mat4 finalMat = mvp * matrix_padding;
+    gl_Position = finalMat * vec4(pos.xyz, 1.0f);
+    vec3 norm =  (matrix_padding * vec4(pos.xyz, 0.0f)).xyz;
     vec3 sunDir = vec3(0.5f, -1.0f, 0.5f);
-    colOut = data.color * 0.75f + 0.25f * (-dot(norm, sunDir));
+    colOut = data.color; // * 0.75f + 0.25f * (-dot(norm, sunDir));
 }

@@ -45,6 +45,7 @@ public:
 
 public:
     Camera camera;
+    RenderModel renderModel;
 
     UniformBufferHandle uniformDataHandle;
     UniformBufferHandle animVertexDataHandle;
@@ -95,19 +96,17 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
 
 
-    RenderModel renderModel;
 
     //bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
     //bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
-    //bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
-    bool readSuccess = readGLTF("assets/models/animatedthing_resaved.gltf", renderModel);
+    bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
+    //bool readSuccess = readGLTF("assets/models/animatedthing_resaved.gltf", renderModel);
 
     printf("gltf read success: %i\n", readSuccess);
     if (!readSuccess)
         return false;
 
     //vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d.vert.spv");
-    //ASSERT(vertShaderModule);
     vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv");
     ASSERT(vertShaderModule);
 
@@ -141,7 +140,8 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
         addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, 0u);
         addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, 0u);
-        addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 0u);
+        if(renderModel.animationVertices.size() > 0)
+            addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 0u);
         flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
         endSingleTimeCommands();
@@ -230,20 +230,6 @@ void VulkanDrawStuff::logicUpdate()
 
     checkCameraKeypresses(dt, camera);
 
-    Transform trans;
-    trans.pos = Vec3(3.0f, 3.0f, 13.0f);
-    static float rotationAmount = Pi * 0.25f;
-
-    trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
-    Vec3 tmp = rotateVector(Vector3(0.0f, 0.0f, 1.0f), trans.rot);
-    trans.scale = Vec3(1.0f, 1.0f, 1.0f);
-
-    Transform trans2;
-    trans2.pos = Vec3(5.0f, 0.0f, 0.0f);
-    rotationAmount += 1.5f * dt;
-
-    //b.padding = getModelMatrix(trans); // *getModelMatrix(trans);
-
     camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
 }
 
@@ -274,12 +260,26 @@ void VulkanDrawStuff::renderUpdate()
     frameBufferData.viewProj = camera.perspectiveProjectionRH();
     frameBufferData.mvp = frameBufferData.camMat * frameBufferData.viewProj;
 
+    Transform trans;
+    trans.pos = Vec3(0.0f, 0.0f, -5.0f);
+    static float rotationAmount = Pi * 0.25f;
+
+    trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
+    Vec3 tmp = rotateVector(Vector3(0.0f, 0.0f, 1.0f), trans.rot);
+    trans.scale = Vec3(1.0f, 1.0f, 1.0f);
+
+    //rotationAmount += 1.5f * dt;
+
+    //frameBufferData.padding = getModelMatrix(trans); // *getModelMatrix(trans);
+
     addToCopylist(frameBufferData, uniformDataHandle);
 
 
     PodVector<Matrix> animationMatrices;
-    animationMatrices.resize(256, Matrix());
-
+    if(!evaluateAnimation(renderModel, 0, this->getTime(), animationMatrices))
+    {
+        animationMatrices.resize(256, Matrix());
+    }
     addToCopylist(sliceFromPodVectorBytes(animationMatrices), animVertexDataHandle);
 }
 

@@ -4,6 +4,7 @@
 
 #include <core/general.h>
 #include <core/json.h>
+#include <core/transform.h>
 
 #include <math/matrix.h>
 #include <math/quaternion.h>
@@ -64,6 +65,7 @@ struct GltfSceneNode
     std::string_view name;
     Quat rot;
     Vec3 trans;
+    Vec3 scale{1.0f, 1.0f, 1.0f};
     uint32_t meshIndex = ~0u;
     uint32_t skinIndex = ~0u;
     PodVector<uint32_t> childNodeIndices;
@@ -87,8 +89,6 @@ struct GltfSkinNode
     std::string_view name;
     PodVector<uint32_t> joints;
     uint32_t inverseMatricesIndex = ~0u;
-
-    PodVector<Matrix> inverseMatrices;
 };
 
 struct GltfAnimationNode
@@ -508,7 +508,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
         if(!meshBlock.isValid() || meshBlock.getChildCount() != 1)
             return false;
 
-        data.meshes.resize(meshBlock.getChildCount());
+        data.meshes.resize(meshBlock.getChildCount(), GltfMeshNode());
 
         for(int i = 0; i < meshBlock.getChildCount(); ++i)
         {
@@ -570,6 +570,10 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             transBlock.getChild(1).parseNumber(node.trans.y);
             transBlock.getChild(2).parseNumber(node.trans.z);
 
+            const JSONBlock &scaleBlock = child.getChild("scale");
+            scaleBlock.getChild(0).parseNumber(node.scale.x);
+            scaleBlock.getChild(1).parseNumber(node.scale.y);
+            scaleBlock.getChild(2).parseNumber(node.scale.z);
 
             const JSONBlock& childrenBlock = child.getChild("children");
             for(const auto &childBlock : childrenBlock.children)
@@ -924,6 +928,15 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                 offsetof(RenderModel::AnimationVertex, boneIndices),
                 sliceFromPodVectorBytes(outModel.animationVertices)))
                 return false;
+            /*
+            for(const auto &v : outModel.animationVertices)
+            {
+                printf("boneind: [%u, %u, %u, %u], weight: [%.3f, %.3f, %.3f, %.3f]\n",
+                    v.boneIndices[0], v.boneIndices[1], v.boneIndices[2], v.boneIndices[3],
+                    v.weights.x, v.weights.y, v.weights.z, v.weights.w);
+            }
+            */
+
 
         }
         for(uint32_t i = 0; i < data.skins.size(); ++i)
@@ -935,13 +948,12 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
                 return false;
 
-            PodVector<Matrix> &matrices = skinNode.inverseMatrices;
-            matrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
+            PodVector<Matrix> &inverseMatrices = outModel.inverseMatrices;
+            inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
 
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
-                0, sliceFromPodVectorBytes(matrices)))
+                0, sliceFromPodVectorBytes(inverseMatrices)))
                 return false;
-
         }
 
         // Parse animationdata
@@ -951,6 +963,8 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             outModel.animationPosData.resize(jointCount);
             outModel.animationRotData.resize(jointCount);
             outModel.animationScaleData.resize(jointCount);
+            outModel.bones.resize(jointCount);
+
             for(uint32_t boneIndex = 0u; boneIndex < jointCount; ++boneIndex)
             {
                 PodVector<RenderModel::BoneAnimationPosOrScale> &bonePosVector
@@ -968,7 +982,9 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                 uint32_t scaleSamplerIndex =  getSamplerIndex(data, jointIndex,
                     GltfAnimationNode::Channel::ChannelPath::SCALE);
 
-
+                ASSERT(jointIndex < data.nodes.size());
+                if(jointIndex >= data.nodes.size())
+                    return false;
                 if(!parseAnimationChannel(data, positionSamplerIndex,
                     GltfBufferComponentCountType::VEC3, bonePosVector))
                 {
@@ -979,10 +995,45 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                 {
                     ASSERT(false && "failed to parse animation channel for position");
                 }
-                if(!parseAnimationChannel(data, positionSamplerIndex,
+                if(!parseAnimationChannel(data, scaleSamplerIndex,
                     GltfBufferComponentCountType::VEC3, boneScaleVector))
                 {
                     ASSERT(false && "failed to parse animation channel for position");
+                }
+
+                /*
+                for(const auto &v : bonePosVector)
+                {
+                    printf("time: %f, pos: [%f, %f, %f]\n",
+                        v.timeStamp, v.value.x, v.value.y, v.value.z);
+                }
+                */
+                /*
+                for(const auto &v : boneRotVector)
+                {
+                    printf("time: %f, rot: [%f, %f, %f], [%f]\n",
+                        v.timeStamp, v.value.v.x, v.value.v.y, v.value.v.z, v.value.w);
+                }
+                */
+                /*
+                for(const auto &v : boneScaleVector)
+                {
+                    printf("time: %f, scale: [%f, %f, %f]\n",
+                        v.timeStamp, v.value.x, v.value.y, v.value.z);
+                }
+                */
+
+                for(uint32_t index : data.nodes[jointIndex].childNodeIndices)
+                {
+                    const auto &joints = data.skins[0].joints;
+                    for(uint32_t ind = 0u; ind < joints.size(); ++ind)
+                    {
+                        if(joints[ind] == index)
+                        {
+                            outModel.bones[boneIndex].childrenIndices.pushBack(ind);
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -1020,9 +1071,9 @@ bool readGLTF(const char *filename, RenderModel &outModel)
     const ArraySliceView<RenderModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
     for(uint32_t i = 0; i < vertices.size(); ++i)
     {
-        printf("vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
-        printf("vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].norm.x, vertices[i].norm.y, vertices[i].norm.z);
-        printf("vert: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
+        printf("pos vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
+        printf("nor vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].norm.x, vertices[i].norm.y, vertices[i].norm.z);
+        printf("col vert: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
     }
 
     const ArraySliceView<RenderModel::AnimationVertex> animationVertices(
@@ -1062,12 +1113,85 @@ bool readGLTF(const char *filename, RenderModel &outModel)
     return true;
 }
 
+static bool evaluateBone(const RenderModel &model, uint32_t boneIndex,
+    float time, const Matrix &parentMatrix, PodVector<Matrix> &outMatrices)
+{
+    if(boneIndex >= model.bones.size())
+        return false;
+
+    Vec3 pos;
+    Quat rot;
+    Vec3 scale;
+
+    auto getInterpolationValue = [](float prevTime, float nextTime, float currTime)
+    {
+        currTime = std::max(prevTime, currTime);
+        currTime = std::min(nextTime, currTime);
+        float duration = (nextTime - prevTime);
+
+        float frac = duration > 0.0f ? (currTime - prevTime) / duration : 1.0f;
+        return frac;
+    };
+
+    const PodVector<RenderModel::BoneAnimationPosOrScale> &posTime = model.animationPosData[boneIndex];
+    for(uint32_t i = 0; i < posTime.size(); ++i)
+    {
+        uint32_t nextI = std::min(i + 1, posTime.size() - 1);
+        const RenderModel::BoneAnimationPosOrScale &prev = posTime[i];
+        const RenderModel::BoneAnimationPosOrScale &next = posTime[nextI];
+        if((time <= next.timeStamp) || i == nextI)
+        {
+            float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
+            pos = prev.value * (1.0f - frac) + next.value * frac;
+            break;
+        }
+    }
+
+    const PodVector<RenderModel::BoneAnimationRot> &rotTime = model.animationRotData[boneIndex];
+    for(uint32_t i = 0; i < rotTime.size(); ++i)
+    {
+        uint32_t nextI = std::min(i + 1, rotTime.size() - 1);
+        const RenderModel::BoneAnimationRot &prev = rotTime[i];
+        const RenderModel::BoneAnimationRot &next = rotTime[nextI];
+        if((time <= next.timeStamp) || i == nextI)
+        {
+            float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
+            rot = slerp(prev.value, next.value, frac);
+            break;
+        }
+    }
+
+    const PodVector<RenderModel::BoneAnimationPosOrScale> &scaleTime = model.animationScaleData[boneIndex];
+    for(uint32_t i = 0; i < scaleTime.size(); ++i)
+    {
+        uint32_t nextI = std::min(i + 1, scaleTime.size() - 1);
+        const RenderModel::BoneAnimationPosOrScale &prev = scaleTime[i];
+        const RenderModel::BoneAnimationPosOrScale &next = scaleTime[nextI];
+        if((time <= next.timeStamp) || i == nextI)
+        {
+            float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
+            scale = prev.value * (1.0f - frac) + next.value * frac;
+            break;
+        }
+    }
+    Matrix res = getModelMatrix({pos, rot, scale});
+    Matrix newParent = res * parentMatrix ;
+    // Something is definitely wrong in here, the order doesn't make sense
+    outMatrices[boneIndex] = model.inverseMatrices[boneIndex] * newParent;
+    for(uint32_t childIndex : model.bones[boneIndex].childrenIndices)
+    {
+        bool success = evaluateBone(model, childIndex, time, newParent, outMatrices);
+        if(!success)
+            return false;
+    }
+    return true;
+}
 
 bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
     PodVector<Matrix> &outMatrices)
 {
     time -= model.animStartTime;
-    if(time < 0.0f)
+    if(time < 0.0f || model.bones.size() == 0)
         return false;
 
     if(model.animStartTime < model.animEndTime)
@@ -1081,35 +1205,5 @@ bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
     }
 
     outMatrices.resize(model.animationPosData.size());
-
-    Vec3 pos;
-    Quat rot;
-    Vec3 scale;
-    //auto lam = [](float prevTime, float currTime)
-    for(uint32_t boneIndex = 0u; boneIndex < model.animationPosData.size(); ++boneIndex)
-    {
-        const PodVector<RenderModel::BoneAnimationPosOrScale> &posTime = model.animationPosData[boneIndex];
-        for(uint32_t i = 0; i < posTime.size(); ++i)
-        {
-            uint32_t nextI = std::min(i + 1, posTime.size() - 1);
-            const RenderModel::BoneAnimationPosOrScale &prev = posTime[i];
-            const RenderModel::BoneAnimationPosOrScale &next = posTime[nextI];
-            if(next.timeStamp <= time || i == nextI)
-            {
-                // laske min time, laske erotus, laske osamäärä
-                time = std::max(prev.timeStamp, time);
-                time = std::min(next.timeStamp, time);
-                float duration = (next.timeStamp - prev.timeStamp);
-
-                float frac = duration > 0.0f ? (time - prev.timeStamp) / duration : 1.0f;
-                pos = prev.value * (1.0f - frac) + next.value * frac;
-                break;
-            }
-        }
-        uint32_t startIndex = 0u;
-        uint32_t endIndex = 0u;
-
-    }
-
-    return true;
+    return evaluateBone(model, 0, time, Matrix(), outMatrices);
 }

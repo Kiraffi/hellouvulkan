@@ -136,7 +136,7 @@ T & PodVector<T>::operator[] (uint32_t index) const
 template <typename T>
 void PodVector<T>::resize(uint32_t newSize)
 {
-    this->buffer.resize(newSize);
+    resize(newSize, T());
 }
 
 template <typename T>

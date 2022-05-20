@@ -30,14 +30,20 @@ struct RenderModel
         Quat value;
         float timeStamp = 0.0f;
     };
+    struct Bone
+    {
+        PodVector<uint32_t> childrenIndices;
+    };
 
     PodVector<Vertex> vertices;
     PodVector<AnimationVertex> animationVertices;
     PodVector<uint32_t> indices;
+    PodVector<Matrix> inverseMatrices;
 
     Vector<PodVector<BoneAnimationPosOrScale>> animationPosData;
     Vector<PodVector<BoneAnimationRot>> animationRotData;
     Vector<PodVector<BoneAnimationPosOrScale>> animationScaleData;
+    Vector<Bone> bones;
     uint32_t boneCount = 0u;
 
     float animStartTime = 0.0f;
