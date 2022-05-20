@@ -13,16 +13,27 @@ struct GltfMemoryRange
 };
 
 template<typename T>
-GltfMemoryRange getMemoryRange(const PodVector<T> &vec)
+static GltfMemoryRange getMemoryRange(const PodVector<T> &vec)
 {
     return { .start = ( uint8_t * )( &*vec.begin() ), .end = ( uint8_t * )( &*vec.begin() + vec.size() ) };
 }
 
 template<typename T>
-GltfMemoryRange getMemoryRange(const Vector<T> &vec)
+static GltfMemoryRange getMemoryRange(const Vector<T> &vec)
 {
     return { .start = ( uint8_t * )( &*vec.begin() ), .end = ( uint8_t * )( &*vec.begin() + vec.size() ) };
 }
+
+struct GltfData;
+
+static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
+        uint32_t writeStartOffsetInBytes, uint32_t writeStrideInBytes,
+        GltfMemoryRange memoryRange);
+
+static uint32_t findAccessorIndexAndParseTimeStamps(
+    const GltfData &data, uint32_t samplerIndex,
+    PodVector<float> &inOutTimestamps);
+
 
 //Type      component count
 //"SCALAR"     1
@@ -109,7 +120,7 @@ struct GltfAnimationNode
         };
         uint32_t samplerIndex = ~0u;
         uint32_t nodeIndex = ~0u;
-        ChannelPath pathType = ChannelPath::NONE;
+        ChannelPath channelType = ChannelPath::NONE;
     };
     struct Sampler
     {
@@ -144,7 +155,6 @@ struct GltfBufferAccessor
     PodVector<double> mins;
     PodVector<double> maxs;
     bool normalized = false;
-    bool useMinMax = false;
 };
 
 struct GltfData
@@ -163,14 +173,158 @@ struct GltfData
 
 
 
+static uint32_t getSamplerIndex(const GltfData &data, uint32_t nodeIndex,
+    GltfAnimationNode::Channel::ChannelPath channelType)
+{
+    for(const auto &node : data.animationNodes)
+    {
+        for(const auto &channel : node.channels)
+        {
+            if(channel.nodeIndex == nodeIndex && channel.channelType == channelType)
+                return channel.samplerIndex;
+        }
+    }
+    return ~0u;
+}
+
+template <typename T>
+static bool parseAnimationChannel(const GltfData &data,
+    uint32_t samplerIndex, GltfBufferComponentCountType assumedCountType,
+    PodVector<T> &outVector)
+{
+    if(samplerIndex == ~0u)
+        return false;
+
+    uint32_t animationValueOffset = offsetof(T, value);
+    uint32_t timeStampOffset = offsetof(T, timeStamp);
+    uint32_t stride = sizeof(T);
+
+    for(const GltfAnimationNode &node : data.animationNodes)
+    {
+        if(samplerIndex >= node.samplers.size())
+            continue;
+        const auto &sampler = node.samplers[samplerIndex];
+
+        ASSERT(sampler.inputIndex < data.accessors.size());
+        ASSERT(sampler.outputIndex < data.accessors.size());
+
+        if(sampler.inputIndex >= data.accessors.size() ||
+            sampler.outputIndex >= data.accessors.size())
+            return false;
+
+        const auto &timeStampAccessor = data.accessors[sampler.inputIndex];
+        const auto &animationValueAccessor = data.accessors[sampler.outputIndex];
+
+        ASSERT(timeStampAccessor.bufferViewIndex < data.bufferViews.size());
+        ASSERT(animationValueAccessor.bufferViewIndex < data.bufferViews.size());
+        ASSERT(timeStampAccessor.countType == GltfBufferComponentCountType::SCALAR);
+        ASSERT(animationValueAccessor.countType == assumedCountType);
+        ASSERT(timeStampAccessor.count == animationValueAccessor.count);
+
+        if(timeStampAccessor.bufferViewIndex >= data.bufferViews.size() ||
+            animationValueAccessor.bufferViewIndex >= data.bufferViews.size())
+            return false;
+
+        if(timeStampAccessor.countType != GltfBufferComponentCountType::SCALAR)
+            return false;
+        if(animationValueAccessor.countType != assumedCountType)
+            return false;
+        if(timeStampAccessor.count != animationValueAccessor.count)
+            return false;
+
+        outVector.resize(timeStampAccessor.count);
+        GltfMemoryRange memoryRange = getMemoryRange(outVector);
+        if(!gltfReadIntoBuffer(data, sampler.outputIndex,
+            animationValueOffset, stride,
+            memoryRange))
+            return false;
+        if(!gltfReadIntoBuffer(data, sampler.inputIndex,
+            animationValueOffset, stride,
+            memoryRange))
+            return false;
+
+        return true;
+    }
+}
 
 
+static uint32_t findAccessorIndexAndParseTimeStamps(
+    const GltfData &data, uint32_t samplerIndex,
+    PodVector<float> &inOutTimestamps)
+{
+    if(samplerIndex == ~0u)
+        return ~0u;
+    for(const GltfAnimationNode &node : data.animationNodes)
+    {
+        if(samplerIndex >= node.samplers.size())
+            return ~0u;
+
+        const auto &sampler = node.samplers[samplerIndex];
+        if(sampler.inputIndex >= data.accessors.size() ||
+            sampler.outputIndex >= data.accessors.size())
+            return ~0u;
+
+        const auto &accessor = data.accessors[sampler.inputIndex];
+        if(accessor.bufferViewIndex >= data.bufferViews.size())
+            return ~0u;
+
+        if(accessor.countType != GltfBufferComponentCountType::SCALAR)
+            return ~0u;
+
+        PodVector<float> timeStamps;
+        timeStamps.resize(accessor.count);
+
+        if(!gltfReadIntoBuffer(data, sampler.inputIndex,
+            0, sizeof(float),
+            getMemoryRange(timeStamps)))
+            return ~0u;
+
+        // merge the timestamps
+        if(inOutTimestamps.size() == 0)
+            inOutTimestamps = timeStamps;
+        else if(timeStamps.size() >= 0u)
+        {
+            uint32_t newTimeStampIndex = 0u;
+            uint32_t inOutTimeStampIndex = 0u;
+
+            if(inOutTimestamps.size() == 0 ||
+                timeStamps.back() > inOutTimestamps.back())
+                inOutTimestamps.pushBack(timeStamps.back());
+
+            while(inOutTimeStampIndex <= inOutTimestamps.size()
+                && newTimeStampIndex < timeStamps.size())
+            {
+                float t = newTimeStampIndex < timeStamps.size() ?
+                    timeStamps[newTimeStampIndex] : timeStamps.back();
+
+                inOutTimeStampIndex = inOutTimeStampIndex < inOutTimestamps.size() ?
+                    inOutTimeStampIndex : inOutTimestamps.size() - 1;
+
+                float t2 = inOutTimestamps[inOutTimeStampIndex];
+                if(t <= t2)
+                {
+                    if(t < t2)
+                        inOutTimestamps.insertIndex(inOutTimeStampIndex, t);
+
+                    // either we added one, or they were same, so grow in those cases
+                    ++newTimeStampIndex;
+                }
+                // either we add one, or they are same, or newtimestamp is bigger
+                // so inOutTimeStampIndex grows always.
+                ++inOutTimeStampIndex;
+            }
+        }
+
+        return sampler.outputIndex;
+    }
+    return ~0u;
+}
 
 // if buffer + offsetInStruct + stride * indexcount can write past buffer......
 // Reads f32, float normalized u16 and normalized u8 into float,
 // Reads u32, from u8, u16, u32
 // doesnt handle i8, i16 nor i32 reading, should probably just read them into i32.
-static bool gltfReadIntoBuffer(GltfData &data, uint32_t index,
+static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
         uint32_t writeStartOffsetInBytes, uint32_t writeStrideInBytes,
         GltfMemoryRange memoryRange)
 {
@@ -371,7 +525,8 @@ bool readGLTF(const char *filename, RenderModel &outModel)
     // Parse meshes
     {
         const JSONBlock &meshBlock = bl.getChild("meshes");
-        if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
+        ASSERT(meshBlock.getChildCount() == 1);
+        if(!meshBlock.isValid() || meshBlock.getChildCount() != 1)
             return false;
 
         data.meshes.resize(meshBlock.getChildCount());
@@ -382,7 +537,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             GltfMeshNode &node = data.meshes [i];
             if(!child.getChild("name").parseString(node.name))
                 return false;
-
+            ASSERT(child.getChild("primitives").getChildCount() == 1);
             const JSONBlock &prims = child.getChild("primitives").getChild(0);
             if(!prims.isValid())
                 return false;
@@ -452,6 +607,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
         const JSONBlock& skinBlock = bl.getChild("skins");
         if (skinBlock.isValid() && skinBlock.getChildCount() > 0)
         {
+            ASSERT(skinBlock.getChildCount() == 1);
             data.skins.resize(skinBlock.getChildCount());
 
             for (int i = 0; i < skinBlock.getChildCount(); ++i)
@@ -486,6 +642,7 @@ bool readGLTF(const char *filename, RenderModel &outModel)
         const JSONBlock &bufferBlock = bl.getChild("buffers");
         if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
             return false;
+        ASSERT(bufferBlock.getChildCount() == 1);
 
         data.buffers.resize(bufferBlock.getChildCount());
 
@@ -542,11 +699,11 @@ bool readGLTF(const char *filename, RenderModel &outModel)
                     if(!channelBlock.getChild("target").getChild("path").parseString(pathStr))
                         return false;
                     if(pathStr == "translation")
-                        channel.pathType = GltfAnimationNode::Channel::ChannelPath::TRANSLATION;
+                        channel.channelType = GltfAnimationNode::Channel::ChannelPath::TRANSLATION;
                     else if(pathStr == "rotation")
-                        channel.pathType = GltfAnimationNode::Channel::ChannelPath::ROTAION;
+                        channel.channelType = GltfAnimationNode::Channel::ChannelPath::ROTAION;
                     else if(pathStr == "scale")
-                        channel.pathType = GltfAnimationNode::Channel::ChannelPath::SCALE;
+                        channel.channelType = GltfAnimationNode::Channel::ChannelPath::SCALE;
                     // unsupported?
                     else
                     {
@@ -809,22 +966,49 @@ bool readGLTF(const char *filename, RenderModel &outModel)
 
         }
 
-
+        // Parse animationdata
+        if(data.skins.getSize() == 1 && data.skins[0].joints.size() > 0)
         {
+            uint32_t jointCount = data.skins[0].joints.size();
+            outModel.animationPosData.resize(jointCount);
+            outModel.animationRotData.resize(jointCount);
+            outModel.animationScaleData.resize(jointCount);
+            for(uint32_t boneIndex = 0u; boneIndex < jointCount; ++boneIndex)
+            {
+                PodVector<RenderModel::BoneAnimationPosOrScale> &bonePosVector
+                    = outModel.animationPosData[boneIndex];
+                PodVector<RenderModel::BoneAnimationRot> &boneRotVector
+                    = outModel.animationRotData[boneIndex];
+                PodVector<RenderModel::BoneAnimationPosOrScale> &boneScaleVector
+                    = outModel.animationScaleData[boneIndex];
 
+                uint32_t jointIndex = data.skins[0].joints[boneIndex];
+                uint32_t positionSamplerIndex =  getSamplerIndex(data, jointIndex,
+                    GltfAnimationNode::Channel::ChannelPath::TRANSLATION);
+                uint32_t rotationSamplerIndex =  getSamplerIndex(data, jointIndex,
+                    GltfAnimationNode::Channel::ChannelPath::ROTAION);
+                uint32_t scaleSamplerIndex =  getSamplerIndex(data, jointIndex,
+                    GltfAnimationNode::Channel::ChannelPath::SCALE);
+
+
+                if(!parseAnimationChannel(data, positionSamplerIndex,
+                    GltfBufferComponentCountType::VEC3, bonePosVector))
+                {
+                    ASSERT(false && "failed to parse animation channel for position");
+                }
+                if(!parseAnimationChannel(data, rotationSamplerIndex,
+                    GltfBufferComponentCountType::VEC4, boneRotVector))
+                {
+                    ASSERT(false && "failed to parse animation channel for position");
+                }
+                if(!parseAnimationChannel(data, positionSamplerIndex,
+                    GltfBufferComponentCountType::VEC3, boneScaleVector))
+                {
+                    ASSERT(false && "failed to parse animation channel for position");
+                }
+            }
         }
         {
-            PodVector<float> floats;
-            floats.resize(data.accessors[8].count);
-            if(data.accessors[8].countType != GltfBufferComponentCountType::SCALAR)
-                return false;
-            if(!gltfReadIntoBuffer(data, 8,
-                0, sizeof(float),
-                getMemoryRange(floats)))
-                return false;
-            for(float f: floats)
-                printf("%.2f, ", f);
-            printf("\n");
         }
     }
 

@@ -18,21 +18,25 @@ struct RenderModel
         uint32_t boneIndices[4];
     };
 
-    struct AnimationPoint
+    struct BoneAnimationPosOrScale
     {
-        Vec4 rot;
-        Vec3 pos;
-        Vec3 scale;
-        uint32_t boneIndex = ~0u;
-        float timePoint = 0.0f;
+        Vec3 value;
+        float timeStamp = 0.0f;
+    };
+    struct BoneAnimationRot
+    {
+        Vec4 value;
+        float timeStamp = 0.0f;
     };
 
     PodVector<Vertex> vertices;
     PodVector<AnimationVertex> animationVertices;
     PodVector<uint32_t> indices;
 
-
-    Vector<PodVector<AnimationPoint>> animationData;
+    Vector<PodVector<BoneAnimationPosOrScale>> animationPosData;
+    Vector<PodVector<BoneAnimationRot>> animationRotData;
+    Vector<PodVector<BoneAnimationPosOrScale>> animationScaleData;
+    uint32_t boneCount = 0u;
 };
 
 bool readGLTF(const char *filename, RenderModel &outModel);

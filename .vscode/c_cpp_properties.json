@@ -10,22 +10,18 @@
     "configurations": [
         {
             "name": "Linux",
-            //"intelliSenseMode": "msvc-x64",
             "intelliSenseMode": "clang-x64",
             "includePath": [
-                "${myDefaultIncludePath}"
+                "${myDefaultIncludePath}",
+                "${workspaceFolder}/src/mylibs"
             ],
-            //"compilerArgs": ["-Wpragma-once-outside-header"],
-            //"macFrameworkPath": ["/System/Library/Frameworks"],
             "defines": [
                 "FOO",
                 "BAR=100"
             ],
-            //"forcedInclude": ["${workspaceFolder}/include/config.h"],
-            "compilerPath": "/usr/bin/clang",
+            "compilerPath": "/usr/bin/clang++",
             "cStandard": "c11",
             "cppStandard": "c++20",
-            //"compileCommands": "/path/to/compile_commands.json",
             "browse": {
                 "path": [
                     "${workspaceFolder}",
