@@ -1,0 +1,30 @@
+#version 450 core
+
+#define MATRIX_ORDER row_major
+//#define MATRIX_ORDER column_major
+
+layout (binding = 0) uniform ConstantDataStructBlock
+{
+    vec2 windowSize;
+    vec2 padding;
+
+};
+
+layout (rgba8, binding = 1) uniform readonly image2D loadTex;
+layout (rgba8, binding = 2) uniform writeonly image2D storeTex;
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    uint indexInThreadGroup = 8 * gl_LocalInvocationID.y + gl_LocalInvocationID.x;
+    uint groupThreadIndex = gl_WorkGroupID.y * 8 + gl_WorkGroupID.x;
+
+
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    if(pos.x < windowSize.x && pos.y < windowSize.y)
+    {
+        vec4 imageSample = imageLoad(loadTex, pos);
+        imageStore(storeTex, pos, imageSample);
+    }
+}
+
