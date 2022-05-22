@@ -36,6 +36,7 @@ void FontRenderSystem::deInit()
 
 bool FontRenderSystem::init(std::string_view fontFilename)
 {
+#if 1
     PodVector<char> data;
     if (!loadBytes(fontFilename, data))
     {
@@ -83,7 +84,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
         // Note save order is a bit messed up!!! Since the file has one char 8x12 then next
         uint32_t index = 0;
-        for (int y = 11; y >= 0; --y)
+        for (int y = 0; y < 12; ++y)
         {
             for (int charIndex = 0; charIndex < 128 - 32; ++charIndex)
             {
@@ -161,7 +162,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             return false;
         }
     }
-
+#endif
 
     return true;
 }
@@ -181,16 +182,17 @@ void FontRenderSystem::addText(std::string_view text, Vector2 pos, Vec2 charSize
         vdata.color = getColor(color.x, color.y, color.z, color.w);
         vdata.pixelSizeX = charWidth;
         vdata.pixelSizeY = charHeight;
-        vdata.posX = pos.x;
-        vdata.posY = pos.y;
+        vdata.pos = pos;
 
-        uint32_t letter = c - 32;
+        if(c >= 32 && c <= 127)
+        {
+            uint32_t letter = c - 32;
+            static constexpr float LetterTextureWidth = 128.0f - 32.0f;
+            vdata.uvStart = Vec2(float(letter) / LetterTextureWidth, 0.0f);
+            vdata.uvSize = Vec2(1.0f / LetterTextureWidth, 1.0f);
 
-        vdata.uvX = float(letter) / float(128-32);
-        vdata.uvY = 0.0f;
-
-        vertData.emplace_back(vdata);
-
+            vertData.emplace_back(vdata);
+        }
         pos.x += charWidth;
     }
 }

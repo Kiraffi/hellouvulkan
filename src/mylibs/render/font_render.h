@@ -24,21 +24,18 @@ public:
     void addText(std::string_view text, Vector2 pos,
         Vector2 charSize = Vector2(8.0f, 12.0f), const Vector4 &color = Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
-private:
     struct GPUVertexData
     {
-        float posX;
-        float posY;
+        Vec2 pos;
         uint16_t pixelSizeX;
         uint16_t pixelSizeY;
         uint32_t color;
 
-        float uvX;
-        float uvY;
-
-        float padding[2];
+        Vec2 uvStart;
+        Vec2 uvSize;
     };
 
+private:
     PodVector<GPUVertexData> vertData;
 
     VkShaderModule vertexShader = nullptr;

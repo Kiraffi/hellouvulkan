@@ -598,6 +598,7 @@ static bool createDeviceWithQueues()
     ASSERT(vulk.presentColorFormat != VK_FORMAT_UNDEFINED);
 
     static constexpr uint32_t flagBits =
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
         VK_FORMAT_FEATURE_BLIT_SRC_BIT |
         VK_FORMAT_FEATURE_BLIT_DST_BIT |
         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
@@ -707,10 +708,12 @@ static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout
     PodVector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
     for (uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
     {
-        setBindings[i].binding = descriptors[i].bindingIndex;
-        setBindings[i].descriptorType = descriptors[i].descriptorType; // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        setBindings[i].descriptorCount = 1;
-        setBindings[i].stageFlags = stage; // VK_SHADER_STAGE_VERTEX_BIT;
+        setBindings[i] = VkDescriptorSetLayoutBinding {
+            .binding = descriptors[i].bindingIndex,
+            .descriptorType = descriptors[i].descriptorType,
+            .descriptorCount = 1,
+            .stageFlags = stage, // VK_SHADER_STAGE_VERTEX_BIT;
+        };
     }
 
     VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
@@ -720,6 +723,7 @@ static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout
 
     VkDescriptorSetLayout setLayout = 0;
     VK_CHECK(vkCreateDescriptorSetLayout(vulk.device, &createInfo, nullptr, &setLayout));
+
     ASSERT(setLayout);
     return setLayout;
 }
@@ -1353,7 +1357,7 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
 VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLayout)
 {
     //Pipeline result = createPipelineLayout(device, descriptors, pushConstantSize, pushConstantStage);
-    //ASSERT(result.pipelineLayout);
+    ASSERT(pipelineLayout);
     if(!pipelineLayout)
         return nullptr;
 
@@ -1387,7 +1391,7 @@ VkShaderModule loadShader(std::string_view filename)
         VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         createInfo.codeSize = buffer.size();
         createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
-        vkCreateShaderModule(vulk.device, &createInfo, nullptr, &shaderModule);
+        VK_CHECK(vkCreateShaderModule(vulk.device, &createInfo, nullptr, &shaderModule));
     }
     ASSERT(shaderModule);
     return shaderModule;
@@ -1402,6 +1406,8 @@ void destroyShaderModule(VkShaderModule shaderModule)
 
 void destroyPipeline(PipelineWithDescriptors &pipeline)
 {
+    destroyDescriptor(pipeline.descriptor);
+
     if(pipeline.pipeline)
         vkDestroyPipeline(vulk.device, pipeline.pipeline, nullptr);
     if(pipeline.pipelineLayout)
@@ -1605,24 +1611,24 @@ void beginDebugRegion(std::string_view pMarkerName, Vec4 color)
 void insertDebugRegion(std::string_view markerName, Vec4 color)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
-//    if (pfnCmdDebugMarkerInsert)
-//    {
-//        VkDebugMarkerMarkerInfoEXT markerInfo = {};
-//        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-//        memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-//        markerInfo.pMarkerName = markerName.c_str();
-//        pfnCmdDebugMarkerInsert(vulk.commandBuffer, &markerInfo);
-//    }
+    if (pfnCmdDebugMarkerInsert)
+    {
+        VkDebugMarkerMarkerInfoEXT markerInfo = {};
+        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+        memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+        markerInfo.pMarkerName = markerName.data();
+        pfnCmdDebugMarkerInsert(vulk.commandBuffer, &markerInfo);
+    }
 }
 
 // End the current debug marker region
 void endDebugRegion()
 {
     // Check for valid function (may not be present if not runnin in a debugging application)
-//    if (pfnCmdDebugMarkerEnd)
-//    {
-//        pfnCmdDebugMarkerEnd(vulk.commandBuffer);
-//    }
+    if (pfnCmdDebugMarkerEnd)
+    {
+        pfnCmdDebugMarkerEnd(vulk.commandBuffer);
+    }
 }
 
 
