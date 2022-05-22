@@ -349,6 +349,7 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = image;
+    barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.aspectMask = aspectMask;
     // Andoird error?
     barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
@@ -434,7 +435,7 @@ bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits
         0, nullptr,
         vulk.bufferMemoryBarriers.size(), bufferBarrier,
         vulk.imageMemoryBarriers.size(), imageBarrier);
-
+   
     vulk.bufferMemoryBarriers.clear();
     vulk.imageMemoryBarriers.clear();
     return true;

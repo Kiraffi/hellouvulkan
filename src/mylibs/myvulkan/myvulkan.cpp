@@ -64,12 +64,26 @@ struct VulkanDeviceOptionals
     bool canUseVulkanRenderdocExtensionMarker = false;
 };
 
-
+static const VkValidationFeatureEnableEXT enabledValidationFeatures[] =
+{
+    //VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+    //VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+    //VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+    //VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
+    VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+};
 static const PodVector<const char *>validationLayers =
 {
     "VK_LAYER_KHRONOS_validation",
     "VK_LAYER_LUNARG_monitor",
+    "VK_LAYER_KHRONOS_synchronization2",
 
+
+    //"VK_LAYER_NV_optimus",
+    //"VK_LAYER_RENDERDOC_Capture",
+    //"VK_LAYER_KHRONOS_profiles",
+    //"VK_LAYER_LUNARG_screenshot",
+    //"VK_LAYER_LUNARG_gfxreconstruct",
     //"VK_LAYER_LUNARG_api_dump"
 };
 
@@ -434,6 +448,13 @@ static bool createInstance()
         debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debugCreateInfo.pfnUserCallback = debugReportCallback;
 
+        
+        VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+        validationFeatures.enabledValidationFeatureCount = ARRAYSIZES(enabledValidationFeatures);
+        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+
+        debugCreateInfo.pNext = &validationFeatures;
+        
         createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
     }
     else
