@@ -582,7 +582,7 @@ void VulkanComputeTest::renderDraw()
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 
         addImageBarrier(imageBarrier(computeColorImage,
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 
         flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
@@ -645,7 +645,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = false,
+            .useIntegratedGpu = true,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC
