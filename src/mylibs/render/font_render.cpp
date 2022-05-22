@@ -61,7 +61,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         {
             uint32_t offset = 0;
             PodVector<uint32_t> indices;
-            indices.resize(6 * MAX_LETTERS);
+            indices.uninitializedResize(6 * MAX_LETTERS);
             for (int i = 0; i < MAX_LETTERS; ++i)
             {
                 indices[size_t(i) * 6 + 0] = i * 4 + 1;

@@ -35,6 +35,7 @@ public:
 
     void resize(uint32_t newSize);
     void resize(uint32_t newSize, const T &defaultValue);
+    void uninitializedResize(uint32_t newSize);
 
     void clear() { doClear(); }
 
@@ -144,6 +145,12 @@ template <typename T>
 void PodVector<T>::resize(uint32_t newSize, const T &defaultValue)
 {
     this->buffer.resize(newSize, (uint8_t *)&defaultValue);
+}
+
+template <typename T>
+void PodVector<T>::uninitializedResize(uint32_t newSize)
+{
+    this->buffer.resize(newSize);
 }
 
 
