@@ -399,7 +399,7 @@ void VulkanComputeTest::resized()
         vulk.swapchain.width, vulk.swapchain.height,
         vulk.defaultColorFormat,
 
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Compute target image");
 
@@ -407,7 +407,7 @@ void VulkanComputeTest::resized()
         vulk.swapchain.width, vulk.swapchain.height,
         vulk.defaultColorFormat,
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Render color final image");
 
@@ -582,7 +582,7 @@ void VulkanComputeTest::renderDraw()
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 
         addImageBarrier(imageBarrier(computeColorImage,
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 
         flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
@@ -646,7 +646,7 @@ int main(int argCount, char **argv)
             .showInfoMessages = false,
             .useHDR = false,
             .useIntegratedGpu = false,
-            .useValidationLayers = false,
+            .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC
         }))
