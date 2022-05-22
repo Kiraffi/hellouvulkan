@@ -58,7 +58,8 @@ template <typename T>
 PodVector<T>::PodVector(uint32_t size) : VectorBase(sizeof(T))
 {
     CHECK_POD_MACRO();
-    this->buffer.resize(size);
+    const T t{};
+    this->buffer.resize(size, (uint8_t *)&t);
 }
 
 template <typename T>
