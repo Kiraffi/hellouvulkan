@@ -218,7 +218,9 @@ void VulkanApp::run()
     while (!glfwWindowShouldClose(window))
     {
         logicUpdate();
-        if (startRender())
+        bool resizeHappen = !startRender();
+
+        if (!resizeHappen)
         {
             renderUpdate();
             renderDraw();
@@ -233,7 +235,9 @@ void VulkanApp::run()
         #if _WIN32
             timeEndPeriod(1);
         #endif
-        //VK_CHECK(vkDeviceWaitIdle(vulk.device));
+        // needed cos of resize?
+        if(resizeHappen)
+            VK_CHECK(vkDeviceWaitIdle(vulk.device));
 
     }
     VK_CHECK(vkDeviceWaitIdle(vulk.device));
