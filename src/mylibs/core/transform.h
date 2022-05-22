@@ -15,9 +15,9 @@ static Matrix getModelMatrix(const Transform &trans)
 {
     Matrix posMat = getMatrixFromTranslation(trans.pos);
     Matrix scaleMat = getMatrixFromScale(trans.scale);
-    Matrix rotMat = getMatrixFromQuaternionLH(trans.rot);
+    Matrix rotMat = getMatrixFromQuaternion(trans.rot);
 
-    return scaleMat * rotMat * posMat;
+    return posMat * rotMat * scaleMat;
 }
 
 static Matrix getModelMatrixInverse(const Transform &trans)
@@ -30,7 +30,7 @@ static Matrix getModelMatrixInverse(const Transform &trans)
     Quat rot = trans.rot;
     rot.w = -rot.w;
     Matrix scaleMat = getMatrixFromScale(scale);
-    Matrix rotMat = getMatrixFromQuaternionLH(rot);
+    Matrix rotMat = getMatrixFromQuaternion(rot);
 
-    return posMat * rotMat * scaleMat;
+    return scaleMat * rotMat * posMat;
 }

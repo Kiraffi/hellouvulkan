@@ -2,9 +2,6 @@
 #include <math/quaternion.h>
 #include <math/general_math.h>
 
-#define MATRIX_ADD_ROW_MULT(row, col) (a._##row##0 * b._0##col + a._##row##1 * b._1##col + a._##row##2 * b._2##col + a._##row##3 * b._3##col)
-#define MATRIX_SET(row, col) (result._##row##col)  = MATRIX_ADD_ROW_MULT(row, col)
-
 Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vector3 &forward)
 {
     Matrix result;
@@ -74,9 +71,9 @@ Matrix getMatrixFromScale(const Vector3 &scale)
 Matrix getMatrixFromTranslation(const Vector3 &pos)
 {
     Matrix result;
-    result._30 = pos.x;
-    result._31 = pos.y;
-    result._32 = pos.z;
+    result._03 = pos.x;
+    result._13 = pos.y;
+    result._23 = pos.z;
 
     return result;
 
@@ -95,14 +92,12 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
     result._00 = 2.0f / width;
     result._11 = 2.0f / height;
     result._22 = fRange;
-    result._32 = -fRange * nearPlane;
-    //result._22 = 0.0f; // fRange
-    //result._32 = 0.0f; // -fRange * NearZ;
+    result._23 = -fRange * nearPlane;
     result._33 = 1.0f;
     return result;
 }
 
-Matrix createPerspectiveMatrixRH(float fov, float aspectRatio, float nearPlane, float farPlane)
+Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
     Matrix result;
     ASSERT(ffabsf(fov) > 0.00001f);
@@ -118,36 +113,41 @@ Matrix createPerspectiveMatrixRH(float fov, float aspectRatio, float nearPlane, 
     result._11 = yScale;
 
     result._22 = -fRange;
-    result._23 = -1.0f;
-    result._32 = -nearPlane * fRange;
+    result._23 = -nearPlane * fRange;
+    result._32 = -1.0f;
     result._33 = 0.0f;
     return result;
 }
 
-Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up)
+Matrix createMatrixFromLookAt(const Vec3 &pos, const Vec3 &target, const Vec3 &up)
 {
-    Vector3 forward = normalize(target - pos);
-    Vector3 right = normalize(cross(up, forward));
-    Vector3 realUp = normalize(cross(forward, right));
+    const Vec3 forward = normalize(target - pos);
+    const Vec3 right = normalize(cross(up, forward));
+    const Vec3 realUp = normalize(cross(forward, right));
 
     Matrix result;
     result._00 = right.x;
-    result._01 = realUp.x;
-    result._02 = forward.x;
+    result._01 = right.y;
+    result._02 = right.z;
+    result._03 = -dot(pos, right);
 
-    result._10 = right.y;
+    result._10 = realUp.x;
     result._11 = realUp.y;
-    result._12 = forward.y;
+    result._12 = realUp.z;
+    result._13 = -dot(pos, realUp);
 
-    result._20 = right.z;
-    result._21 = realUp.z;
+    result._20 = forward.x;
+    result._21 = forward.y;
     result._22 = forward.z;
+    result._23 = -dot(pos, forward);
 
-    result._30 = -dot(pos, right);
-    result._31 = -dot(pos, realUp);
-    result._32 = -dot(pos, forward);
+    result._30 = 0.0;
+    result._31 = 0.0;
+    result._32 = 0.0;
+    result._33 = 1.0;
     return result;
 }
+
 
 Matrix transpose(const Matrix &m)
 {
@@ -179,6 +179,10 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 {
     Matrix result;
 
+    #define MATRIX_ADD_ROW_MULT(row, col) (a._##row##0 * b._0##col + a._##row##1 * b._1##col + a._##row##2 * b._2##col + a._##row##3 * b._3##col)
+    #define MATRIX_SET(row, col) (result._##row##col)  = MATRIX_ADD_ROW_MULT(row, col)
+
+
     MATRIX_SET(0, 0);
     MATRIX_SET(0, 1);
     MATRIX_SET(0, 2);
@@ -199,6 +203,9 @@ Matrix operator*(const Matrix &a, const Matrix &b)
     MATRIX_SET(3, 2);
     MATRIX_SET(3, 3);
 
+    #undef MATRIX_ADD_ROW_MULT
+    #undef MATRIX_SET
+
     return result;
 }
 
@@ -215,7 +222,7 @@ Vec4 mul(const Matrix& m, const Vec4& v)
 Vec4 mul(const Vec4& v, const Matrix& m)
 {
     Vec4 result;
-    result.x = v.x * m._00 + v.y * m._00 + v.z * m._02 + v.w * m._03;
+    result.x = v.x * m._00 + v.y * m._01 + v.z * m._02 + v.w * m._03;
     result.y = v.x * m._10 + v.y * m._11 + v.z * m._12 + v.w * m._13;
     result.z = v.x * m._20 + v.y * m._21 + v.z * m._22 + v.w * m._23;
     result.w = v.x * m._30 + v.y * m._31 + v.z * m._32 + v.w * m._33;

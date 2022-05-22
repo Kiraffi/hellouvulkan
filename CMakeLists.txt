@@ -81,6 +81,3 @@ add_subdirectory("external/glfw")
 add_subdirectory("src")
 
 #print_variables()
-
-
-

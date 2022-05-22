@@ -1,15 +1,17 @@
 
 #include "camera.h"
-#include <math/matrix.h>
+
 #include <math/general_math.h>
+#include <math/matrix.h>
 #include <math/quaternion.h>
+#include <math/vector3.h>
 
 #include <render/font_render.h>
 
 #include <math.h>
 #include <stdio.h>
 
-Matrix Camera::perspectiveProjectionRH()
+Matrix Camera::perspectiveProjection()
 {
     float f = 1.0f / tanf(toRadians(fovY * 0.5f));
 
@@ -19,40 +21,18 @@ Matrix Camera::perspectiveProjectionRH()
     return Matrix(
         f / aspectRatioWByH, 0.0f, 0.0f, 0.0f,
         0.0f, f, 0.0f, 0.0f,
-        0.0f, 0.0f, s1, -1.0f,
-        0.0f, 0.0f, s2, 0.0f);
+        0.0f, 0.0f, s1, s2,
+        0.0f, 0.0f, -1.0f, 0.0f);
 }
-
 
 Matrix Camera::getCameraMatrix()
 {
-
     Vector3 rightDir;
     Vector3 upDir;
     Vector3 forwardDir;
     getCameraDirections(rightDir, upDir, forwardDir);
-
-    Matrix result;
-    result._00 = rightDir.x;
-    result._01 = upDir.x;
-    result._02 = forwardDir.x;
-
-    result._10 = rightDir.y;
-    result._11 = upDir.y;
-    result._12 = forwardDir.y;
-
-    result._20 = rightDir.z;
-    result._21 = upDir.z;
-    result._22 = forwardDir.z;
-
-
-    result._30 = -dot(position, rightDir);
-    result._31 = -dot(position, upDir);
-    result._32 = -dot(position, forwardDir);
-
-    return result;
+    return createMatrixFromLookAt(position, position + forwardDir, upDir);
 }
-
 
 void Camera::getCameraDirections(Vec3 &rightDir, Vec3 &upDir, Vec3 &forwardDir)
 {

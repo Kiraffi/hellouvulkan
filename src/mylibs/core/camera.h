@@ -6,8 +6,9 @@ class FontRenderSystem;
 class Matrix;
 struct Camera
 {
-    Matrix perspectiveProjectionRH();
+    Matrix perspectiveProjection();
     Matrix getCameraMatrix();
+
     void getCameraDirections(Vec3& rightDir, Vec3& upDir, Vec3& forwardDie);
 
     void renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);

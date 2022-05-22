@@ -24,8 +24,8 @@
 
 #include <string.h>
 
-static constexpr int SCREEN_WIDTH = 640;
-static constexpr int SCREEN_HEIGHT = 540;
+static constexpr int SCREEN_WIDTH = 800;
+static constexpr int SCREEN_HEIGHT = 600;
 
 
 
@@ -257,20 +257,19 @@ void VulkanDrawStuff::renderUpdate()
     camera.zFar = 200.0f;
     camera.zNear = 0.001f;
 
-    frameBufferData.viewProj = camera.perspectiveProjectionRH();
-    frameBufferData.mvp = frameBufferData.camMat * frameBufferData.viewProj;
+    frameBufferData.viewProj = camera.perspectiveProjection();
+    frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
 
     Transform trans;
-    trans.pos = Vec3(0.0f, 0.0f, -5.0f);
+    trans.pos = Vec3(3.0f, 0.0f, -5.0f);
     static float rotationAmount = Pi * 0.25f;
 
     trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
-    Vec3 tmp = rotateVector(Vector3(0.0f, 0.0f, 1.0f), trans.rot);
     trans.scale = Vec3(1.0f, 1.0f, 1.0f);
 
-    //rotationAmount += 1.5f * dt;
+    rotationAmount += 1.5f * dt;
 
-    //frameBufferData.padding = getModelMatrix(trans); // *getModelMatrix(trans);
+    frameBufferData.padding = getModelMatrix(trans);
 
     addToCopylist(frameBufferData, uniformDataHandle);
 

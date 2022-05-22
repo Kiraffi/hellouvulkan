@@ -5,6 +5,14 @@
 
 struct Quaternion;
 
+// The matrices are used mostly in row order where
+// row 0 = x vec, transpose.x
+// row 1 = y vec, transpose.y
+// row 2 = z vec, transpose.z
+// row 3 = projection stuff.
+// It makes easy to convert to 4x3 or from 4x3 to 4x4,
+// since no need to transpose and shaders use rowmatrix,
+// so its direct copy.
 struct Matrix
 {
     Matrix() {}
@@ -48,9 +56,10 @@ Matrix getMatrixFromQuaternionLH(const Quaternion &quat);
 Matrix getMatrixFromScale(const Vector3 &scale);
 Matrix getMatrixFromTranslation(const Vector3 &pos);
 Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPlane);
-Matrix createPerspectiveMatrixRH(float fov, float aspectRatio, float nearPlane, float farPlane);
+Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane);
 
 Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
+Matrix createMatrixFromLookAtRH(const Vec3 &pos, const Vec3 &target, const Vec3 &up);
 
 Matrix transpose(const Matrix &m);
 Matrix operator*(const Matrix &a, const Matrix &b);

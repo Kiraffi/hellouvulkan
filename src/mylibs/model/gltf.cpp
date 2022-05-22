@@ -954,6 +954,11 @@ bool readGLTF(const char *filename, RenderModel &outModel)
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
                 0, sliceFromPodVectorBytes(inverseMatrices)))
                 return false;
+
+            for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
+            {
+                inverseMatrices[i] = transpose(inverseMatrices[i]);
+            }
         }
 
         // Parse animationdata
@@ -1175,9 +1180,9 @@ static bool evaluateBone(const RenderModel &model, uint32_t boneIndex,
         }
     }
     Matrix res = getModelMatrix({pos, rot, scale});
-    Matrix newParent = res * parentMatrix ;
-    // Something is definitely wrong in here, the order doesn't make sense
-    outMatrices[boneIndex] = model.inverseMatrices[boneIndex] * newParent;
+    Matrix newParent = parentMatrix * res;
+
+    outMatrices[boneIndex] =  newParent * model.inverseMatrices[boneIndex];
     for(uint32_t childIndex : model.bones[boneIndex].childrenIndices)
     {
         bool success = evaluateBone(model, childIndex, time, newParent, outMatrices);

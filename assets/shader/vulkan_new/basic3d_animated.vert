@@ -1,5 +1,8 @@
 #version 450 core
 
+#define MATRIX_ORDER row_major
+//#define MATRIX_ORDER column_major
+
 layout (binding = 0) uniform ConstantDataStructBlock
 {
     vec2 windowSize;
@@ -7,7 +10,7 @@ layout (binding = 0) uniform ConstantDataStructBlock
 
 };
 
-layout (binding = 1) uniform FrameDataBlock
+layout (binding = 1, MATRIX_ORDER) uniform FrameDataBlock
 {
     mat4 cameraMatrix;
     mat4 viewProjMat;
@@ -15,7 +18,7 @@ layout (binding = 1) uniform FrameDataBlock
     mat4 matrix_padding;
 };
 
-layout (binding = 2) uniform AnimationData
+layout (binding = 2, MATRIX_ORDER) uniform AnimationData
 {
     mat4 animationVertices[256];
     mat3x3 normalInverses[256];

@@ -7,7 +7,7 @@ layout (binding = 0) uniform ConstantDataStructBlock
 
 };
 
-layout (binding = 1) uniform FrameDataBlock
+layout (binding = 1, row_major) uniform FrameDataBlock
 {
 	mat4 cameraMatrix;
 	mat4 viewProjMat;
