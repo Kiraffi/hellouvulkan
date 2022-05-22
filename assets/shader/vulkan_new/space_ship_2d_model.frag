@@ -7,6 +7,6 @@ layout (location = 0) in flat vec4 colIn;
 
 void main()
 {
-	outColor.a = 1.0f;
-	outColor.rgb = colIn.rgb;
+    outColor.a = 1.0f;
+    outColor.rgb = colIn.rgb;
 }
