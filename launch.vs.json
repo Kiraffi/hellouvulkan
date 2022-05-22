@@ -31,11 +31,18 @@
       "currentDir": "${workspaceRoot}"
     },
     {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
-      "name": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
-      "currentDir": "${workspaceRoot}"
+        "type": "default",
+        "project": "CMakeLists.txt",
+        "projectTarget": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
+        "name": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
+        "currentDir": "${workspaceRoot}"
+    },
+    {
+        "type": "default",
+        "project": "CMakeLists.txt",
+        "projectTarget": "compute_test_vulkan.exe (src\\compute_test_vulkan\\compute_test_vulkan.exe)",
+        "name": "compute_test_vulkan.exe (src\\compute_test_vulkan\\compute_test_vulkan.exe)",
+        "currentDir": "${workspaceRoot}"
     }
   ]
 }
