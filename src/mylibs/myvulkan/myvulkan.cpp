@@ -9,6 +9,7 @@
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
 #include <math/vector3.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <vulkan/vulkan_core.h>
@@ -730,7 +731,7 @@ static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout
     for (uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
     {
         setBindings[i] = VkDescriptorSetLayoutBinding {
-            .binding = descriptors[i].bindingIndex,
+            .binding = uint32_t(descriptors[i].bindingIndex),
             .descriptorType = descriptors[i].descriptorType,
             .descriptorCount = 1,
             .stageFlags = stage, // VK_SHADER_STAGE_VERTEX_BIT;
@@ -846,7 +847,22 @@ static VkFence createFence()
 
 
 
-
+static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader> &shaders)
+{
+    PodVector< DescriptorSetLayout > result;
+    
+    for (uint32_t shaderIndex = 0; shaderIndex < shaders.size(); ++shaderIndex)
+    {
+        const Shader& shader = shaders[shaderIndex];
+        for (uint32_t maskIndex = 0u; maskIndex < 64; ++maskIndex)
+        {
+            if ((shader.resourceMask & (uint64_t(1) << uint64_t(maskIndex))) == 0)
+                continue;
+            result.push_back(DescriptorSetLayout{ .descriptorType = shader.resourceTypes[maskIndex], .bindingIndex = maskIndex });
+        }
+    }
+    return result;
+}
 
 
 
@@ -995,6 +1011,9 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         vulk.renderFrameBufferHandle = vulk.uniformBufferManager.reserveHandle();
     }
 
+    if (!loadShaders())
+        return false;
+
     return true;
 }
 
@@ -1013,6 +1032,8 @@ void deinitVulkan()
         vkDestroyQueryPool(vulk.device, vulk.queryPool, nullptr);
 
         destroySwapchain(vulk.swapchain);
+
+        deleteLoadedShaders();
 
         vkDestroyFence(vulk.device, vulk.fence, nullptr);
         vkDestroySemaphore(vulk.device, vulk.acquireSemaphore, nullptr);
@@ -1286,20 +1307,29 @@ void present(Image & imageToPresent)
 
 
 
-VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
-    const PodVector<VkFormat> &colorFormats, const DepthTest &depthTest)
+bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
+    const PodVector<VkFormat> &colorFormats, const DepthTest &depthTest, PipelineWithDescriptors &outPipeline)
 {
+    PodVector<Shader> shaders = { vertShader, fragShader };
+    outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
+    if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
+    {
+        printf("Failed to create graphics pipelinelayout!\n");
+        return false;
+    }
+
+
     VkPipelineShaderStageCreateInfo stageInfos[2] = {
         {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .module = vs,
+            .module = vertShader.module,
             .pName = "main",
         },
         {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .module = fs,
+            .module = fragShader.module,
             .pName = "main",
         },
     };
@@ -1362,7 +1392,7 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
     createInfo.pColorBlendState = &blendInfo;
     createInfo.pDynamicState = &dynamicInfo;
     createInfo.renderPass = VK_NULL_HANDLE;
-    createInfo.layout = pipelineLayout;
+    createInfo.layout = outPipeline.pipelineLayout;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
 
     createInfo.pNext = &pipelineRenderingCreateInfo;
@@ -1371,57 +1401,36 @@ VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipeli
     VK_CHECK(vkCreateGraphicsPipelines(vulk.device, nullptr, 1, &createInfo, nullptr, &pipeline));
     ASSERT(pipeline);
 
-    return pipeline;
+    outPipeline.pipeline = pipeline;
+    return pipeline != nullptr;
 }
 
 
-VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLayout)
+bool createComputePipeline(const Shader &csShader, PipelineWithDescriptors &outPipeline)
 {
-    //Pipeline result = createPipelineLayout(device, descriptors, pushConstantSize, pushConstantStage);
-    ASSERT(pipelineLayout);
-    if(!pipelineLayout)
-        return nullptr;
+    PodVector<Shader> shaders = { csShader };
+    outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
+    if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_COMPUTE_BIT))
+    {
+        printf("Failed to create graphics pipelinelayout!\n");
+        return false;
+    }
 
     VkPipelineShaderStageCreateInfo stageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
     stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    stageInfo.module = cs;
+    stageInfo.module = csShader.module;
     stageInfo.pName = "main";
 
     VkComputePipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
     createInfo.stage = stageInfo;
-    createInfo.layout = pipelineLayout;
+    createInfo.layout = outPipeline.pipelineLayout;
 
     VkPipeline pipeline = 0;
     VK_CHECK(vkCreateComputePipelines(vulk.device, nullptr, 1, &createInfo, nullptr, &pipeline));
     ASSERT(pipeline);
 
-    return pipeline;
-}
-
-
-
-VkShaderModule loadShader(std::string_view filename)
-{
-    PodVector<char> buffer;
-    VkShaderModule shaderModule = 0;
-
-    if (loadBytes(filename, buffer))
-    {
-        ASSERT(buffer.size() % 4 == 0);
-
-        VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-        createInfo.codeSize = buffer.size();
-        createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
-        VK_CHECK(vkCreateShaderModule(vulk.device, &createInfo, nullptr, &shaderModule));
-    }
-    ASSERT(shaderModule);
-    return shaderModule;
-}
-
-
-void destroyShaderModule(VkShaderModule shaderModule)
-{
-    vkDestroyShaderModule(vulk.device, shaderModule, nullptr);
+    outPipeline.pipeline = pipeline;
+    return pipeline != nullptr;
 }
 
 
@@ -1465,118 +1474,6 @@ void destroyDescriptor(Descriptor& descriptor)
 
 
 
-
-
-
-
-Descriptor createDescriptor(const PodVector<DescriptorSetLayout>& descriptors, VkDescriptorSetLayout descriptorSetLayout)
-{
-    Descriptor result;
-    if (descriptors.size() == 0)
-        return result;
-
-    PodVector<VkDescriptorPoolSize> poolSizes(descriptors.size());
-
-    for (uint32_t i = 0; i < descriptors.size(); ++i)
-    {
-        poolSizes[i].type = descriptors[i].descriptorType;
-        poolSizes[i].descriptorCount = 1;
-    }
-
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = uint32_t(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1; // NOTE ????
-
-    VK_CHECK(vkCreateDescriptorPool(vulk.device, &poolInfo, nullptr, &result.pool));
-
-    VkDescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = result.pool;
-    allocInfo.descriptorSetCount = 1u;
-    allocInfo.pSetLayouts = &descriptorSetLayout;
-
-    VkDescriptorSet descriptorSet = 0;
-    VK_CHECK(vkAllocateDescriptorSets(vulk.device, &allocInfo, &descriptorSet));
-    ASSERT(descriptorSet);
-
-    result.descriptorSet = descriptorSet;
-    return result;
-}
-
-bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
-    const PodVector<DescriptorInfo>& descriptorInfos, VkDescriptorSet descriptorSet)
-{
-    uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
-    if (writeDescriptorCount < 1u)
-        return false;
-
-    PodVector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
-    PodVector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
-
-    PodVector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
-
-    uint32_t writeIndex = 0u;
-    uint32_t bufferCount = 0u;
-    uint32_t imageCount = 0u;
-    for (uint32_t i = 0; i < descriptorInfos.size(); ++i)
-    {
-        if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::BUFFER)
-        {
-            const VkDescriptorBufferInfo& bufferInfo = descriptorInfos[i].bufferInfo;
-            ASSERT(bufferInfo.buffer);
-            ASSERT(bufferInfo.range > 0u);
-            bufferInfos[bufferCount] = {};
-            bufferInfos[bufferCount].buffer = bufferInfo.buffer;
-            bufferInfos[bufferCount].offset = bufferInfo.offset;
-            bufferInfos[bufferCount].range = bufferInfo.range;
-            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
-            writeDescriptorSets[writeIndex].dstArrayElement = 0;
-            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
-            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
-            writeDescriptorSets[writeIndex].pBufferInfo = &bufferInfos[bufferCount];
-            writeDescriptorSets[writeIndex].descriptorCount = 1;
-
-            ++bufferCount;
-            ++writeIndex;
-        }
-        else if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::IMAGE)
-        {
-            const VkDescriptorImageInfo& imageInfo = descriptorInfos[i].imageInfo;
-            ASSERT(imageInfo.sampler);
-            ASSERT(imageInfo.imageView);
-            ASSERT(imageInfo.imageLayout);
-
-            imageInfos[imageCount] = {};
-            imageInfos[imageCount].sampler = imageInfo.sampler;
-            imageInfos[imageCount].imageView = imageInfo.imageView;
-            imageInfos[imageCount].imageLayout = imageInfo.imageLayout;
-
-            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
-            writeDescriptorSets[writeIndex].dstArrayElement = 0;
-            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
-            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
-            writeDescriptorSets[writeIndex].pImageInfo = &imageInfos[imageCount];
-            writeDescriptorSets[writeIndex].descriptorCount = 1;
-            ++writeIndex;
-            ++imageCount;
-        }
-        else
-        {
-            ASSERT(true);
-            return false;
-        }
-    }
-
-    if (writeDescriptorSets.size() > 0)
-    {
-        vkUpdateDescriptorSets(vulk.device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
-    }
-    return true;
-}
 
 
 

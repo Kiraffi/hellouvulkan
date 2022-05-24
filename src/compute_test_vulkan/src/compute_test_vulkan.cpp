@@ -20,6 +20,7 @@
 #include <model/gltf.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <string.h>
@@ -52,13 +53,6 @@ public:
     UniformBufferHandle uniformDataHandle;
     UniformBufferHandle animVertexDataHandle;
     UniformBufferHandle quadHandle;
-
-    VkShaderModule vertShaderModule = { };
-    VkShaderModule fragShaderModule = { };
-
-    VkShaderModule computeShaderModule = { };
-    VkShaderModule graphicsVertShader = { };
-    VkShaderModule graphicsFragShader = {};
 
     Buffer vertexBuffer;
     Buffer animationVertexBuffer;
@@ -108,13 +102,6 @@ VulkanComputeTest::~VulkanComputeTest()
 
     destroySampler(textureSampler);
     destroySampler(computeWriteSampler);
-
-    vkDestroyShaderModule(vulk.device, vertShaderModule, nullptr);
-    vkDestroyShaderModule(vulk.device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(vulk.device, computeShaderModule, nullptr);
-    vkDestroyShaderModule(vulk.device, graphicsVertShader, nullptr);
-    vkDestroyShaderModule(vulk.device, graphicsFragShader, nullptr);
-
 }
 
 
@@ -134,22 +121,6 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
     printf("gltf read success: %i\n", readSuccess);
     if (!readSuccess)
         return false;
-
-    //vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d.vert.spv");
-    vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv");
-    ASSERT(vertShaderModule);
-
-    fragShaderModule = loadShader("assets/shader/vulkan_new/basic3d.frag.spv");
-    ASSERT(fragShaderModule);
-
-    computeShaderModule = loadShader("assets/shader/vulkan_new/compute_test.comp.spv");
-    ASSERT(computeShaderModule);
-
-    graphicsVertShader = loadShader("assets/shader/vulkan_new/texturedquad.vert.spv");
-    ASSERT(graphicsVertShader);
-    graphicsFragShader = loadShader("assets/shader/vulkan_new/texturedquad.frag.spv");
-    ASSERT(graphicsFragShader);
-
 
     uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
     animVertexDataHandle = vulk.uniformBufferManager.reserveHandle();
@@ -203,29 +174,14 @@ bool VulkanComputeTest::createPipelines()
 {
     {
         PipelineWithDescriptors &pipeline = graphicsPipeline;
-
-        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>(
-        {
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u },
-
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4u },
-        });
-
-        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
-        {
-            printf("Failed to create graphics pipelinelayout!\n");
-            return false;
-        }
-
-        pipeline.pipeline = createGraphicsPipeline(
-            vertShaderModule, fragShaderModule,
-            pipeline.pipelineLayout,
+        if (!createGraphicsPipeline(
+            getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
             { vulk.defaultColorFormat },
-            {.depthFormat = vulk.depthFormat, .useDepthTest = true, .writeDepth = true}
-        );
+            { .depthFormat = vulk.depthFormat, .useDepthTest = true, .writeDepth = true },
+            pipeline))
+        {
+            printf("failed to create pipeline\n");
+        }
 
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
@@ -247,22 +203,11 @@ bool VulkanComputeTest::createPipelines()
     }
     {
         PipelineWithDescriptors &pipeline = computePipeline;
-
-        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>(
+        if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline))
         {
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2u },
-        });
-
-        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_COMPUTE_BIT))
-        {
-            printf("Failed to create compute pipelinelayout!\n");
+            printf("Failed to create compute pipeline!\n");
             return false;
         }
-
-        pipeline.pipeline = createComputePipeline(
-            computeShaderModule, pipeline.pipelineLayout);
 
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -304,32 +249,17 @@ bool VulkanComputeTest::createPipelines()
     // Create copy-pipelines
     {
         PipelineWithDescriptors &pipeline = graphicsFinalPipeline;
-
-        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>(
+        if (!createGraphicsPipeline(
+            getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
+            { vulk.defaultColorFormat }, {}, pipeline))
         {
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u }
-        });
-
-        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
-        {
-            printf("Failed to create graphics pipelinelayout!\n");
+            printf("Failed to create graphics pipeline\n");
             return false;
         }
 
-        pipeline.pipeline = createGraphicsPipeline(
-            graphicsVertShader, graphicsFragShader,
-            pipeline.pipelineLayout,
-            { vulk.defaultColorFormat },
-            {}
-        );
-
     }
 
-
     return recreateDescriptor();
-
 }
 
 bool VulkanComputeTest::recreateDescriptor()
@@ -645,7 +575,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = true,
+            .useIntegratedGpu = false,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC

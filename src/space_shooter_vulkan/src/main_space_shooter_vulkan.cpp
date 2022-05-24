@@ -19,6 +19,7 @@
 #include <math/vector3.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <render/font_render.h>
@@ -110,9 +111,6 @@ public:
 public:
     Image renderColorImage;
 
-    VkShaderModule vertShaderModule;
-    VkShaderModule fragShaderModule;
-
     Buffer modelVerticesBuffer;
     Buffer instanceBuffer;
     Buffer indexDataBufferModels;
@@ -157,19 +155,13 @@ SpaceShooter::~SpaceShooter()
     destroyBuffer(indexDataBufferModels);
 
     destroyImage(renderColorImage);
-
-    destroyShaderModule(fragShaderModule);
-    destroyShaderModule(vertShaderModule);
 }
 
-bool SpaceShooter::init(const char *windowStr, int screenWidth, int screenHeight,
+bool SpaceShooter::init(const char* windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters& params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-
-    vertShaderModule = loadShader("assets/shader/vulkan_new/space_ship_2d_model.vert.spv");
-    fragShaderModule = loadShader("assets/shader/vulkan_new/space_ship_2d_model.frag.spv");
 
     modelVerticesBuffer = createBuffer(1024u * 1024u * 16u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -194,28 +186,14 @@ bool SpaceShooter::init(const char *windowStr, int screenWidth, int screenHeight
 bool SpaceShooter::createPipelines()
 {
     {
-        PipelineWithDescriptors &pipeline = graphicsPipeline;
-
-        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>(
-            {
-                DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-                DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2u },
-                DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3u },
-            });
-
-
-        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
+        PipelineWithDescriptors& pipeline = graphicsPipeline;
+        if(!createGraphicsPipeline(
+            getShader(ShaderType::SpaceShip2DModelVert), getShader(ShaderType::SpaceShip2DModelFrag),
+            { vulk.defaultColorFormat }, {  }, pipeline))
         {
-            printf("Failed to create pipelinelayout!\n");
+            printf("failed to create pipeline\n");
             return false;
         }
-
-        pipeline.pipeline = createGraphicsPipeline(
-            vertShaderModule, fragShaderModule,
-            pipeline.pipelineLayout,
-            { vulk.defaultColorFormat },
-            {  }
-        );
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {

@@ -20,6 +20,7 @@
 #include <model/gltf.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <string.h>
@@ -49,8 +50,6 @@ public:
 
     UniformBufferHandle uniformDataHandle;
     UniformBufferHandle animVertexDataHandle;
-    VkShaderModule vertShaderModule = { };
-    VkShaderModule fragShaderModule = { };
 
     Buffer vertexBuffer;
     Buffer animationVertexBuffer;
@@ -83,9 +82,6 @@ VulkanDrawStuff::~VulkanDrawStuff()
     destroyImage(renderColorImage);
     destroyImage(renderDepthImage);
 
-    vkDestroyShaderModule(vulk.device, vertShaderModule, nullptr);
-    vkDestroyShaderModule(vulk.device, fragShaderModule, nullptr);
-
 }
 
 
@@ -105,13 +101,6 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     printf("gltf read success: %i\n", readSuccess);
     if (!readSuccess)
         return false;
-
-    //vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d.vert.spv");
-    vertShaderModule = loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv");
-    ASSERT(vertShaderModule);
-
-    fragShaderModule = loadShader("assets/shader/vulkan_new/basic3d.frag.spv");
-    ASSERT(fragShaderModule);
 
     uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
     animVertexDataHandle = vulk.uniformBufferManager.reserveHandle();
@@ -140,7 +129,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
         addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, 0u);
         addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, 0u);
-        if(renderModel.animationVertices.size() > 0)
+        if (renderModel.animationVertices.size() > 0)
             addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 0u);
         flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
@@ -156,30 +145,15 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
 bool VulkanDrawStuff::createPipelines()
 {
-    PipelineWithDescriptors &pipeline = graphicsPipeline;
-
-    pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>(
-    {
-        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
-        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u },
-
-        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3u },
-        DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4u },
-    });
-
-    if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
-    {
-        printf("Failed to create pipelinelayout!\n");
-        return false;
-    }
-
-    pipeline.pipeline = createGraphicsPipeline(
-        vertShaderModule, fragShaderModule,
-        pipeline.pipelineLayout,
+    PipelineWithDescriptors& pipeline = graphicsPipeline;
+    if(!createGraphicsPipeline(
+        getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
         { vulk.defaultColorFormat },
-        {.depthFormat = vulk.depthFormat, .useDepthTest = true, .writeDepth = true}
-    );
+        { .depthFormat = vulk.depthFormat, .useDepthTest = true, .writeDepth = true },
+        pipeline))
+    {
+        printf("Failed to create graphics pipeline\n");
+    }
 
 
     pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(

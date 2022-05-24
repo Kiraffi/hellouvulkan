@@ -28,6 +28,7 @@ add_library(MyLibraries
 
     "render/font_render.cpp"
     "model/gltf.cpp"
+    "myvulkan/shader.cpp"
 )
 
 target_include_directories(MyLibraries PRIVATE

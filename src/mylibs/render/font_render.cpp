@@ -8,6 +8,7 @@
 #include <core/vulkan_app.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <string.h>
@@ -27,16 +28,12 @@ void FontRenderSystem::deInit()
     destroySampler(textureSampler);
 
     destroyBuffer(letterIndexBuffer);
-
-    destroyShaderModule(vertexShader);
-    destroyShaderModule(fragShader);
 }
 
 
 
 bool FontRenderSystem::init(std::string_view fontFilename)
 {
-#if 1
     PodVector<char> data;
     if (!loadBytes(fontFilename, data))
     {
@@ -46,12 +43,6 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     // Create buffers
     {
-        vertexShader = loadShader("assets/shader/vulkan_new/texturedquad.vert.spv");
-        ASSERT(vertexShader);
-
-        fragShader = loadShader("assets/shader/vulkan_new/texturedquad.frag.spv");
-        ASSERT(fragShader);
-
         letterDataBufferHandle = vulk.uniformBufferManager.reserveHandle();
 
         letterIndexBuffer = createBuffer(1 * 1024 * 1024,
@@ -117,7 +108,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         samplerInfo.minFilter = VK_FILTER_LINEAR;
 
         textureSampler = createSampler(samplerInfo);
-        if(!textureSampler)
+        if (!textureSampler)
         {
             printf("Failed to create sampler for font rendering");
             return false;
@@ -126,27 +117,14 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     // Create pipelines
     {
-        PipelineWithDescriptors &pipeline = pipelinesWithDescriptor;
-        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>({
-                DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-                DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1u },
-                DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2u }
-        });
-
-
-
-        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
-        {
-            printf("Failed to create pipelinelayout!\n");
-            return false;
-        }
-
-        pipeline.pipeline = createGraphicsPipeline(
-            vertexShader, fragShader,
-            pipeline.pipelineLayout,
+        PipelineWithDescriptors& pipeline = pipelinesWithDescriptor;
+        if(!createGraphicsPipeline(
+            getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
             { vulk.defaultColorFormat },
-            {}
-        );
+            {}, pipeline))
+        {
+            printf("failed to create graphics pipeline\n");
+        }
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
@@ -162,7 +140,6 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             return false;
         }
     }
-#endif
 
     return true;
 }

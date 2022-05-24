@@ -8,13 +8,9 @@
 #include <math/vector3.h>
 #include <myvulkan/vulkglob.h>
 
-#ifdef NDEBUG
-    #define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call; } while(0)
-#else
-    #define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
-#endif
 
 class VulkanApp;
+struct Shader;
 
 struct DepthTest
 {
@@ -51,24 +47,18 @@ void endSingleTimeCommands();
 
 
 
+bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
+    const PodVector<VkFormat> &colorFormats, const DepthTest& depthTest, PipelineWithDescriptors &outPipeline);
 
-VkPipeline createGraphicsPipeline(VkShaderModule vs, VkShaderModule fs, VkPipelineLayout pipelineLayout,
-    const PodVector<VkFormat> &colorFormats, const DepthTest& depthTest);
-
-VkPipeline createComputePipeline(VkShaderModule cs, VkPipelineLayout pipelineLayout);
+bool createComputePipeline(const Shader& csShader, PipelineWithDescriptors& outPipeline);
 
 
-VkShaderModule loadShader(std::string_view filename);
 
 bool createPipelineLayout(PipelineWithDescriptors &pipelineWithDescriptors, VkShaderStageFlags stage);
 
-void destroyShaderModule(VkShaderModule shaderModule);
+
 void destroyPipeline(PipelineWithDescriptors& pipelineWithDescriptors);
 void destroyDescriptor(Descriptor &descriptor);
-
-Descriptor createDescriptor(const PodVector<DescriptorSetLayout> &descriptors, VkDescriptorSetLayout descriptorSetLayout);
-bool setBindDescriptorSet(const PodVector<DescriptorSetLayout> &descriptors,
-    const PodVector<DescriptorInfo> &descriptorInfos, VkDescriptorSet descriptorSet);
 
 
 void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWithDescriptors &pipelineWithDescriptor);

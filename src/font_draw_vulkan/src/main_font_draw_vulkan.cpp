@@ -14,6 +14,7 @@
 #include <math/vector3.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <filesystem>
@@ -78,9 +79,6 @@ public:
 public:
     Image renderColorImage;
 
-    VkShaderModule vertShaderModule;
-    VkShaderModule fragShaderModule;
-
     Buffer quadBuffer;
     Buffer indexDataBuffer;
 
@@ -113,23 +111,12 @@ VulkanFontDraw::~VulkanFontDraw()
     destroyBuffer(quadBuffer);
     destroyBuffer(indexDataBuffer);
 
-    destroyShaderModule(fragShaderModule);
-    destroyShaderModule(vertShaderModule);
-
 }
 
 bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters &params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-
-    vertShaderModule = loadShader("assets/shader/vulkan_new/coloredquad.vert.spv");
-    ASSERT(vertShaderModule);
-
-    fragShaderModule = loadShader("assets/shader/vulkan_new/coloredquad.frag.spv");
-    ASSERT(fragShaderModule);
-
-
 
     quadBuffer = createBuffer(QuadBufferSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -166,24 +153,13 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
     {
         PipelineWithDescriptors& pipeline = graphicsPipeline;
 
-        pipeline.descriptorSetLayouts = PodVector<DescriptorSetLayout>({
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u },
-            DescriptorSetLayout{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u },
-            });
-
-
-        if (!createPipelineLayout(pipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
+        if (!createGraphicsPipeline(
+            getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
+            { vulk.defaultColorFormat }, {  }, pipeline))
         {
-            printf("Failed to create pipelinelayout!\n");
+            printf("Failed to create pipeline\n");
             return false;
         }
-
-        pipeline.pipeline = createGraphicsPipeline(
-            vertShaderModule, fragShaderModule,
-            pipeline.pipelineLayout,
-            { vulk.defaultColorFormat },
-            {  }
-        );
 
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(

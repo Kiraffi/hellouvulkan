@@ -8,6 +8,14 @@
 #include "vulkaninitparameters.h"
 #include "uniformbuffermanager.h"
 
+
+#ifdef NDEBUG
+#define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call; } while(0)
+#else
+#define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
+#endif
+
+
 struct VmaAllocation_T;
 struct VmaAllocator_T;
 
@@ -147,6 +155,7 @@ struct DescriptorSetLayout
 {
     VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
     uint32_t bindingIndex = ~0u;
+    VkPipelineStageFlagBits stage = VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM;
 };
 
 struct DescriptorSet
