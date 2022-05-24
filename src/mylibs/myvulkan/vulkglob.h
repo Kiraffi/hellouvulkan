@@ -196,14 +196,22 @@ struct DescriptorInfo
     }
 
     //
-    DescriptorInfo(const VkBuffer buffer, const VkDeviceSize offset, const VkDeviceSize range)
+    DescriptorInfo(const Buffer &buffer, const VkDeviceSize offset, const VkDeviceSize range)
     {
         ASSERT(range > 0u);
-        bufferInfo.buffer = buffer;
+        bufferInfo.buffer = buffer.buffer;
         bufferInfo.offset = offset;
         bufferInfo.range = range;
         type = DescriptorType::BUFFER;
     }
+    DescriptorInfo(const Buffer &buffer)
+    {
+        bufferInfo.buffer = buffer.buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = buffer.size;
+        type = DescriptorType::BUFFER;
+    }
+
     DescriptorInfo(const UniformBufferHandle handle)
     {
         ASSERT(handle.manager);

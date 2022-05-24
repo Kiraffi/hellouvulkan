@@ -102,8 +102,6 @@ public:
 
 VulkanFontDraw::~VulkanFontDraw()
 {
-
-    destroyDescriptor(graphicsPipeline.descriptor);
     destroyPipeline(graphicsPipeline);
 
     destroyImage(renderColorImage);
@@ -165,7 +163,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
                 DescriptorInfo(vulk.renderFrameBufferHandle),
-                DescriptorInfo(quadBuffer.buffer, 0u, QuadBufferSize),
+                DescriptorInfo(quadBuffer),
             });
 
         pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);

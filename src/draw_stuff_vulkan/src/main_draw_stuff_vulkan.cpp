@@ -72,7 +72,6 @@ public:
 
 VulkanDrawStuff::~VulkanDrawStuff()
 {
-    destroyDescriptor(graphicsPipeline.descriptor);
     destroyPipeline(graphicsPipeline);
 
     destroyBuffer(vertexBuffer);
@@ -162,8 +161,8 @@ bool VulkanDrawStuff::createPipelines()
             DescriptorInfo(uniformDataHandle),
             DescriptorInfo(animVertexDataHandle),
 
-            DescriptorInfo(vertexBuffer.buffer, 0u, vertexBuffer.size),
-            DescriptorInfo(animationVertexBuffer.buffer, 0u, animationVertexBuffer.size),
+            DescriptorInfo(vertexBuffer),
+            DescriptorInfo(animationVertexBuffer),
         });
 
     pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);

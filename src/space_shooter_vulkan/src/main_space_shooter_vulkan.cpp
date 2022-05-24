@@ -147,7 +147,6 @@ public:
 
 SpaceShooter::~SpaceShooter()
 {
-    destroyDescriptor(graphicsPipeline.descriptor);
     destroyPipeline(graphicsPipeline);
 
     destroyBuffer(modelVerticesBuffer);
@@ -198,8 +197,8 @@ bool SpaceShooter::createPipelines()
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
                 DescriptorInfo(vulk.renderFrameBufferHandle),
-                DescriptorInfo(modelVerticesBuffer.buffer, 0u, modelVerticesBuffer.size),
-                DescriptorInfo(instanceBuffer.buffer, 0u, instanceBuffer.size),
+                DescriptorInfo(modelVerticesBuffer),
+                DescriptorInfo(instanceBuffer),
             });
 
         pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);

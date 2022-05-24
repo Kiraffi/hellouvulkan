@@ -1310,6 +1310,8 @@ void present(Image & imageToPresent)
 bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     const PodVector<VkFormat> &colorFormats, const DepthTest &depthTest, PipelineWithDescriptors &outPipeline)
 {
+    destroyPipeline(outPipeline);
+
     PodVector<Shader> shaders = { vertShader, fragShader };
     outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
     if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
@@ -1408,6 +1410,8 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
 
 bool createComputePipeline(const Shader &csShader, PipelineWithDescriptors &outPipeline)
 {
+    destroyPipeline(outPipeline);
+
     PodVector<Shader> shaders = { csShader };
     outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
     if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_COMPUTE_BIT))
@@ -1453,9 +1457,12 @@ void destroyPipeline(PipelineWithDescriptors &pipeline)
 
 void destroyDescriptor(Descriptor& descriptor)
 {
-    vkDestroyDescriptorPool(vulk.device, descriptor.pool, nullptr);
-    descriptor.pool = 0;
-    descriptor.descriptorSet = 0;
+    if (descriptor.pool)
+    {
+        vkDestroyDescriptorPool(vulk.device, descriptor.pool, nullptr);
+        descriptor.pool = 0;
+        descriptor.descriptorSet = 0;
+    }
 }
 
 

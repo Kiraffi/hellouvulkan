@@ -190,8 +190,8 @@ bool VulkanComputeTest::createPipelines()
                 DescriptorInfo(uniformDataHandle),
                 DescriptorInfo(animVertexDataHandle),
 
-                DescriptorInfo(vertexBuffer.buffer, 0u, vertexBuffer.size),
-                DescriptorInfo(animationVertexBuffer.buffer, 0u, animationVertexBuffer.size),
+                DescriptorInfo(vertexBuffer),
+                DescriptorInfo(animationVertexBuffer),
             });
 
         pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
@@ -286,6 +286,7 @@ bool VulkanComputeTest::recreateDescriptor()
     }
     {
         PipelineWithDescriptors &pipeline = graphicsFinalPipeline;
+        destroyDescriptor(pipeline.descriptor);
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
             DescriptorInfo(vulk.renderFrameBufferHandle),
