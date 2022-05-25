@@ -186,7 +186,7 @@ static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, 
     return true;
 }
 
-static int parseInt(const ArraySliceView<char> &buffer, JSONMarker &marker, int64_t &outResult)
+static int parseInt(const ArraySliceView<char> &buffer, JSONMarker &marker, int64_t &outResult, bool countFrontZeroes = false)
 {
     int numCount = 0;
     int &index = marker.currentIndex;
@@ -201,13 +201,17 @@ static int parseInt(const ArraySliceView<char> &buffer, JSONMarker &marker, int6
         index++;
     }
     outResult = 0;
+    uint32_t indexStart = index;
+    uint32_t frontZeroes = 0u;
     while(index < sz)
     {
         char c = buffer [index];
         if(c >= '0' && c <= '9')
         {
+            if (numCount == frontZeroes && c == '0')
+                ++frontZeroes;
             ++numCount;
-            if(numCount > 18)
+            if(numCount - frontZeroes > 19)
                 return -1;
             outResult = outResult * 10 + int(c - '0');
         }
@@ -220,7 +224,12 @@ static int parseInt(const ArraySliceView<char> &buffer, JSONMarker &marker, int6
         outResult = -outResult;
     if(index < sz && buffer [index] == ',')
         ++index;
-
+    if (!countFrontZeroes)
+    {
+        numCount -= frontZeroes;
+        if (outResult == 0 && frontZeroes > 0)
+            numCount = 1;
+    }
     return numCount;
 }
 
@@ -274,7 +283,7 @@ bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock
         {
             ++index;
             int64_t eValue = 0;
-            numCount = parseInt(buffer, marker, eValue);
+            numCount = parseInt(buffer, marker, eValue, true);
             if(numCount <= 0 || index > marker.endIndex)
                 return false;
             if(eValue > 0)
