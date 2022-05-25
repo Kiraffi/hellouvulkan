@@ -1,6 +1,7 @@
 #include "shader.h"
 
-#include <spirv-headers/spirv.h>
+#include <spirv/1.2/spirv.h>
+//#include <spirv-headers/spirv.h>
 
 #include <container/podvector.h>
 #include <container/vector.h>
@@ -231,13 +232,13 @@ bool loadShaders()
     if (!loadShader("assets/shader/vulkan_new/basic3d.frag.spv", globShaders[uint32_t(ShaderType::Basic3DFrag)])) return false;
     if (!loadShader("assets/shader/vulkan_new/basic3d.vert.spv", globShaders[uint32_t(ShaderType::Basic3DVert)])) return false;
     if (!loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv", globShaders[uint32_t(ShaderType::Basic3DAnimatedVert)])) return false;
-    
+
     if (!loadShader("assets/shader/vulkan_new/coloredquad.frag.spv", globShaders[uint32_t(ShaderType::ColoredQuadFrag)])) return false;
     if (!loadShader("assets/shader/vulkan_new/coloredquad.vert.spv", globShaders[uint32_t(ShaderType::ColoredQuadVert)])) return false;
 
     if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.frag.spv", globShaders[uint32_t(ShaderType::SpaceShip2DModelFrag)])) return false;
         if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.vert.spv", globShaders[uint32_t(ShaderType::SpaceShip2DModelVert)])) return false;
-    
+
     if (!loadShader("assets/shader/vulkan_new/texturedquad.frag.spv", globShaders[uint32_t(ShaderType::TexturedQuadFrag)])) return false;
         if (!loadShader("assets/shader/vulkan_new/texturedquad.vert.spv", globShaders[uint32_t(ShaderType::TexturedQuadVert)])) return false;
 

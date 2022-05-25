@@ -463,13 +463,13 @@ static bool createInstance()
         debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debugCreateInfo.pfnUserCallback = debugReportCallback;
 
-        
+
         VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
         validationFeatures.enabledValidationFeatureCount = ARRAYSIZES(enabledValidationFeatures);
         validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
 
         debugCreateInfo.pNext = &validationFeatures;
-        
+
         createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
     }
     else
@@ -521,7 +521,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
         {
             VkFormatProperties formatProperties;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, defaultFormats[j].format, &formatProperties);
-            if(((formatProperties.optimalTilingFeatures & formatProperties.linearTilingFeatures) & FormatFlagBits) == FormatFlagBits)
+            if(((formatProperties.optimalTilingFeatures) & FormatFlagBits) == FormatFlagBits)
             {
                 formatIndex = j;
                 goto formatIndexFound;
@@ -637,7 +637,7 @@ static bool createDeviceWithQueues()
     {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(vulk.physicalDevice, defaultFormats[j].format, &formatProperties);
-        if (((formatProperties.optimalTilingFeatures & formatProperties.linearTilingFeatures) & FormatFlagBits) == FormatFlagBits)
+        if (((formatProperties.optimalTilingFeatures) & FormatFlagBits) == FormatFlagBits)
         {
             vulk.defaultColorFormat = defaultFormats[j].format;
             break;
@@ -803,7 +803,7 @@ static VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets
         attachments.push_back(attachment);
     }
 
-    VkAttachmentReference depthAttachments = { colorAttachments.size(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }; 
+    VkAttachmentReference depthAttachments = { colorAttachments.size(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
     if(hasDepthFormat)
     {
         VkAttachmentDescription attachment = {};
@@ -871,7 +871,7 @@ static VkFence createFence()
 static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader> &shaders)
 {
     PodVector< DescriptorSetLayout > result;
-    
+
     for (uint32_t shaderIndex = 0; shaderIndex < shaders.size(); ++shaderIndex)
     {
         const Shader& shader = shaders[shaderIndex];

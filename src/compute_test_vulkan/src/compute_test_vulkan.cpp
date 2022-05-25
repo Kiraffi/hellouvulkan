@@ -192,7 +192,7 @@ bool VulkanComputeTest::createPipelines()
                 DescriptorInfo(animationVertexBuffer),
             });
 
-       
+
         if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
@@ -225,7 +225,7 @@ bool VulkanComputeTest::createPipelines()
         Pipeline &pipeline = graphicsFinalPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, 
+            { RenderTarget{.format = vulk.defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } },
             {}, pipeline, false))
         {
             printf("Failed to create graphics pipeline\n");
