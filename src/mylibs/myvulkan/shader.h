@@ -39,7 +39,7 @@ void deleteLoadedShaders();
 bool loadShader(std::string_view filename, Shader& outShader);
 void destroyShader(Shader& shaderModule);
 
-Descriptor createDescriptor(const PodVector<DescriptorSetLayout>& descriptors, VkDescriptorSetLayout descriptorSetLayout);
+bool createDescriptor(Pipeline &pipeline);
 bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
     const PodVector<DescriptorInfo>& descriptorInfos, VkDescriptorSet descriptorSet);
 

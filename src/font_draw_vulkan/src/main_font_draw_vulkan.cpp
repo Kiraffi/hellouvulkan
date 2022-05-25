@@ -260,7 +260,7 @@ void VulkanFontDraw::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
-    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage.imageView }, renderColorImage.width, renderColorImage.height));
+    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage }));
     fontSystem.setRenderTarget(renderColorImage);
 }
 

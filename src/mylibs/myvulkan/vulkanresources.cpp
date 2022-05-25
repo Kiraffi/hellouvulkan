@@ -8,6 +8,23 @@
 
 #include <vk_mem_alloc.h>
 
+static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
+{
+    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    if (format == VK_FORMAT_D32_SFLOAT ||
+        format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+        format == VK_FORMAT_D24_UNORM_S8_UINT ||
+        format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
+        format == VK_FORMAT_D16_UNORM ||
+        format == VK_FORMAT_D16_UNORM_S8_UINT ||
+        format == VK_FORMAT_S8_UINT
+        )
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    return aspectMask;
+}
+
+
 bool initializeVMA()
 {
     VmaVulkanFunctions vulkanFunctions = {};
@@ -35,18 +52,41 @@ void deinitVMA()
     }
 }
 
-bool createFramebuffer(Pipeline &pipeline,
-    const PodVector<VkImageView> &colorsAndDepthView,
-    uint32_t width, uint32_t height)
+
+bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDepthImages)
 {
     destroyFramebuffer(pipeline.framebuffer);
     ASSERT(pipeline.renderPass);
+    uint32_t width = 0u;
+    uint32_t height = 0u;
+    PodVector<VkImageView> views;
+    for (const auto& image : colorsAndDepthImages)
+    {
+        ASSERT(image.imageView);
+        if (!image.imageView)
+            return false;
+        if (width == 0)
+        {
+            width = image.width;
+            height = image.height;
+        }
+        ASSERT(width == image.width && height == image.height);
+        if(width != image.width || height != image.height)
+        {
+            return false;
+        }
+
+        views.push_back(image.imageView);
+    }
+
+    ASSERT(width);
+    ASSERT(height);
 
     VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
     createInfo.renderPass = pipeline.renderPass;
-    createInfo.attachmentCount = colorsAndDepthView.size();
+    createInfo.attachmentCount = views.size();
     createInfo.layers = 1;
-    createInfo.pAttachments = colorsAndDepthView.size() > 0 ? colorsAndDepthView.data() : nullptr;
+    createInfo.pAttachments = views.size() > 0 ? views.data() : nullptr;
     createInfo.width = width;
     createInfo.height = height;
 
@@ -56,7 +96,7 @@ bool createFramebuffer(Pipeline &pipeline,
     pipeline.framebuffer = framebuffer;
     pipeline.framebufferWidth = width;
     pipeline.framebufferHeight = height;
-
+    ASSERT(framebuffer);
     return framebuffer != nullptr;
 }
 
@@ -280,17 +320,7 @@ void destroyBuffer(Buffer& buffer)
 
 VkImageView createImageView(VkImage image, VkFormat format)
 {
-    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    if (format == VK_FORMAT_D32_SFLOAT ||
-        format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-        format == VK_FORMAT_D24_UNORM_S8_UINT ||
-        format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
-        format == VK_FORMAT_D16_UNORM ||
-        format == VK_FORMAT_D16_UNORM_S8_UINT ||
-        format == VK_FORMAT_S8_UINT
-        )
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(format);
 
     VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     createInfo.image = image;

@@ -85,7 +85,7 @@ void VulkanFontRender::resized()
         vulk.swapchain.width, vulk.swapchain.height,
         vulk.defaultColorFormat,
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
     fontSystem.setRenderTarget(renderColorImage);
@@ -146,7 +146,6 @@ void VulkanFontRender::renderDraw()
 
     flushBarriers();
     {
-        //fontSystem.render(renderColorImage);
         fontSystem.render();
     }
 

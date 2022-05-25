@@ -143,7 +143,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
 void FontRenderSystem::setRenderTarget(Image& image)
 {
-    ASSERT(createFramebuffer(pipeline, { image.imageView }, image.width, image.height));
+    ASSERT(createFramebuffer(pipeline, { image }));
 }
 
 
@@ -204,5 +204,4 @@ void FontRenderSystem::render()
     vkCmdEndRenderPass(vulk.commandBuffer);
     vertData.clear();
 }
-
 

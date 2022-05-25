@@ -65,8 +65,8 @@ struct Buffer
 struct Image
 {
     VmaAllocation_T* allocation = nullptr;
-    VkImage image = 0;
-    VkImageView imageView = 0;
+    VkImage image = nullptr;
+    VkImageView imageView = nullptr;
     const char* imageName = nullptr;
     VkAccessFlags accessMask = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;

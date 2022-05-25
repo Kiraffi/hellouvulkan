@@ -6,6 +6,8 @@
 #include <container/vector.h>
 #include <core/general.h>
 #include <core/mytypes.h>
+
+#include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkglob.h>
 
 static PodVector<Shader> globShaders;
@@ -251,17 +253,18 @@ void deleteLoadedShaders()
 
 
 
-Descriptor createDescriptor(const PodVector<DescriptorSetLayout>& descriptors, VkDescriptorSetLayout descriptorSetLayout)
+bool createDescriptor(Pipeline &pipeline)
 {
-    Descriptor result;
-    if (descriptors.size() == 0)
-        return result;
+    destroyDescriptor(pipeline.descriptor);
 
-    PodVector<VkDescriptorPoolSize> poolSizes(descriptors.size());
+    if (pipeline.descriptorSetLayouts.size() == 0)
+        return true;
 
-    for (uint32_t i = 0; i < descriptors.size(); ++i)
+    PodVector<VkDescriptorPoolSize> poolSizes(pipeline.descriptorSetLayouts.size());
+
+    for (uint32_t i = 0; i < pipeline.descriptorSetLayouts.size(); ++i)
     {
-        poolSizes[i].type = descriptors[i].descriptorType;
+        poolSizes[i].type = pipeline.descriptorSetLayouts[i].descriptorType;
         poolSizes[i].descriptorCount = 1;
     }
 
@@ -271,20 +274,23 @@ Descriptor createDescriptor(const PodVector<DescriptorSetLayout>& descriptors, V
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = 1; // NOTE ????
 
-    VK_CHECK(vkCreateDescriptorPool(vulk.device, &poolInfo, nullptr, &result.pool));
-
+    VK_CHECK(vkCreateDescriptorPool(vulk.device, &poolInfo, nullptr, &pipeline.descriptor.pool));
+    if (!pipeline.descriptor.pool)
+        return false;
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = result.pool;
+    allocInfo.descriptorPool = pipeline.descriptor.pool;
     allocInfo.descriptorSetCount = 1u;
-    allocInfo.pSetLayouts = &descriptorSetLayout;
+    allocInfo.pSetLayouts = &pipeline.descriptorSetLayout;
 
     VkDescriptorSet descriptorSet = 0;
     VK_CHECK(vkAllocateDescriptorSets(vulk.device, &allocInfo, &descriptorSet));
     ASSERT(descriptorSet);
 
-    result.descriptorSet = descriptorSet;
-    return result;
+    pipeline.descriptor.descriptorSet = descriptorSet;
+
+
+    return true;
 }
 
 bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
@@ -309,17 +315,17 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
             const VkDescriptorBufferInfo& bufferInfo = descriptorInfos[i].bufferInfo;
             ASSERT(bufferInfo.buffer);
             ASSERT(bufferInfo.range > 0u);
-            bufferInfos[bufferCount] = {};
-            bufferInfos[bufferCount].buffer = bufferInfo.buffer;
-            bufferInfos[bufferCount].offset = bufferInfo.offset;
-            bufferInfos[bufferCount].range = bufferInfo.range;
-            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
-            writeDescriptorSets[writeIndex].dstArrayElement = 0;
-            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
-            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
-            writeDescriptorSets[writeIndex].pBufferInfo = &bufferInfos[bufferCount];
-            writeDescriptorSets[writeIndex].descriptorCount = 1;
+            bufferInfos[bufferCount] = bufferInfo;
+
+            VkWriteDescriptorSet descriptor { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            descriptor.dstSet = descriptorSet;
+            descriptor.dstArrayElement = 0;
+            descriptor.descriptorType = descriptors[i].descriptorType;
+            descriptor.dstBinding = descriptors[i].bindingIndex;
+            descriptor.pBufferInfo = &bufferInfos[bufferCount];
+            descriptor.descriptorCount = 1;
+
+            writeDescriptorSets[writeIndex] = descriptor;
 
             ++bufferCount;
             ++writeIndex;
@@ -327,22 +333,22 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
         else if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::IMAGE)
         {
             const VkDescriptorImageInfo& imageInfo = descriptorInfos[i].imageInfo;
-            ASSERT(imageInfo.sampler);
+            ASSERT(imageInfo.sampler || descriptors[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
             ASSERT(imageInfo.imageView);
             ASSERT(imageInfo.imageLayout);
 
-            imageInfos[imageCount] = {};
-            imageInfos[imageCount].sampler = imageInfo.sampler;
-            imageInfos[imageCount].imageView = imageInfo.imageView;
-            imageInfos[imageCount].imageLayout = imageInfo.imageLayout;
+            imageInfos[imageCount] = imageInfo;
 
-            writeDescriptorSets[writeIndex] = VkWriteDescriptorSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            writeDescriptorSets[writeIndex].dstSet = descriptorSet;
-            writeDescriptorSets[writeIndex].dstArrayElement = 0;
-            writeDescriptorSets[writeIndex].descriptorType = descriptors[i].descriptorType;
-            writeDescriptorSets[writeIndex].dstBinding = descriptors[i].bindingIndex;
-            writeDescriptorSets[writeIndex].pImageInfo = &imageInfos[imageCount];
-            writeDescriptorSets[writeIndex].descriptorCount = 1;
+            VkWriteDescriptorSet descriptor{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            descriptor.dstSet = descriptorSet;
+            descriptor.dstArrayElement = 0;
+            descriptor.descriptorType = descriptors[i].descriptorType;
+            descriptor.dstBinding = descriptors[i].bindingIndex;
+            descriptor.pImageInfo = &imageInfos[imageCount];
+            descriptor.descriptorCount = 1;
+
+            writeDescriptorSets[writeIndex] = descriptor;
+
             ++writeIndex;
             ++imageCount;
         }

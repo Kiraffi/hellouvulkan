@@ -225,7 +225,7 @@ void SpaceShooter::resized()
         "Main color target image");
 
     fontSystem.setRenderTarget(renderColorImage);
-    createFramebuffer(graphicsPipeline, { renderColorImage.imageView }, renderColorImage.width, renderColorImage.height);
+    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage }));
 }
 
 static uint32_t getPackedPosition(float x, float y)

@@ -23,10 +23,24 @@
 #include <string.h>
 
 
-static constexpr Formats defaultFormats[] = {
+static constexpr uint32_t FormatFlagBits =
+    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+    VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+    VK_FORMAT_FEATURE_BLIT_DST_BIT |
+    VK_FORMAT_FEATURE_TRANSFER_SRC_BIT |
+    VK_FORMAT_FEATURE_TRANSFER_DST_BIT |
+    VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
+    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+
+static constexpr Formats defaultPresent[] = {
     { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
     { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
     { VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_HDR10_ST2084_EXT },
+};
+
+static constexpr Formats defaultFormats[] = {
+    { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
+    { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D32_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
 };
 
 
@@ -502,12 +516,12 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             continue;
 
         uint32_t formatIndex = ~0u;
-        uint32_t optimalFormatFeatures = VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+
         for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
         {
             VkFormatProperties formatProperties;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, defaultFormats[j].format, &formatProperties);
-            if((formatProperties.optimalTilingFeatures & optimalFormatFeatures) == optimalFormatFeatures)
+            if(((formatProperties.optimalTilingFeatures & formatProperties.linearTilingFeatures) & FormatFlagBits) == FormatFlagBits)
             {
                 formatIndex = j;
                 goto formatIndexFound;
@@ -591,44 +605,39 @@ static bool createDeviceWithQueues()
         return false;
 
     vulk.presentColorFormat = VK_FORMAT_UNDEFINED;
-    vulk.depthFormat = defaultFormats[0].depth;
+    vulk.depthFormat = defaultPresent[0].depth;
     vulk.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     vulk.defaultColorFormat = VK_FORMAT_UNDEFINED;
 
     for(uint32_t i = 0; i < swapChainSupport.formats.size() && vulk.presentColorFormat == VK_FORMAT_UNDEFINED; ++i)
     {
 
-        for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
+        for (uint32_t j = 0; j < ARRAYSIZES(defaultPresent); ++j)
         {
-            if(swapChainSupport.formats[i].colorSpace != defaultFormats[j].colorSpace)
+            if(swapChainSupport.formats[i].colorSpace != defaultPresent[j].colorSpace)
                 continue;
-            if(swapChainSupport.formats[i].format != defaultFormats[j].format)
+            if(swapChainSupport.formats[i].format != defaultPresent[j].format)
                 continue;
-            vulk.presentColorFormat = defaultFormats[j].format;
-            vulk.depthFormat = defaultFormats[j].depth;
+            vulk.presentColorFormat = defaultPresent[j].format;
+            vulk.depthFormat = defaultPresent[j].depth;
 
-            vulk.colorSpace = defaultFormats[j].colorSpace;
+            vulk.colorSpace = defaultPresent[j].colorSpace;
         }
     }
 
     if(vulk.presentColorFormat == VK_FORMAT_UNDEFINED && swapChainSupport.formats.size() == 1 && swapChainSupport.formats[0].format == VK_FORMAT_UNDEFINED)
     {
-        vulk.presentColorFormat = defaultFormats[0].format;
-        vulk.colorSpace = defaultFormats[0].colorSpace;
-        vulk.depthFormat = defaultFormats[0].depth;
+        vulk.presentColorFormat = defaultPresent[0].format;
+        vulk.colorSpace = defaultPresent[0].colorSpace;
+        vulk.depthFormat = defaultPresent[0].depth;
     }
     ASSERT(vulk.presentColorFormat != VK_FORMAT_UNDEFINED);
 
-    static constexpr uint32_t flagBits =
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
-        VK_FORMAT_FEATURE_BLIT_SRC_BIT |
-        VK_FORMAT_FEATURE_BLIT_DST_BIT |
-        VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
     for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
     {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(vulk.physicalDevice, defaultFormats[j].format, &formatProperties);
-        if((formatProperties.optimalTilingFeatures & flagBits) == flagBits)
+        if (((formatProperties.optimalTilingFeatures & formatProperties.linearTilingFeatures) & FormatFlagBits) == FormatFlagBits)
         {
             vulk.defaultColorFormat = defaultFormats[j].format;
             break;
@@ -789,8 +798,6 @@ static VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
         attachment.loadOp = target.loadOp;
         attachment.storeOp = target.storeOp;
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachments.push_back(attachment);
@@ -1451,9 +1458,12 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     outPipeline.pipeline = pipeline;
     outPipeline.renderPass = renderPass;
 
-    outPipeline.descriptor = createDescriptor(outPipeline.descriptorSetLayouts, outPipeline.descriptorSetLayout);
-    if (!outPipeline.descriptor.descriptorSet || !outPipeline.descriptor.pool)
+    if (!createDescriptor(outPipeline))
+    {
+        printf("Failed to create graphics pipeline descriptor\n");
         return false;
+    }
+
     return pipeline != nullptr;
 }
 
@@ -1485,10 +1495,11 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline)
 
     outPipeline.pipeline = pipeline;
 
-    outPipeline.descriptor = createDescriptor(outPipeline.descriptorSetLayouts, outPipeline.descriptorSetLayout);
-    if (!outPipeline.descriptor.descriptorSet || !outPipeline.descriptor.pool)
+    if (!createDescriptor(outPipeline))
+    {
+        printf("Failed to create compute pipeline descriptor\n");
         return false;
-
+    }
     return pipeline != nullptr;
 }
 

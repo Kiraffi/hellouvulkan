@@ -30,10 +30,7 @@ void destroyBuffer(Buffer& buffer);
 size_t uploadToScratchbuffer(void* data, size_t size, size_t offset);
 void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t sizes);
 
-
-bool createFramebuffer(Pipeline& pipeline,
-    const PodVector<VkImageView> & colorsAndDepthView,
-    uint32_t width, uint32_t height);
+bool createFramebuffer(Pipeline& pipeline, const PodVector<Image>& colorsAndDepthImages);
 
 void destroyFramebuffer(VkFramebuffer framebuffer);
 

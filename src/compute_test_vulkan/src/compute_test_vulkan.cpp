@@ -69,7 +69,6 @@ public:
 
     Image computeColorImage;
     VkSampler textureSampler = nullptr;
-    VkSampler computeWriteSampler = nullptr;
 
     Image renderColorFinalImage;
 
@@ -101,7 +100,6 @@ VulkanComputeTest::~VulkanComputeTest()
     destroyImage(renderColorFinalImage);
 
     destroySampler(textureSampler);
-    destroySampler(computeWriteSampler);
 }
 
 
@@ -210,52 +208,14 @@ bool VulkanComputeTest::createPipelines()
         }
 
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        //samplerInfo.magFilter = VK_FILTER_LINEAR;
-        //samplerInfo.minFilter = VK_FILTER_LINEAR;
-        //samplerInfo.maxLod = 1.0f;
-        //samplerInfo.maxAnisotropy = 1;
-
         samplerInfo.magFilter = VK_FILTER_NEAREST;
         samplerInfo.minFilter = VK_FILTER_NEAREST;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.anisotropyEnable = VK_FALSE; //VK_TRUE;
-        samplerInfo.maxAnisotropy = 1;
-        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.compareEnable = VK_FALSE;
-        samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerInfo.minLod = 0;
-        samplerInfo.maxLod = 1.0f;
-        samplerInfo.mipLodBias = 0;
 
         textureSampler = createSampler(samplerInfo);
         if(!textureSampler)
         {
             printf("Failed to create sampler for font rendering");
             return false;
-        }
-
-        {
-            VkSamplerCreateInfo samplerInfo = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-            samplerInfo.magFilter = VK_FILTER_NEAREST;
-            samplerInfo.minFilter = VK_FILTER_NEAREST;
-            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.anisotropyEnable = VK_FALSE; //VK_TRUE;
-            samplerInfo.maxAnisotropy = 1;
-            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            samplerInfo.compareEnable = VK_FALSE;
-            samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            samplerInfo.minLod = 0;
-            samplerInfo.maxLod = 1.0f;
-            samplerInfo.mipLodBias = 0;
-            computeWriteSampler = createSampler(samplerInfo);
         }
 
     }
@@ -287,12 +247,16 @@ bool VulkanComputeTest::recreateDescriptor()
         destroyDescriptor(pipeline.descriptor);
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
-    //            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 DescriptorInfo(vulk.renderFrameBufferHandle),
-                DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
-                DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, computeWriteSampler),
+                //DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureSampler),
+                DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+                DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             });
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
+        if (!createDescriptor(pipeline))
+        {
+            printf("Failed to create compute pipeline descriptor\n");
+            return false;
+        }
         if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
@@ -309,7 +273,12 @@ bool VulkanComputeTest::recreateDescriptor()
             DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
 
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
+        if (!createDescriptor(pipeline))
+        {
+            printf("Failed to create graphics pipeline descriptor\n");
+            return false;
+        }
+
         if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
@@ -332,7 +301,7 @@ void VulkanComputeTest::resized()
         vulk.swapchain.width, vulk.swapchain.height,
         vulk.defaultColorFormat,
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
@@ -345,7 +314,7 @@ void VulkanComputeTest::resized()
         vulk.swapchain.width, vulk.swapchain.height,
         vulk.defaultColorFormat,
 
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Compute target image");
 
@@ -357,9 +326,9 @@ void VulkanComputeTest::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Render color final image");
 
-    createFramebuffer(graphicsPipeline, { renderColorImage.imageView, renderDepthImage.imageView }, renderColorImage.width, renderColorImage.height);
+    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage, renderDepthImage }));
     fontSystem.setRenderTarget(renderColorImage);
-    createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage.imageView }, renderColorFinalImage.width, renderColorFinalImage.height);
+    ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
     recreateDescriptor();
 }
 
@@ -473,13 +442,12 @@ void VulkanComputeTest::renderDraw()
 
     {
         addImageBarrier(imageBarrier(renderColorImage,
-            //VK_ACCESS_MEMORY_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            //VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
             VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 
         addImageBarrier(imageBarrier(computeColorImage,
             0, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
-            //VK_ACCESS_MEMORY_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
 
         flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
@@ -516,6 +484,8 @@ void VulkanComputeTest::renderDraw()
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
+    //present(renderColorImage);
+    //present(computeColorImage);
     present(renderColorFinalImage);
 }
 

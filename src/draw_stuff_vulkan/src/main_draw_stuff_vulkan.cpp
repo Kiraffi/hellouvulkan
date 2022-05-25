@@ -149,7 +149,7 @@ bool VulkanDrawStuff::createPipelines()
         getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
         { RenderTarget{.format = vulk.defaultColorFormat } },
         { .depthTarget = RenderTarget{.format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
-        pipeline))
+        pipeline, false))
     {
         printf("Failed to create graphics pipeline\n");
     }
@@ -165,12 +165,12 @@ bool VulkanDrawStuff::createPipelines()
             DescriptorInfo(animationVertexBuffer),
         });
 
-    pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
     if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
     {
         printf("Failed to set descriptor binds!\n");
         return false;
     }
+    resized();
     return true;
 }
 
@@ -193,6 +193,8 @@ void VulkanDrawStuff::resized()
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main depth target image");
 
+    fontSystem.setRenderTarget(renderColorImage);
+    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage, renderDepthImage }));
 }
 
 void VulkanDrawStuff::logicUpdate()
@@ -274,45 +276,9 @@ void VulkanDrawStuff::renderDraw()
     {
         static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
         static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
-        VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };
-        VkRect2D scissors = { { 0, 0 }, { uint32_t(swapchain.width), uint32_t(swapchain.height) } };
+        
+        beginRenderPass(graphicsPipeline, { colorClear, depthClear });
 
-
-        const VkRenderingAttachmentInfo colorAttachmentInfo[] {
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-                .imageView = renderColorImage.imageView,
-                .imageLayout = renderColorImage.layout,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = colorClear
-            },
-
-        };
-        const VkRenderingAttachmentInfo depthAttachment{
-            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-            .imageView = renderDepthImage.imageView,
-            .imageLayout = renderDepthImage.layout,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .clearValue = depthClear
-        };
-
-        const VkRenderingInfo renderInfo {
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-            .pColorAttachments = colorAttachmentInfo,
-            .pDepthAttachment = &depthAttachment,
-        };
-
-        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
-
-        insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
         // draw calls here
         // Render
         {
@@ -321,9 +287,8 @@ void VulkanDrawStuff::renderDraw()
             vkCmdDrawIndexed(vulk.commandBuffer, indicesCount, 1, 0, 0, 0);
 
         }
-        vkCmdEndRendering(vulk.commandBuffer);
-
-        fontSystem.render(renderColorImage);
+        vkCmdEndRenderPass(vulk.commandBuffer);
+        fontSystem.render();
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
