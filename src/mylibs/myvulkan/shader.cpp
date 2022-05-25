@@ -1,7 +1,6 @@
 #include "shader.h"
 
-#include <spirv/1.2/spirv.h>
-//#include <spirv-headers/spirv.h>
+#include <spirv_cross/spirv.h>
 
 #include <container/podvector.h>
 #include <container/vector.h>
