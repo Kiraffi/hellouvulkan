@@ -8,21 +8,30 @@
 #include <math/vector3.h>
 #include <myvulkan/vulkglob.h>
 
+constexpr uint32_t QUERY_COUNT = 128u;
+static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
 
 class VulkanApp;
 struct Shader;
+struct GLFWwindow;
+
+struct RenderTarget
+{
+    VkFormat format = VK_FORMAT_UNDEFINED;
+
+    VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+};
 
 struct DepthTest
 {
-    VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+    RenderTarget depthTarget = {};
     VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
     bool useDepthTest = false;
     bool writeDepth = false;
 };
 
-struct GLFWwindow;
-constexpr uint32_t QUERY_COUNT = 128u;
-static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_3;
+
 
 bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
@@ -40,26 +49,23 @@ void endDebugRegion();
 void beginSingleTimeCommands();
 void endSingleTimeCommands();
 
-
-
-
-
-
+void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues);
 
 
 bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
-    const PodVector<VkFormat> &colorFormats, const DepthTest& depthTest, PipelineWithDescriptors &outPipeline);
+    const PodVector<RenderTarget> &colorTargets, const DepthTest& depthTest, Pipeline &outPipeline,
+    bool useDynamic = true);
 
-bool createComputePipeline(const Shader& csShader, PipelineWithDescriptors& outPipeline);
-
-
-
-bool createPipelineLayout(PipelineWithDescriptors &pipelineWithDescriptors, VkShaderStageFlags stage);
+bool createComputePipeline(const Shader& csShader, Pipeline& outPipeline);
 
 
-void destroyPipeline(PipelineWithDescriptors& pipelineWithDescriptors);
+
+bool createPipelineLayout(Pipeline &pipelineWithDescriptors, VkShaderStageFlags stage);
+
+
+void destroyPipeline(Pipeline& pipelineWithDescriptors);
 void destroyDescriptor(Descriptor &descriptor);
 
 
-void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWithDescriptors &pipelineWithDescriptor);
+void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const Pipeline &pipelineWithDescriptor);
 

@@ -21,9 +21,8 @@
 void FontRenderSystem::deInit()
 {
     destroyImage(textImage);
-
-    destroyDescriptor(pipelinesWithDescriptor.descriptor);
-    destroyPipeline(pipelinesWithDescriptor);
+    destroyDescriptor(pipeline.descriptor);
+    destroyPipeline(pipeline);
 
     destroySampler(textureSampler);
 
@@ -117,11 +116,10 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     // Create pipelines
     {
-        PipelineWithDescriptors& pipeline = pipelinesWithDescriptor;
         if(!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { vulk.defaultColorFormat },
-            {}, pipeline))
+            { RenderTarget{.format = vulk.defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
+            {}, pipeline, false))
         {
             printf("failed to create graphics pipeline\n");
         }
@@ -133,7 +131,6 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
 
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
         if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
@@ -144,6 +141,10 @@ bool FontRenderSystem::init(std::string_view fontFilename)
     return true;
 }
 
+void FontRenderSystem::setRenderTarget(Image& image)
+{
+    ASSERT(createFramebuffer(pipeline, { image.imageView }, image.width, image.height));
+}
 
 
 
@@ -188,48 +189,20 @@ void FontRenderSystem::reset()
     vertData.clear();
 }
 
-void FontRenderSystem::render(Image &image)
+void FontRenderSystem::render()
 {
-    if (vertData.size() == 0 || vulk.commandBuffer == nullptr)
+    VkCommandBuffer commandBuffer = vulk.commandBuffer;
+    if (vertData.size() == 0 || !commandBuffer)
         return;
 
-    VkRect2D renderArea = { .extent = {.width = vulk.swapchain.width, .height = vulk.swapchain.height } };
-    VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
-    VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
+    beginRenderPass(pipeline, {});
 
+    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindIndexBuffer(commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 
-    const VkRenderingAttachmentInfo colorAttachmentInfo[]{
-        {
-            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-            .imageView = image.imageView,
-            .imageLayout = image.layout,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        },
-
-    };
-
-    const VkRenderingInfo renderInfo{
-        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-        .renderArea = renderArea,
-        .layerCount = 1,
-        .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-        .pColorAttachments = colorAttachmentInfo,
-        .pDepthAttachment = nullptr,
-    };
-
-    vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
-
-    insertDebugRegion("FontRender", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-    vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-    vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
-
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptor);
-    vkCmdBindIndexBuffer(vulk.commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
-
-    vkCmdEndRendering(vulk.commandBuffer);
+    vkCmdEndRenderPass(vulk.commandBuffer);
+    vertData.clear();
 }
-
 
 

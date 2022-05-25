@@ -54,7 +54,7 @@ file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DI
 foreach(SHADER IN LISTS SPV_SHADERS)
     get_filename_component(FILENAME ${SHADER} NAME)
     message(STATUS "Compiling ${SHADER}")
-    execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.2 -o ${SHADER_DIR}/${FILENAME}.spv)
+    execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.1 -o ${SHADER_DIR}/${FILENAME}.spv)
 endForeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})

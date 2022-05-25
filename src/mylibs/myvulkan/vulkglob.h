@@ -64,18 +64,15 @@ struct Buffer
 
 struct Image
 {
+    VmaAllocation_T* allocation = nullptr;
     VkImage image = 0;
     VkImageView imageView = 0;
     const char* imageName = nullptr;
-    /*
-    VkDeviceMemory deviceMemory = 0;
-    */
     VkAccessFlags accessMask = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     uint32_t width = 0u;
     uint32_t height = 0u;
-    VmaAllocation_T *allocation = nullptr;
-    //VmaAllocation allocation = nullptr;
+    VkFormat format = VK_FORMAT_UNDEFINED;
 };
 
 
@@ -233,8 +230,10 @@ struct DescriptorInfo
 
 
 
-struct PipelineWithDescriptors
+struct Pipeline
 {
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    VkFramebuffer framebuffer = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
@@ -242,6 +241,9 @@ struct PipelineWithDescriptors
     Descriptor descriptor;
     PodVector<DescriptorSetLayout> descriptorSetLayouts;
     PodVector<DescriptorInfo> descriptorSetBinds;
+
+    uint32_t framebufferWidth = 0u;
+    uint32_t framebufferHeight = 0u;
 };
 
 

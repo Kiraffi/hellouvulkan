@@ -55,7 +55,7 @@ public:
     Buffer animationVertexBuffer;
     Buffer indexDataBuffer;
 
-    PipelineWithDescriptors graphicsPipeline;
+    Pipeline graphicsPipeline;
 
     Image renderColorImage;
     Image renderDepthImage;
@@ -144,11 +144,11 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
 bool VulkanDrawStuff::createPipelines()
 {
-    PipelineWithDescriptors& pipeline = graphicsPipeline;
+    Pipeline& pipeline = graphicsPipeline;
     if(!createGraphicsPipeline(
         getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
-        { vulk.defaultColorFormat },
-        { .depthFormat = vulk.depthFormat, .useDepthTest = true, .writeDepth = true },
+        { RenderTarget{.format = vulk.defaultColorFormat } },
+        { .depthTarget = RenderTarget{.format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
         pipeline))
     {
         printf("Failed to create graphics pipeline\n");

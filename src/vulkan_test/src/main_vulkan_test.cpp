@@ -116,7 +116,7 @@ enum ShaderModuleIndexes
 };
 
 // Probably not good in long run?
-enum PipelineWithDescriptorsIndexes
+enum PipelineIndexes
 {
     PIPELINE_COMPUTE_RESET,
     PIPELINE_COMPUTE_MESHES_BUILD,
@@ -182,7 +182,7 @@ public:
     std::vector<DescriptorSet> descriptorSets[NUM_SHADER_MODULES];
 
 
-    PipelineWithDescriptors pipelinesWithDescriptors[NUM_PIPELINE];
+    Pipeline pipelines[NUM_PIPELINE];
 
     VkSampler mainImageComputeWriteSampler = 0; // can write without sampler?
 
@@ -232,7 +232,7 @@ VulkanTest::~VulkanTest()
     for (auto& image : renderTargetImages)
         destroyImage(device, image);
 
-    for (auto& pipeline : pipelinesWithDescriptors)
+    for (auto& pipeline : pipelines)
     {
         destroyDescriptor(device, pipeline.descriptor);
         destroyPipeline(device, pipeline.pipeline);
@@ -447,7 +447,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
     struct HelperStruct
     {
-        static void setGraphicsPipeline(VkDevice device, PipelineWithDescriptors &pipelineWithDescriptors, VulkanTest *test,
+        static void setGraphicsPipeline(VkDevice device, Pipeline &pipelineWithDescriptors, VulkanTest *test,
             ShaderModuleIndexes vertShaderIndex, ShaderModuleIndexes fragShaderIndex, const VertexInput &vertexInput,
             u32 pushConstantSize = 0u, VkShaderStageFlagBits pushConstantStageUsage = VK_SHADER_STAGE_ALL_GRAPHICS)
         {
@@ -457,7 +457,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
             pipelineWithDescriptors.descriptor = createDescriptor(device, pipelineWithDescriptors.descriptorSet, pipelineWithDescriptors.pipeline.descriptorSetLayout);
         }
 
-        static void setComputePipeline(VkDevice device, PipelineWithDescriptors &pipelineWithDescriptors, VulkanTest *test,
+        static void setComputePipeline(VkDevice device, Pipeline &pipelineWithDescriptors, VulkanTest *test,
             ShaderModuleIndexes computeShaderIndex,
             u32 pushConstantSize = 0u, VkShaderStageFlagBits pushConstantStageUsage = VK_SHADER_STAGE_ALL_GRAPHICS)
         {
@@ -470,7 +470,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
 
     {
-        PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[PIPELINE_GRAPHICS_PIPELINE];
+        Pipeline &pipeline = pipelines[PIPELINE_GRAPHICS_PIPELINE];
         VertexInput vertexInput;
         //vertexInput.formats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
         //vertexInput.formats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
@@ -490,7 +490,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
     }
 
     {
-        PipelineWithDescriptors& pipeline = pipelinesWithDescriptors[PIPELINE_COMPUTE_MESHES_BUILD];
+        Pipeline& pipeline = pipelines[PIPELINE_COMPUTE_MESHES_BUILD];
         pipeline.descriptorSet = std::vector<DescriptorSet>(
             {
                 DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[UNIFORM_BUFFER] },
@@ -505,7 +505,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
 
     }
     {
-        PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[PIPELINE_COMPUTE_TRIANGLE_BUILD];
+        Pipeline &pipeline = pipelines[PIPELINE_COMPUTE_TRIANGLE_BUILD];
         pipeline.descriptorSet = std::vector<DescriptorSet>(
         {
             DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[UNIFORM_BUFFER] },
@@ -546,7 +546,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
     }
 
     {
-        PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[PIPELINE_COMPUTE_CARP_WRITE_NUMBER];
+        Pipeline &pipeline = pipelines[PIPELINE_COMPUTE_CARP_WRITE_NUMBER];
         pipeline.descriptorSet = std::vector<DescriptorSet>(
         {
             DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0u, true, &buffers[UNIFORM_BUFFER] },
@@ -559,7 +559,7 @@ bool VulkanTest::init(const char *windowStr, int screenWidth, int screenHeight)
     }
 
     {
-        PipelineWithDescriptors &pipeline = pipelinesWithDescriptors[PIPELINE_COMPUTE_RESET];
+        Pipeline &pipeline = pipelines[PIPELINE_COMPUTE_RESET];
         pipeline.descriptorSet = std::vector<DescriptorSet>(
         {
             DescriptorSet{ VK_SHADER_STAGE_COMPUTE_BIT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4u, true, &buffers[ATOMIC_BUFFER] },
@@ -600,7 +600,7 @@ void VulkanTest::recreateSwapchainData()
 
     // Should probably handle descriptor pool reseting instead of actually destroying it.
     {
-        PipelineWithDescriptors &pipelineWithDescriptors = pipelinesWithDescriptors[PIPELINE_COMPUTE_CARP_WRITE_NUMBER];
+        Pipeline &pipelineWithDescriptors = pipelines[PIPELINE_COMPUTE_CARP_WRITE_NUMBER];
         destroyDescriptor(device, pipelineWithDescriptors.descriptor);
 
         pipelineWithDescriptors.descriptorSet[3].image = renderTargetImages[MAIN_COLOR_TARGET].image;
@@ -904,7 +904,7 @@ void VulkanTest::run()
         beginDebugRegion(commandBuffer, "Render scene", Vec4(0.5f, 0.76f, 0.34f, 1.0f));
         insertDebugRegion(commandBuffer, "Compute", Vec4(0.0f));
         {
-            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinesWithDescriptors[PIPELINE_COMPUTE_RESET]);
+            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[PIPELINE_COMPUTE_RESET]);
             vkCmdDispatch(commandBuffer, 1, 1, 1);
 
             VkBufferMemoryBarrier bar[]
@@ -918,7 +918,7 @@ void VulkanTest::run()
 
 
         {
-            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinesWithDescriptors[PIPELINE_COMPUTE_MESHES_BUILD]);
+            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[PIPELINE_COMPUTE_MESHES_BUILD]);
             vkCmdDispatch(commandBuffer, drawCount, 1, 1);
 
             VkBufferMemoryBarrier bar[]
@@ -934,7 +934,7 @@ void VulkanTest::run()
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, queryPool, TIME_POINTS::COMPUTE_BEFORE_TRIANGLE_BUILD);
 
         {
-            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinesWithDescriptors[PIPELINE_COMPUTE_TRIANGLE_BUILD]);
+            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[PIPELINE_COMPUTE_TRIANGLE_BUILD]);
             //const u32 groupSize = trianglesPerPatch;
             //vkCmdDispatch(commandBuffer, (meshData.indiceCount + groupSize * groupSize * 3 - 1) / (groupSize * groupSize * 3), drawCount, 1);
             vkCmdDispatchIndirect(commandBuffer, buffers[ATOMIC_BUFFER].buffer, VkDeviceSize(8u * sizeof(u32)));
@@ -1019,7 +1019,7 @@ void VulkanTest::run()
                 //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, &vbOffset);
 
                 //vkCmdBindIndexBuffer(commandBuffer, buffers[INDEX_DATA_BUFFER].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-                bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinesWithDescriptors[PIPELINE_GRAPHICS_PIPELINE]);
+                bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines[PIPELINE_GRAPHICS_PIPELINE]);
                 vkCmdBindIndexBuffer(commandBuffer, buffers[INDEX_WRITE_BUFFER].buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
 
                 //for(u32 i = 0; i < drawCount; ++i)
@@ -1068,7 +1068,7 @@ void VulkanTest::run()
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, //COMPUTE_SHADER_BIT,
                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
 
-            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinesWithDescriptors[PIPELINE_COMPUTE_CARP_WRITE_NUMBER]);
+            bindPipelineWithDecriptors(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[PIPELINE_COMPUTE_CARP_WRITE_NUMBER]);
             vkCmdDispatch(commandBuffer, 10, 2, 1);
         }
 

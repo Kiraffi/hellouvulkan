@@ -82,7 +82,7 @@ public:
     Buffer quadBuffer;
     Buffer indexDataBuffer;
 
-    PipelineWithDescriptors graphicsPipeline;
+    Pipeline graphicsPipeline;
 
     std::string fontFilename;
 
@@ -149,11 +149,11 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
     }
 
     {
-        PipelineWithDescriptors& pipeline = graphicsPipeline;
+        Pipeline& pipeline = graphicsPipeline;
 
         if (!createGraphicsPipeline(
             getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
-            { vulk.defaultColorFormat }, {  }, pipeline))
+            { RenderTarget {.format = vulk.defaultColorFormat } }, {  }, pipeline, false))
         {
             printf("Failed to create pipeline\n");
             return false;
@@ -166,13 +166,13 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
                 DescriptorInfo(quadBuffer),
             });
 
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
         if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
         }
     }
+    resized();
     return initRun();
 }
 
@@ -260,6 +260,8 @@ void VulkanFontDraw::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
+    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage.imageView }, renderColorImage.width, renderColorImage.height));
+    fontSystem.setRenderTarget(renderColorImage);
 }
 
 void VulkanFontDraw::logicUpdate()
@@ -379,41 +381,8 @@ void VulkanFontDraw::renderDraw()
     // Drawingg
 
     {
-        const SwapChain& swapchain = vulk.swapchain;
-
         static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
-        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
-
-
-        const VkRenderingAttachmentInfo colorAttachmentInfo[]{
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-                .imageView = renderColorImage.imageView,
-                .imageLayout = renderColorImage.layout,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = colorClear
-            },
-
-        };
-
-        const VkRenderingInfo renderInfo{
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-            .pColorAttachments = colorAttachmentInfo,
-            .pDepthAttachment = nullptr,
-        };
-        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
-
-        VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
-        VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
-
-        insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
-
+        beginRenderPass(graphicsPipeline, { colorClear });
         // draw calls here
         // Render
         {
@@ -422,7 +391,8 @@ void VulkanFontDraw::renderDraw()
             vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 
         }
-        vkCmdEndRendering(vulk.commandBuffer);
+        vkCmdEndRenderPass(vulk.commandBuffer);
+        //vkCmdEndRendering(vulk.commandBuffer);
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);

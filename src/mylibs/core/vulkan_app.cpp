@@ -131,7 +131,6 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     glfwSetKeyCallback(window, keyboardHandlerCallback);
     glfwSetWindowUserPointer(window, this);
-    resized();
     return true;
 
 }

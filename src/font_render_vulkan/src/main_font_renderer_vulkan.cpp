@@ -60,7 +60,7 @@ bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHe
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-
+    resized();
     return true;
 }
 
@@ -88,7 +88,7 @@ void VulkanFontRender::resized()
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
-
+    fontSystem.setRenderTarget(renderColorImage);
 }
 
 void VulkanFontRender::logicUpdate()
@@ -145,50 +145,9 @@ void VulkanFontRender::renderDraw()
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 
     flushBarriers();
-    // Drawingg, just to change background color....
     {
-        const SwapChain& swapchain = vulk.swapchain;
-
-        static constexpr VkClearValue colorClear = { .color{48.0f / 255.0f, 10.0f / 255.0f, 36.0f / 255.0f, 1.0f } };
-        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
-
-
-        const VkRenderingAttachmentInfo colorAttachmentInfo[]{
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-                .imageView = renderColorImage.imageView,
-                .imageLayout = renderColorImage.layout,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = colorClear
-            },
-
-        };
-
-        const VkRenderingInfo renderInfo{
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-            .pColorAttachments = colorAttachmentInfo,
-            .pDepthAttachment = nullptr,
-        };
-        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
-
-        VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
-        VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
-
-        insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
-
-        // draw calls here
-        // Render
-        {
-        }
-        vkCmdEndRendering(vulk.commandBuffer);
-
-        fontSystem.render(renderColorImage);
+        //fontSystem.render(renderColorImage);
+        fontSystem.render();
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);

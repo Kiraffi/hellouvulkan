@@ -59,10 +59,10 @@ public:
     Buffer indexDataBuffer;
     Buffer quadIndexBuffer;
 
-    PipelineWithDescriptors graphicsPipeline;
+    Pipeline graphicsPipeline;
 
-    PipelineWithDescriptors computePipeline;
-    PipelineWithDescriptors graphicsFinalPipeline;
+    Pipeline computePipeline;
+    Pipeline graphicsFinalPipeline;
 
     Image renderColorImage;
     Image renderDepthImage;
@@ -173,12 +173,12 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
 bool VulkanComputeTest::createPipelines()
 {
     {
-        PipelineWithDescriptors &pipeline = graphicsPipeline;
+        Pipeline &pipeline = graphicsPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
-            { vulk.defaultColorFormat },
-            { .depthFormat = vulk.depthFormat, .useDepthTest = true, .writeDepth = true },
-            pipeline))
+            { RenderTarget{.format = vulk.defaultColorFormat } },
+            { .depthTarget = RenderTarget{ .format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
+            pipeline, false))
         {
             printf("failed to create pipeline\n");
         }
@@ -194,7 +194,7 @@ bool VulkanComputeTest::createPipelines()
                 DescriptorInfo(animationVertexBuffer),
             });
 
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
+       
         if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
@@ -202,7 +202,7 @@ bool VulkanComputeTest::createPipelines()
         }
     }
     {
-        PipelineWithDescriptors &pipeline = computePipeline;
+        Pipeline &pipeline = computePipeline;
         if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline))
         {
             printf("Failed to create compute pipeline!\n");
@@ -210,10 +210,26 @@ bool VulkanComputeTest::createPipelines()
         }
 
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        //samplerInfo.magFilter = VK_FILTER_LINEAR;
+        //samplerInfo.minFilter = VK_FILTER_LINEAR;
+        //samplerInfo.maxLod = 1.0f;
+        //samplerInfo.maxAnisotropy = 1;
 
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
+        samplerInfo.magFilter = VK_FILTER_NEAREST;
+        samplerInfo.minFilter = VK_FILTER_NEAREST;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.anisotropyEnable = VK_FALSE; //VK_TRUE;
+        samplerInfo.maxAnisotropy = 1;
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerInfo.minLod = 0;
+        samplerInfo.maxLod = 1.0f;
+        samplerInfo.mipLodBias = 0;
 
         textureSampler = createSampler(samplerInfo);
         if(!textureSampler)
@@ -223,8 +239,7 @@ bool VulkanComputeTest::createPipelines()
         }
 
         {
-            VkSamplerCreateInfo samplerInfo = {};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            VkSamplerCreateInfo samplerInfo = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
             samplerInfo.magFilter = VK_FILTER_NEAREST;
             samplerInfo.minFilter = VK_FILTER_NEAREST;
             samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -240,25 +255,25 @@ bool VulkanComputeTest::createPipelines()
             samplerInfo.minLod = 0;
             samplerInfo.maxLod = 1.0f;
             samplerInfo.mipLodBias = 0;
-
-            VK_CHECK(vkCreateSampler(vulk.device, &samplerInfo, nullptr, &computeWriteSampler));
+            computeWriteSampler = createSampler(samplerInfo);
         }
 
     }
 
     // Create copy-pipelines
     {
-        PipelineWithDescriptors &pipeline = graphicsFinalPipeline;
+        Pipeline &pipeline = graphicsFinalPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { vulk.defaultColorFormat }, {}, pipeline))
+            { RenderTarget{.format = vulk.defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, 
+            {}, pipeline, false))
         {
             printf("Failed to create graphics pipeline\n");
             return false;
         }
 
     }
-
+    resized();
     return recreateDescriptor();
 }
 
@@ -268,7 +283,7 @@ bool VulkanComputeTest::recreateDescriptor()
         return false;
 
     {
-        PipelineWithDescriptors &pipeline = computePipeline;
+        Pipeline &pipeline = computePipeline;
         destroyDescriptor(pipeline.descriptor);
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
@@ -285,7 +300,7 @@ bool VulkanComputeTest::recreateDescriptor()
         }
     }
     {
-        PipelineWithDescriptors &pipeline = graphicsFinalPipeline;
+        Pipeline &pipeline = graphicsFinalPipeline;
         destroyDescriptor(pipeline.descriptor);
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
@@ -342,6 +357,9 @@ void VulkanComputeTest::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Render color final image");
 
+    createFramebuffer(graphicsPipeline, { renderColorImage.imageView, renderDepthImage.imageView }, renderColorImage.width, renderColorImage.height);
+    fontSystem.setRenderTarget(renderColorImage);
+    createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage.imageView }, renderColorFinalImage.width, renderColorFinalImage.height);
     recreateDescriptor();
 }
 
@@ -434,45 +452,11 @@ void VulkanComputeTest::renderDraw()
     {
         static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
         static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
-        VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };
-        VkRect2D scissors = { { 0, 0 }, { uint32_t(swapchain.width), uint32_t(swapchain.height) } };
 
-
-        const VkRenderingAttachmentInfo colorAttachmentInfo[] {
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-                .imageView = renderColorImage.imageView,
-                .imageLayout = renderColorImage.layout,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = colorClear
-            },
-
-        };
-        const VkRenderingAttachmentInfo depthAttachment{
-            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-            .imageView = renderDepthImage.imageView,
-            .imageLayout = renderDepthImage.layout,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .clearValue = depthClear
-        };
-
-        const VkRenderingInfo renderInfo {
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-            .pColorAttachments = colorAttachmentInfo,
-            .pDepthAttachment = &depthAttachment,
-        };
-
-        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
+        beginRenderPass(graphicsPipeline, { colorClear, depthClear });
 
         insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
+
         // draw calls here
         // Render
         {
@@ -481,9 +465,8 @@ void VulkanComputeTest::renderDraw()
             vkCmdDrawIndexed(vulk.commandBuffer, indicesCount, 1, 0, 0, 0);
 
         }
-        vkCmdEndRendering(vulk.commandBuffer);
-
-        fontSystem.render(renderColorImage);
+        vkCmdEndRenderPass(vulk.commandBuffer);
+        fontSystem.render();
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
@@ -517,38 +500,10 @@ void VulkanComputeTest::renderDraw()
 
         flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
-        static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
-        static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
-        VkViewport viewPort = { 0.0f, float(swapchain.height), float(swapchain.width), -float(swapchain.height), 0.0f, 1.0f };
-        VkRect2D scissors = { { 0, 0 }, { uint32_t(swapchain.width), uint32_t(swapchain.height) } };
 
-
-        const VkRenderingAttachmentInfo colorAttachmentInfo[] {
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-                .imageView = renderColorFinalImage.imageView,
-                .imageLayout = renderColorFinalImage.layout,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = colorClear
-            },
-        };
-
-        const VkRenderingInfo renderInfo {
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-            .pColorAttachments = colorAttachmentInfo,
-            .pDepthAttachment = nullptr,
-        };
-
-        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
-
+        beginRenderPass(graphicsFinalPipeline, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
+
         // draw calls here
         // Render
         {
@@ -556,8 +511,7 @@ void VulkanComputeTest::renderDraw()
             vkCmdBindIndexBuffer(vulk.commandBuffer, quadIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(vulk.commandBuffer, 6, 1, 0, 0, 0);
         }
-        vkCmdEndRendering(vulk.commandBuffer);
-
+        vkCmdEndRenderPass(vulk.commandBuffer);
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
@@ -576,7 +530,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = false,
+            .useIntegratedGpu = true,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC

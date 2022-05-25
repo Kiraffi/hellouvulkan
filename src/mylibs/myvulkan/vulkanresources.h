@@ -31,10 +31,11 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset);
 void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t sizes);
 
 
-VkFramebuffer createFramebuffer(VkRenderPass renderPass,
-    const ArraySliceView<VkImageView> &colorView, const VkImageView depthView,
+bool createFramebuffer(Pipeline& pipeline,
+    const PodVector<VkImageView> & colorsAndDepthView,
     uint32_t width, uint32_t height);
 
+void destroyFramebuffer(VkFramebuffer framebuffer);
 
 VkImageView createImageView(VkImage image, VkFormat format);
 

@@ -115,7 +115,7 @@ public:
     Buffer instanceBuffer;
     Buffer indexDataBufferModels;
 
-    PipelineWithDescriptors graphicsPipeline;
+    Pipeline graphicsPipeline;
 
     Entity playerEntity;
 
@@ -185,10 +185,10 @@ bool SpaceShooter::init(const char* windowStr, int screenWidth, int screenHeight
 bool SpaceShooter::createPipelines()
 {
     {
-        PipelineWithDescriptors& pipeline = graphicsPipeline;
+        Pipeline& pipeline = graphicsPipeline;
         if(!createGraphicsPipeline(
             getShader(ShaderType::SpaceShip2DModelVert), getShader(ShaderType::SpaceShip2DModelFrag),
-            { vulk.defaultColorFormat }, {  }, pipeline))
+            { RenderTarget{.format = vulk.defaultColorFormat } }, {  }, pipeline, false))
         {
             printf("failed to create pipeline\n");
             return false;
@@ -201,14 +201,13 @@ bool SpaceShooter::createPipelines()
                 DescriptorInfo(instanceBuffer),
             });
 
-        pipeline.descriptor = createDescriptor(pipeline.descriptorSetLayouts, pipeline.descriptorSetLayout);
         if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
         }
     }
-
+    resized();
     return true;
 }
 
@@ -225,6 +224,8 @@ void SpaceShooter::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
+    fontSystem.setRenderTarget(renderColorImage);
+    createFramebuffer(graphicsPipeline, { renderColorImage.imageView }, renderColorImage.width, renderColorImage.height);
 }
 
 static uint32_t getPackedPosition(float x, float y)
@@ -553,15 +554,12 @@ void SpaceShooter::logicUpdate()
 
         ASSERT(gpuModelInstances.size() < (1 << 16u));
     }
-
+    fontSystem.addText(text, Vector2(100.0f, 10.0f), Vec2(8.0f, 12.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
 void SpaceShooter::renderUpdate()
 {
     VulkanApp::renderUpdate();
-
-
-    fontSystem.addText(text, Vector2(100.0f, 10.0f), Vec2(8.0f, 12.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
 
     addToCopylist(sliceFromPodVectorBytes(gpuModelInstances), instanceBuffer.buffer, 0);
     addToCopylist(sliceFromPodVectorBytes(gpuModelIndices), indexDataBufferModels.buffer, 0);
@@ -577,42 +575,9 @@ void SpaceShooter::renderDraw()
 
     // Drawingg
     {
-        const SwapChain& swapchain = vulk.swapchain;
 
         static constexpr VkClearValue colorClear = { .color{ 0.0f, 0.0f, 0.0f, 1.0f } };
-        VkRect2D renderArea = { .extent = {.width = swapchain.width, .height = swapchain.height } };
-
-
-        const VkRenderingAttachmentInfo colorAttachmentInfo[]{
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-                .imageView = renderColorImage.imageView,
-                .imageLayout = renderColorImage.layout,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = colorClear
-            },
-
-        };
-
-        const VkRenderingInfo renderInfo{
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = ARRAYSIZES(colorAttachmentInfo),
-            .pColorAttachments = colorAttachmentInfo,
-            .pDepthAttachment = nullptr,
-        };
-        vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
-
-        VkViewport viewPort = { 0.0f, float(vulk.swapchain.height), float(vulk.swapchain.width), -float(vulk.swapchain.height), 0.0f, 1.0f };
-        VkRect2D scissors = { { 0, 0 }, { uint32_t(vulk.swapchain.width), uint32_t(vulk.swapchain.height) } };
-
-
-        insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
-        vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
-
+        beginRenderPass(graphicsPipeline, { colorClear });
         // draw calls here
         // Render
         {
@@ -621,9 +586,9 @@ void SpaceShooter::renderDraw()
             vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
 
         }
-        vkCmdEndRendering(vulk.commandBuffer);
+        vkCmdEndRenderPass(vulk.commandBuffer);
 
-        fontSystem.render(renderColorImage);
+        fontSystem.render();
 
     }
 

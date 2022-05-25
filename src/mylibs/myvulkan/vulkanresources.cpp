@@ -35,33 +35,36 @@ void deinitVMA()
     }
 }
 
-VkFramebuffer createFramebuffer(VkRenderPass renderPass,
-    const ArraySliceView<VkImageView> &colorView, const VkImageView depthView,
+bool createFramebuffer(Pipeline &pipeline,
+    const PodVector<VkImageView> &colorsAndDepthView,
     uint32_t width, uint32_t height)
 {
-
-    uint32_t colorViewCount = colorView.size();
-    uint32_t depthViewCount = depthView ? 1u : 0u;
-    PodVector<VkImageView> attachments(colorViewCount + depthViewCount);
-    for (uint32_t i = 0; i < colorViewCount; ++i)
-        attachments[i] = colorView[i];
-    if (depthView)
-        attachments[colorViewCount] = depthView;
-
+    destroyFramebuffer(pipeline.framebuffer);
+    ASSERT(pipeline.renderPass);
 
     VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-    createInfo.renderPass = renderPass;
-    createInfo.attachmentCount = attachments.size();
+    createInfo.renderPass = pipeline.renderPass;
+    createInfo.attachmentCount = colorsAndDepthView.size();
     createInfo.layers = 1;
-    createInfo.pAttachments = attachments.data();
+    createInfo.pAttachments = colorsAndDepthView.size() > 0 ? colorsAndDepthView.data() : nullptr;
     createInfo.width = width;
     createInfo.height = height;
 
     VkFramebuffer framebuffer = 0;
     VK_CHECK(vkCreateFramebuffer(vulk.device, &createInfo, nullptr, &framebuffer));
-    return framebuffer;
+
+    pipeline.framebuffer = framebuffer;
+    pipeline.framebufferWidth = width;
+    pipeline.framebufferHeight = height;
+
+    return framebuffer != nullptr;
 }
 
+void destroyFramebuffer(VkFramebuffer framebuffer)
+{
+    if (framebuffer)
+        vkDestroyFramebuffer(vulk.device, framebuffer, nullptr);
+}
 
 Image createImage(uint32_t width, uint32_t height, VkFormat format,
     VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* imageName)
@@ -102,7 +105,9 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
     */
     setObjectName((uint64_t)result.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, imageName);
     result.imageName = imageName;
-
+    result.width = width;
+    result.height = height;
+    result.format = format;
     return result;
 }
 

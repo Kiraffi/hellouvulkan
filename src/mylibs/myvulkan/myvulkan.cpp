@@ -664,9 +664,9 @@ static bool createDeviceWithQueues()
             .dynamicRendering = VK_TRUE,
         };
 
-        static constexpr  VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 {
+        static constexpr  VkPhysicalDeviceFeatures2 physicalDeviceFeatures2{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-            .pNext = (void *)&deviceFeatures13,
+            .pNext = VulkanApiVersion >= VK_API_VERSION_1_3 ? (void*)&deviceFeatures13 : nullptr,
             .features = deviceFeatures,
         };
 
@@ -679,7 +679,7 @@ static bool createDeviceWithQueues()
 
 
 
-        createInfo.pEnabledFeatures = nullptr; // &deviceFeatures;
+        createInfo.pEnabledFeatures = nullptr;
 
         PodVector<const char*> deviceExts = deviceExtensions;
         if (optionals.canUseVulkanRenderdocExtensionMarker)
@@ -774,46 +774,60 @@ static VkCommandPool createCommandPool()
 }
 
 
-static VkRenderPass createRenderPass(VkFormat colorFormat, VkFormat depthFormat)
+static VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget&depthFormat)
 {
-    VkAttachmentDescription attachments[2] = {};
-    attachments[0].format = colorFormat;
-    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    bool hasDepthFormat = depthFormat.format != VK_FORMAT_UNDEFINED;
+    PodVector< VkAttachmentDescription> attachments;
+    PodVector< VkAttachmentReference > colorAttachments;
+    for (const RenderTarget& target : colorTargets)
+    {
+        // To get indexes right
+        colorAttachments.push_back({ VkAttachmentReference{ attachments.size(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL} });
 
-    attachments[1].format = depthFormat;
-    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; //VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        VkAttachmentDescription attachment = {};
+        attachment.format = target.format;
+        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment.loadOp = target.loadOp;
+        attachment.storeOp = target.storeOp;
+        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachments.push_back(attachment);
+    }
 
-    // attachment index
-    VkAttachmentReference colorAttachments = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-    VkAttachmentReference depthAttachments = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference depthAttachments = { colorAttachments.size(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }; 
+    if(hasDepthFormat)
+    {
+        VkAttachmentDescription attachment = {};
+        attachment.format = depthFormat.format;
+        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment.loadOp = depthFormat.loadOp;
+        attachment.storeOp = depthFormat.storeOp;
+        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments.push_back(attachment);
+    }
+    ASSERT(attachments.size());
 
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachments;
-    subpass.pDepthStencilAttachment = &depthAttachments;
+    subpass.colorAttachmentCount = colorAttachments.size();
+    subpass.pColorAttachments = colorAttachments.size() > 0 ? colorAttachments.data() : nullptr;
+    subpass.pDepthStencilAttachment = hasDepthFormat ? &depthAttachments : nullptr;
 
     VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    createInfo.attachmentCount = ARRAYSIZES(attachments);
-    createInfo.pAttachments = attachments;
+    createInfo.attachmentCount = attachments.size();
+    createInfo.pAttachments = attachments.size() > 0 ? attachments.data() : nullptr;
     createInfo.subpassCount = 1;
     createInfo.pSubpasses = &subpass;
 
     VkRenderPass renderPass = 0;
 
     VK_CHECK(vkCreateRenderPass(vulk.device, &createInfo, nullptr, &renderPass));
+    ASSERT(renderPass);
     return renderPass;
 }
 
@@ -1085,7 +1099,7 @@ bool resizeSwapchain()
 
 
 
-bool createPipelineLayout(PipelineWithDescriptors& pipelineWithDescriptors, VkShaderStageFlags stage)
+bool createPipelineLayout(Pipeline& pipelineWithDescriptors, VkShaderStageFlags stage)
 {
     VkDescriptorSetLayout setLayout = 0;
     VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -1153,7 +1167,24 @@ void endSingleTimeCommands()
     VK_CHECK(vkQueueWaitIdle(queue));
 }
 
+void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues)
+{
+    VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+    passBeginInfo.renderPass = pipeline.renderPass;
+    passBeginInfo.framebuffer = pipeline.framebuffer;
+    passBeginInfo.renderArea.extent.width = pipeline.framebufferWidth;
+    passBeginInfo.renderArea.extent.height = pipeline.framebufferHeight;
+    passBeginInfo.clearValueCount = clearValues.size();
+    passBeginInfo.pClearValues = clearValues.size() > 0 ? clearValues.data() : nullptr;
 
+    vkCmdBeginRenderPass(vulk.commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkRect2D renderArea = { .extent = {.width = pipeline.framebufferWidth, .height = pipeline.framebufferHeight } };
+    VkViewport viewPort = { 0.0f, float(pipeline.framebufferHeight), float(pipeline.framebufferWidth), -float(pipeline.framebufferHeight), 0.0f, 1.0f };
+    VkRect2D scissors = { { 0, 0 }, { pipeline.framebufferWidth, pipeline.framebufferHeight } };
+    vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
+    vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
+}
 
 
 
@@ -1308,7 +1339,8 @@ void present(Image & imageToPresent)
 
 
 bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
-    const PodVector<VkFormat> &colorFormats, const DepthTest &depthTest, PipelineWithDescriptors &outPipeline)
+    const PodVector<RenderTarget> &colorTargets, const DepthTest &depthTest, Pipeline &outPipeline,
+    bool useDynamic)
 {
     destroyPipeline(outPipeline);
 
@@ -1375,13 +1407,26 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     dynamicInfo.pDynamicStates = dynamicStates;
     dynamicInfo.dynamicStateCount = ARRAYSIZES(dynamicStates);
 
+    PodVector<VkFormat> colorFormats;
+    for (const auto& target : colorTargets)
+    {
+        colorFormats.push_back(target.format);
+    }
+
     const VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
         .colorAttachmentCount = colorFormats.size(),
         .pColorAttachmentFormats = colorFormats.data(),
-        .depthAttachmentFormat = depthTest.depthFormat,
+        .depthAttachmentFormat = depthTest.depthTarget.format,
     };
-
+    VkRenderPass renderPass = nullptr;
+    if (!useDynamic)
+    {
+        renderPass = createRenderPass(colorTargets, depthTest.depthTarget);
+        ASSERT(renderPass);
+        if (!renderPass)
+            return false;
+    }
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     createInfo.stageCount = ARRAYSIZES(stageInfos);
     createInfo.pStages = stageInfos;
@@ -1393,22 +1438,27 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     createInfo.pDepthStencilState = &depthInfo;
     createInfo.pColorBlendState = &blendInfo;
     createInfo.pDynamicState = &dynamicInfo;
-    createInfo.renderPass = VK_NULL_HANDLE;
+    createInfo.renderPass = renderPass; // VK_NULL_HANDLE;
     createInfo.layout = outPipeline.pipelineLayout;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    createInfo.pNext = &pipelineRenderingCreateInfo;
+    if(useDynamic)
+        createInfo.pNext = &pipelineRenderingCreateInfo;
 
     VkPipeline pipeline = 0;
     VK_CHECK(vkCreateGraphicsPipelines(vulk.device, nullptr, 1, &createInfo, nullptr, &pipeline));
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
+    outPipeline.renderPass = renderPass;
+
+    outPipeline.descriptor = createDescriptor(outPipeline.descriptorSetLayouts, outPipeline.descriptorSetLayout);
+    if (!outPipeline.descriptor.descriptorSet || !outPipeline.descriptor.pool)
+        return false;
     return pipeline != nullptr;
 }
 
 
-bool createComputePipeline(const Shader &csShader, PipelineWithDescriptors &outPipeline)
+bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline)
 {
     destroyPipeline(outPipeline);
 
@@ -1434,14 +1484,22 @@ bool createComputePipeline(const Shader &csShader, PipelineWithDescriptors &outP
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
+
+    outPipeline.descriptor = createDescriptor(outPipeline.descriptorSetLayouts, outPipeline.descriptorSetLayout);
+    if (!outPipeline.descriptor.descriptorSet || !outPipeline.descriptor.pool)
+        return false;
+
     return pipeline != nullptr;
 }
 
 
-void destroyPipeline(PipelineWithDescriptors &pipeline)
+void destroyPipeline(Pipeline &pipeline)
 {
     destroyDescriptor(pipeline.descriptor);
+    destroyFramebuffer(pipeline.framebuffer);
 
+    if (pipeline.renderPass)
+        vkDestroyRenderPass(vulk.device, pipeline.renderPass, nullptr);
     if(pipeline.pipeline)
         vkDestroyPipeline(vulk.device, pipeline.pipeline, nullptr);
     if(pipeline.pipelineLayout)
@@ -1453,6 +1511,8 @@ void destroyPipeline(PipelineWithDescriptors &pipeline)
     pipeline.pipeline = nullptr;
     pipeline.pipelineLayout = nullptr;
     pipeline.descriptorSetLayout = nullptr;
+    pipeline.renderPass = nullptr;
+    pipeline.framebuffer = nullptr;
 }
 
 void destroyDescriptor(Descriptor& descriptor)
@@ -1557,7 +1617,7 @@ void endDebugRegion()
 }
 
 
-void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const PipelineWithDescriptors &pipelineWithDescriptor)
+void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const Pipeline &pipelineWithDescriptor)
 {
     vkCmdBindPipeline(vulk.commandBuffer, bindPoint, pipelineWithDescriptor.pipeline);
     vkCmdBindDescriptorSets(vulk.commandBuffer, bindPoint, pipelineWithDescriptor.pipelineLayout,
