@@ -23,6 +23,10 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <render/meshsystem.h>
+
+#include <scene/scene.h>
+
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 800;
@@ -33,7 +37,7 @@ static constexpr int SCREEN_HEIGHT = 600;
 class VulkanDrawStuff : public VulkanApp
 {
 public:
-    VulkanDrawStuff() { }
+    VulkanDrawStuff() : scene(meshRenderSystem) { }
     virtual ~VulkanDrawStuff() override;
     virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters& params) override;
@@ -42,25 +46,20 @@ public:
     virtual void renderDraw() override;
     virtual void resized() override;
 
-    bool createPipelines();
-
 public:
+    Scene scene;
+    MeshRenderSystem meshRenderSystem;
+
     Camera camera;
-    RenderModel renderModel;
 
     UniformBufferHandle uniformDataHandle;
-    UniformBufferHandle animVertexDataHandle;
-
-    Buffer vertexBuffer;
-    Buffer animationVertexBuffer;
-    Buffer indexDataBuffer;
-
-    Pipeline graphicsPipeline;
 
     Image renderColorImage;
     Image renderDepthImage;
 
     uint32_t indicesCount = 0;
+
+    PodVector<uint32_t> entityIndices;
 };
 
 
@@ -72,15 +71,8 @@ public:
 
 VulkanDrawStuff::~VulkanDrawStuff()
 {
-    destroyPipeline(graphicsPipeline);
-
-    destroyBuffer(vertexBuffer);
-    destroyBuffer(animationVertexBuffer);
-    destroyBuffer(indexDataBuffer);
-
     destroyImage(renderColorImage);
     destroyImage(renderDepthImage);
-
 }
 
 
@@ -91,88 +83,29 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
 
 
-
-    //bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
-    //bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
-    bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
-    //bool readSuccess = readGLTF("assets/models/animatedthing_resaved.gltf", renderModel);
-
-    printf("gltf read success: %i\n", readSuccess);
-    if (!readSuccess)
+    uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
+    if (!uniformDataHandle.isValid())
         return false;
 
-    uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
-    animVertexDataHandle = vulk.uniformBufferManager.reserveHandle();
-    vertexBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
+    if (!meshRenderSystem.init(uniformDataHandle))
+        return false;
 
-    animationVertexBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Animation vertex buffer");
+    if (!scene.init())
+        return false;
 
-    indexDataBuffer = createBuffer(32 * 1024 * 1024,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
-
-    // Random tag data
-    //struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
-    //setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
-
-
-    {
-
-        beginSingleTimeCommands();
-
-        addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, 0u);
-        addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, 0u);
-        if (renderModel.animationVertices.size() > 0)
-            addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 0u);
-        flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-        endSingleTimeCommands();
-
-        indicesCount = renderModel.indices.size();
-    }
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
-    return createPipelines();
-}
-
-
-bool VulkanDrawStuff::createPipelines()
-{
-    Pipeline& pipeline = graphicsPipeline;
-    if(!createGraphicsPipeline(
-        getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
-        { RenderTarget{.format = vulk.defaultColorFormat } },
-        { .depthTarget = RenderTarget{.format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
-        pipeline, false))
-    {
-        printf("Failed to create graphics pipeline\n");
-    }
-
-
-    pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-        {
-            DescriptorInfo(vulk.renderFrameBufferHandle),
-            DescriptorInfo(uniformDataHandle),
-            DescriptorInfo(animVertexDataHandle),
-
-            DescriptorInfo(vertexBuffer),
-            DescriptorInfo(animationVertexBuffer),
-        });
-
-    if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
-    {
-        printf("Failed to set descriptor binds!\n");
-        return false;
-    }
     resized();
+
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
+    for(float f = -2.5f; f <= 2.5f; f += 1.0f)
+        entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, -2.0f - float(f * 3.0f)}}, .entityType = EntityType::ARROW}));
+
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
+
     return true;
 }
+
 
 void VulkanDrawStuff::resized()
 {
@@ -194,7 +127,6 @@ void VulkanDrawStuff::resized()
         "Main depth target image");
 
     fontSystem.setRenderTarget(renderColorImage);
-    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage, renderDepthImage }));
 }
 
 void VulkanDrawStuff::logicUpdate()
@@ -206,6 +138,7 @@ void VulkanDrawStuff::logicUpdate()
     checkCameraKeypresses(dt, camera);
 
     camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
+    meshRenderSystem.clear();
 }
 
 void VulkanDrawStuff::renderUpdate()
@@ -235,26 +168,23 @@ void VulkanDrawStuff::renderUpdate()
     frameBufferData.viewProj = camera.perspectiveProjection();
     frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
 
-    Transform trans;
-    trans.pos = Vec3(3.0f, 0.0f, -5.0f);
     static float rotationAmount = Pi * 0.25f;
-
-    trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
-    trans.scale = Vec3(1.0f, 1.0f, 1.0f);
-
+    for(uint32_t entityIndex : entityIndices)
+    {
+        GameEntity& entity = scene.getEntity(entityIndex);
+        if (entity.entityType != EntityType::NUM_OF_ENTITY_TYPES)
+        {
+            entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
+        }
+    }
     rotationAmount += 1.5f * dt;
-
-    frameBufferData.padding = getModelMatrix(trans);
 
     addToCopylist(frameBufferData, uniformDataHandle);
 
 
-    PodVector<Matrix> animationMatrices;
-    if(!evaluateAnimation(renderModel, 0, this->getTime(), animationMatrices))
-    {
-        animationMatrices.resize(256, Matrix());
-    }
-    addToCopylist(sliceFromPodVectorBytes(animationMatrices), animVertexDataHandle);
+
+    scene.update(getTime());
+    meshRenderSystem.prepareToRender();
 }
 
 void VulkanDrawStuff::renderDraw()
@@ -274,20 +204,7 @@ void VulkanDrawStuff::renderDraw()
 
     // Drawingg
     {
-        static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
-        static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-        
-        beginRenderPass(graphicsPipeline, { colorClear, depthClear });
-
-        // draw calls here
-        // Render
-        {
-            bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-            vkCmdBindIndexBuffer(vulk.commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk.commandBuffer, indicesCount, 1, 0, 0, 0);
-
-        }
-        vkCmdEndRenderPass(vulk.commandBuffer);
+        meshRenderSystem.render(renderColorImage, renderDepthImage);
         fontSystem.render();
     }
 

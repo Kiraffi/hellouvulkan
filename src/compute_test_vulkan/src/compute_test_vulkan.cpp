@@ -23,6 +23,9 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <render/meshsystem.h>
+#include <scene/scene.h>
+
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 800;
@@ -33,7 +36,7 @@ static constexpr int SCREEN_HEIGHT = 600;
 class VulkanComputeTest : public VulkanApp
 {
 public:
-    VulkanComputeTest() { }
+    VulkanComputeTest() : scene(meshRenderSystem) { }
     virtual ~VulkanComputeTest() override;
     virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters& params) override;
@@ -47,19 +50,15 @@ public:
     bool recreateDescriptor();
 
 public:
+    Scene scene;
+    MeshRenderSystem meshRenderSystem;
+
     Camera camera;
-    RenderModel renderModel;
 
     UniformBufferHandle uniformDataHandle;
-    UniformBufferHandle animVertexDataHandle;
     UniformBufferHandle quadHandle;
 
-    Buffer vertexBuffer;
-    Buffer animationVertexBuffer;
-    Buffer indexDataBuffer;
     Buffer quadIndexBuffer;
-
-    Pipeline graphicsPipeline;
 
     Pipeline computePipeline;
     Pipeline graphicsFinalPipeline;
@@ -71,8 +70,6 @@ public:
     VkSampler textureSampler = nullptr;
 
     Image renderColorFinalImage;
-
-    uint32_t indicesCount = 0;
 };
 
 
@@ -84,13 +81,9 @@ public:
 
 VulkanComputeTest::~VulkanComputeTest()
 {
-    destroyPipeline(graphicsPipeline);
     destroyPipeline(computePipeline);
     destroyPipeline(graphicsFinalPipeline);
 
-    destroyBuffer(vertexBuffer);
-    destroyBuffer(animationVertexBuffer);
-    destroyBuffer(indexDataBuffer);
     destroyBuffer(quadIndexBuffer);
 
     destroyImage(renderColorImage);
@@ -110,33 +103,16 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         return false;
 
 
+    uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
 
-    //bool readSuccess = readGLTF("assets/models/test_gltf.gltf", renderModel);
-    //bool readSuccess = readGLTF("assets/models/arrows.gltf", renderModel);
-    bool readSuccess = readGLTF("assets/models/animatedthing.gltf", renderModel);
-    //bool readSuccess = readGLTF("assets/models/animatedthing_resaved.gltf", renderModel);
-
-    printf("gltf read success: %i\n", readSuccess);
-    if (!readSuccess)
+    if (!meshRenderSystem.init(uniformDataHandle))
         return false;
 
-    uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
-    animVertexDataHandle = vulk.uniformBufferManager.reserveHandle();
+    if (!scene.init())
+        return false;
+    scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
+
     quadHandle = vulk.uniformBufferManager.reserveHandle();
-    vertexBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
-
-    animationVertexBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Animation vertex buffer");
-
-    indexDataBuffer = createBuffer(32 * 1024 * 1024,
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
-
 
     quadIndexBuffer = createBuffer(64 * 1024,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -152,15 +128,9 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         beginSingleTimeCommands();
         uint32_t quads[] = {1,0,2, 2,0,3};
         addToCopylist(ArraySliceViewBytes(quads, ARRAYSIZES(quads)), quadIndexBuffer.buffer, 0u);
-        addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, 0u);
-        addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, 0u);
-        if(renderModel.animationVertices.size() > 0)
-            addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 0u);
         flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
         endSingleTimeCommands();
-
-        indicesCount = renderModel.indices.size();
     }
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
@@ -170,35 +140,6 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
 
 bool VulkanComputeTest::createPipelines()
 {
-    {
-        Pipeline &pipeline = graphicsPipeline;
-        if (!createGraphicsPipeline(
-            getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat } },
-            { .depthTarget = RenderTarget{ .format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
-            pipeline, false))
-        {
-            printf("failed to create pipeline\n");
-        }
-
-
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk.renderFrameBufferHandle),
-                DescriptorInfo(uniformDataHandle),
-                DescriptorInfo(animVertexDataHandle),
-
-                DescriptorInfo(vertexBuffer),
-                DescriptorInfo(animationVertexBuffer),
-            });
-
-
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
-        {
-            printf("Failed to set descriptor binds!\n");
-            return false;
-        }
-    }
     {
         Pipeline &pipeline = computePipeline;
         if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline))
@@ -326,7 +267,6 @@ void VulkanComputeTest::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Render color final image");
 
-    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage, renderDepthImage }));
     fontSystem.setRenderTarget(renderColorImage);
     ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
     recreateDescriptor();
@@ -341,6 +281,8 @@ void VulkanComputeTest::logicUpdate()
     checkCameraKeypresses(dt, camera);
 
     camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
+
+    meshRenderSystem.clear();
 }
 
 void VulkanComputeTest::renderUpdate()
@@ -370,26 +312,8 @@ void VulkanComputeTest::renderUpdate()
     frameBufferData.viewProj = camera.perspectiveProjection();
     frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
 
-    Transform trans;
-    trans.pos = Vec3(3.0f, 0.0f, -5.0f);
-    static float rotationAmount = Pi * 0.25f;
-
-    trans.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
-    trans.scale = Vec3(1.0f, 1.0f, 1.0f);
-
-    rotationAmount += 1.5f * dt;
-
-    frameBufferData.padding = getModelMatrix(trans);
-
     addToCopylist(frameBufferData, uniformDataHandle);
 
-
-    PodVector<Matrix> animationMatrices;
-    if(!evaluateAnimation(renderModel, 0, this->getTime(), animationMatrices))
-    {
-        animationMatrices.resize(256, Matrix());
-    }
-    addToCopylist(sliceFromPodVectorBytes(animationMatrices), animVertexDataHandle);
 
     FontRenderSystem::GPUVertexData vdata;
     vdata.pos = Vec2(0.0f, 0.0f); // Vec2(swapchain.width / 2.0f, swapchain.height / 2.0f);
@@ -400,6 +324,9 @@ void VulkanComputeTest::renderUpdate()
     vdata.uvSize = Vec2(1.0f, 1.0f);
 
     addToCopylist(vdata, quadHandle);
+
+    scene.update(getTime());
+    meshRenderSystem.prepareToRender();
 }
 
 void VulkanComputeTest::renderDraw()
@@ -419,22 +346,7 @@ void VulkanComputeTest::renderDraw()
 
     // Drawingg
     {
-        static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
-        static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-
-        beginRenderPass(graphicsPipeline, { colorClear, depthClear });
-
-        insertDebugRegion("Render", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-
-        // draw calls here
-        // Render
-        {
-            bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-            vkCmdBindIndexBuffer(vulk.commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk.commandBuffer, indicesCount, 1, 0, 0, 0);
-
-        }
-        vkCmdEndRenderPass(vulk.commandBuffer);
+        meshRenderSystem.render(renderColorImage, renderDepthImage);
         fontSystem.render();
     }
 

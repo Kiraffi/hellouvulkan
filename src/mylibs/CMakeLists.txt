@@ -26,10 +26,14 @@ add_library(MyLibraries
     "myvulkan/uniformbuffermanager.cpp"
     "myvulkan/vulkanresources.cpp"
 
-    "render/font_render.cpp"
     "model/gltf.cpp"
     "myvulkan/shader.cpp"
-)
+
+    "render/font_render.cpp"
+    "render/meshsystem.cpp"
+
+    "scene/scene.cpp"
+ )
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
