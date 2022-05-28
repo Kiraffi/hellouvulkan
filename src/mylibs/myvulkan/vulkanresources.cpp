@@ -444,16 +444,10 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
         return false;
 
     memcpy(((uint8_t*)vulk.scratchBuffer.data) + vulk.scratchBufferOffset, objectToCopy, objectSize);
-    {
-        VkBufferCopy region = {
-            vulk.scratchBufferOffset,
-            targetOffset,
-            objectSize
-        };
-        vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, targetBuffer, 1, &region);
-    }
-    vulk.bufferMemoryBarriers.pushBack(
-        bufferBarrier(targetBuffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, objectSize, targetOffset));
+   
+    VkBufferCopy region = { vulk.scratchBufferOffset, targetOffset, objectSize };
+
+    vulk.bufferMemoryBarriers.pushBack({ targetBuffer, region });
     vulk.scratchBufferOffset += objectSize;
     return true;
 }
@@ -468,8 +462,19 @@ bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits
 {
     if (vulk.bufferMemoryBarriers.size() == 0 && vulk.imageMemoryBarriers.size() == 0)
         return true;
+   
+    PodVector< VkBufferMemoryBarrier > bufferBarriers;
+    for (const auto& barrier : vulk.bufferMemoryBarriers)
+    {
+        if (barrier.buffer)
+        {
+            vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, barrier.buffer, 1, &barrier.copyRegion);
+            bufferBarriers.push_back(bufferBarrier(barrier.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+                barrier.copyRegion.size, barrier.copyRegion.dstOffset));
+        }
+    }
+    const VkBufferMemoryBarrier* bufferBarrier = bufferBarriers.size() > 0 ? bufferBarriers.data() : nullptr;
     const VkImageMemoryBarrier* imageBarrier = vulk.imageMemoryBarriers.size() > 0 ? vulk.imageMemoryBarriers.data() : nullptr;
-    const VkBufferMemoryBarrier* bufferBarrier = vulk.bufferMemoryBarriers.size() > 0 ? vulk.bufferMemoryBarriers.data() : nullptr;
 
     vkCmdPipelineBarrier(vulk.commandBuffer, srcStageMask, dstStageMask,
         VK_DEPENDENCY_BY_REGION_BIT,

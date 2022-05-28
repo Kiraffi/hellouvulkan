@@ -88,7 +88,11 @@ struct SwapChain
     uint32_t swapchainCount = 0;
 };
 
-
+struct BufferBarrierInfo
+{
+    VkBuffer buffer = nullptr;
+    VkBufferCopy copyRegion{};
+};
 
 struct VulkGlob
 {
@@ -135,7 +139,7 @@ struct VulkGlob
     uint32_t imageIndex = 0u;
 
     VulkanApp* vulkanApp = nullptr;
-    PodVector< VkBufferMemoryBarrier > bufferMemoryBarriers;
+    PodVector< BufferBarrierInfo > bufferMemoryBarriers;
     PodVector< VkImageMemoryBarrier > imageMemoryBarriers;
     bool needToResize = false;
     bool waitForFence = true;
