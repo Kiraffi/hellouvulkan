@@ -9,7 +9,7 @@
 #include <myvulkan/vulkglob.h>
 
 constexpr uint32_t QUERY_COUNT = 128u;
-static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_2;
+static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_3;
 
 class VulkanApp;
 struct Shader;
@@ -31,7 +31,13 @@ struct DepthTest
     bool writeDepth = false;
 };
 
-
+struct RenderImage
+{
+    Image* image = nullptr;
+    VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    VkClearValue clearValue{};
+};
 
 bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
@@ -50,7 +56,7 @@ void beginSingleTimeCommands();
 void endSingleTimeCommands();
 
 void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues);
-
+void beginRendering(const PodVector<RenderImage>& renderColorImages, RenderImage depthImage);
 
 bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
     const PodVector<RenderTarget> &colorTargets, const DepthTest& depthTest, Pipeline &outPipeline,

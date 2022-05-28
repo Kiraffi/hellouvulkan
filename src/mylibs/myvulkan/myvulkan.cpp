@@ -1193,7 +1193,74 @@ void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& 
     vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
 }
 
+void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage depthImage)
+{
+    uint32_t width = 0u;
+    uint32_t height = 0u;
+    PodVector< VkRenderingAttachmentInfo> colorAttachments;
+    for (const auto& renderImage : renderColorImages)
+    {
+        if (!renderImage.image)
+            continue;
 
+        if(width == 0u && height == 0u)
+        {
+            width = renderImage.image->width;
+            height = renderImage.image->height;
+        }
+        else if (width != renderImage.image->width || height != renderImage.image->height)
+        {
+            ASSERT(!"Images are not same size\n");
+            return;
+        }
+        const VkRenderingAttachmentInfo colorAttachmentInfo
+        {
+           .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+           .imageView = renderImage.image->imageView,
+           .imageLayout = renderImage.image->layout,
+           .loadOp = renderImage.loadOp,
+           .storeOp = renderImage.storeOp,
+           .clearValue = renderImage.clearValue
+        };
+        colorAttachments.push_back(colorAttachmentInfo);
+    }
+    VkRenderingAttachmentInfo depthAttachmentInfo{ .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR  };
+    if (depthImage.image)
+    {
+        if (width == 0u && height == 0u)
+        {
+            width = depthImage.image->width;
+            height = depthImage.image->height;
+        }
+        else if (width != depthImage.image->width || height != depthImage.image->height)
+        {
+            ASSERT(!"Images are not same size\n");
+            return;
+        }
+        depthAttachmentInfo.imageView = depthImage.image->imageView;
+        depthAttachmentInfo.imageLayout = depthImage.image->layout;
+        depthAttachmentInfo.loadOp = depthImage.loadOp;
+        depthAttachmentInfo.storeOp = depthImage.storeOp;
+        depthAttachmentInfo.clearValue = depthImage.clearValue;
+    }
+
+    VkRect2D renderArea = { .extent = {.width = width, .height = height } };
+    VkViewport viewPort = { 0.0f, float(height), float(width), -float(height), 0.0f, 1.0f };
+    VkRect2D scissors = { { 0, 0 }, { width, height } };
+
+    const VkRenderingInfo renderInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+        .renderArea = renderArea,
+        .layerCount = 1,
+        .colorAttachmentCount = colorAttachments.size(),
+        .pColorAttachments = colorAttachments.data(),
+        .pDepthAttachment = depthImage.image  ? &depthAttachmentInfo : nullptr,
+    };
+
+    vkCmdBeginRendering(vulk.commandBuffer, &renderInfo);
+    vkCmdSetViewport(vulk.commandBuffer, 0, 1, &viewPort);
+    vkCmdSetScissor(vulk.commandBuffer, 0, 1, &scissors);
+}
 
 
 
