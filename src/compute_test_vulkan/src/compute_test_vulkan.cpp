@@ -108,9 +108,6 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
     if (!meshRenderSystem.init(uniformDataHandle))
         return false;
 
-    if (!scene.init())
-        return false;
-    scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
 
     quadHandle = vulk.uniformBufferManager.reserveHandle();
 
@@ -133,6 +130,11 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         endSingleTimeCommands();
     }
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
+
+    if (!scene.init())
+        return false;
+    scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
+
 
     return createPipelines();
 }
@@ -270,6 +272,19 @@ void VulkanComputeTest::resized()
     fontSystem.setRenderTarget(renderColorImage);
     ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
     recreateDescriptor();
+
+    if (quadHandle.isValid())
+    {
+        FontRenderSystem::GPUVertexData vdata;
+        vdata.pos = Vec2(0.0f, 0.0f); // Vec2(swapchain.width / 2.0f, swapchain.height / 2.0f);
+        vdata.pixelSizeX = vulk.swapchain.width;
+        vdata.pixelSizeY = vulk.swapchain.height;
+        vdata.color = getColor(1.0f, 1.0f, 1.0f, 1.0f);
+        vdata.uvStart = Vec2(0.0f, 0.0f);
+        vdata.uvSize = Vec2(1.0f, 1.0f);
+
+        addToCopylist(vdata, quadHandle);
+    }
 }
 
 void VulkanComputeTest::logicUpdate()
@@ -315,15 +330,7 @@ void VulkanComputeTest::renderUpdate()
     addToCopylist(frameBufferData, uniformDataHandle);
 
 
-    FontRenderSystem::GPUVertexData vdata;
-    vdata.pos = Vec2(0.0f, 0.0f); // Vec2(swapchain.width / 2.0f, swapchain.height / 2.0f);
-    vdata.pixelSizeX = swapchain.width;
-    vdata.pixelSizeY = swapchain.height;
-    vdata.color = getColor(1.0f, 1.0f, 1.0f, 1.0f);
-    vdata.uvStart = Vec2(0.0f, 0.0f);
-    vdata.uvSize = Vec2(1.0f, 1.0f);
 
-    addToCopylist(vdata, quadHandle);
 
     scene.update(getTime());
     meshRenderSystem.prepareToRender();

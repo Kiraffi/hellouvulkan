@@ -1,6 +1,8 @@
 
 #include "scene.h"
 
+#include <core/timer.h>
+
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
 
@@ -26,6 +28,8 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
 
 bool Scene::init()
 {
+    ScopedTimer timer("Scene init");
+
     // animated first
     if (!loadModelForScene(sceneData, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
         return false;
@@ -34,6 +38,10 @@ bool Scene::init()
     // load nonanimated.
     if (!loadModelForScene(sceneData, "assets/models/arrows.gltf", EntityType::ARROW))
         return false;
+
+    if (!loadModelForScene(sceneData, "assets/models/test_gltf.gltf", EntityType::TEST_THING))
+        return false;
+
 
     return true;
 }

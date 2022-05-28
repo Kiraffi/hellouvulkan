@@ -13,6 +13,7 @@ enum class EntityType : uint32_t
 
     // non animated
     ARROW,
+    TEST_THING,
 
     NUM_OF_ENTITY_TYPES,
 };
