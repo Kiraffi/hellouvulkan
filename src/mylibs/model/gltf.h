@@ -6,6 +6,8 @@
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
+#include <string_view>
+
 struct RenderModel
 {
     struct Vertex
@@ -54,4 +56,4 @@ bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
     PodVector<Matrix> &outMatrices);
 
 
-bool readGLTF(const char *filename, RenderModel &outModel);
+bool readGLTF(std::string_view filename, RenderModel &outModel);

@@ -28,6 +28,7 @@ public:
     T &operator[] (uint32_t index) const;
 
     void pushBack(const T &obj);
+    void pushBack(const PodVector<T> &obj);
     void push_back(const T &obj) { pushBack(obj); }
     void emplace_back(const T &obj) { pushBack(obj); }
     void insertIndex(uint32_t index, const T &obj);
@@ -164,6 +165,15 @@ void PodVector<T>::pushBack(const T &obj)
 }
 
 
+template <typename T>
+void PodVector<T>::pushBack(const PodVector<T> &vec)
+{
+    if (vec.size() == 0)
+        return;
+    uint32_t oldSize = size();
+    this->buffer.resize(size() + vec.size());
+    memcpy(this->buffer.getDataIndex(oldSize), vec.data(), vec.size() * sizeof(T));
+}
 
 template <typename T>
 void PodVector<T>::insertIndex(uint32_t index, const T &obj)

@@ -475,7 +475,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
 
 
 
-bool readGLTF(const char *filename, RenderModel &outModel)
+bool readGLTF(std::string_view filename, RenderModel &outModel)
 {
     GltfData data;
 
@@ -1208,7 +1208,8 @@ bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
     {
         time = model.animStartTime;
     }
-
-    outMatrices.resize(model.animationPosData.size());
+    if (model.animationPosData.size() > 255)
+        return false;
+    outMatrices.resize(256);
     return evaluateBone(model, 0, time, Matrix(), outMatrices);
 }

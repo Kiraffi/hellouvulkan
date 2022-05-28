@@ -69,6 +69,7 @@ bool addToCopylist(const T& objectToCopy, UniformBufferHandle handle)
 
 bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle);
 bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset);
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer &targetBuffer);
 
 bool addToCopylist(const void *objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset);
 bool addImageBarrier(VkImageMemoryBarrier barrier);

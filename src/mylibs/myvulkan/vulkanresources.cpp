@@ -428,6 +428,12 @@ bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle h
     return addToCopylist(objectToCopy, handle.manager->buffer->buffer, handle.getOffset());
 }
 
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer& targetBuffer)
+{
+    return addToCopylist(objectToCopy, targetBuffer.buffer, 0u);
+}
+
+
 bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset)
 {
     ASSERT(objectToCopy);
