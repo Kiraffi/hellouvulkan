@@ -88,10 +88,8 @@ template <typename T>
 PodVector<T>::PodVector(PodVector &&other) noexcept : VectorBase(sizeof(T))
 {
     CHECK_POD_MACRO();
-
-    new (&this->buffer) ByteBuffer(sizeof(T));
-    memmove(&this->buffer, &other.buffer, sizeof(ByteBuffer));
-
+    buffer.~ByteBuffer();
+    buffer = other.buffer;
     new (&other.buffer) ByteBuffer(sizeof(T));
 }
 
@@ -100,15 +98,11 @@ PodVector<T>::PodVector(const std::initializer_list<T> &initializerList) : Vecto
 {
     CHECK_POD_MACRO();
     uint32_t size = initializerList.size();
-    this->buffer.reserve(size);
+    this->buffer.resize(size);
 
     uint32_t counter = 0;
-
-    for(const T &t : initializerList)
-    {
-        this->buffer.insertIndex(counter, (const uint8_t *)&t);
-        ++counter;
-    }
+    uint8_t* ptr = this->buffer.getDataIndex(0);
+    memcpy(ptr, &*initializerList.begin(), size * sizeof(T));
 }
 
 
@@ -120,9 +114,8 @@ PodVector<T>& PodVector<T>::operator=(const PodVector<T> &vec)
 
     if (&vec == this)
         return *this;
-
+    buffer.~ByteBuffer();
     new (&this->buffer) ByteBuffer(sizeof(T));
-
     this->buffer.copyFrom(vec.buffer);
     return *this;
 }

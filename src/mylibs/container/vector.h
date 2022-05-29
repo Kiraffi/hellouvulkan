@@ -102,10 +102,8 @@ template <typename T>
 Vector<T>::Vector(Vector &&other) noexcept : VectorBase(sizeof(T))
 {
     CHECK_NO_POD_MACRO();
-
-    new (&this->buffer) ByteBuffer(sizeof(T));
-    memmove(&this->buffer, &other.buffer, sizeof(ByteBuffer));
-
+    this->~Vector<T>();
+    buffer = other.buffer;
     new (&other.buffer) ByteBuffer(sizeof(T));
 }
 
@@ -135,7 +133,6 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
         return *this;
 
     this->~Vector<T>();
-
     new (&this->buffer) ByteBuffer(sizeof(T));
     ASSERT(sizeof(T) == buffer.getDataSize());
     if(vec.size() == 0)
