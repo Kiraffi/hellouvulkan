@@ -42,7 +42,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     // Create buffers
     {
-        letterDataBufferHandle = vulk.uniformBufferManager.reserveHandle();
+        letterDataBufferHandle = vulk->uniformBufferManager.reserveHandle();
 
         letterIndexBuffer = createBuffer(1 * 1024 * 1024,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -118,7 +118,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
     {
         if(!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
+            { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
             {}, pipeline, false))
         {
             printf("failed to create graphics pipeline\n");
@@ -126,7 +126,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
-            DescriptorInfo(vulk.renderFrameBufferHandle),
+            DescriptorInfo(vulk->renderFrameBufferHandle),
             DescriptorInfo(letterDataBufferHandle),
             DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
@@ -191,7 +191,7 @@ void FontRenderSystem::reset()
 
 void FontRenderSystem::render()
 {
-    VkCommandBuffer commandBuffer = vulk.commandBuffer;
+    VkCommandBuffer commandBuffer = vulk->commandBuffer;
     if (vertData.size() == 0 || !commandBuffer)
         return;
 
@@ -201,7 +201,7 @@ void FontRenderSystem::render()
     vkCmdBindIndexBuffer(commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 
-    vkCmdEndRenderPass(vulk.commandBuffer);
+    vkCmdEndRenderPass(vulk->commandBuffer);
     vertData.clear();
 }
 

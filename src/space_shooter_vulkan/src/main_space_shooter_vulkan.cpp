@@ -188,7 +188,7 @@ bool SpaceShooter::createPipelines()
         Pipeline& pipeline = graphicsPipeline;
         if(!createGraphicsPipeline(
             getShader(ShaderType::SpaceShip2DModelVert), getShader(ShaderType::SpaceShip2DModelFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat } }, {  }, pipeline, false))
+            { RenderTarget{.format = vulk->defaultColorFormat } }, {  }, pipeline, false))
         {
             printf("failed to create pipeline\n");
             return false;
@@ -196,7 +196,7 @@ bool SpaceShooter::createPipelines()
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
-                DescriptorInfo(vulk.renderFrameBufferHandle),
+                DescriptorInfo(vulk->renderFrameBufferHandle),
                 DescriptorInfo(modelVerticesBuffer),
                 DescriptorInfo(instanceBuffer),
             });
@@ -217,8 +217,8 @@ void SpaceShooter::resized()
 
     // create color and depth images
     renderColorImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.defaultColorFormat,
+        vulk->swapchain.width, vulk->swapchain.height,
+        vulk->defaultColorFormat,
 
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -582,11 +582,11 @@ void SpaceShooter::renderDraw()
         // Render
         {
             bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-            vkCmdBindIndexBuffer(vulk.commandBuffer, indexDataBufferModels.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
+            vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBufferModels.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(vulk->commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
 
         }
-        vkCmdEndRenderPass(vulk.commandBuffer);
+        vkCmdEndRenderPass(vulk->commandBuffer);
 
         fontSystem.render();
 

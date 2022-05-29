@@ -70,8 +70,8 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
         Pipeline& pipeline = nonAnimatedGraphicsPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::Basic3DVert), getShader(ShaderType::Basic3DFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat } },
-            { .depthTarget = RenderTarget{.format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
+            { RenderTarget{.format = vulk->defaultColorFormat } },
+            { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
             pipeline))
         {
             printf("Failed to create graphics pipeline\n");
@@ -80,7 +80,7 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
-                DescriptorInfo(vulk.renderFrameBufferHandle),
+                DescriptorInfo(vulk->renderFrameBufferHandle),
                 DescriptorInfo(uniformDataHandle),
                 
                 DescriptorInfo(modelRenderMatricesBuffer),
@@ -98,8 +98,8 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
         Pipeline& pipeline = animatedGraphicsPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat } },
-            { .depthTarget = RenderTarget{.format = vulk.depthFormat }, .useDepthTest = true, .writeDepth = true },
+            { RenderTarget{.format = vulk->defaultColorFormat } },
+            { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
             pipeline))
         {
             printf("Failed to create graphics pipeline\n");
@@ -108,7 +108,7 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
-                DescriptorInfo(vulk.renderFrameBufferHandle),
+                DescriptorInfo(vulk->renderFrameBufferHandle),
                 DescriptorInfo(uniformDataHandle),
 
                 DescriptorInfo(modelRenderMatricesBuffer),
@@ -237,8 +237,8 @@ void MeshRenderSystem::render(Image& renderColorTarget, Image& renderDepthTarget
             if (instances)
             {
                 const ModelData& modelData = models[modelIndex];
-                vkCmdBindIndexBuffer(vulk.commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(vulk.commandBuffer, modelData.indices, instances,
+                vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
                     modelData.indiceStart, modelData.vertexStart, instanceStartIndex);
                 instanceStartIndex += instances;
             }
@@ -255,13 +255,13 @@ void MeshRenderSystem::render(Image& renderColorTarget, Image& renderDepthTarget
             if (instances)
             {
                 const ModelData& modelData = models[modelIndex];
-                vkCmdBindIndexBuffer(vulk.commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(vulk.commandBuffer, modelData.indices, instances,
+                vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
                     modelData.indiceStart, modelData.vertexStart, instanceStartIndex);
                 instanceStartIndex += instances;
             }
         }
 
     }
-    vkCmdEndRendering(vulk.commandBuffer);
+    vkCmdEndRendering(vulk->commandBuffer);
 }

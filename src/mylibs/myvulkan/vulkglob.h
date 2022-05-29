@@ -52,13 +52,7 @@ struct Buffer
     // cpu mapped memory for cpu accessbuffers
     void *data = nullptr;
     const char *bufferName = nullptr;
-    /*
-    VkDeviceMemory deviceMemory = 0;
     size_t size = 0ull;
-    */
-
-    size_t size = 0ull;
-    //VmaAllocation allocation = nullptr;
     VmaAllocation_T *allocation = nullptr;
 };
 
@@ -145,7 +139,7 @@ struct VulkGlob
     bool waitForFence = true;
 };
 
-extern VulkGlob vulk;
+extern VulkGlob *vulk;
 
 
 
@@ -157,19 +151,6 @@ struct DescriptorSetLayout
     VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
     uint32_t bindingIndex = ~0u;
     VkPipelineStageFlagBits stage = VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM;
-};
-
-struct DescriptorSet
-{
-    VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-    uint32_t bindingIndex = ~0u;
-    const Buffer *buffer = nullptr;
-    VkDeviceSize offset = 0;
-    VkDeviceSize size = 0;
-    VkImage image = 0;
-    VkImageView imageView = 0;
-    VkSampler sampler = 0;
-    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
 struct Descriptor

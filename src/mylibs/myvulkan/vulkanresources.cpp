@@ -33,22 +33,22 @@ bool initializeVMA()
 
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
     allocatorCreateInfo.vulkanApiVersion = VulkanApiVersion;
-    allocatorCreateInfo.physicalDevice = vulk.physicalDevice;
-    allocatorCreateInfo.device = vulk.device;
-    allocatorCreateInfo.instance = vulk.instance;
+    allocatorCreateInfo.physicalDevice = vulk->physicalDevice;
+    allocatorCreateInfo.device = vulk->device;
+    allocatorCreateInfo.instance = vulk->instance;
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
-    VK_CHECK(vmaCreateAllocator(&allocatorCreateInfo, &vulk.allocator));
+    VK_CHECK(vmaCreateAllocator(&allocatorCreateInfo, &vulk->allocator));
     return true;
 }
 
 void deinitVMA()
 {
-    if (vulk.device)
+    if (vulk->device)
     {
-        if (vulk.allocator)
-            vmaDestroyAllocator(vulk.allocator);
-        vulk.allocator = nullptr;
+        if (vulk->allocator)
+            vmaDestroyAllocator(vulk->allocator);
+        vulk->allocator = nullptr;
     }
 }
 
@@ -91,7 +91,7 @@ bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDept
     createInfo.height = height;
 
     VkFramebuffer framebuffer = 0;
-    VK_CHECK(vkCreateFramebuffer(vulk.device, &createInfo, nullptr, &framebuffer));
+    VK_CHECK(vkCreateFramebuffer(vulk->device, &createInfo, nullptr, &framebuffer));
 
     pipeline.framebuffer = framebuffer;
     pipeline.framebufferWidth = width;
@@ -103,7 +103,7 @@ bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDept
 void destroyFramebuffer(VkFramebuffer framebuffer)
 {
     if (framebuffer)
-        vkDestroyFramebuffer(vulk.device, framebuffer, nullptr);
+        vkDestroyFramebuffer(vulk->device, framebuffer, nullptr);
 }
 
 Image createImage(uint32_t width, uint32_t height, VkFormat format,
@@ -121,13 +121,13 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
     createInfo.usage = usage;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     createInfo.queueFamilyIndexCount = 1;
-    createInfo.pQueueFamilyIndices = &vulk.queueFamilyIndices.graphicsFamily;
+    createInfo.pQueueFamilyIndices = &vulk->queueFamilyIndices.graphicsFamily;
     Image result;
 
     VmaAllocationCreateInfo allocInfo = {};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
-    VK_CHECK(vmaCreateImage(vulk.allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
+    VK_CHECK(vmaCreateImage(vulk->allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
 
     result.imageView = createImageView(result.image, format);
     ASSERT(result.imageView);
@@ -168,16 +168,16 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
     VmaAllocation allocation;
-    VK_CHECK(vmaCreateBuffer(vulk.allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
+    VK_CHECK(vmaCreateBuffer(vulk->allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
 
     void* data = nullptr;
     if (memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        VK_CHECK(vmaMapMemory(vulk.allocator, allocation, &data));
+        VK_CHECK(vmaMapMemory(vulk->allocator, allocation, &data));
 //        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
-        //VK_CHECK(vkMapMemory(vulk.device, allocation->GetMemory(), 0, size, 0, &data));
+        //VK_CHECK(vkMapMemory(vulk->device, allocation->GetMemory(), 0, size, 0, &data));
 
-        //VK_CHECK(vkMapMemory(vulk.device, result.deviceMemory, 0, size, 0, &data));
+        //VK_CHECK(vkMapMemory(vulk->device, result.deviceMemory, 0, size, 0, &data));
         ASSERT(data);
     }
     result.data = data;
@@ -197,7 +197,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
 {
 
     ASSERT(data != nullptr || dataSize > 0u);
-    VkDeviceSize size = vulk.scratchBuffer.size;
+    VkDeviceSize size = vulk->scratchBuffer.size;
     ASSERT(size);
 
     ASSERT(size >= width * height * pixelSize);
@@ -213,7 +213,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
         };
 
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        vkCmdPipelineBarrier(vulk->commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
 
@@ -228,7 +228,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
     region.imageOffset = { 0, 0, 0 };
     region.imageExtent = { width, height, 1 };
 
-    vkCmdCopyBufferToImage(vulk.commandBuffer, vulk.scratchBuffer.buffer, targetImage.image,
+    vkCmdCopyBufferToImage(vulk->commandBuffer, vulk->scratchBuffer.buffer, targetImage.image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     {
         VkImageMemoryBarrier imageBarriers[] =
@@ -237,7 +237,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
                 VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL),
         };
 
-        vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        vkCmdPipelineBarrier(vulk->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
     endSingleTimeCommands();
@@ -250,16 +250,16 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
 VkSampler createSampler(const VkSamplerCreateInfo& info)
 {
     VkSampler sampler = nullptr;
-    VK_CHECK(vkCreateSampler(vulk.device, &info, nullptr, &sampler));
+    VK_CHECK(vkCreateSampler(vulk->device, &info, nullptr, &sampler));
     return sampler;
 }
 
 void destroyImage(Image& image)
 {
     if(image.imageView)
-        vkDestroyImageView(vulk.device, image.imageView, nullptr);
+        vkDestroyImageView(vulk->device, image.imageView, nullptr);
     if(image.image)
-        vmaDestroyImage(vulk.allocator, image.image, image.allocation);
+        vmaDestroyImage(vulk->allocator, image.image, image.allocation);
     image = Image{};
 }
 
@@ -267,19 +267,19 @@ void destroyImage(Image& image)
 void destroySampler(VkSampler sampler)
 {
     if(sampler)
-        vkDestroySampler(vulk.device, sampler, nullptr);
+        vkDestroySampler(vulk->device, sampler, nullptr);
 }
 
 
 
 size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
 {
-    ASSERT(vulk.scratchBuffer.data);
+    ASSERT(vulk->scratchBuffer.data);
     ASSERT(size);
 
-    ASSERT(vulk.scratchBuffer.size >= size);
+    ASSERT(vulk->scratchBuffer.size >= size);
 
-    memcpy((unsigned char*)vulk.scratchBuffer.data + offset, data, size);
+    memcpy((unsigned char*)vulk->scratchBuffer.data + offset, data, size);
     offset += size;
 
     return offset;
@@ -288,17 +288,17 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
 
 void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
 {
-    ASSERT(vulk.scratchBuffer.data);
-    ASSERT(vulk.scratchBuffer.size >= size);
+    ASSERT(vulk->scratchBuffer.data);
+    ASSERT(vulk->scratchBuffer.size >= size);
     ASSERT(gpuBuffer.size >= size);
 
     beginSingleTimeCommands();
 
     VkBufferCopy region = { 0, 0, VkDeviceSize(size) };
-    vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, gpuBuffer.buffer, 1, &region);
+    vkCmdCopyBuffer(vulk->commandBuffer, vulk->scratchBuffer.buffer, gpuBuffer.buffer, 1, &region);
 
     VkBufferMemoryBarrier copyBarrier = bufferBarrier(gpuBuffer.buffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, size);
-    vkCmdPipelineBarrier(vulk.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    vkCmdPipelineBarrier(vulk->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyBarrier, 0, nullptr);
 
     endSingleTimeCommands();
@@ -308,8 +308,8 @@ void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
 void destroyBuffer(Buffer& buffer)
 {
     if(buffer.data)
-        vmaUnmapMemory(vulk.allocator, buffer.allocation);
-    vmaDestroyBuffer(vulk.allocator, buffer.buffer, buffer.allocation);
+        vmaUnmapMemory(vulk->allocator, buffer.allocation);
+    vmaDestroyBuffer(vulk->allocator, buffer.buffer, buffer.allocation);
     buffer.buffer = 0;
     buffer.data = nullptr;
     buffer.allocation = nullptr;
@@ -339,7 +339,7 @@ VkImageView createImageView(VkImage image, VkFormat format)
 
 
     VkImageView view = 0;
-    VK_CHECK(vkCreateImageView(vulk.device, &createInfo, nullptr, &view));
+    VK_CHECK(vkCreateImageView(vulk->device, &createInfo, nullptr, &view));
 
     ASSERT(view);
     return view;
@@ -439,50 +439,50 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     ASSERT(objectToCopy);
     ASSERT(objectSize);
     ASSERT(targetBuffer);
-    ASSERT(vulk.scratchBufferOffset + objectSize < vulk.scratchBuffer.size);
+    ASSERT(vulk->scratchBufferOffset + objectSize < vulk->scratchBuffer.size);
     if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr)
         return false;
 
-    memcpy(((uint8_t*)vulk.scratchBuffer.data) + vulk.scratchBufferOffset, objectToCopy, objectSize);
+    memcpy(((uint8_t*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
    
-    VkBufferCopy region = { vulk.scratchBufferOffset, targetOffset, objectSize };
+    VkBufferCopy region = { vulk->scratchBufferOffset, targetOffset, objectSize };
 
-    vulk.bufferMemoryBarriers.pushBack({ targetBuffer, region });
-    vulk.scratchBufferOffset += objectSize;
+    vulk->bufferMemoryBarriers.pushBack({ targetBuffer, region });
+    vulk->scratchBufferOffset += objectSize;
     return true;
 }
 
 bool addImageBarrier(VkImageMemoryBarrier barrier)
 {
-    vulk.imageMemoryBarriers.pushBack(barrier);
+    vulk->imageMemoryBarriers.pushBack(barrier);
     return true;
 }
 
 bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits dstStageMask)
 {
-    if (vulk.bufferMemoryBarriers.size() == 0 && vulk.imageMemoryBarriers.size() == 0)
+    if (vulk->bufferMemoryBarriers.size() == 0 && vulk->imageMemoryBarriers.size() == 0)
         return true;
    
     PodVector< VkBufferMemoryBarrier > bufferBarriers;
-    for (const auto& barrier : vulk.bufferMemoryBarriers)
+    for (const auto& barrier : vulk->bufferMemoryBarriers)
     {
         if (barrier.buffer)
         {
-            vkCmdCopyBuffer(vulk.commandBuffer, vulk.scratchBuffer.buffer, barrier.buffer, 1, &barrier.copyRegion);
+            vkCmdCopyBuffer(vulk->commandBuffer, vulk->scratchBuffer.buffer, barrier.buffer, 1, &barrier.copyRegion);
             bufferBarriers.push_back(bufferBarrier(barrier.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
                 barrier.copyRegion.size, barrier.copyRegion.dstOffset));
         }
     }
     const VkBufferMemoryBarrier* bufferBarrier = bufferBarriers.size() > 0 ? bufferBarriers.data() : nullptr;
-    const VkImageMemoryBarrier* imageBarrier = vulk.imageMemoryBarriers.size() > 0 ? vulk.imageMemoryBarriers.data() : nullptr;
+    const VkImageMemoryBarrier* imageBarrier = vulk->imageMemoryBarriers.size() > 0 ? vulk->imageMemoryBarriers.data() : nullptr;
 
-    vkCmdPipelineBarrier(vulk.commandBuffer, srcStageMask, dstStageMask,
+    vkCmdPipelineBarrier(vulk->commandBuffer, srcStageMask, dstStageMask,
         VK_DEPENDENCY_BY_REGION_BIT,
         0, nullptr,
-        vulk.bufferMemoryBarriers.size(), bufferBarrier,
-        vulk.imageMemoryBarriers.size(), imageBarrier);
+        vulk->bufferMemoryBarriers.size(), bufferBarrier,
+        vulk->imageMemoryBarriers.size(), imageBarrier);
    
-    vulk.bufferMemoryBarriers.clear();
-    vulk.imageMemoryBarriers.clear();
+    vulk->bufferMemoryBarriers.clear();
+    vulk->imageMemoryBarriers.clear();
     return true;
 }

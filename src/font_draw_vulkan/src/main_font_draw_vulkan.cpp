@@ -153,7 +153,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
         if (!createGraphicsPipeline(
             getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
-            { RenderTarget {.format = vulk.defaultColorFormat } }, {  }, pipeline, false))
+            { RenderTarget {.format = vulk->defaultColorFormat } }, {  }, pipeline, false))
         {
             printf("Failed to create pipeline\n");
             return false;
@@ -162,7 +162,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
-                DescriptorInfo(vulk.renderFrameBufferHandle),
+                DescriptorInfo(vulk->renderFrameBufferHandle),
                 DescriptorInfo(quadBuffer),
             });
 
@@ -253,8 +253,8 @@ void VulkanFontDraw::resized()
 
     // create color and depth images
     renderColorImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.defaultColorFormat,
+        vulk->swapchain.width, vulk->swapchain.height,
+        vulk->defaultColorFormat,
 
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -387,12 +387,12 @@ void VulkanFontDraw::renderDraw()
         // Render
         {
             bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-            vkCmdBindIndexBuffer(vulk.commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk.commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
+            vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(vulk->commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 
         }
-        vkCmdEndRenderPass(vulk.commandBuffer);
-        //vkCmdEndRendering(vulk.commandBuffer);
+        vkCmdEndRenderPass(vulk->commandBuffer);
+        //vkCmdEndRendering(vulk->commandBuffer);
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);

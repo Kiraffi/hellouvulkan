@@ -10,7 +10,11 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkglob.h>
 
-static PodVector<Shader> globShaders;
+struct GlobalShaders
+{
+    PodVector<Shader> shaders;
+};
+static GlobalShaders *globShaders = nullptr;
 
 // spir-v specs, 1.6 https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.pdf
 static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_view filename, Shader& inOutShader)
@@ -199,7 +203,7 @@ bool loadShader(std::string_view filename, Shader &outShader)
         VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         createInfo.codeSize = buffer.size();
         createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
-        VK_CHECK(vkCreateShaderModule(vulk.device, &createInfo, nullptr, &shaderModule));
+        VK_CHECK(vkCreateShaderModule(vulk->device, &createInfo, nullptr, &shaderModule));
         ASSERT(shaderModule);
 
         outShader.module = shaderModule;
@@ -213,7 +217,7 @@ bool loadShader(std::string_view filename, Shader &outShader)
 void destroyShader(Shader& shader)
 {
     if (shader.module)
-        vkDestroyShaderModule(vulk.device, shader.module, nullptr);
+        vkDestroyShaderModule(vulk->device, shader.module, nullptr);
     shader.module = nullptr;
 }
 
@@ -221,34 +225,37 @@ void destroyShader(Shader& shader)
 const Shader& getShader(ShaderType shaderType)
 {
     ASSERT(uint32_t(shaderType) < uint32_t(ShaderType::NumShaders));
-    ASSERT(uint32_t(shaderType) < globShaders.size());
-    return globShaders[uint32_t(shaderType)];
+    ASSERT(uint32_t(shaderType) < globShaders->shaders.size());
+    return globShaders->shaders[uint32_t(shaderType)];
 }
 
 bool loadShaders()
 {
-    globShaders.resize(uint8_t(ShaderType::NumShaders));
-    if (!loadShader("assets/shader/vulkan_new/basic3d.frag.spv", globShaders[uint32_t(ShaderType::Basic3DFrag)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/basic3d.vert.spv", globShaders[uint32_t(ShaderType::Basic3DVert)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv", globShaders[uint32_t(ShaderType::Basic3DAnimatedVert)])) return false;
+    globShaders = new GlobalShaders();
+    globShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
+    if (!loadShader("assets/shader/vulkan_new/basic3d.frag.spv", globShaders->shaders[uint32_t(ShaderType::Basic3DFrag)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/basic3d.vert.spv", globShaders->shaders[uint32_t(ShaderType::Basic3DVert)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv", globShaders->shaders[uint32_t(ShaderType::Basic3DAnimatedVert)])) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/coloredquad.frag.spv", globShaders[uint32_t(ShaderType::ColoredQuadFrag)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/coloredquad.vert.spv", globShaders[uint32_t(ShaderType::ColoredQuadVert)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/coloredquad.frag.spv", globShaders->shaders[uint32_t(ShaderType::ColoredQuadFrag)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/coloredquad.vert.spv", globShaders->shaders[uint32_t(ShaderType::ColoredQuadVert)])) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.frag.spv", globShaders[uint32_t(ShaderType::SpaceShip2DModelFrag)])) return false;
-        if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.vert.spv", globShaders[uint32_t(ShaderType::SpaceShip2DModelVert)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.frag.spv", globShaders->shaders[uint32_t(ShaderType::SpaceShip2DModelFrag)])) return false;
+        if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.vert.spv", globShaders->shaders[uint32_t(ShaderType::SpaceShip2DModelVert)])) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/texturedquad.frag.spv", globShaders[uint32_t(ShaderType::TexturedQuadFrag)])) return false;
-        if (!loadShader("assets/shader/vulkan_new/texturedquad.vert.spv", globShaders[uint32_t(ShaderType::TexturedQuadVert)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/texturedquad.frag.spv", globShaders->shaders[uint32_t(ShaderType::TexturedQuadFrag)])) return false;
+        if (!loadShader("assets/shader/vulkan_new/texturedquad.vert.spv", globShaders->shaders[uint32_t(ShaderType::TexturedQuadVert)])) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/compute_test.comp.spv", globShaders[uint32_t(ShaderType::ComputeTestComp)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/compute_test.comp.spv", globShaders->shaders[uint32_t(ShaderType::ComputeTestComp)])) return false;
     return true;
 }
 
 void deleteLoadedShaders()
 {
     for (uint32_t i = 0; i < uint32_t(ShaderType::NumShaders); ++i)
-        destroyShader(globShaders[i]);
+        destroyShader(globShaders->shaders[i]);
+    delete globShaders;
+    globShaders = nullptr;
 }
 
 
@@ -274,7 +281,7 @@ bool createDescriptor(Pipeline &pipeline)
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = 1; // NOTE ????
 
-    VK_CHECK(vkCreateDescriptorPool(vulk.device, &poolInfo, nullptr, &pipeline.descriptor.pool));
+    VK_CHECK(vkCreateDescriptorPool(vulk->device, &poolInfo, nullptr, &pipeline.descriptor.pool));
     if (!pipeline.descriptor.pool)
         return false;
     VkDescriptorSetAllocateInfo allocInfo = {};
@@ -284,7 +291,7 @@ bool createDescriptor(Pipeline &pipeline)
     allocInfo.pSetLayouts = &pipeline.descriptorSetLayout;
 
     VkDescriptorSet descriptorSet = 0;
-    VK_CHECK(vkAllocateDescriptorSets(vulk.device, &allocInfo, &descriptorSet));
+    VK_CHECK(vkAllocateDescriptorSets(vulk->device, &allocInfo, &descriptorSet));
     ASSERT(descriptorSet);
 
     pipeline.descriptor.descriptorSet = descriptorSet;
@@ -361,7 +368,7 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
 
     if (writeDescriptorSets.size() > 0)
     {
-        vkUpdateDescriptorSets(vulk.device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+        vkUpdateDescriptorSets(vulk->device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
     }
     return true;
 }

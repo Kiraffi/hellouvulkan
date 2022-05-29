@@ -3,7 +3,6 @@
 
 #include <core/camera.h>
 #include <core/general.h>
-#include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
 #include <core/transform.h>
@@ -26,7 +25,6 @@
 #include <render/meshsystem.h>
 #include <scene/scene.h>
 
-#include <string.h>
 
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
@@ -103,13 +101,12 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         return false;
 
 
-    uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
+    uniformDataHandle = vulk->uniformBufferManager.reserveHandle();
 
     if (!meshRenderSystem.init(uniformDataHandle))
         return false;
 
-
-    quadHandle = vulk.uniformBufferManager.reserveHandle();
+    quadHandle = vulk->uniformBufferManager.reserveHandle();
 
     quadIndexBuffer = createBuffer(64 * 1024,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -168,14 +165,15 @@ bool VulkanComputeTest::createPipelines()
         Pipeline &pipeline = graphicsFinalPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { RenderTarget{.format = vulk.defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } },
-            {}, pipeline, false))
+            { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } },
+            {}, pipeline, true))
         {
             printf("Failed to create graphics pipeline\n");
             return false;
         }
 
     }
+
     resized();
     return recreateDescriptor();
 }
@@ -190,7 +188,7 @@ bool VulkanComputeTest::recreateDescriptor()
         destroyDescriptor(pipeline.descriptor);
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
-                DescriptorInfo(vulk.renderFrameBufferHandle),
+                DescriptorInfo(vulk->renderFrameBufferHandle),
                 //DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureSampler),
                 DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
                 DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
@@ -211,7 +209,7 @@ bool VulkanComputeTest::recreateDescriptor()
         destroyDescriptor(pipeline.descriptor);
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
         {
-            DescriptorInfo(vulk.renderFrameBufferHandle),
+            DescriptorInfo(vulk->renderFrameBufferHandle),
             DescriptorInfo(quadHandle),
             DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
         });
@@ -241,44 +239,44 @@ void VulkanComputeTest::resized()
 
     // create color and depth images
     renderColorImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.defaultColorFormat,
+        vulk->swapchain.width, vulk->swapchain.height,
+        vulk->defaultColorFormat,
 
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
     renderDepthImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
+        vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main depth target image");
 
     computeColorImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.defaultColorFormat,
+        vulk->swapchain.width, vulk->swapchain.height,
+        vulk->defaultColorFormat,
 
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Compute target image");
 
     renderColorFinalImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.defaultColorFormat,
+        vulk->swapchain.width, vulk->swapchain.height,
+        vulk->defaultColorFormat,
 
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Render color final image");
 
     fontSystem.setRenderTarget(renderColorImage);
-    ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
+    //ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
     recreateDescriptor();
 
     if (quadHandle.isValid())
     {
         FontRenderSystem::GPUVertexData vdata;
         vdata.pos = Vec2(0.0f, 0.0f); // Vec2(swapchain.width / 2.0f, swapchain.height / 2.0f);
-        vdata.pixelSizeX = vulk.swapchain.width;
-        vdata.pixelSizeY = vulk.swapchain.height;
+        vdata.pixelSizeX = vulk->swapchain.width;
+        vdata.pixelSizeY = vulk->swapchain.height;
         vdata.color = getColor(1.0f, 1.0f, 1.0f, 1.0f);
         vdata.uvStart = Vec2(0.0f, 0.0f);
         vdata.uvSize = Vec2(1.0f, 1.0f);
@@ -318,7 +316,7 @@ void VulkanComputeTest::renderUpdate()
 
     frameBufferData.camMat = camera.getCameraMatrix();
 
-    const SwapChain &swapchain = vulk.swapchain;
+    const SwapChain &swapchain = vulk->swapchain;
     camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
     camera.fovY = 90.0f;
     camera.zFar = 200.0f;
@@ -338,7 +336,7 @@ void VulkanComputeTest::renderUpdate()
 
 void VulkanComputeTest::renderDraw()
 {
-    const SwapChain& swapchain = vulk.swapchain;
+    const SwapChain& swapchain = vulk->swapchain;
 
     addImageBarrier(imageBarrier(renderColorImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -372,7 +370,7 @@ void VulkanComputeTest::renderDraw()
 
 
         bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-        vkCmdDispatch(vulk.commandBuffer, (swapchain.width + 7) / 8, (swapchain.height + 7) / 8, 1);
+        vkCmdDispatch(vulk->commandBuffer, (swapchain.width + 7) / 8, (swapchain.height + 7) / 8, 1);
 
     }
     writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
@@ -388,17 +386,20 @@ void VulkanComputeTest::renderDraw()
         flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
 
-        beginRenderPass(graphicsFinalPipeline, {});
+        //beginRenderPass(graphicsFinalPipeline, {});
+        beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
         // draw calls here
         // Render
         {
             bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsFinalPipeline);
-            vkCmdBindIndexBuffer(vulk.commandBuffer, quadIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk.commandBuffer, 6, 1, 0, 0, 0);
+            vkCmdBindIndexBuffer(vulk->commandBuffer, quadIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(vulk->commandBuffer, 6, 1, 0, 0, 0);
         }
-        vkCmdEndRenderPass(vulk.commandBuffer);
+        //vkCmdEndRenderPass(vulk->commandBuffer);
+        vkCmdEndRendering(vulk->commandBuffer);
+
     }
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);

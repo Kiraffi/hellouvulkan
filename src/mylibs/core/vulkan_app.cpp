@@ -160,8 +160,8 @@ void VulkanApp::setVsync(VSyncType vSyncType)
         return;
 
     vSync = vSyncType;
-    vulk.initParams.vsync = vSync;
-    vulk.needToResize = true;
+    vulk->initParams.vsync = vSync;
+    vulk->needToResize = true;
 }
 
 bool VulkanApp::isPressed(int keyCode)
@@ -196,7 +196,7 @@ void VulkanApp::renderUpdate()
     timeStampCount = 0u;
 
     beginSingleTimeCommands();
-    vkCmdResetQueryPool(vulk.commandBuffer, vulk.queryPool, 0, QUERY_COUNT);
+    vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPool, 0, QUERY_COUNT);
 
     writeStamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
@@ -206,7 +206,7 @@ void VulkanApp::renderUpdate()
         float tmp[6 + 8];
     };
     Buff buff{ Vector2(windowWidth, windowHeight) };
-    addToCopylist(buff, vulk.renderFrameBufferHandle);
+    addToCopylist(buff, vulk->renderFrameBufferHandle);
 
     fontSystem.update();
 }
@@ -236,10 +236,10 @@ void VulkanApp::run()
         #endif
         // needed cos of resize?
         if(resizeHappen)
-            VK_CHECK(vkDeviceWaitIdle(vulk.device));
+            VK_CHECK(vkDeviceWaitIdle(vulk->device));
 
     }
-    VK_CHECK(vkDeviceWaitIdle(vulk.device));
+    VK_CHECK(vkDeviceWaitIdle(vulk->device));
 }
 
 void VulkanApp::logicUpdate()
@@ -357,7 +357,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 uint32_t VulkanApp::writeStamp(VkPipelineStageFlagBits stage)
 {
     uint32_t result = timeStampCount;
-    vkCmdWriteTimestamp(vulk.commandBuffer, stage, vulk.queryPool, result);
+    vkCmdWriteTimestamp(vulk->commandBuffer, stage, vulk->queryPool, result);
     ++timeStampCount;
     return result;
 }
@@ -373,7 +373,7 @@ static void printStats(VulkanApp& app)
 
     uint64_t queryResults[QUERY_COUNT];
     static constexpr size_t querySize = sizeof(uint64_t);
-    VkResult res = (vkGetQueryPoolResults(vulk.device, vulk.queryPool,
+    VkResult res = (vkGetQueryPoolResults(vulk->device, vulk->queryPool,
         0, app.timeStampCount, querySize * app.timeStampCount, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
 
     if (res != VK_SUCCESS)
@@ -385,7 +385,7 @@ static void printStats(VulkanApp& app)
     };
 
     VkPhysicalDeviceProperties props = {};
-    vkGetPhysicalDeviceProperties(vulk.physicalDevice, &props);
+    vkGetPhysicalDeviceProperties(vulk->physicalDevice, &props);
 
     static TimeValues timeValues = {};
     for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)

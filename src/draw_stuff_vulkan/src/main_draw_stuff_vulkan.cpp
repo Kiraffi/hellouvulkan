@@ -83,7 +83,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
 
 
-    uniformDataHandle = vulk.uniformBufferManager.reserveHandle();
+    uniformDataHandle = vulk->uniformBufferManager.reserveHandle();
     if (!uniformDataHandle.isValid())
         return false;
 
@@ -120,15 +120,15 @@ void VulkanDrawStuff::resized()
 
     // create color and depth images
     renderColorImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height,
-        vulk.defaultColorFormat,
+        vulk->swapchain.width, vulk->swapchain.height,
+        vulk->defaultColorFormat,
 
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
     renderDepthImage = createImage(
-        vulk.swapchain.width, vulk.swapchain.height, vulk.depthFormat,
+        vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main depth target image");
 
@@ -165,7 +165,7 @@ void VulkanDrawStuff::renderUpdate()
 
     frameBufferData.camMat = camera.getCameraMatrix();
 
-    const SwapChain &swapchain = vulk.swapchain;
+    const SwapChain &swapchain = vulk->swapchain;
     camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
     camera.fovY = 90.0f;
     camera.zFar = 200.0f;
@@ -195,7 +195,7 @@ void VulkanDrawStuff::renderUpdate()
 
 void VulkanDrawStuff::renderDraw()
 {
-    const SwapChain& swapchain = vulk.swapchain;
+    const SwapChain& swapchain = vulk->swapchain;
 
     addImageBarrier(imageBarrier(renderColorImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
