@@ -365,8 +365,15 @@ uint32_t VulkanApp::writeStamp(VkPipelineStageFlagBits stage)
 static void printStats(VulkanApp& app)
 {
     static uint32_t gpuframeCount = 0u;
+    static uint32_t cpuframeCount = 0u;
     static double gpuTime = 0.0;
     static double cpuTimeStamp = app.getTime();
+    
+    struct TimeValues
+    {
+        double timeDuration[QUERY_COUNT];
+    };
+    static TimeValues timeValues = {};
 
     if (app.timeStampCount < 2u)
         return;
@@ -376,48 +383,41 @@ static void printStats(VulkanApp& app)
     VkResult res = (vkGetQueryPoolResults(vulk->device, vulk->queryPool,
         0, app.timeStampCount, querySize * app.timeStampCount, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
 
-    if (res != VK_SUCCESS)
-        return;
-
-    struct TimeValues
+    if (res == VK_SUCCESS)
     {
-        double timeDuration[QUERY_COUNT];
-    };
+        VkPhysicalDeviceProperties props = {};
+        vkGetPhysicalDeviceProperties(vulk->physicalDevice, &props);
 
-    VkPhysicalDeviceProperties props = {};
-    vkGetPhysicalDeviceProperties(vulk->physicalDevice, &props);
+  
+        for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)
+            timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
 
-    static TimeValues timeValues = {};
-    for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)
-        timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
+        gpuTime += (double(queryResults[app.timeStampCount - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
+        ++gpuframeCount;
+    }
+    ++cpuframeCount;
 
-    gpuTime += (double(queryResults[app.timeStampCount - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
-
-    ++gpuframeCount;
     double currTime = app.getTime();
 
-    double d = 1000.0 / gpuframeCount;
-    double e = gpuframeCount;
-
     double cpuTime = currTime - cpuTimeStamp;
-    app.gpuFps = e / gpuTime;
-    app.cpuFps = e / cpuTime;
+    app.gpuFps = gpuframeCount / gpuTime;
+    app.cpuFps = cpuframeCount / cpuTime;
 
     if (currTime - cpuTimeStamp >= 1.0)
     {
 
         cpuTimeStamp += 1.0f;
 
-        printf("Gpu: %.3fms, cpu: %.3fms.  GpuFps:%.1f, CpuFps:%.1f\n",
-            float(gpuTime* d), (float)(cpuTime * d),
+        printf("Gpu: %4.3fms, cpu: %4.3fms.  GpuFps:%4.2f, CpuFps:%4.2f\n",
+            float(gpuTime* 1000.0 / gpuframeCount), (float)(cpuTime * 1000.0f / cpuframeCount),
             app.gpuFps, app.cpuFps);
-        gpuframeCount = 0u;
 
         for (uint32_t i = 0; i < QUERY_COUNT; ++i)
             timeValues.timeDuration[i] = 0.0;
-
+            
         gpuTime = 0.0;
-
+        gpuframeCount = 0u;
+        cpuframeCount = 0u;
     }
 
     MouseState mouseState = app.getMouseState();
@@ -425,7 +425,7 @@ static void printStats(VulkanApp& app)
     char str[100];
     float fps = app.dt > 0.0 ? float(1.0 / app.dt) : 0.0f;
 
-    sprintf(str, "%2.2fms, fps: %4.2f, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
+    sprintf(str, "%3.2fms, fps: %4.2f, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
         float(app.dt * 1000.0), app.cpuFps, app.gpuFps, mouseState.x, mouseState.y,
         mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown
     );
