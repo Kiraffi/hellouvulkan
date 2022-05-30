@@ -99,8 +99,8 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
     for(float f = -2.5f; f <= 2.5f; f += 1.0f)
-        entityIndices.push_back(scene.addGameEntity({ 
-            .transform = {.pos = {f * 5.0f, 0.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } }, 
+        entityIndices.push_back(scene.addGameEntity({
+            .transform = {.pos = {f * 5.0f, 0.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } },
             .entityType = EntityType::ARROW }));
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
@@ -110,12 +110,12 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
         entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, 
+            .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, },
             .entityType = EntityType::TREE }));
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
         entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, },
+            .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, },
             .entityType = EntityType::TREE_SMOOTH }));
 
 
@@ -250,7 +250,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = false,
+            .useIntegratedGpu = true,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
             .vsync = VSyncType::FIFO_VSYNC
