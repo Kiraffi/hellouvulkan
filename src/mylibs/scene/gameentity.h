@@ -14,6 +14,12 @@ enum class EntityType : uint32_t
     // non animated
     ARROW,
     TEST_THING,
+    
+    TREE,
+    TREE_SMOOTH,
+
+    BLOB,
+    BLOB_FLAT,
 
     NUM_OF_ENTITY_TYPES,
 };

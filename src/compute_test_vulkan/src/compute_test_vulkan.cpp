@@ -416,7 +416,7 @@ void VulkanComputeTest::renderDraw()
 int main(int argCount, char **argv)
 {
     VulkanComputeTest app;
-    if (app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
+    if (app.init("Vulkan, compute test", SCREEN_WIDTH, SCREEN_HEIGHT,
         {
             .showInfoMessages = false,
             .useHDR = false,

@@ -418,7 +418,7 @@ int main(int argCount, char **argv)
     }
     VulkanFontDraw app;
     app.fontFilename = filename;
-    if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
+    if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT,
         {
             .showInfoMessages = false,
             .useHDR = false,

@@ -107,7 +107,27 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 0.0f, 2.0f } }, .entityType = EntityType::TEST_THING }));
 
-    
+
+    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
+        entityIndices.push_back(scene.addGameEntity({
+            .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, 
+            .entityType = EntityType::TREE }));
+
+    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
+        entityIndices.push_back(scene.addGameEntity({
+            .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, },
+            .entityType = EntityType::TREE_SMOOTH }));
+
+
+    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
+        entityIndices.push_back(scene.addGameEntity({
+            .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, },
+            .entityType = EntityType::BLOB }));
+
+    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
+        entityIndices.push_back(scene.addGameEntity({
+            .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, },
+            .entityType = EntityType::BLOB_FLAT }));
 
     return true;
 }
@@ -226,14 +246,14 @@ void VulkanDrawStuff::renderDraw()
 int main(int argCount, char **argv)
 {
     VulkanDrawStuff app;
-    if (app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
+    if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT,
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = true,
+            .useIntegratedGpu = false,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            .vsync = VSyncType::FIFO_VSYNC
         }))
     {
         app.run();

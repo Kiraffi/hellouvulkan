@@ -42,7 +42,18 @@ bool Scene::init()
     if (!loadModelForScene(sceneData, "assets/models/test_gltf.gltf", EntityType::TEST_THING))
         return false;
 
+    if (!loadModelForScene(sceneData, "assets/models/tree1.gltf", EntityType::TREE))
+        return false;
 
+    if (!loadModelForScene(sceneData, "assets/models/tree1_smooth.gltf", EntityType::TREE_SMOOTH))
+        return false;
+
+    if (!loadModelForScene(sceneData, "assets/models/blob.gltf", EntityType::BLOB))
+        return false;
+
+    if (!loadModelForScene(sceneData, "assets/models/blob_flat.gltf", EntityType::BLOB_FLAT))
+        return false;
+    
     return true;
 }
 

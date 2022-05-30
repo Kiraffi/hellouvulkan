@@ -604,7 +604,7 @@ void SpaceShooter::renderDraw()
 int main(int argCount, char **argv)
 {
     SpaceShooter app;
-    if (app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
+    if (app.init("Vulkan, space shooter", SCREEN_WIDTH, SCREEN_HEIGHT,
         {
             .showInfoMessages = false,
             .useHDR = false,
