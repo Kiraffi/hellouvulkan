@@ -44,7 +44,7 @@ void main()
     VData data = vertexValues[gl_VertexIndex];
     mat4 finalMat = mvp * enityModelMatrices[instanceIndex];
     gl_Position = finalMat * vec4(data.pos.xyz, 1.0f);
-    vec3 norm =  (matrix_padding * vec4(data.nor.xyz, 0.0f)).xyz;
+    vec3 norm =  (enityModelMatrices[instanceIndex] * vec4(data.nor.xyz, 0.0f)).xyz;
     vec3 sunDir = vec3(0.5f, -1.0f, 0.5f);
-    colOut = data.color * 0.75f + 0.25f * (-dot(norm, sunDir));
+    colOut = data.color * 0.75f + 0.25f * max(0.0, -dot(norm, sunDir));
 }

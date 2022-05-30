@@ -75,5 +75,5 @@ void main()
     gl_Position = finalMat * vec4(pos.xyz, 1.0f);
     vec3 norm =  (enityModelMatrices[instanceIndex] * vec4(pos.xyz, 0.0f)).xyz;
     vec3 sunDir = vec3(0.5f, -1.0f, 0.5f);
-    colOut = data.color; // * 0.75f + 0.25f * (-dot(norm, sunDir));
+    colOut = data.color * 0.75f + 0.25f * max(0.0f, -dot(norm, sunDir));
 }
