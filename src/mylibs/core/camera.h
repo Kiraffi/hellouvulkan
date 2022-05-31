@@ -9,9 +9,7 @@ struct Camera
     Matrix perspectiveProjection();
     Matrix getCameraMatrix();
 
-    void getCameraDirections(Vec3& rightDir, Vec3& upDir, Vec3& forwardDie);
-
-    void renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);
+    Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);
 
     Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
     float aspectRatioWByH = 1.667f;

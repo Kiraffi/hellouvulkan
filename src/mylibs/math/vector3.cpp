@@ -1,4 +1,5 @@
 #include "vector3.h"
+#include <math/quaternion.h>
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b)
 {
@@ -171,4 +172,15 @@ Vector3 reject(const Vector3 &a, const Vector3 &b)
 void printVector3(const Vector3 &v, const char name[])
 {
     LOG("%s: %f, %f, %f\n", name, v.x, v.y, v.z);
+}
+
+void getDirectionsFromPitchYawRoll(float pitch, float yaw, float roll, Vector3& rightDir, Vector3& upDir, Vector3& forwardDir)
+{
+    Quat rotation = getQuaternionFromAxisAngle(Vec3(0.0f, 0.0f, 1.0f), roll);
+    rotation = rotation * getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), pitch);
+    rotation = rotation * getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), yaw);
+
+    rightDir = rotateVector(Vec3(1.0f, 0.0, 0.0f), rotation);
+    upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), rotation);
+    forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), rotation);
 }

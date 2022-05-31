@@ -30,33 +30,22 @@ Matrix Camera::getCameraMatrix()
     Vector3 rightDir;
     Vector3 upDir;
     Vector3 forwardDir;
-    getCameraDirections(rightDir, upDir, forwardDir);
+    getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
     return createMatrixFromLookAt(position, position + forwardDir, upDir);
 }
 
-void Camera::getCameraDirections(Vec3 &rightDir, Vec3 &upDir, Vec3 &forwardDir)
-{
-    Quat cameraRotation = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), yaw);
-    cameraRotation = getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), pitch) * cameraRotation;
-
-    rightDir = rotateVector(Vec3(1.0f, 0.0, 0.0f), cameraRotation);
-    upDir = rotateVector(Vec3(0.0, 1.0, 0.0f), cameraRotation);
-    forwardDir = rotateVector(Vec3(0.0, 0.0, 1.0f), cameraRotation);
-}
-
-
-void Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize)
+Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize)
 {
     char tmpStr[1024];
 
-    snprintf(tmpStr, 1024, "Camera position: (%.2f, %.2f, %.2f), pitch: %.2f, yaw:%.2f", position.x, position.y, position.z, pitch, yaw);
+    snprintf(tmpStr, 1024, "Camera position: (%.2f, %.2f, %.2f), pitch: %.2f, yaw:%.2f, roll:%.2f", position.x, position.y, position.z, pitch, yaw, roll);
     fontSystem.addText(tmpStr, camInfoPosition, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
 
     Vec3 cameraRightdDir;
     Vec3 cameraUpDir;
     Vec3 cameraForwardDir;
-    getCameraDirections(cameraRightdDir, cameraUpDir, cameraForwardDir);
+    getDirectionsFromPitchYawRoll(pitch, yaw, roll, cameraRightdDir, cameraUpDir, cameraForwardDir);
 
     camInfoPosition.y += fontSize.y + 2.0f;
 
@@ -66,4 +55,5 @@ void Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition
     fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 1.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "Camera right: (%.3f, %.3f, %.3f)", cameraRightdDir.x, cameraRightdDir.y, cameraRightdDir.z);
     fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 2.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    return camInfoPosition + Vec2(0.0f, fontSize.y) * 3.0f;
 }

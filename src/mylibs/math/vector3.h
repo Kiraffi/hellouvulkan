@@ -65,6 +65,7 @@ Vector3 reject(const Vector3 &a, const Vector3 &b);
 
 void printVector3(const Vector3 &v, const char name[]);
 
+void getDirectionsFromPitchYawRoll(float pitch, float yaw, float roll, Vector3& rightDir, Vector3& upDir, Vector3& forwardDir);
 
 using Vec2 = Vector2;
 using Vec3 = Vector3;

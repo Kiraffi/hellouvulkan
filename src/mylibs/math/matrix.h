@@ -59,7 +59,6 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
 Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane);
 
 Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
-Matrix createMatrixFromLookAtRH(const Vec3 &pos, const Vec3 &target, const Vec3 &up);
 
 Matrix transpose(const Matrix &m);
 Matrix operator*(const Matrix &a, const Matrix &b);
