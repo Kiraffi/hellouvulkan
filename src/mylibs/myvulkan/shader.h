@@ -18,7 +18,7 @@ enum class ShaderType : uint8_t
 {
     Basic3DFrag,
     Basic3DVert,
-    Basic3DAnimatedVert,
+
     ColoredQuadFrag,
     ColoredQuadVert,
 
@@ -39,7 +39,7 @@ enum class ShaderType : uint8_t
 };
 
 
-const Shader& getShader(ShaderType shaderType);
+const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex = 1);
 bool loadShaders();
 void deleteLoadedShaders();
 

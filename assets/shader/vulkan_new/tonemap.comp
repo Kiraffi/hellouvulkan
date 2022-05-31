@@ -24,7 +24,6 @@ void main()
     uint indexInThreadGroup = 8 * gl_LocalInvocationID.y + gl_LocalInvocationID.x;
     uint groupThreadIndex = gl_WorkGroupID.y * 8 + gl_WorkGroupID.x;
 
-
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
     if(pos.x < windowSize.x && pos.y < windowSize.y)
     {

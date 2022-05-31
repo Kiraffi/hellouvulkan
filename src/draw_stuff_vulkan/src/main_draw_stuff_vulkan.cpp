@@ -36,6 +36,9 @@
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
 
+static constexpr int SHADOW_WIDTH = 2048;
+static constexpr int SHADOW_HEIGHT = 2048;
+
 static Vec3 getSunDirection(float sunPitch, float sunYaw)
 {
     Vec3 sundir[3];
@@ -66,6 +69,8 @@ public:
     Image renderNormalMapColorImage;
     Image renderDepthImage;
 
+    Image shadowDepthImage;
+
     Image renderHdrImage;
 
 
@@ -79,7 +84,7 @@ public:
     float rotationAmount = 0.0f;
 
     // rotation in angles.
-    float sunPitch = 330.0f;
+    float sunPitch = 120.0f;
     float sunYaw = 30.0f;
 
     bool showNormalMap = false;
@@ -99,6 +104,7 @@ VulkanDrawStuff::~VulkanDrawStuff()
     destroyImage(renderDepthImage);
     destroyImage(renderNormalMapColorImage);
     destroyImage(renderHdrImage);
+    destroyImage(shadowDepthImage);
 }
 
 
@@ -166,6 +172,9 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     camera.zFar = 200.0f;
     camera.zNear = 0.001f;
 
+    shadowDepthImage = createImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main shadow target");
    
     return true;
 }
@@ -241,7 +250,7 @@ void VulkanDrawStuff::logicUpdate()
 
     Vec3 sundir = getSunDirection(sunPitch, sunYaw);
     while (sunPitch >= 360.0f) sunPitch -= 360.0f;
-    while (sunPitch <= 0.0f) sunPitch += 0.0f;
+    while (sunPitch <= 0.0f) sunPitch += 360.0f;
     while (sunYaw >= 360.0f) sunYaw -= 360.0f;
     while (sunYaw <= 0.0f) sunYaw += 360.0f;
 

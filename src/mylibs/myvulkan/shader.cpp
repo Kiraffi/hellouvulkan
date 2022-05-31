@@ -10,11 +10,14 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanglobal.h>
 
+// std::to_string
+#include <string>
+
 struct GlobalShaders
 {
-    PodVector<Shader> shaders;
+    Vector<PodVector<Shader>> shaders;
 };
-static GlobalShaders *globShaders = nullptr;
+static GlobalShaders *globalShaders = nullptr;
 
 // spir-v specs, 1.6 https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.pdf
 static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_view filename, Shader& inOutShader)
@@ -192,25 +195,55 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_vi
     return true;
 }
 
-bool loadShader(std::string_view filename, Shader &outShader)
+bool loadShader(std::string_view filename, ShaderType shaderType)
 {
+    if (!globalShaders)
+        return false;
+    if (uint32_t(shaderType) >= uint32_t(ShaderType::NumShaders))
+        return false;
+    uint32_t permutationIndex = 1;
     PodVector<char> buffer;
-    VkShaderModule shaderModule = 0;
-    if (loadBytes(filename, buffer))
+
+    while(true)
     {
-        ASSERT(buffer.size() % 4 == 0);
+        std::string newFilename = "assets/shader/vulkan_new/";
+        newFilename += filename;
+        newFilename += "_";
+        newFilename += std::to_string(permutationIndex);
+        newFilename += ".spv";
 
-        VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-        createInfo.codeSize = buffer.size();
-        createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
-        VK_CHECK(vkCreateShaderModule(vulk->device, &createInfo, nullptr, &shaderModule));
-        ASSERT(shaderModule);
 
-        outShader.module = shaderModule;
-        if (shaderModule)
-            parseShaderCode(createInfo, filename, outShader);
+        if(loadBytes(newFilename, buffer))
+        {
+            ASSERT(buffer.size() % 4 == 0);
+            if (buffer.size() % 4 != 0)
+                return false;
+
+            Shader shader;
+
+            VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+            createInfo.codeSize = buffer.size();
+            createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
+            VK_CHECK(vkCreateShaderModule(vulk->device, &createInfo, nullptr, &shader.module));
+            ASSERT(shader.module);
+            if (!shader.module)
+                return false;
+
+            
+            bool parseSuccess = parseShaderCode(createInfo, filename, shader);
+            ASSERT(parseSuccess);
+            if (!parseSuccess)
+                return false;
+
+            globalShaders->shaders[uint32_t(shaderType)].push_back(shader);
+        }
+        else
+        {
+            break;
+        }
+        ++permutationIndex;
     }
-    return outShader.module != nullptr;
+    return permutationIndex > 1u;
 }
 
 
@@ -222,42 +255,45 @@ void destroyShader(Shader& shader)
 }
 
 
-const Shader& getShader(ShaderType shaderType)
+const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex)
 {
+    ASSERT(globalShaders);
     ASSERT(uint32_t(shaderType) < uint32_t(ShaderType::NumShaders));
-    ASSERT(uint32_t(shaderType) < globShaders->shaders.size());
-    return globShaders->shaders[uint32_t(shaderType)];
+    ASSERT(uint32_t(shaderType) < globalShaders->shaders.size());
+    ASSERT(permutationIndex - 1 < globalShaders->shaders[uint32_t(shaderType)].size());
+    return globalShaders->shaders[uint32_t(shaderType)][permutationIndex - 1];
 }
 
 bool loadShaders()
 {
-    globShaders = new GlobalShaders();
-    globShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
-    if (!loadShader("assets/shader/vulkan_new/basic3d.frag.spv", globShaders->shaders[uint32_t(ShaderType::Basic3DFrag)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/basic3d.vert.spv", globShaders->shaders[uint32_t(ShaderType::Basic3DVert)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/basic3d_animated.vert.spv", globShaders->shaders[uint32_t(ShaderType::Basic3DAnimatedVert)])) return false;
+    globalShaders = new GlobalShaders();
+    globalShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
+    if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
+    if (!loadShader("4basic3d.vert", ShaderType::Basic3DVert)) return false;
+    //if (!loadShader("4basic3d.vert.spv", ShaderType::Basic3DAnimatedVert)) return false;
+    //if (!loadShader("assets/shader/vulkan_new/basic3d_animated.vert_1.spv", globalShaders->shaders[uint32_t(ShaderType::Basic3DAnimatedVert)])) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/coloredquad.frag.spv", globShaders->shaders[uint32_t(ShaderType::ColoredQuadFrag)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/coloredquad.vert.spv", globShaders->shaders[uint32_t(ShaderType::ColoredQuadVert)])) return false;
+    if (!loadShader("coloredquad.frag", ShaderType::ColoredQuadFrag)) return false;
+    if (!loadShader("coloredquad.vert", ShaderType::ColoredQuadVert)) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.frag.spv", globShaders->shaders[uint32_t(ShaderType::SpaceShip2DModelFrag)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/space_ship_2d_model.vert.spv", globShaders->shaders[uint32_t(ShaderType::SpaceShip2DModelVert)])) return false;
+    if (!loadShader("space_ship_2d_model.frag", ShaderType::SpaceShip2DModelFrag)) return false;
+    if (!loadShader("space_ship_2d_model.vert", ShaderType::SpaceShip2DModelVert)) return false;
 
-    if (!loadShader("assets/shader/vulkan_new/texturedquad.frag.spv", globShaders->shaders[uint32_t(ShaderType::TexturedQuadFrag)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/texturedquad.vert.spv", globShaders->shaders[uint32_t(ShaderType::TexturedQuadVert)])) return false;
+    if (!loadShader("texturedquad.frag", ShaderType::TexturedQuadFrag)) return false;
+    if (!loadShader("texturedquad.vert", ShaderType::TexturedQuadVert)) return false;
 
 
 
-    if (!loadShader("assets/shader/vulkan_new/compute_test.comp.spv", globShaders->shaders[uint32_t(ShaderType::ComputeTestComp)])) return false;
+    if (!loadShader("compute_test.comp", ShaderType::ComputeTestComp)) return false;
 
     
-    if (!loadShader("assets/shader/vulkan_new/lighting.comp.spv", globShaders->shaders[uint32_t(ShaderType::LightingShader)])) return false;
-    if (!loadShader("assets/shader/vulkan_new/tonemap.comp.spv", globShaders->shaders[uint32_t(ShaderType::TonemapShader)])) return false;
+    if (!loadShader("lighting.comp", ShaderType::LightingShader)) return false;
+    if (!loadShader("tonemap.comp", ShaderType::TonemapShader)) return false;
 
 
 
 
-    if (!loadShader("assets/shader/vulkan_new/convertrgbas16.comp.spv", globShaders->shaders[uint32_t(ShaderType::ConvertFromRGBAS16)])) return false;
+    if (!loadShader("convertrgbas16.comp", ShaderType::ConvertFromRGBAS16)) return false;
 
     
 
@@ -266,10 +302,17 @@ bool loadShaders()
 
 void deleteLoadedShaders()
 {
-    for (uint32_t i = 0; i < uint32_t(ShaderType::NumShaders); ++i)
-        destroyShader(globShaders->shaders[i]);
-    delete globShaders;
-    globShaders = nullptr;
+    if (!globalShaders)
+        return;
+
+    for (auto &shaderPermutations : globalShaders->shaders)
+    {
+        for (auto& shaderModule : shaderPermutations)
+            destroyShader(shaderModule);
+    }
+
+    delete globalShaders;
+    globalShaders = nullptr;
 }
 
 

@@ -23,7 +23,7 @@ public:
     bool prepareToRender();
 
     void render(const Image& renderColorTarget, const Image& normalMapColorImage, const Image& renderDepthTarget);
-
+    void renderShadows(const Image& shadowDepthTarget);
 private:
     struct ModelData
     {

@@ -99,7 +99,7 @@ bool MeshRenderSystem::init()
     {
         Pipeline& pipeline = animatedGraphicsPipeline;
         if (!createGraphicsPipeline(
-            getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
+            getShader(ShaderType::Basic3DVert, 3), getShader(ShaderType::Basic3DFrag),
             {
               RenderTarget{.format = vulk->defaultColorFormat },
               RenderTarget{.format = VK_FORMAT_R16G16B16A16_SNORM },
@@ -272,5 +272,16 @@ void MeshRenderSystem::render(const Image& renderColorTarget,
         }
 
     }
+    vkCmdEndRendering(vulk->commandBuffer);
+}
+
+
+void renderShadows(const Image& shadowDepthTarget)
+{
+    static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
+
+    beginRendering({}, { .image = &shadowDepthTarget, .clearValue = depthClear });
+
+
     vkCmdEndRendering(vulk->commandBuffer);
 }

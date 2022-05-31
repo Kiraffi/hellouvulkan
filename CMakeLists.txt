@@ -43,21 +43,42 @@ set(GLSLC_EXECUTABLE glslc)
 
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/vulkan_new)
 
-#set(SPV_SHADERS
-#    ${SHADER_DIR}/texturedquad.vert ${SHADER_DIR}/texturedquad.frag
-#    #${SHADER_DIR}/*.comp
-#)
-file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp
-    #${SHADER_DIR}/*.geom ${SHADER_DIR}/*.tesc ${SHADER_DIR}/*.tese ${SHADER_DIR}/*.mesh ${SHADER_DIR}/*.task ${SHADER_DIR}/*.rgen ${SHADER_DIR}/*.rchit ${SHADER_DIR}/*.rmiss
-    )
+file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp)
+
+set(SPIRV_BINARY_FILES, "")
+
+function(COMPILE_SHADER SHADER_PERMUTATION)
+    set(SPIRV "${SHADER}_${SHADER_PERMUTATION}.spv" PARENT_SCOPE)
+    set(SPIRV "${SHADER}_${SHADER_PERMUTATION}.spv")
+    message(STATUS "Compiling ${SHADER} into ${SPIRV}")
+    add_custom_command(
+        OUTPUT ${SPIRV}
+        COMMAND ${GLSLC_EXECUTABLE} ${SHADER} -DSPECIAL_PERMUTATION=${SHADER_PERMUTATION} --target-env=vulkan1.1 -o ${SPIRV}
+        DEPENDS ${SHADER})
+    
+endfunction()
 
 foreach(SHADER IN LISTS SPV_SHADERS)
     get_filename_component(FILENAME ${SHADER} NAME)
-    message(STATUS "Compiling ${SHADER}")
-    execute_process(COMMAND ${GLSLC_EXECUTABLE} ${SHADER} --target-env=vulkan1.1 -o ${SHADER_DIR}/${FILENAME}.spv)
+
+    # probably the most horrible way to get first number from string?
+    string(REGEX REPLACE "([0-9]+)([A-Za-z0-9_.]*)" "\\1" FIRST_LETTER ${FILENAME} )
+    set(VALUE_OUT 1)
+    if(FIRST_LETTER STRLESS_EQUAL "999999999999999")
+       math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
+    endif()
+    while(VALUE_OUT GREATER 1)
+       compile_shader("${VALUE_OUT}")
+       math(EXPR VALUE_OUT "${VALUE_OUT} - 1" OUTPUT_FORMAT DECIMAL)
+       list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+    endwhile()
+    compile_shader("1")
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+
+    message(STATUS "AFTER FUNC Compiling ${SHADER} into ${SPIRV}")
 endForeach()
 
-add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
+add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
 
 
 
