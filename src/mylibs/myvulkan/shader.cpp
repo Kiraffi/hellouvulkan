@@ -246,7 +246,15 @@ bool loadShaders()
     if (!loadShader("assets/shader/vulkan_new/texturedquad.frag.spv", globShaders->shaders[uint32_t(ShaderType::TexturedQuadFrag)])) return false;
     if (!loadShader("assets/shader/vulkan_new/texturedquad.vert.spv", globShaders->shaders[uint32_t(ShaderType::TexturedQuadVert)])) return false;
 
+
+
     if (!loadShader("assets/shader/vulkan_new/compute_test.comp.spv", globShaders->shaders[uint32_t(ShaderType::ComputeTestComp)])) return false;
+
+    
+    if (!loadShader("assets/shader/vulkan_new/lighting.comp.spv", globShaders->shaders[uint32_t(ShaderType::LightingShader)])) return false;
+    if (!loadShader("assets/shader/vulkan_new/tonemap.comp.spv", globShaders->shaders[uint32_t(ShaderType::TonemapShader)])) return false;
+
+
 
 
     if (!loadShader("assets/shader/vulkan_new/convertrgbas16.comp.spv", globShaders->shaders[uint32_t(ShaderType::ConvertFromRGBAS16)])) return false;

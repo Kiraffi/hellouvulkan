@@ -3,19 +3,16 @@
 #define MATRIX_ORDER row_major
 //#define MATRIX_ORDER column_major
 
-
-layout (binding = 0) uniform ConstantDataStructBlock
-{
-    vec2 windowSize;
-    vec2 padding;
-};
-
-layout (binding = 1, MATRIX_ORDER) uniform FrameDataBlock
+layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
 {
     mat4 cameraMatrix;
     mat4 viewProjMat;
     mat4 mvp;
     mat4 matrix_padding;
+
+    vec2 windowSize;
+    float padding[12];
+
 };
 
 layout (binding = 2, MATRIX_ORDER) restrict readonly buffer EnityModelMatrices
@@ -83,8 +80,7 @@ void main()
     mat4 finalMat = mvp * enityModelMatrices[instanceIndex];
     gl_Position = finalMat * vec4(pos.xyz, 1.0f);
     vec3 normalDir =  (enityModelMatrices[instanceIndex] * vec4(pos.xyz, 0.0f)).xyz;
-    vec3 sunDir = vec3(0.5f, -1.0f, 0.5f);
-    colOut = data.color * 0.75f + 0.25f * max(0.0f, -dot(normalDir, sunDir));
+    colOut = data.color;
 
     normalDirOut = normalDir;
 }

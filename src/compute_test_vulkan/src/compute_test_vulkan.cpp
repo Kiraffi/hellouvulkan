@@ -22,7 +22,7 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <render/meshsystem.h>
+#include <render/meshrendersystem.h>
 #include <scene/scene.h>
 
 
@@ -51,9 +51,6 @@ public:
     Scene scene;
     MeshRenderSystem meshRenderSystem;
 
-    Camera camera;
-
-    UniformBufferHandle uniformDataHandle;
     UniformBufferHandle quadHandle;
 
     Buffer quadIndexBuffer;
@@ -103,9 +100,7 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         return false;
 
 
-    uniformDataHandle = vulk->uniformBufferManager.reserveHandle();
-
-    if (!meshRenderSystem.init(uniformDataHandle))
+    if (!meshRenderSystem.init())
         return false;
 
     quadHandle = vulk->uniformBufferManager.reserveHandle();
@@ -312,35 +307,6 @@ void VulkanComputeTest::logicUpdate()
 void VulkanComputeTest::renderUpdate()
 {
     VulkanApp::renderUpdate();
-
-
-    struct FrameBuffer
-    {
-        Matrix camMat;
-        Matrix viewProj;
-        Matrix mvp;
-        Matrix padding;
-    };
-    FrameBuffer frameBufferData;
-
-
-
-    frameBufferData.camMat = camera.getCameraMatrix();
-
-    const SwapChain &swapchain = vulk->swapchain;
-    camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
-    camera.fovY = 90.0f;
-    camera.zFar = 200.0f;
-    camera.zNear = 0.001f;
-
-    frameBufferData.viewProj = camera.perspectiveProjection();
-    frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
-
-    addToCopylist(frameBufferData, uniformDataHandle);
-
-
-
-
     scene.update(getTime());
     meshRenderSystem.prepareToRender();
 }

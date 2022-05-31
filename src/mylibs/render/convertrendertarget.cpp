@@ -49,9 +49,9 @@ bool CovertRenderTarget::updateSourceImage(Image& srcImage, Image& toImage)
     return true;
 }
 
-void CovertRenderTarget::render(Image& srcImage, Image& toImage)
+void CovertRenderTarget::render(uint32_t width, uint32_t height)
 {
 
     bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-    vkCmdDispatch(vulk->commandBuffer, (toImage.width + 7) / 8, (toImage.height + 7) / 8, 1);
+    vkCmdDispatch(vulk->commandBuffer, (width + 7) / 8, (height + 7) / 8, 1);
 }

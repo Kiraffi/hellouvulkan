@@ -24,7 +24,10 @@
 #include <myvulkan/vulkanresources.h>
 
 #include <render/convertrendertarget.h>
-#include <render/meshsystem.h>
+#include <render/lightrendersystem.h>
+#include <render/meshrendersystem.h>
+#include <render/tonemaprendersystem.h>
+
 
 #include <scene/scene.h>
 
@@ -33,7 +36,13 @@
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
 
+static Vec3 getSunDirection(float sunPitch, float sunYaw)
+{
+    Vec3 sundir[3];
+    getDirectionsFromPitchYawRoll(toRadians(sunPitch), toRadians(sunYaw), 0.0f, sundir[0], sundir[1], sundir[2]);
 
+    return sundir[2];
+}
 
 class VulkanDrawStuff : public VulkanApp
 {
@@ -50,21 +59,31 @@ public:
 public:
     Scene scene;
     MeshRenderSystem meshRenderSystem;
-
-    Camera camera;
-
-    UniformBufferHandle uniformDataHandle;
+    LightRenderSystem lightRenderSystem;
+    TonemapRenderSystem tonemapRenderSystem;
 
     Image renderColorImage;
+    Image renderNormalMapColorImage;
     Image renderDepthImage;
 
-    Image renderNormalMapColorImage;
+    Image renderHdrImage;
+
 
     uint32_t indicesCount = 0;
 
     PodVector<uint32_t> entityIndices;
 
     CovertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
+    Vec2 fontSize{ 8.0f, 12.0f };
+
+    float rotationAmount = 0.0f;
+
+    // rotation in angles.
+    float sunPitch = 330.0f;
+    float sunYaw = 30.0f;
+
+    bool showNormalMap = false;
+    bool rotateOn = false;
 };
 
 
@@ -79,6 +98,7 @@ VulkanDrawStuff::~VulkanDrawStuff()
     destroyImage(renderColorImage);
     destroyImage(renderDepthImage);
     destroyImage(renderNormalMapColorImage);
+    destroyImage(renderHdrImage);
 }
 
 
@@ -92,29 +112,33 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     
     convertFromS16.init(ShaderType::ConvertFromRGBAS16);
 
-    uniformDataHandle = vulk->uniformBufferManager.reserveHandle();
-    if (!uniformDataHandle.isValid())
-        return false;
-
-    if (!meshRenderSystem.init(uniformDataHandle))
+    if (!meshRenderSystem.init())
         return false;
 
     if (!scene.init())
+        return false;
+
+    if (!lightRenderSystem.init())
+        return false;
+
+    if (!tonemapRenderSystem.init())
         return false;
 
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
     resized();
 
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
     for(float f = -2.5f; f <= 2.5f; f += 1.0f)
         entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } },
+            .transform = {.pos = {f * 5.0f, 1.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } },
             .entityType = EntityType::ARROW }));
 
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
 
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 0.0f, 2.0f } }, .entityType = EntityType::TEST_THING }));
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING }));
+
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
 
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
@@ -138,6 +162,11 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
             .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, },
             .entityType = EntityType::BLOB_FLAT }));
 
+    camera.fovY = 90.0f;
+    camera.zFar = 200.0f;
+    camera.zNear = 0.001f;
+
+   
     return true;
 }
 
@@ -147,6 +176,7 @@ void VulkanDrawStuff::resized()
     destroyImage(renderColorImage);
     destroyImage(renderDepthImage);
     destroyImage(renderNormalMapColorImage);
+    destroyImage(renderHdrImage);
 
     // create color and depth images
     renderColorImage = createImage(
@@ -164,6 +194,16 @@ void VulkanDrawStuff::resized()
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main normal map target image");
+    
+    renderHdrImage = createImage(
+        vulk->swapchain.width, vulk->swapchain.height,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main color HDR");
+
+
 
     renderDepthImage = createImage(
         vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
@@ -172,6 +212,8 @@ void VulkanDrawStuff::resized()
 
     fontSystem.setRenderTarget(renderColorImage);
     convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
+    lightRenderSystem.updateReadTargets(renderColorImage, renderNormalMapColorImage, renderHdrImage);
+    tonemapRenderSystem.updateReadTargets(renderHdrImage, renderColorImage);
 }
 
 void VulkanDrawStuff::logicUpdate()
@@ -182,7 +224,35 @@ void VulkanDrawStuff::logicUpdate()
 
     checkCameraKeypresses(dt, camera);
 
-    camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), Vec2(8.0f, 12.0f));
+    if (isPressed(GLFW_KEY_SPACE))
+        showNormalMap = !showNormalMap;
+
+    if (isPressed(GLFW_KEY_Z))
+        rotateOn = !rotateOn;
+
+    if (isDown(GLFW_KEY_UP))
+        sunPitch -= dt * 60.0f;
+    if (isDown(GLFW_KEY_DOWN))
+        sunPitch += dt * 60.0f;
+    if (isDown(GLFW_KEY_LEFT))
+        sunYaw += dt * 60.0f;
+    if (isDown(GLFW_KEY_RIGHT))
+        sunYaw -= dt * 60.0f;
+
+    Vec3 sundir = getSunDirection(sunPitch, sunYaw);
+    while (sunPitch >= 360.0f) sunPitch -= 360.0f;
+    while (sunPitch <= 0.0f) sunPitch += 0.0f;
+    while (sunYaw >= 360.0f) sunYaw -= 360.0f;
+    while (sunYaw <= 0.0f) sunYaw += 360.0f;
+
+    Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
+    char tmpStr[1024];
+    snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f",
+        showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount));
+    fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f", sunPitch, sunYaw, sundir.x, sundir.y, sundir.z);
+    fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
     meshRenderSystem.clear();
 }
 
@@ -191,45 +261,31 @@ void VulkanDrawStuff::renderUpdate()
     VulkanApp::renderUpdate();
 
 
-    struct FrameBuffer
-    {
-        Matrix camMat;
-        Matrix viewProj;
-        Matrix mvp;
-        Matrix padding;
-    };
-    FrameBuffer frameBufferData;
 
 
-
-    frameBufferData.camMat = camera.getCameraMatrix();
-
-    const SwapChain &swapchain = vulk->swapchain;
-    camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
-    camera.fovY = 90.0f;
-    camera.zFar = 200.0f;
-    camera.zNear = 0.001f;
-
-    frameBufferData.viewProj = camera.perspectiveProjection();
-    frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
-
-    static float rotationAmount = 0.0f; // Pi * 0.25f;
-    for(uint32_t entityIndex : entityIndices)
+    for (uint32_t entityIndex : entityIndices)
     {
         GameEntity& entity = scene.getEntity(entityIndex);
-        if (entity.entityType != EntityType::NUM_OF_ENTITY_TYPES)
-        {
-            entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
-        }
+        if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES ||
+            entity.entityType == EntityType::FLOOR)
+            continue;
+
+        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
     }
-    //rotationAmount += 1.5f * dt;
-
-    addToCopylist(frameBufferData, uniformDataHandle);
-
-
+    if (rotateOn)
+    {
+        rotationAmount += 1.5f * dt;
+        while (rotationAmount >= 2.0f * PI) rotationAmount -= 2.0f * PI;
+        while (rotationAmount <= -2.0f * PI) rotationAmount += 2.0f * PI;
+    }
 
     scene.update(getTime());
     meshRenderSystem.prepareToRender();
+
+    Vec3 sundir = getSunDirection(sunPitch, sunYaw);
+    lightRenderSystem.setSunDirection(sundir);
+
+    lightRenderSystem.update();
 }
 
 void VulkanDrawStuff::renderDraw()
@@ -254,26 +310,55 @@ void VulkanDrawStuff::renderDraw()
     // Drawingg
     {
         meshRenderSystem.render(renderColorImage, renderNormalMapColorImage, renderDepthImage);
-        fontSystem.render();
     }
 
 
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
+    if (showNormalMap)
     {
 
-        addImageBarrier(imageBarrier(renderNormalMapColorImage,
-            //VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
         addImageBarrier(imageBarrier(renderColorImage,
             VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderNormalMapColorImage,
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 
         flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-
-        convertFromS16.render(renderNormalMapColorImage, renderColorImage);
+        convertFromS16.render(renderColorImage.width, renderColorImage.height);
+        writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     }
-    writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    else
+    {
+        addImageBarrier(imageBarrier(renderColorImage,
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderNormalMapColorImage,
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderHdrImage,
+            0, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+
+        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        lightRenderSystem.render(renderColorImage.width, renderColorImage.height);
+        writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+        addImageBarrier(imageBarrier(renderHdrImage,
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderColorImage,
+            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+        tonemapRenderSystem.render(renderColorImage.width, renderColorImage.height);
+        writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    }
+
+    addImageBarrier(imageBarrier(renderColorImage,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+
+
+    fontSystem.render();
+    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     present(renderColorImage);
 }

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <core/camera.h>
 #include <core/timer.h>
 #include <myvulkan/vulkaninitparameters.h>
 #include <render/font_render.h>
 
 struct GLFWwindow;
-struct Camera;
 
 struct MouseState
 {
@@ -76,5 +76,6 @@ protected:
     FontRenderSystem fontSystem;
 
     Timer timer;
+    Camera camera;
 
 };

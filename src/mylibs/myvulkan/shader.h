@@ -29,6 +29,10 @@ enum class ShaderType : uint8_t
 
     ComputeTestComp,
 
+
+    LightingShader,
+    TonemapShader,
+
     ConvertFromRGBAS16,
 
     NumShaders,

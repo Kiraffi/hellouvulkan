@@ -21,20 +21,21 @@ add_library(MyLibraries
     "math/quaternion.cpp"
     "math/vector3.cpp"
 
+    "model/gltf.cpp"
+
     "myvulkan/myvma.cpp"
     "myvulkan/myvulkan.cpp"
     "myvulkan/uniformbuffermanager.cpp"
     "myvulkan/vulkanresources.cpp"
-
-    "model/gltf.cpp"
     "myvulkan/shader.cpp"
 
+    "render/convertrendertarget.cpp"
     "render/font_render.cpp"
-    "render/meshsystem.cpp"
+    "render/lightrendersystem.cpp"
+    "render/meshrendersystem.cpp"
+    "render/tonemaprendersystem.cpp"
 
     "scene/scene.cpp"
-    "render/convertrendertarget.cpp"
-    "render/lightsystem.cpp"
 )
 
 target_include_directories(MyLibraries PRIVATE

@@ -12,7 +12,7 @@ class MeshRenderSystem
 public:
     ~MeshRenderSystem();
 
-    bool init(UniformBufferHandle uniformDataHandle);
+    bool init();
     uint32_t addModel(const RenderModel &renderModel);
 
 

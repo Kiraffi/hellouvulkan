@@ -1,18 +1,26 @@
 #version 450 core
 
+#define MATRIX_ORDER row_major
+//#define MATRIX_ORDER column_major
+
+layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
+{
+    mat4 cameraMatrix;
+    mat4 viewProjMat;
+    mat4 mvp;
+    mat4 matrix_padding;
+
+    vec2 windowSize;
+    float padding[12];
+
+};
+
 struct VData
 {
     vec2 vpos;
     uint vSizes;
     uint vColor;
 };
-
-layout (binding = 0) uniform ConstantDataStructBlock
-{
-    vec2 windowSize;
-    vec2 padding;
-};
-
 
 layout (std430, binding=1) restrict readonly buffer shader_data
 {

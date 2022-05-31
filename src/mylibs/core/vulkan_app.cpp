@@ -16,6 +16,7 @@
 #include <container/mymemory.h>
 
 #include <math/general_math.h>
+#include <math/matrix.h>
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
@@ -200,13 +201,33 @@ void VulkanApp::renderUpdate()
 
     writeStamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
-    struct Buff
+
+    struct FrameBuffer
     {
+        Matrix camMat;
+        Matrix viewProj;
+        Matrix mvp;
+        Matrix padding;
+
         Vector2 areaSize;
-        float tmp[6 + 8];
+        float tmp[12]{};
     };
-    Buff buff{ Vector2(windowWidth, windowHeight) };
-    addToCopylist(buff, vulk->renderFrameBufferHandle);
+    FrameBuffer frameBufferData;
+
+
+
+    frameBufferData.camMat = camera.getCameraMatrix();
+
+    const SwapChain& swapchain = vulk->swapchain;
+    camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
+
+
+    frameBufferData.viewProj = camera.perspectiveProjection();
+    frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
+
+
+    frameBufferData.areaSize = Vector2(windowWidth, windowHeight);
+    addToCopylist(frameBufferData, vulk->renderFrameBufferHandle);
 
     fontSystem.update();
 }
@@ -302,29 +323,39 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 
     if (keyDowns[GLFW_KEY_I].isDown)
     {
-        camera.pitch -= rotationSpeed;
+        camera.pitch += rotationSpeed;
     }
     if (keyDowns[GLFW_KEY_K].isDown)
     {
-        camera.pitch += rotationSpeed;
+        camera.pitch -= rotationSpeed;
     }
     if (keyDowns[GLFW_KEY_J].isDown)
     {
-        camera.yaw -= rotationSpeed;
+        camera.yaw += rotationSpeed;
     }
     if (keyDowns[GLFW_KEY_L].isDown)
     {
-        camera.yaw += rotationSpeed;
+        camera.yaw -= rotationSpeed;
     }
-
+    /*
+    if (keyDowns[GLFW_KEY_O].isDown)
+    {
+        camera.roll += rotationSpeed;
+    }
+    if (keyDowns[GLFW_KEY_P].isDown)
+    {
+        camera.roll -= rotationSpeed;
+    }
+    */
     camera.pitch = clamp(camera.pitch, -0.499f * PI, 0.4999f * PI);
     camera.yaw = ffmodf(camera.yaw, 2.0f * PI);
+    camera.roll = ffmodf(camera.roll, 2.0f * PI);
 
     Vec3 rightDir;
     Vec3 upDir;
     Vec3 forwardDir;
 
-    camera.getCameraDirections(rightDir, upDir, forwardDir);
+    getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, camera.roll, rightDir, upDir, forwardDir);
 
 
     if (keyDowns[GLFW_KEY_W].isDown)

@@ -14,11 +14,8 @@ public:
 
     bool init(ShaderType shapeType);
     bool updateSourceImage(Image& srcImage, Image& toImage);
-    void render(Image &srcImage, Image& toImage);
-
+    void render(uint32_t width, uint32_t height);
 private:
     VkFormat fromFormat = VK_FORMAT_UNDEFINED;
-    VkShaderModule convertShader = nullptr;
     Pipeline computePipeline;
-
 };

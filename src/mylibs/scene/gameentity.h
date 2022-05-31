@@ -21,6 +21,8 @@ enum class EntityType : uint32_t
     BLOB,
     BLOB_FLAT,
 
+    FLOOR,
+
     NUM_OF_ENTITY_TYPES,
 };
 

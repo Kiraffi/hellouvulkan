@@ -15,9 +15,8 @@ layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
 
 };
 
-//layout (binding = 1) uniform sampler2D textureToSample;
-layout (rgba16_snorm, binding = 1) uniform readonly image2D loadTex; // when color format was bgra, didnt work on intel
-layout (rgba8, binding = 2) uniform writeonly image2D storeTex;
+layout (rgba16f, binding = 16) uniform readonly image2D hdrTex;
+layout (rgba8, binding = 17) uniform writeonly image2D storeTex;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
@@ -29,8 +28,10 @@ void main()
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
     if(pos.x < windowSize.x && pos.y < windowSize.y)
     {
-        vec4 imageSample = imageLoad(loadTex, pos) * 0.5f + 0.5f;
-        imageStore(storeTex, pos, imageSample);
+        vec4 hdrSample = imageLoad(hdrTex, pos);
+        // reinhard tonemapping
+        hdrSample = hdrSample / (hdrSample + 1.0f);
+        imageStore(storeTex, pos, vec4(hdrSample.rgb, 0.0f));
     }
 }
 

@@ -1,0 +1,49 @@
+#version 450 core
+
+#define MATRIX_ORDER row_major
+//#define MATRIX_ORDER column_major
+
+layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
+{
+    mat4 cameraMatrix;
+    mat4 viewProjMat;
+    mat4 mvp;
+    mat4 matrix_padding;
+
+    vec2 windowSize;
+    float padding[12];
+
+};
+
+layout (binding = 1, MATRIX_ORDER) uniform LightBuffer
+{
+    vec3 sunDir;
+    float lightBufferPadding[16 - 3];
+};
+
+layout (rgba16_snorm, binding = 16) uniform readonly image2D normalTex; // when color format was bgra, didnt work on intel
+layout (rgba8, binding = 17) uniform readonly image2D albedoTex;
+layout (rgba16f, binding = 18) uniform writeonly image2D storeTex;
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    uint indexInThreadGroup = 8 * gl_LocalInvocationID.y + gl_LocalInvocationID.x;
+    uint groupThreadIndex = gl_WorkGroupID.y * 8 + gl_WorkGroupID.x;
+
+
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    if(pos.x < windowSize.x && pos.y < windowSize.y)
+    {
+        vec4 normalSample = imageLoad(normalTex, pos);
+        vec4 albedoSample = imageLoad(albedoTex, pos);
+
+        // Do math, calculate position from vertex?
+        // Normal...
+
+        vec3 colorOut = albedoSample.rgb * 0.5f + 0.5f * max(0.0f, -dot(normalSample.xyz, sunDir));
+
+        imageStore(storeTex, pos, vec4(colorOut, 0.0f));
+    }
+}
+

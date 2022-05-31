@@ -1,4 +1,4 @@
-#include "meshsystem.h"
+#include "meshrendersystem.h"
 
 #include <container/arraysliceview.h>
 
@@ -27,7 +27,7 @@ MeshRenderSystem::~MeshRenderSystem()
 }
 
 
-bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
+bool MeshRenderSystem::init()
 {
     vertexBuffer = createBuffer(32u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -84,7 +84,6 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
                 DescriptorInfo(vulk->renderFrameBufferHandle),
-                DescriptorInfo(uniformDataHandle),
                 
                 DescriptorInfo(modelRenderMatricesBuffer),
 
@@ -115,7 +114,6 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
         pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
             {
                 DescriptorInfo(vulk->renderFrameBufferHandle),
-                DescriptorInfo(uniformDataHandle),
 
                 DescriptorInfo(modelRenderMatricesBuffer),
                 DescriptorInfo(modelBoneRenderMatricesBuffer),

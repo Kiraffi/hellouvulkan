@@ -1,5 +1,20 @@
 #version 450 core
 
+#define MATRIX_ORDER row_major
+//#define MATRIX_ORDER column_major
+
+layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
+{
+    mat4 cameraMatrix;
+    mat4 viewProjMat;
+    mat4 mvp;
+    mat4 matrix_padding;
+
+    vec2 windowSize;
+    float padding[12];
+
+};
+
 struct VData
 {
     vec2 vpos;
@@ -8,12 +23,6 @@ struct VData
 
     vec2 vUvStart;
     vec2 vUvSize;
-};
-
-layout (binding = 0) uniform ConstantDataStructBlock
-{
-    vec2 windowSize;
-    vec2 padding;
 };
 
 layout (binding = 1) uniform ValueBlock

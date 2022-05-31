@@ -54,6 +54,10 @@ bool Scene::init()
     if (!loadModelForScene(sceneData, "assets/models/blob_flat.gltf", EntityType::BLOB_FLAT))
         return false;
     
+    if (!loadModelForScene(sceneData, "assets/models/floor.gltf", EntityType::FLOOR))
+        return false;
+
+
     return true;
 }
 
