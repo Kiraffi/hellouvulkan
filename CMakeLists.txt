@@ -62,10 +62,11 @@ foreach(SHADER IN LISTS SPV_SHADERS)
     get_filename_component(FILENAME ${SHADER} NAME)
 
     # probably the most horrible way to get first number from string?
-    string(REGEX REPLACE "([0-9]+)([A-Za-z0-9_.]*)" "\\1" FIRST_LETTER ${FILENAME} )
+    string(REGEX REPLACE "[A-Za-z0-9_]+[_]([0-9]+).[A-Za-z]+" "\\1" FIRST_LETTER ${FILENAME} )
     set(VALUE_OUT 1)
-    if(FIRST_LETTER STRLESS_EQUAL "999999999999999")
+    if(FIRST_LETTER STRLESS_EQUAL "999999999999999" AND NOT FILENAME STREQUAL FIRST_LETTER)
         #parse the string number into number.
+        message(STATUS "number ${FIRST_LETTER}")
         math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
     endif()
     while(VALUE_OUT GREATER 0)

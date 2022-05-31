@@ -212,35 +212,34 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
         newFilename += std::to_string(permutationIndex);
         newFilename += ".spv";
 
+        if (!fileExists(newFilename))
+            break;
 
-        if(loadBytes(newFilename, buffer))
-        {
-            ASSERT(buffer.size() % 4 == 0);
-            if (buffer.size() % 4 != 0)
-                return false;
+        if (!loadBytes(newFilename, buffer))
+            return false;
 
-            Shader shader;
+        ASSERT(buffer.size() % 4 == 0);
+        if (buffer.size() % 4 != 0)
+            return false;
 
-            VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-            createInfo.codeSize = buffer.size();
-            createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
-            VK_CHECK(vkCreateShaderModule(vulk->device, &createInfo, nullptr, &shader.module));
-            ASSERT(shader.module);
-            if (!shader.module)
-                return false;
+        Shader shader;
+
+        VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+        createInfo.codeSize = buffer.size();
+        createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
+        VK_CHECK(vkCreateShaderModule(vulk->device, &createInfo, nullptr, &shader.module));
+        ASSERT(shader.module);
+        if (!shader.module)
+            return false;
 
             
-            bool parseSuccess = parseShaderCode(createInfo, filename, shader);
-            ASSERT(parseSuccess);
-            if (!parseSuccess)
-                return false;
+        bool parseSuccess = parseShaderCode(createInfo, filename, shader);
+        ASSERT(parseSuccess);
+        if (!parseSuccess)
+            return false;
 
-            globalShaders->shaders[uint32_t(shaderType)].push_back(shader);
-        }
-        else
-        {
-            break;
-        }
+        globalShaders->shaders[uint32_t(shaderType)].push_back(shader);
+
         ++permutationIndex;
     }
     return permutationIndex > 1u;
@@ -269,9 +268,7 @@ bool loadShaders()
     globalShaders = new GlobalShaders();
     globalShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
     if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
-    if (!loadShader("4basic3d.vert", ShaderType::Basic3DVert)) return false;
-    //if (!loadShader("4basic3d.vert.spv", ShaderType::Basic3DAnimatedVert)) return false;
-    //if (!loadShader("assets/shader/vulkan_new/basic3d_animated.vert_1.spv", globalShaders->shaders[uint32_t(ShaderType::Basic3DAnimatedVert)])) return false;
+    if (!loadShader("basic3d_4.vert", ShaderType::Basic3DVert)) return false;
 
     if (!loadShader("coloredquad.frag", ShaderType::ColoredQuadFrag)) return false;
     if (!loadShader("coloredquad.vert", ShaderType::ColoredQuadVert)) return false;
