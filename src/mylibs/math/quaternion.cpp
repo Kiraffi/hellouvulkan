@@ -52,12 +52,12 @@ void getAxis(const Quaternion &quat, Vector3 &right, Vector3 &up, Vector3 &forwa
 
 Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
 {
-    float s = fsinf(angle * 0.5f);
+    float s = fsinf(-angle * 0.5f);
 
     Quaternion result;
     result.v = normalize(v) * s;
 
-    result.w = fcosf(angle * 0.5f);
+    result.w = fcosf(-angle * 0.5f);
     return result;
 }
 
