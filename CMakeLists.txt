@@ -38,7 +38,7 @@ endif()
 include_directories(${Vulkan_INCLUDE_DIRS})
 
 
-
+# Shader compileing
 set(GLSLC_EXECUTABLE glslc)
 
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/vulkan_new)
@@ -47,6 +47,7 @@ file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DI
 
 set(SPIRV_BINARY_FILES, "")
 
+# helper function to generate custom commands for filename
 function(COMPILE_SHADER SHADER_PERMUTATION)
     set(SPIRV "${SHADER}_${SHADER_PERMUTATION}.spv" PARENT_SCOPE)
     set(SPIRV "${SHADER}_${SHADER_PERMUTATION}.spv")
@@ -55,7 +56,6 @@ function(COMPILE_SHADER SHADER_PERMUTATION)
         OUTPUT ${SPIRV}
         COMMAND ${GLSLC_EXECUTABLE} ${SHADER} -DSPECIAL_PERMUTATION=${SHADER_PERMUTATION} --target-env=vulkan1.1 -o ${SPIRV}
         DEPENDS ${SHADER})
-    
 endfunction()
 
 foreach(SHADER IN LISTS SPV_SHADERS)
@@ -65,17 +65,19 @@ foreach(SHADER IN LISTS SPV_SHADERS)
     string(REGEX REPLACE "([0-9]+)([A-Za-z0-9_.]*)" "\\1" FIRST_LETTER ${FILENAME} )
     set(VALUE_OUT 1)
     if(FIRST_LETTER STRLESS_EQUAL "999999999999999")
-       math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
+        #parse the string number into number.
+        math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
     endif()
-    while(VALUE_OUT GREATER 1)
-       compile_shader("${VALUE_OUT}")
-       math(EXPR VALUE_OUT "${VALUE_OUT} - 1" OUTPUT_FORMAT DECIMAL)
-       list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-    endwhile()
-    compile_shader("1")
-    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+    while(VALUE_OUT GREATER 0)
+        # Add filename_index.spv, from 1 to filename first number.
+        # For example 3shader.comp -> { 3shader.comp_1.spv, 3shader.comp_2.spv, 3shader.comp_3.spv }
+        # If there is no number then we just make shadername_1.spv
+        compile_shader("${VALUE_OUT}")
 
-    message(STATUS "AFTER FUNC Compiling ${SHADER} into ${SPIRV}")
+        # Count down the VALUE_OUT, there is probably far better way to do for loop, but...
+        math(EXPR VALUE_OUT "${VALUE_OUT} - 1" OUTPUT_FORMAT DECIMAL)
+        list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+    endwhile()
 endForeach()
 
 add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
