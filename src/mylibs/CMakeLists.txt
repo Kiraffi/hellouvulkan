@@ -33,7 +33,9 @@ add_library(MyLibraries
     "render/meshsystem.cpp"
 
     "scene/scene.cpp"
- )
+    "render/convertrendertarget.cpp"
+    "render/lightsystem.cpp"
+)
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"

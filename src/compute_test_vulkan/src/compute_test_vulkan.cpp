@@ -62,6 +62,7 @@ public:
     Pipeline graphicsFinalPipeline;
 
     Image renderColorImage;
+    Image renderNormalMapColorImage;
     Image renderDepthImage;
 
     Image computeColorImage;
@@ -85,6 +86,7 @@ VulkanComputeTest::~VulkanComputeTest()
     destroyBuffer(quadIndexBuffer);
 
     destroyImage(renderColorImage);
+    destroyImage(renderNormalMapColorImage);
     destroyImage(renderDepthImage);
 
     destroyImage(computeColorImage);
@@ -233,6 +235,7 @@ bool VulkanComputeTest::recreateDescriptor()
 void VulkanComputeTest::resized()
 {
     destroyImage(renderColorImage);
+    destroyImage(renderNormalMapColorImage);
     destroyImage(renderDepthImage);
     destroyImage(computeColorImage);
     destroyImage(renderColorFinalImage);
@@ -245,6 +248,14 @@ void VulkanComputeTest::resized()
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
+
+    renderNormalMapColorImage = createImage(
+        vulk->swapchain.width, vulk->swapchain.height,
+        VK_FORMAT_R16G16B16A16_SNORM,
+
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main normal map target image");
 
     renderDepthImage = createImage(
         vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
@@ -342,6 +353,10 @@ void VulkanComputeTest::renderDraw()
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 
+    addImageBarrier(imageBarrier(renderNormalMapColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+
     addImageBarrier(imageBarrier(renderDepthImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -351,7 +366,7 @@ void VulkanComputeTest::renderDraw()
 
     // Drawingg
     {
-        meshRenderSystem.render(renderColorImage, renderDepthImage);
+        meshRenderSystem.render(renderColorImage, renderNormalMapColorImage, renderDepthImage);
         fontSystem.render();
     }
 

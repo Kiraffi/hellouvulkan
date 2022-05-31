@@ -4,7 +4,7 @@
 #include <container/podvector.h>
 
 #include <myvulkan/myvulkan.h>
-#include <myvulkan/vulkglob.h>
+#include <myvulkan/vulkanglobal.h>
 
 #include <vk_mem_alloc.h>
 

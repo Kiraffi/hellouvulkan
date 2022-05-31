@@ -6,7 +6,7 @@
 #include <container/arraysliceview.h>
 #include <core/mytypes.h>
 #include <math/vector3.h>
-#include <myvulkan/vulkglob.h>
+#include <myvulkan/vulkanglobal.h>
 
 constexpr uint32_t QUERY_COUNT = 128u;
 static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_3;
@@ -33,7 +33,7 @@ struct DepthTest
 
 struct RenderImage
 {
-    Image* image = nullptr;
+    const Image* const image = nullptr;
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     VkClearValue clearValue{};

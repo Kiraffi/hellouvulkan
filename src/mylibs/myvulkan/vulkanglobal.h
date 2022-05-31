@@ -88,7 +88,7 @@ struct BufferBarrierInfo
     VkBufferCopy copyRegion{};
 };
 
-struct VulkGlob
+struct VulkanGlobal
 {
     VulkanInitializationParameters initParams;
     QueueFamilyIndices queueFamilyIndices;
@@ -139,7 +139,7 @@ struct VulkGlob
     bool waitForFence = true;
 };
 
-extern VulkGlob *vulk;
+extern VulkanGlobal *vulk;
 
 
 
@@ -168,6 +168,7 @@ struct DescriptorInfo
 
         NOT_VALID
     };
+
 
     DescriptorInfo(const VkImageView imageView, const VkImageLayout layout, const VkSampler sampler)
     {

@@ -70,7 +70,10 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
         Pipeline& pipeline = nonAnimatedGraphicsPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::Basic3DVert), getShader(ShaderType::Basic3DFrag),
-            { RenderTarget{.format = vulk->defaultColorFormat } },
+            { 
+                RenderTarget{.format = vulk->defaultColorFormat },
+                RenderTarget{.format = VK_FORMAT_R16G16B16A16_SNORM },
+            },
             { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
             pipeline))
         {
@@ -98,7 +101,10 @@ bool MeshRenderSystem::init(UniformBufferHandle uniformDataHandle)
         Pipeline& pipeline = animatedGraphicsPipeline;
         if (!createGraphicsPipeline(
             getShader(ShaderType::Basic3DAnimatedVert), getShader(ShaderType::Basic3DFrag),
-            { RenderTarget{.format = vulk->defaultColorFormat } },
+            {
+              RenderTarget{.format = vulk->defaultColorFormat },
+              RenderTarget{.format = VK_FORMAT_R16G16B16A16_SNORM },
+            },
             { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
             pipeline))
         {
@@ -219,12 +225,17 @@ bool MeshRenderSystem::prepareToRender()
     return true;
 }
 
-void MeshRenderSystem::render(Image& renderColorTarget, Image& renderDepthTarget)
+void MeshRenderSystem::render(const Image& renderColorTarget, 
+    const Image& normalMapColorImage, const Image& renderDepthTarget)
 {
     static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
+    static constexpr VkClearValue normlClear = { .color{0.0f, 0.0f, 0.0f, 0.0f} };
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
 
-    beginRendering({ RenderImage{.image = &renderColorTarget, .clearValue = colorClear } }, { .image = &renderDepthTarget, .clearValue = depthClear });
+    beginRendering({
+        RenderImage{.image = &renderColorTarget, .clearValue = colorClear },
+        RenderImage{.image = &normalMapColorImage, .clearValue = normlClear }, },
+        {.image = &renderDepthTarget, .clearValue = depthClear });
 
     uint32_t instanceStartIndex = 0u;
     // draw calls here

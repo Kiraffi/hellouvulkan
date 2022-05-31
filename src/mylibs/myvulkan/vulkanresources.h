@@ -5,7 +5,7 @@
 #include <container/arraysliceview.h>
 #include <core/mytypes.h>
 #include <myvulkan/uniformbuffermanager.h>
-#include <myvulkan/vulkglob.h>
+#include <myvulkan/vulkanglobal.h>
 
 struct Buffer;
 struct Image;

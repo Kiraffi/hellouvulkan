@@ -23,6 +23,7 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <render/convertrendertarget.h>
 #include <render/meshsystem.h>
 
 #include <scene/scene.h>
@@ -57,9 +58,13 @@ public:
     Image renderColorImage;
     Image renderDepthImage;
 
+    Image renderNormalMapColorImage;
+
     uint32_t indicesCount = 0;
 
     PodVector<uint32_t> entityIndices;
+
+    CovertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
 };
 
 
@@ -73,6 +78,7 @@ VulkanDrawStuff::~VulkanDrawStuff()
 {
     destroyImage(renderColorImage);
     destroyImage(renderDepthImage);
+    destroyImage(renderNormalMapColorImage);
 }
 
 
@@ -81,7 +87,10 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-
+    // TEMPORARY!
+    glfwSetWindowPos(window, 2000, 100);
+    
+    convertFromS16.init(ShaderType::ConvertFromRGBAS16);
 
     uniformDataHandle = vulk->uniformBufferManager.reserveHandle();
     if (!uniformDataHandle.isValid())
@@ -137,6 +146,7 @@ void VulkanDrawStuff::resized()
 {
     destroyImage(renderColorImage);
     destroyImage(renderDepthImage);
+    destroyImage(renderNormalMapColorImage);
 
     // create color and depth images
     renderColorImage = createImage(
@@ -147,12 +157,21 @@ void VulkanDrawStuff::resized()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
+    renderNormalMapColorImage = createImage(
+        vulk->swapchain.width, vulk->swapchain.height,
+        VK_FORMAT_R16G16B16A16_SNORM,
+
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "Main normal map target image");
+
     renderDepthImage = createImage(
         vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main depth target image");
 
     fontSystem.setRenderTarget(renderColorImage);
+    convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
 }
 
 void VulkanDrawStuff::logicUpdate()
@@ -194,7 +213,7 @@ void VulkanDrawStuff::renderUpdate()
     frameBufferData.viewProj = camera.perspectiveProjection();
     frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
 
-    static float rotationAmount = Pi * 0.25f;
+    static float rotationAmount = 0.0f; // Pi * 0.25f;
     for(uint32_t entityIndex : entityIndices)
     {
         GameEntity& entity = scene.getEntity(entityIndex);
@@ -203,7 +222,7 @@ void VulkanDrawStuff::renderUpdate()
             entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
         }
     }
-    rotationAmount += 1.5f * dt;
+    //rotationAmount += 1.5f * dt;
 
     addToCopylist(frameBufferData, uniformDataHandle);
 
@@ -221,6 +240,10 @@ void VulkanDrawStuff::renderDraw()
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 
+    addImageBarrier(imageBarrier(renderNormalMapColorImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    
     addImageBarrier(imageBarrier(renderDepthImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -230,11 +253,27 @@ void VulkanDrawStuff::renderDraw()
 
     // Drawingg
     {
-        meshRenderSystem.render(renderColorImage, renderDepthImage);
+        meshRenderSystem.render(renderColorImage, renderNormalMapColorImage, renderDepthImage);
         fontSystem.render();
     }
 
+
     writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+
+    {
+
+        addImageBarrier(imageBarrier(renderNormalMapColorImage,
+            //VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderColorImage,
+            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+
+        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+
+        convertFromS16.render(renderNormalMapColorImage, renderColorImage);
+    }
+    writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
     present(renderColorImage);
 }
@@ -253,7 +292,7 @@ int main(int argCount, char **argv)
             .useIntegratedGpu = true,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = false,
-            .vsync = VSyncType::FIFO_VSYNC
+            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
         }))
     {
         app.run();

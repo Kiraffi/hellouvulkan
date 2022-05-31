@@ -3,7 +3,7 @@
 #include <vulkan/vulkan_core.h>
 #include <string_view>
 
-#include <myvulkan/vulkglob.h>
+#include <myvulkan/vulkanglobal.h>
 
 struct Shader
 {
@@ -28,6 +28,9 @@ enum class ShaderType : uint8_t
     TexturedQuadVert,
 
     ComputeTestComp,
+
+    ConvertFromRGBAS16,
+
     NumShaders,
 };
 

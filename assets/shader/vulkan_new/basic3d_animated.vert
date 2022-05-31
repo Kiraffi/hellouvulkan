@@ -58,22 +58,33 @@ layout (std430, binding = 6) restrict readonly buffer animationVertexData
 };
 
 layout (location = 0) out flat vec4 colOut;
+layout (location = 1) out vec3 normalDirOut;
 
 void main()
 {
     uint instanceIndex = gl_InstanceIndex;
     VData data = vertexValues[gl_VertexIndex];
     AnimationVData animData = animationVertexValues[gl_VertexIndex];
-    vec4 pos = vec4(data.pos.xyz, 1.0f);
+    vec4 pos = vec4(0.0f);
 
+    #if 0 
     mat4 boneTransform = animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.x] * animData.weights.x;
     boneTransform += animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.y] * animData.weights.y;
     boneTransform += animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.z] * animData.weights.z;
     boneTransform += animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.w] * animData.weights.w;
     pos = boneTransform * vec4(pos.xyz, 1.0f);
+    #else
+    pos += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.x] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.x;
+    pos += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.y] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.y;
+    pos += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.z] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.z;
+    pos += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.w] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.w;
+
+    #endif
     mat4 finalMat = mvp * enityModelMatrices[instanceIndex];
     gl_Position = finalMat * vec4(pos.xyz, 1.0f);
-    vec3 norm =  (enityModelMatrices[instanceIndex] * vec4(pos.xyz, 0.0f)).xyz;
+    vec3 normalDir =  (enityModelMatrices[instanceIndex] * vec4(pos.xyz, 0.0f)).xyz;
     vec3 sunDir = vec3(0.5f, -1.0f, 0.5f);
-    colOut = data.color * 0.75f + 0.25f * max(0.0f, -dot(norm, sunDir));
+    colOut = data.color * 0.75f + 0.25f * max(0.0f, -dot(normalDir, sunDir));
+
+    normalDirOut = normalDir;
 }

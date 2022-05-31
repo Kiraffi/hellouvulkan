@@ -22,7 +22,7 @@ public:
 
     bool prepareToRender();
 
-    void render(Image& renderColorTarget, Image& renderDepthTarget);
+    void render(const Image& renderColorTarget, const Image& normalMapColorImage, const Image& renderDepthTarget);
 
 private:
     struct ModelData

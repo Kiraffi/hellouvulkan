@@ -54,7 +54,7 @@ struct SwapChainSupportDetails
 // Intel?
 //const VkFormat defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-VulkGlob *vulk = nullptr;
+VulkanGlobal*vulk = nullptr;
 
 
 static PFN_vkDebugMarkerSetObjectTagEXT pfnDebugMarkerSetObjectTag = nullptr;
@@ -710,6 +710,8 @@ static bool createDeviceWithQueues()
 
         VK_CHECK(vkCreateDevice(vulk->physicalDevice, &createInfo, nullptr, &vulk->device));
         ASSERT(vulk->device);
+        if (!vulk->device)
+            return false;
     }
 
     vkGetDeviceQueue(vulk->device, vulk->queueFamilyIndices.graphicsFamily, 0, &vulk->graphicsQueue);
@@ -719,6 +721,9 @@ static bool createDeviceWithQueues()
     ASSERT(vulk->presentQueue);
     ASSERT(vulk->computeQueue);
 
+
+    if (!vulk->device || !vulk->graphicsQueue || !vulk->presentQueue || !vulk->computeQueue)
+        return false;
 
 
     if(optionals.canUseVulkanRenderdocExtensionMarker)
@@ -894,7 +899,7 @@ static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader>
 
 bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters)
 {
-    vulk = new VulkGlob();
+    vulk = new VulkanGlobal();
     vulk->vulkanApp = &app;
     vulk->initParams = initParameters;
     ASSERT(app.window);
@@ -1468,14 +1473,19 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     depthInfo.depthWriteEnable = depthTest.writeDepth ? VK_TRUE : VK_FALSE;
     depthInfo.depthCompareOp = depthTest.depthCompareOp;
 
-    VkPipelineColorBlendAttachmentState colorAttachmentState = {};
-    colorAttachmentState.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
+    PodVector<VkPipelineColorBlendAttachmentState> colorAttachmentStates;
+    colorAttachmentStates.resize(colorTargets.size());
+    for (uint32_t i = 0; i < colorTargets.size(); ++i)
+    {
+        VkPipelineColorBlendAttachmentState colorAttachmentState{
+            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+        colorAttachmentStates[i] = colorAttachmentState;
+    }
     VkPipelineColorBlendStateCreateInfo blendInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &colorAttachmentState,
+        .attachmentCount = colorAttachmentStates.size(),
+        .pAttachments = colorAttachmentStates.size() > 0 ? colorAttachmentStates.data() : nullptr,
     };
 
     VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
