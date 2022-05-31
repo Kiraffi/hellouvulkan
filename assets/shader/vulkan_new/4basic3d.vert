@@ -15,7 +15,7 @@ layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
     vec2 windowSize;
     float padding[12];
 
-}; 
+};
 
 struct VData
 {
@@ -93,7 +93,7 @@ void main()
 
     mat4 finalMat = mvp * enityModelMatrices[instanceIndex];
     gl_Position = finalMat * vec4(pos.xyz, 1.0f);
-    vec3 normalDir =  (enityModelMatrices[instanceIndex] * vec4(data.nor.xyz, 0.0f)).xyz;
+    vec3 normalDir =  normalize(enityModelMatrices[instanceIndex] * vec4(normalize(nor.xyz), 0.0f)).xyz;
 
     colOut = data.color;
     normalDirOut = normalDir.xyz;
