@@ -479,23 +479,23 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
 {
     GltfData data;
 
-    std::string_view fName(filename);
     PodVector<char> buffer;
 
-    if(!loadBytes(fName, buffer))
+    if(!loadBytes(filename, buffer))
         return false;
 
     JSONBlock bl;
     bool parseSuccess = bl.parseJSON(ArraySliceView(buffer.data(), buffer.size()));
-    printf("parsed: %i\n", parseSuccess);
-    if(!parseSuccess)
-        return false;
-
-    if(parseSuccess)
+   
+    if (!parseSuccess)
     {
-//        bl.print();
+        printf("Failed to parse: %s\n", filename.data());
+        return false;
     }
-
+    else
+    {
+        //bl.print();
+    }
 
     if(!bl.isObject() || bl.getChildCount() < 1)
         return false;
