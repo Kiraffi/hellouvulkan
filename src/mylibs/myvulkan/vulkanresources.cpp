@@ -33,35 +33,37 @@ static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
     return aspectMask;
 }
 
-/*
-bool initializeVMA()
+static VkImageView createImageView(VkImage image, VkFormat format)
 {
-    VmaVulkanFunctions vulkanFunctions = {};
-    vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-    vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(format);
 
-    VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.vulkanApiVersion = VulkanApiVersion;
-    allocatorCreateInfo.physicalDevice = vulk->physicalDevice;
-    allocatorCreateInfo.device = vulk->device;
-    allocatorCreateInfo.instance = vulk->instance;
-    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+    VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    createInfo.image = image;
+    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    createInfo.format = format;
 
-    VK_CHECK(vmaCreateAllocator(&allocatorCreateInfo, &vulk->allocator));
-    return true;
+    //createInfo.components.r = VK_COMPONENT_SWIZZLE_R; // VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.g = VK_COMPONENT_SWIZZLE_G; //VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.b = VK_COMPONENT_SWIZZLE_B; //VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.a = VK_COMPONENT_SWIZZLE_A; //VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    createInfo.subresourceRange.aspectMask = aspectMask;
+    createInfo.subresourceRange.baseMipLevel = 0;
+    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.baseArrayLayer = 0;
+    createInfo.subresourceRange.layerCount = 1;
+
+    VkImageView view = 0;
+    VK_CHECK(vkCreateImageView(vulk->device, &createInfo, nullptr, &view));
+
+    ASSERT(view);
+    return view;
 }
-
-void deinitVMA()
-{
-    if (vulk->device)
-    {
-        if (vulk->allocator)
-            vmaDestroyAllocator(vulk->allocator);
-        vulk->allocator = nullptr;
-    }
-}
-*/
-
 
 bool initVulkanResources()
 {
@@ -159,9 +161,13 @@ void destroyFramebuffer(VkFramebuffer framebuffer)
         vkDestroyFramebuffer(vulk->device, framebuffer, nullptr);
 }
 
-Image createImage(uint32_t width, uint32_t height, VkFormat format,
-    VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* imageName)
+bool createImage(uint32_t width, uint32_t height, VkFormat format,
+    VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* imageName, Image &outImage)
 {
+    if (outImage.image)
+        destroyImage(outImage);
+
+    outImage = Image{};
 
     VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     createInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -175,35 +181,56 @@ Image createImage(uint32_t width, uint32_t height, VkFormat format,
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     createInfo.queueFamilyIndexCount = 1;
     createInfo.pQueueFamilyIndices = &vulk->queueFamilyIndices.graphicsFamily;
-    Image result;
 
     VmaAllocationCreateInfo allocInfo = {};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
-    VK_CHECK(vmaCreateImage(vulk->allocator, &createInfo, &allocInfo, &result.image, &result.allocation, nullptr));
+    VK_CHECK(vmaCreateImage(vulk->allocator, &createInfo, &allocInfo, &outImage.image, &outImage.allocation, nullptr));
+    if (!outImage.image || !outImage.allocation)
+        return false;
 
-    result.imageView = createImageView(result.image, format);
-    ASSERT(result.imageView);
+    outImage.imageView = createImageView(outImage.image, format);
+    ASSERT(outImage.imageView);
+    if (!outImage.imageView)
+        return false;
 
-    /*
-        // If cpu image access?
-        void *data = nullptr;
-        if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-        {
-            VK_CHECK(vkMapMemory(device, result.deviceMemory, 0, size, 0, &data));
-            ASSERT(data);
-        }
-        result.data = data;
-        result.size = size;
-    */
-    setObjectName((uint64_t)result.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, imageName);
-    result.imageName = imageName;
-    result.width = width;
-    result.height = height;
-    result.format = format;
-    return result;
+    setObjectName((uint64_t)outImage.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, imageName);
+    outImage.imageName = imageName;
+    outImage.width = width;
+    outImage.height = height;
+    outImage.format = format;
+    outImage.layout = createInfo.initialLayout;
+    return true;
 }
 
+bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,
+    const char* imageName, Image& outImage)
+{
+    outImage.imageName = imageName;
+    VkImageAspectFlags aspect = getAspectMaskFromFormat(format);
+
+    if (aspect == VK_IMAGE_ASPECT_COLOR_BIT)
+        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    else if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT)
+        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    else
+    {
+        ASSERT(!"Unknown format!\n");
+        printf("Trying to create unknown format: %s\n", imageName);
+        return false;
+    }
+
+    bool success = createImage(width, height, format, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, imageName, outImage);
+    if (!success)
+    {
+        ASSERT(!"Failed to create render target image!\n");
+        printf("Failed to create render target image: %s\n", imageName);
+        return false;
+    }
+
+    outImage.imageName = imageName;
+    return success;
+}
 
 
 Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* bufferName)
@@ -371,37 +398,6 @@ void destroyBuffer(Buffer& buffer)
 
 
 
-VkImageView createImageView(VkImage image, VkFormat format)
-{
-    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(format);
-
-    VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    createInfo.image = image;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = format;
-
-    //createInfo.components.r = VK_COMPONENT_SWIZZLE_R; // VK_COMPONENT_SWIZZLE_IDENTITY;
-    //createInfo.components.g = VK_COMPONENT_SWIZZLE_G; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    //createInfo.components.b = VK_COMPONENT_SWIZZLE_B; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    //createInfo.components.a = VK_COMPONENT_SWIZZLE_A; //VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    createInfo.subresourceRange.aspectMask = aspectMask;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount = 1;
-
-    VkImageView view = 0;
-    VK_CHECK(vkCreateImageView(vulk->device, &createInfo, nullptr, &view));
-
-    ASSERT(view);
-    return view;
-}
 
 
 VkImageMemoryBarrier imageBarrier(Image& image,

@@ -19,7 +19,7 @@
 #include <filesystem>
 #include <fstream>
 
-static constexpr int SCREEN_WIDTH  = 640;
+static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
 
@@ -29,12 +29,12 @@ public:
     VulkanFontRender() {}
     virtual ~VulkanFontRender() override;
 
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters &params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
+        const VulkanInitializationParameters& params) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
-    virtual void resized() override;
+    virtual bool resized() override;
 
     void updateText(std::string_view str);
 
@@ -55,13 +55,13 @@ VulkanFontRender::~VulkanFontRender()
     destroyImage(renderColorImage);
 }
 
-bool VulkanFontRender::init(const char *windowStr, int screenWidth, int screenHeight,
-    const VulkanInitializationParameters &params)
+bool VulkanFontRender::init(const char* windowStr, int screenWidth, int screenHeight,
+    const VulkanInitializationParameters& params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-    resized();
-    return true;
+
+    return resized();
 }
 
 
@@ -76,19 +76,18 @@ void VulkanFontRender::updateText(std::string_view str)
     fontSystem.addText(str, Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
-void VulkanFontRender::resized()
+bool VulkanFontRender::resized()
 {
-    destroyImage(renderColorImage);
-
     // create color and depth images
-    renderColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        vulk->defaultColorFormat,
-
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color target image");
+    if(!createRenderTargetImage(vulk->swapchain.width, vulk->swapchain.height, vulk->defaultColorFormat,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Main color target image", renderColorImage))
+    {
+        printf("Failed to create font render target image!\n");
+        return false;
+    }
     fontSystem.setRenderTarget(renderColorImage);
+    return true;
 }
 
 void VulkanFontRender::logicUpdate()

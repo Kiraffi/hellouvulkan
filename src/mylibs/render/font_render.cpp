@@ -8,8 +8,6 @@
 #include <core/vulkan_app.h>
 
 #include <myvulkan/myvulkan.h>
-#include <myvulkan/shader.h>
-#include <myvulkan/vulkanresources.h>
 
 #include <string.h>
 
@@ -94,9 +92,14 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         const int textureWidth = 8 * (128 - 32);
         const int textureHeight = 12;
 
-        textImage = createImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            "TextImage");
+        if (!createImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            "TextImage", textImage))
+        {
+            printf("Failed to create image for text!\n");
+            return false;
+        }
 
         updateImageWithData(textureWidth, textureHeight, 4u,
             textImage,

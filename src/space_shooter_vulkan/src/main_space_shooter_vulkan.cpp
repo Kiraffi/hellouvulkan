@@ -102,7 +102,7 @@ public:
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
-    virtual void resized() override;
+    virtual bool resized() override;
 
     void updateLogic();
 
@@ -207,25 +207,23 @@ bool SpaceShooter::createPipelines()
             return false;
         }
     }
-    resized();
-    return true;
+    return resized();
 }
 
-void SpaceShooter::resized()
+bool SpaceShooter::resized()
 {
-    destroyImage(renderColorImage);
-
     // create color and depth images
-    renderColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        vulk->defaultColorFormat,
-
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color target image");
+    if (!createRenderTargetImage(vulk->swapchain.width, vulk->swapchain.height, vulk->defaultColorFormat,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Main color target image", renderColorImage))
+    {
+        printf("Failed to create render target image\n");
+        return false;
+    }
 
     fontSystem.setRenderTarget(renderColorImage);
     ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage }));
+    return true;
 }
 
 static uint32_t getPackedPosition(float x, float y)

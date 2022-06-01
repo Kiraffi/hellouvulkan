@@ -2,7 +2,7 @@
 
 
 #include <myvulkan/myvulkan.h>
-#include <myvulkan/shader.h>
+#include <myvulkan/vulkanresources.h>
 
 struct LightBuffer
 {

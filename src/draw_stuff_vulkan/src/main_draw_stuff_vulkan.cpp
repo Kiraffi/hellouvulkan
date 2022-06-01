@@ -57,7 +57,7 @@ public:
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
-    virtual void resized() override;
+    virtual bool resized() override;
 
 public:
     Scene scene;
@@ -162,60 +162,60 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
             .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, },
             .entityType = EntityType::BLOB_FLAT }));
 
-    renderShadowDepthImage = createImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main shadow target");
+    if (!createRenderTargetImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        "Main shadow target", renderShadowDepthImage))
+    {
+        printf("Failed to create shadow target image\n");
+        return false;
+    }
    
     sunCamera.pitch = toRadians(60.0f);
     sunCamera.yaw = toRadians(30.0f);
 
-
-    resized();
-
-    return true;
+    return resized();
 }
 
 
-void VulkanDrawStuff::resized()
+bool VulkanDrawStuff::resized()
 {
-    destroyImage(renderColorImage);
-    destroyImage(renderDepthImage);
-    destroyImage(renderNormalMapColorImage);
-    destroyImage(renderHdrImage);
+    uint32_t width = vulk->swapchain.width;
+    uint32_t height = vulk->swapchain.height;
 
     // create color and depth images
-    renderColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        vulk->defaultColorFormat,
+    if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+            "Main color target image", renderColorImage))
+    {
+        printf("Failed to create %s\n", renderColorImage.imageName);
+        return false;
+    }
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color target image");
-
-    renderNormalMapColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        VK_FORMAT_R16G16B16A16_SNORM,
-
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, //VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main normal map target image");
+    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SNORM,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, //VK_IMAGE_USAGE_STORAGE_BIT,
+            "Main normal map target image", renderNormalMapColorImage))
+    {
+        printf("Failed to create %s\n", renderNormalMapColorImage.imageName);
+        return false;
+    }
     
-    renderHdrImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        VK_FORMAT_R16G16B16A16_SFLOAT,
+    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Main color HDR", renderHdrImage))
+    {
+        printf("Failed to create %s\n", renderHdrImage.imageName);
+        return false;
+    }
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color HDR");
 
 
-
-    renderDepthImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main depth target image");
+    if(!createRenderTargetImage(width, height, vulk->depthFormat,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        "Main depth target image", renderDepthImage))
+    {
+        printf("Failed to create %s\n", renderDepthImage.imageName);
+        return false;
+    }
 
     fontSystem.setRenderTarget(renderColorImage);
     //convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
@@ -223,6 +223,7 @@ void VulkanDrawStuff::resized()
         renderDepthImage, renderShadowDepthImage,
         renderHdrImage);
     tonemapRenderSystem.updateReadTargets(renderHdrImage, renderColorImage);
+    return true;
 }
 
 void VulkanDrawStuff::logicUpdate()

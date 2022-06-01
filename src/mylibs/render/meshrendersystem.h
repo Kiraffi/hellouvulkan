@@ -3,6 +3,8 @@
 #include <string_view>
 
 #include <model/gltf.h>
+
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 

@@ -2,8 +2,10 @@
 
 #include <container/podvector.h>
 #include <math/vector3.h>
-#include <myvulkan/myvulkan.h>
+
+#include <myvulkan/shader.h>
 #include <myvulkan/uniformbuffermanager.h>
+#include <myvulkan/vulkanresources.h>
 
 static constexpr uint32_t MAX_LETTERS = 10000 * 4;
 

@@ -16,8 +16,11 @@ struct Image;
 bool initVulkanResources();
 bool deinitVulkanResources();
 
-Image createImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,
-    VkMemoryPropertyFlags memoryFlags, const char* imageName);
+bool createImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,
+    VkMemoryPropertyFlags memoryFlags, const char* imageName, Image &outImage);
+
+bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,
+    const char* imageName, Image& outImage);
 
 void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
     Image& targetImage, uint32_t dataSize, void* data);
@@ -37,7 +40,6 @@ bool createFramebuffer(Pipeline& pipeline, const PodVector<Image>& colorsAndDept
 
 void destroyFramebuffer(VkFramebuffer framebuffer);
 
-VkImageView createImageView(VkImage image, VkFormat format);
 
 
 VkImageMemoryBarrier imageBarrier(Image& image,

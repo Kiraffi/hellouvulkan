@@ -33,7 +33,7 @@ public:
     virtual void logicUpdate() = 0;
     virtual void renderUpdate() = 0;
     virtual void renderDraw() = 0;
-    virtual void resized() = 0;
+    virtual bool resized() = 0;
 
     void run();
 

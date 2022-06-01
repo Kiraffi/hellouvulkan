@@ -41,7 +41,7 @@ public:
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
-    virtual void resized() override;
+    virtual bool resized() override;
 
     bool createPipelines();
 
@@ -170,8 +170,7 @@ bool VulkanComputeTest::createPipelines()
 
     }
 
-    resized();
-    return recreateDescriptor();
+    return resized() && recreateDescriptor();
 }
 
 bool VulkanComputeTest::recreateDescriptor()
@@ -226,51 +225,51 @@ bool VulkanComputeTest::recreateDescriptor()
     return true;
 }
 
-void VulkanComputeTest::resized()
+bool VulkanComputeTest::resized()
 {
-    destroyImage(renderColorImage);
-    destroyImage(renderNormalMapColorImage);
-    destroyImage(renderDepthImage);
-    destroyImage(computeColorImage);
-    destroyImage(renderColorFinalImage);
-
+    uint32_t width = vulk->swapchain.width;
+    uint32_t height = vulk->swapchain.height;
     // create color and depth images
-    renderColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        vulk->defaultColorFormat,
+    if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Main color target image", renderColorImage))
+    {
+        printf("Failed to create: %s\n", renderColorImage.imageName);
+        return false;
+    }
 
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main color target image");
+    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SNORM,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Main normal map target image", renderNormalMapColorImage))
+    {
+        printf("Failed to create: %s\n", renderNormalMapColorImage.imageName);
+        return false;
+    }
 
-    renderNormalMapColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        VK_FORMAT_R16G16B16A16_SNORM,
+    if (!createRenderTargetImage(width, height, vulk->depthFormat,
+        0,
+        "Main depth target image", renderDepthImage))
+    {
+        printf("Failed to create: %s\n", renderDepthImage.imageName);
+        return false;
+    }
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main normal map target image");
-
-    renderDepthImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Main depth target image");
-
-    computeColorImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        vulk->defaultColorFormat,
-
+    if (!createRenderTargetImage(
+        width, height, vulk->defaultColorFormat,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Compute target image");
+        "Compute target image", computeColorImage))
+    {
+        printf("Failed to create: %s\n", computeColorImage.imageName);
+        return false;
+    }
 
-    renderColorFinalImage = createImage(
-        vulk->swapchain.width, vulk->swapchain.height,
-        vulk->defaultColorFormat,
-
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "Render color final image");
+    if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Render color final image", renderColorFinalImage))
+    {
+        printf("Failed to create: %s\n", renderColorFinalImage.imageName);
+        return false;
+    }
 
     fontSystem.setRenderTarget(renderColorImage);
     //ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
@@ -288,6 +287,7 @@ void VulkanComputeTest::resized()
 
         addToCopylist(vdata, quadHandle);
     }
+    return true;
 }
 
 void VulkanComputeTest::logicUpdate()

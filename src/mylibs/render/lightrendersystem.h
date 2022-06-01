@@ -1,7 +1,7 @@
 #pragma once
 
 #include <math/vector3.h>
-#include<myvulkan/vulkanresources.h>
+#include <myvulkan/shader.h>
 
 class LightRenderSystem
 {
