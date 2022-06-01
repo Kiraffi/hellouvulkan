@@ -12,12 +12,13 @@
 
 // std::to_string
 #include <string>
+#include <vector>
 
 struct GlobalShaders
 {
-    Vector<PodVector<Shader>> shaders;
+    std::vector<std::vector<Shader>> shaders;
 };
-static GlobalShaders *globalShaders = nullptr;
+static GlobalShaders globalShaders;
 
 // spir-v specs, 1.6 https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.pdf
 static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_view filename, Shader& inOutShader)
@@ -197,8 +198,6 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_vi
 
 bool loadShader(std::string_view filename, ShaderType shaderType)
 {
-    if (!globalShaders)
-        return false;
     if (uint32_t(shaderType) >= uint32_t(ShaderType::NumShaders))
         return false;
     uint32_t permutationIndex = 0;
@@ -238,7 +237,7 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
         if (!parseSuccess)
             return false;
 
-        globalShaders->shaders[uint32_t(shaderType)].push_back(shader);
+        globalShaders.shaders[uint32_t(shaderType)].push_back(shader);
 
         ++permutationIndex;
     }
@@ -256,17 +255,15 @@ void destroyShader(Shader& shader)
 
 const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex)
 {
-    ASSERT(globalShaders);
     ASSERT(uint32_t(shaderType) < uint32_t(ShaderType::NumShaders));
-    ASSERT(uint32_t(shaderType) < globalShaders->shaders.size());
-    ASSERT(permutationIndex < globalShaders->shaders[uint32_t(shaderType)].size());
-    return globalShaders->shaders[uint32_t(shaderType)][permutationIndex];
+    ASSERT(uint32_t(shaderType) < globalShaders.shaders.size());
+    ASSERT(permutationIndex < globalShaders.shaders[uint32_t(shaderType)].size());
+    return globalShaders.shaders[uint32_t(shaderType)][permutationIndex];
 }
 
 bool loadShaders()
 {
-    globalShaders = new GlobalShaders();
-    globalShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
+    globalShaders.shaders.resize(uint8_t(ShaderType::NumShaders));
     if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
     if (!loadShader("basic3d_4.vert", ShaderType::Basic3DVert)) return false;
 
@@ -299,17 +296,13 @@ bool loadShaders()
 
 void deleteLoadedShaders()
 {
-    if (!globalShaders)
-        return;
-
-    for (auto &shaderPermutations : globalShaders->shaders)
+    for (auto &shaderPermutations : globalShaders.shaders)
     {
         for (auto& shaderModule : shaderPermutations)
             destroyShader(shaderModule);
     }
 
-    delete globalShaders;
-    globalShaders = nullptr;
+    globalShaders.shaders.clear();
 }
 
 

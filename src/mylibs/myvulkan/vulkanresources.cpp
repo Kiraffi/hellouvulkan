@@ -8,7 +8,10 @@
 
 #include <vk_mem_alloc.h>
 
-static PodVector<Image*> *globalImages = nullptr;
+#include <algorithm>
+#include <vector>
+
+static std::vector<Image*> globalImages;
 
 static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
 {
@@ -67,10 +70,6 @@ static VkImageView createImageView(VkImage image, VkFormat format)
 
 bool initVulkanResources()
 {
-    ASSERT(!globalImages);
-    if (globalImages)
-        return false;
-    globalImages = new PodVector<Image*>();
     // init VMA
     {
         VmaVulkanFunctions vulkanFunctions = {};
@@ -101,19 +100,12 @@ bool deinitVulkanResources()
             vmaDestroyAllocator(vulk->allocator);
         vulk->allocator = nullptr;
     }
-    ASSERT(globalImages);
-
-    delete globalImages;
-    globalImages = nullptr;
     return true;
 }
 
 void vulkanResourceFrameUpdate()
 {
-    if (!globalImages)
-        return;
-
-    for (auto& image : *globalImages)
+    for (auto& image : globalImages)
     {
         image->accessMask = 0u;
         image->layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -240,18 +232,8 @@ bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, V
         return false;
     }
 
-    bool found = false;
-    for (const auto& image : *globalImages)
-    {
-        if (&outImage == image)
-        {
-            found = true;
-        }
-    }
-    if (!found)
-    {
-        globalImages->push_back(&outImage);
-    }
+    if(std::find(globalImages.begin(), globalImages.end(), &outImage) == globalImages.end())
+        globalImages.push_back(&outImage);
 
     outImage.imageName = imageName;
     return success;
