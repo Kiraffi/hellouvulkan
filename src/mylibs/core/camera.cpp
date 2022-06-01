@@ -27,15 +27,10 @@ Matrix Camera::perspectiveProjection()
 
 Matrix Camera::ortographicProjection(float width, float height)
 {
-    Vector3 rightDir;
-    Vector3 upDir;
-    Vector3 forwardDir;
-    getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
-
     float s1 = -1.0f / (zNear - zFar);
     float s2 = -(zNear) / (zNear - zFar);
 
-    float x = 2.0f / width;
+    float x = -2.0f / width;
     float y = 2.0f / height;
 
     return Matrix(

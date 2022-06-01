@@ -12,7 +12,7 @@ layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
 
     vec2 windowSize;
     vec2 pad1;
-    
+
     vec4 camPos;
     vec4 pad3;
     vec4 pad4;
@@ -50,11 +50,11 @@ void main()
 
         // Do math, calculate position from vertex?
         // Normal...
-        
+
         vec2 sampleDepthPos = (pos.xy + vec2(0.5f)) / vec2(windowSize);
         sampleDepthPos.y = 1.0f - sampleDepthPos.y;
         sampleDepthPos = sampleDepthPos * 2.0f - 1.0f;
-        
+
         vec4 pixelWorldPos = inverseMvp * vec4(sampleDepthPos, depthSample, 1.0f);
         pixelWorldPos = pixelWorldPos / pixelWorldPos.w;
 
@@ -64,7 +64,7 @@ void main()
         // flip y
         pixelWorldPosInShadowMap.y = -pixelWorldPosInShadowMap.y;
         pixelWorldPosInShadowMap.xy = pixelWorldPosInShadowMap.xy * 0.5f + 0.5f;
-        pixelWorldPosInShadowMap.z += 0.001f;
+        pixelWorldPosInShadowMap.z -= 0.001f;
         float shadowDepth = texture(shadowDepthTex, pixelWorldPosInShadowMap.xyz);
 
         vec3 colorOut = albedoSample.rgb * 0.5f + 0.5f * max(0.0f, -dot(normalSample.xyz, sunDir)) * shadowDepth;
@@ -72,7 +72,7 @@ void main()
         imageStore(storeTex, pos, vec4(colorOut, pixelWorldPosInShadowMap.z));
         //imageStore(storeTex, pos, pixelWorldPos);
         //imageStore(storeTex, pos, pixelWorldPosInShadowMap);
-        
+
     }
 }
 
