@@ -54,7 +54,6 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
     if(!data)
         return;
 
-
     if(action == GLFW_PRESS)
     {
         if(key == GLFW_KEY_ESCAPE)
@@ -206,7 +205,7 @@ void VulkanApp::renderUpdate()
     vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPool, 0, QUERY_COUNT);
 
     writeStamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-
+    vulkanResourceFrameUpdate();
 
     struct FrameBuffer
     {

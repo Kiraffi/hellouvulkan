@@ -37,7 +37,7 @@ bool CovertRenderTarget::updateSourceImage(Image& srcImage, Image& toImage)
         {
             DescriptorInfo(vulk->renderFrameBufferHandle),
 
-            DescriptorInfo(srcImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+            DescriptorInfo(srcImage.imageView, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
             DescriptorInfo(toImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
         });
     if (!createDescriptor(pipeline))

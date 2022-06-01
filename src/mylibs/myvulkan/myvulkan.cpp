@@ -1040,6 +1040,16 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
     if (!loadShaders())
         return false;
 
+    {
+        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+        vulk->globalTextureSampler = createSampler(samplerInfo);
+        if (!vulk->globalTextureSampler)
+        {
+            printf("Failed to create global texture sampler");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1051,6 +1061,8 @@ void deinitVulkan()
 
     if (vulk && vulk->device)
     {
+        destroySampler(vulk->globalTextureSampler);
+        vulk->globalTextureSampler = nullptr;
         destroyBuffer(vulk->scratchBuffer);
         destroyBuffer(vulk->uniformBuffer);
 

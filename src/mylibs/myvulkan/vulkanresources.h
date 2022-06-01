@@ -14,6 +14,7 @@ struct Image;
 //void deinitVMA();
 
 bool initVulkanResources();
+void vulkanResourceFrameUpdate();
 bool deinitVulkanResources();
 
 bool createImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,

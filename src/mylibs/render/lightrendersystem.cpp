@@ -15,7 +15,6 @@ LightRenderSystem::~LightRenderSystem()
 {
     destroyPipeline(lightComputePipeline);
     destroySampler(shadowTextureSampler);
-    destroySampler(colorTextureSampler);
 }
 
 bool LightRenderSystem::init()
@@ -48,15 +47,6 @@ bool LightRenderSystem::init()
             return false;
         }
     }
-    {
-        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        colorTextureSampler = createSampler(samplerInfo);
-        if (!colorTextureSampler)
-        {
-            printf("Failed to create sampler for font rendering");
-            return false;
-        }
-    }
     return true;
 }
 
@@ -78,8 +68,8 @@ bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& n
             //DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             //DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
 
-            DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, colorTextureSampler),
-            DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, colorTextureSampler),
+            DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
+            DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
 
             DescriptorInfo(depthTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
             DescriptorInfo(shadowTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),

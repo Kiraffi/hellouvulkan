@@ -108,6 +108,18 @@ bool deinitVulkanResources()
     return true;
 }
 
+void vulkanResourceFrameUpdate()
+{
+    if (!globalImages)
+        return;
+
+    for (auto& image : *globalImages)
+    {
+        image->accessMask = 0u;
+        image->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+}
+
 bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDepthImages)
 {
     destroyFramebuffer(pipeline.framebuffer);
@@ -226,6 +238,19 @@ bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, V
         ASSERT(!"Failed to create render target image!\n");
         printf("Failed to create render target image: %s\n", imageName);
         return false;
+    }
+
+    bool found = false;
+    for (const auto& image : *globalImages)
+    {
+        if (&outImage == image)
+        {
+            found = true;
+        }
+    }
+    if (!found)
+    {
+        globalImages->push_back(&outImage);
     }
 
     outImage.imageName = imageName;

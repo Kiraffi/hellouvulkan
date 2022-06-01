@@ -21,5 +21,4 @@ public:
 
 private:
     Pipeline tonemapPipeline;
-    VkSampler colorTextureSampler = nullptr;
 };

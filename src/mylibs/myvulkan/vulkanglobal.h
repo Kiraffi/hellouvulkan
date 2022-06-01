@@ -123,6 +123,8 @@ struct VulkanGlobal
     VmaAllocator_T *allocator = nullptr;
 
 
+    VkSampler globalTextureSampler = nullptr;
+
     VkFormat defaultColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
     VkFormat presentColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
     VkFormat depthFormat = VkFormat::VK_FORMAT_UNDEFINED;

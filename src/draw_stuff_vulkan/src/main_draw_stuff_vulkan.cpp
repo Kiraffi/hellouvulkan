@@ -28,7 +28,6 @@
 #include <render/meshrendersystem.h>
 #include <render/tonemaprendersystem.h>
 
-
 #include <scene/scene.h>
 
 #include <string.h>
@@ -72,9 +71,6 @@ public:
     Image renderShadowDepthImage;
 
     Image renderHdrImage;
-
-
-    uint32_t indicesCount = 0;
 
     PodVector<uint32_t> entityIndices;
 
@@ -198,7 +194,7 @@ bool VulkanDrawStuff::resized()
         printf("Failed to create %s\n", renderNormalMapColorImage.imageName);
         return false;
     }
-    
+
     if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         "Main color HDR", renderHdrImage))
@@ -206,8 +202,6 @@ bool VulkanDrawStuff::resized()
         printf("Failed to create %s\n", renderHdrImage.imageName);
         return false;
     }
-
-
 
     if(!createRenderTargetImage(width, height, vulk->depthFormat,
         VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -218,7 +212,7 @@ bool VulkanDrawStuff::resized()
     }
 
     fontSystem.setRenderTarget(renderColorImage);
-    //convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
+    convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
     lightRenderSystem.updateReadTargets(renderColorImage, renderNormalMapColorImage, 
         renderDepthImage, renderShadowDepthImage,
         renderHdrImage);
@@ -273,9 +267,6 @@ void VulkanDrawStuff::renderUpdate()
 {
     VulkanApp::renderUpdate();
 
-
-
-
     for (uint32_t entityIndex : entityIndices)
     {
         GameEntity& entity = scene.getEntity(entityIndex);
@@ -305,21 +296,11 @@ void VulkanDrawStuff::renderDraw()
 {
     const SwapChain& swapchain = vulk->swapchain;
 
-    addImageBarrier(imageBarrier(renderColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    prepareToGraphicsSampleWrite(renderColorImage);
+    prepareToGraphicsSampleWrite(renderNormalMapColorImage);
+    prepareToGraphicsSampleWrite(renderDepthImage);
+    prepareToGraphicsSampleWrite(renderShadowDepthImage);
 
-    addImageBarrier(imageBarrier(renderNormalMapColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-    
-    addImageBarrier(imageBarrier(renderDepthImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
-
-    addImageBarrier(imageBarrier(renderShadowDepthImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
     flushBarriers();
 
     // Drawingg
@@ -333,11 +314,9 @@ void VulkanDrawStuff::renderDraw()
 
     if (showNormalMap)
     {
+        prepareToComputeSampleRead(renderNormalMapColorImage);
 
-        addImageBarrier(imageBarrier(renderColorImage,
-            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
-        addImageBarrier(imageBarrier(renderNormalMapColorImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        prepareToComputeImageWrite(renderColorImage);
 
         flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
@@ -346,51 +325,41 @@ void VulkanDrawStuff::renderDraw()
     }
     else
     {
-        addImageBarrier(imageBarrier(renderColorImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-        addImageBarrier(imageBarrier(renderNormalMapColorImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-        addImageBarrier(imageBarrier(renderDepthImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-        addImageBarrier(imageBarrier(renderShadowDepthImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+        {
+            prepareToComputeSampleRead(renderColorImage);
+            prepareToComputeSampleRead(renderNormalMapColorImage);
+            prepareToComputeSampleRead(renderDepthImage);
+            prepareToComputeSampleRead(renderShadowDepthImage);
 
-        addImageBarrier(imageBarrier(renderHdrImage,
-            0, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            prepareToComputeImageWrite(renderHdrImage);
 
-        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
+            lightRenderSystem.render(renderColorImage.width, renderColorImage.height);
+            writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        }
 
+        {
+            prepareToComputeSampleRead(renderHdrImage);
 
+            prepareToComputeImageWrite(renderColorImage);
 
-        lightRenderSystem.render(renderColorImage.width, renderColorImage.height);
-        writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-        addImageBarrier(imageBarrier(renderHdrImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-        addImageBarrier(imageBarrier(renderColorImage,
-            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
-        flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-        tonemapRenderSystem.render(renderColorImage.width, renderColorImage.height);
-        writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            tonemapRenderSystem.render(renderColorImage.width, renderColorImage.height);
+            writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        }
     }
 
-    addImageBarrier(imageBarrier(renderColorImage,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-    flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    {
+        prepareToGraphicsSampleWrite(renderColorImage);
+        flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
-
-    fontSystem.render();
-    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
-
+        fontSystem.render();
+        writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    }
     present(renderColorImage);
 }
-
-
-
-
 
 int main(int argCount, char **argv)
 {

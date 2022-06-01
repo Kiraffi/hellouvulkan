@@ -8,7 +8,6 @@
 TonemapRenderSystem::~TonemapRenderSystem()
 {
     destroyPipeline(tonemapPipeline);
-    destroySampler(colorTextureSampler);
 }
 
 bool TonemapRenderSystem::init()
@@ -18,15 +17,6 @@ bool TonemapRenderSystem::init()
     {
         printf("Failed to create compute pipeline!\n");
         return false;
-    }
-    {
-        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        colorTextureSampler = createSampler(samplerInfo);
-        if (!colorTextureSampler)
-        {
-            printf("Failed to create sampler for font rendering");
-            return false;
-        }
     }
     return true;
 }
@@ -44,7 +34,7 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
 
             //DescriptorInfo(hdrTexIn.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
 
-            DescriptorInfo(hdrTexIn.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, colorTextureSampler),
+            DescriptorInfo(hdrTexIn.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
 
             
