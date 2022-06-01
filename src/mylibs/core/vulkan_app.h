@@ -76,6 +76,11 @@ protected:
     FontRenderSystem fontSystem;
 
     Timer timer;
-    Camera camera;
 
+    // rotation in angles. TODO think better place later on!!!
+    // needs even shadow map texture size
+    Camera camera;
+    Camera sunCamera;
+
+    bool useSunCamera = false;
 };

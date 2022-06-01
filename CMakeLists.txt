@@ -70,13 +70,15 @@ foreach(SHADER IN LISTS SPV_SHADERS)
         math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
     endif()
     while(VALUE_OUT GREATER 0)
-        # Add filename_index.spv, from 1 to filename first number.
-        # For example 3shader.comp -> { 3shader.comp_1.spv, 3shader.comp_2.spv, 3shader.comp_3.spv }
-        # If there is no number then we just make shadername_1.spv
-        compile_shader("${VALUE_OUT}")
+
 
         # Count down the VALUE_OUT, there is probably far better way to do for loop, but...
         math(EXPR VALUE_OUT "${VALUE_OUT} - 1" OUTPUT_FORMAT DECIMAL)
+
+        # Add filename_index.spv, from 1 to filename first number.
+        # For example 3shader.comp -> { 3shader.comp_0.spv, 3shader.comp_1.spv, 3shader.comp_2.spv }
+        # If there is no number then we just make shadername_1.spv
+        compile_shader("${VALUE_OUT}")
         list(APPEND SPIRV_BINARY_FILES ${SPIRV})
     endwhile()
 endForeach()

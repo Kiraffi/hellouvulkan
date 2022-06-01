@@ -3,6 +3,8 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <string>
+
 CovertRenderTarget::~CovertRenderTarget()
 {
     destroyPipeline(computePipeline);
@@ -13,7 +15,9 @@ bool CovertRenderTarget::init(ShaderType shapeType)
     // pipelines.
     {
         auto& pipeline = computePipeline;
-        if (!createComputePipeline(getShader(shapeType), pipeline))
+        std::string name = "Convert pipeline - ";
+        name += std::to_string(uint32_t(shapeType));
+        if (!createComputePipeline(getShader(shapeType), pipeline, name))
         {
             printf("Failed to create compute pipeline!\n");
             return false;

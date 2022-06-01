@@ -13,7 +13,7 @@ TonemapRenderSystem::~TonemapRenderSystem()
 bool TonemapRenderSystem::init()
 {
     auto& pipeline = tonemapPipeline;
-    if (!createComputePipeline(getShader(ShaderType::TonemapShader), pipeline))
+    if (!createComputePipeline(getShader(ShaderType::TonemapShader), pipeline, "Tonemap system compute"))
     {
         printf("Failed to create compute pipeline!\n");
         return false;

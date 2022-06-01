@@ -1421,11 +1421,19 @@ void present(Image & imageToPresent)
 
 bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     const PodVector<RenderTarget> &colorTargets, const DepthTest &depthTest, Pipeline &outPipeline,
-    bool useDynamic)
+    std::string_view pipelineName, bool useDynamic)
 {
     destroyPipeline(outPipeline);
 
-    PodVector<Shader> shaders = { vertShader, fragShader };
+    bool hasFragShader = fragShader.module != nullptr;
+
+    PodVector<Shader> shaders;
+
+    if(hasFragShader)
+        shaders = { vertShader, fragShader };
+    else
+        shaders = { vertShader };
+
     outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
     if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
     {
@@ -1433,22 +1441,23 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
         return false;
     }
 
-
-    VkPipelineShaderStageCreateInfo stageInfos[2] = {
-        {
+    PodVector<VkPipelineShaderStageCreateInfo> stageInfos;
+    stageInfos.push_back({
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
             .module = vertShader.module,
             .pName = "main",
-        },
-        {
+        });
+    if (hasFragShader)
+    {
+        stageInfos.push_back({
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
             .module = fragShader.module,
             .pName = "main",
-        },
-    };
-
+            });
+    }
+    
 
     VkPipelineVertexInputStateCreateInfo vertexInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
@@ -1514,8 +1523,8 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
             return false;
     }
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-    createInfo.stageCount = ARRAYSIZES(stageInfos);
-    createInfo.pStages = stageInfos;
+    createInfo.stageCount = stageInfos.size();
+    createInfo.pStages = stageInfos.size() > 0 ? stageInfos.data() : nullptr;
     createInfo.pVertexInputState = &vertexInfo;
     createInfo.pInputAssemblyState = &assemblyInfo;
     createInfo.pViewportState = &viewportInfo;
@@ -1542,12 +1551,13 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
         printf("Failed to create graphics pipeline descriptor\n");
         return false;
     }
+    setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
 
     return pipeline != nullptr;
 }
 
 
-bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline)
+bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::string_view pipelineName)
 {
     destroyPipeline(outPipeline);
 
@@ -1573,12 +1583,13 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline)
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
-
+    
     if (!createDescriptor(outPipeline))
     {
         printf("Failed to create compute pipeline descriptor\n");
         return false;
     }
+    setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
     return pipeline != nullptr;
 }
 

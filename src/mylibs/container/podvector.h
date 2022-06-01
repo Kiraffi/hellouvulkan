@@ -114,7 +114,7 @@ PodVector<T>& PodVector<T>::operator=(const PodVector<T> &vec)
 
     if (&vec == this)
         return *this;
-    buffer.~ByteBuffer();
+    this->~PodVector<T>();
     new (&this->buffer) ByteBuffer(sizeof(T));
     this->buffer.copyFrom(vec.buffer);
     return *this;

@@ -10,7 +10,8 @@ public:
 
     bool init();
 
-    bool updateReadTargets(const Image &albedoTex, const Image &normalTex, const Image &outputTex);
+    bool updateReadTargets(const Image &albedoTex, const Image &normalTex, const Image &depthTex,
+        const Image &shadowTex, const Image &outputTex);
 
 
     void update();
@@ -25,4 +26,5 @@ private:
     UniformBufferHandle lightBufferHandle;
 
     Pipeline lightComputePipeline;
+    VkSampler shadowTextureSampler = nullptr;
 };

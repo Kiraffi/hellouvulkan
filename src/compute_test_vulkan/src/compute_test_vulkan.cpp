@@ -129,6 +129,16 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         return false;
     scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
 
+    VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    samplerInfo.magFilter = VK_FILTER_NEAREST;
+    samplerInfo.minFilter = VK_FILTER_NEAREST;
+
+    textureSampler = createSampler(samplerInfo);
+    if (!textureSampler)
+    {
+        printf("Failed to create sampler for font rendering");
+        return false;
+    }
 
     return createPipelines();
 }
@@ -141,17 +151,6 @@ bool VulkanComputeTest::createPipelines()
         if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline))
         {
             printf("Failed to create compute pipeline!\n");
-            return false;
-        }
-
-        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        samplerInfo.magFilter = VK_FILTER_NEAREST;
-        samplerInfo.minFilter = VK_FILTER_NEAREST;
-
-        textureSampler = createSampler(samplerInfo);
-        if(!textureSampler)
-        {
-            printf("Failed to create sampler for font rendering");
             return false;
         }
 

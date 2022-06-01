@@ -119,7 +119,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         if(!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
             { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
-            {}, pipeline, false))
+            {}, pipeline, "Font renderer", false))
         {
             printf("failed to create graphics pipeline\n");
         }

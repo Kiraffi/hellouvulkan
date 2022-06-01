@@ -39,7 +39,7 @@ enum class ShaderType : uint8_t
 };
 
 
-const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex = 1);
+const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex = 0u);
 bool loadShaders();
 void deleteLoadedShaders();
 

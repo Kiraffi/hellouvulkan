@@ -201,7 +201,7 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
         return false;
     if (uint32_t(shaderType) >= uint32_t(ShaderType::NumShaders))
         return false;
-    uint32_t permutationIndex = 1;
+    uint32_t permutationIndex = 0;
     PodVector<char> buffer;
 
     while(true)
@@ -242,7 +242,7 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
 
         ++permutationIndex;
     }
-    return permutationIndex > 1u;
+    return permutationIndex > 0u;
 }
 
 
@@ -259,8 +259,8 @@ const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex)
     ASSERT(globalShaders);
     ASSERT(uint32_t(shaderType) < uint32_t(ShaderType::NumShaders));
     ASSERT(uint32_t(shaderType) < globalShaders->shaders.size());
-    ASSERT(permutationIndex - 1 < globalShaders->shaders[uint32_t(shaderType)].size());
-    return globalShaders->shaders[uint32_t(shaderType)][permutationIndex - 1];
+    ASSERT(permutationIndex < globalShaders->shaders[uint32_t(shaderType)].size());
+    return globalShaders->shaders[uint32_t(shaderType)][permutationIndex];
 }
 
 bool loadShaders()

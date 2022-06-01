@@ -39,10 +39,10 @@ static constexpr int SCREEN_HEIGHT = 600;
 static constexpr int SHADOW_WIDTH = 2048;
 static constexpr int SHADOW_HEIGHT = 2048;
 
-static Vec3 getSunDirection(float sunPitch, float sunYaw)
+static Vec3 getSunDirection(const Camera &camera)
 {
     Vec3 sundir[3];
-    getDirectionsFromPitchYawRoll(toRadians(sunPitch), toRadians(sunYaw), 0.0f, sundir[0], sundir[1], sundir[2]);
+    getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
 
     return sundir[2];
 }
@@ -69,7 +69,7 @@ public:
     Image renderNormalMapColorImage;
     Image renderDepthImage;
 
-    Image shadowDepthImage;
+    Image renderShadowDepthImage;
 
     Image renderHdrImage;
 
@@ -82,10 +82,6 @@ public:
     Vec2 fontSize{ 8.0f, 12.0f };
 
     float rotationAmount = 0.0f;
-
-    // rotation in angles.
-    float sunPitch = 120.0f;
-    float sunYaw = 30.0f;
 
     bool showNormalMap = false;
     bool rotateOn = false;
@@ -104,7 +100,7 @@ VulkanDrawStuff::~VulkanDrawStuff()
     destroyImage(renderDepthImage);
     destroyImage(renderNormalMapColorImage);
     destroyImage(renderHdrImage);
-    destroyImage(shadowDepthImage);
+    destroyImage(renderShadowDepthImage);
 }
 
 
@@ -114,7 +110,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
     // TEMPORARY!
-    glfwSetWindowPos(window, 2000, 100);
+    //glfwSetWindowPos(window, 2000, 100);
     
     convertFromS16.init(ShaderType::ConvertFromRGBAS16);
 
@@ -131,8 +127,6 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
 
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
-
-    resized();
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
     for(float f = -2.5f; f <= 2.5f; f += 1.0f)
@@ -168,14 +162,17 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
             .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, },
             .entityType = EntityType::BLOB_FLAT }));
 
-    camera.fovY = 90.0f;
-    camera.zFar = 200.0f;
-    camera.zNear = 0.001f;
-
-    shadowDepthImage = createImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    renderShadowDepthImage = createImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main shadow target");
    
+    sunCamera.pitch = toRadians(60.0f);
+    sunCamera.yaw = toRadians(30.0f);
+
+
+    resized();
+
     return true;
 }
 
@@ -216,12 +213,15 @@ void VulkanDrawStuff::resized()
 
     renderDepthImage = createImage(
         vulk->swapchain.width, vulk->swapchain.height, vulk->depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main depth target image");
 
     fontSystem.setRenderTarget(renderColorImage);
     convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
-    lightRenderSystem.updateReadTargets(renderColorImage, renderNormalMapColorImage, renderHdrImage);
+    lightRenderSystem.updateReadTargets(renderColorImage, renderNormalMapColorImage, 
+        renderDepthImage, renderShadowDepthImage,
+        renderHdrImage);
     tonemapRenderSystem.updateReadTargets(renderHdrImage, renderColorImage);
 }
 
@@ -240,27 +240,30 @@ void VulkanDrawStuff::logicUpdate()
         rotateOn = !rotateOn;
 
     if (isDown(GLFW_KEY_UP))
-        sunPitch -= dt * 60.0f;
+        sunCamera.pitch -= dt * 1.0f;
     if (isDown(GLFW_KEY_DOWN))
-        sunPitch += dt * 60.0f;
+        sunCamera.pitch += dt * 1.0f;
     if (isDown(GLFW_KEY_LEFT))
-        sunYaw += dt * 60.0f;
+        sunCamera.yaw += dt * 1.0f;
     if (isDown(GLFW_KEY_RIGHT))
-        sunYaw -= dt * 60.0f;
+        sunCamera.yaw -= dt * 1.0f;
 
-    Vec3 sundir = getSunDirection(sunPitch, sunYaw);
-    while (sunPitch >= 360.0f) sunPitch -= 360.0f;
-    while (sunPitch <= 0.0f) sunPitch += 360.0f;
-    while (sunYaw >= 360.0f) sunYaw -= 360.0f;
-    while (sunYaw <= 0.0f) sunYaw += 360.0f;
+    Vec3 sundir = getSunDirection(sunCamera);
+    while (sunCamera.pitch >= 2.0f * PI) sunCamera.pitch -= 2.0f * PI;
+    while (sunCamera.pitch <= 0.0f) sunCamera.pitch += 2.0f * PI;
+    while (sunCamera.yaw >= 2.0f * PI) sunCamera.yaw -= 2.0f * PI;
+    while (sunCamera.yaw <= 0.0f) sunCamera.yaw += 2.0f * PI;
 
     Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
-    snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f",
-        showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount));
+    snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f, use sun camera: %s",
+        showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount), useSunCamera ? "on" : "off");
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f", sunPitch, sunYaw, sundir.x, sundir.y, sundir.z);
+    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f", 
+        toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f", sunCamera.position.x, sunCamera.position.y, sunCamera.position.z);
+    fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
     meshRenderSystem.clear();
 }
@@ -291,7 +294,7 @@ void VulkanDrawStuff::renderUpdate()
     scene.update(getTime());
     meshRenderSystem.prepareToRender();
 
-    Vec3 sundir = getSunDirection(sunPitch, sunYaw);
+    Vec3 sundir = getSunDirection(sunCamera);
     lightRenderSystem.setSunDirection(sundir);
 
     lightRenderSystem.update();
@@ -311,14 +314,17 @@ void VulkanDrawStuff::renderDraw()
     
     addImageBarrier(imageBarrier(renderDepthImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_ASPECT_DEPTH_BIT));
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
 
+    addImageBarrier(imageBarrier(renderShadowDepthImage,
+        0, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
     flushBarriers();
 
     // Drawingg
     {
         meshRenderSystem.render(renderColorImage, renderNormalMapColorImage, renderDepthImage);
+        meshRenderSystem.renderShadows(renderShadowDepthImage);
     }
 
 
@@ -343,11 +349,20 @@ void VulkanDrawStuff::renderDraw()
             VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
         addImageBarrier(imageBarrier(renderNormalMapColorImage,
             VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderDepthImage,
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+        addImageBarrier(imageBarrier(renderShadowDepthImage,
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+
         addImageBarrier(imageBarrier(renderHdrImage,
             0, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
 
         flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+
+
+
         lightRenderSystem.render(renderColorImage.width, renderColorImage.height);
         writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
@@ -385,7 +400,7 @@ int main(int argCount, char **argv)
             .useHDR = false,
             .useIntegratedGpu = true,
             .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = false,
+            .useVulkanDebugMarkersRenderDoc = true,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC
         }))
     {

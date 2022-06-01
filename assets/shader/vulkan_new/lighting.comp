@@ -8,11 +8,16 @@ layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
     mat4 cameraMatrix;
     mat4 viewProjMat;
     mat4 mvp;
-    mat4 matrix_padding;
+    mat4 sunMatrix;
 
     vec2 windowSize;
-    float padding[12];
+    vec2 pad1;
+    
+    vec4 camPos;
+    vec4 pad3;
+    vec4 pad4;
 
+    mat4 inverseMvp;
 };
 
 layout (binding = 1, MATRIX_ORDER) uniform LightBuffer
@@ -23,7 +28,11 @@ layout (binding = 1, MATRIX_ORDER) uniform LightBuffer
 
 layout (rgba16_snorm, binding = 16) uniform readonly image2D normalTex; // when color format was bgra, didnt work on intel
 layout (rgba8, binding = 17) uniform readonly image2D albedoTex;
-layout (rgba16f, binding = 18) uniform writeonly image2D storeTex;
+layout (binding = 18)  uniform sampler2D depthTex;
+
+layout (binding = 19)  uniform sampler2DShadow shadowDepthTex;
+
+layout (rgba16f, binding = 20) uniform writeonly image2D storeTex;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
@@ -37,13 +46,33 @@ void main()
     {
         vec4 normalSample = imageLoad(normalTex, pos);
         vec4 albedoSample = imageLoad(albedoTex, pos);
+        float depthSample = texelFetch(depthTex, pos.xy, 0).x;
 
         // Do math, calculate position from vertex?
         // Normal...
+        
+        vec2 sampleDepthPos = (pos.xy + vec2(0.5f)) / vec2(windowSize);
+        sampleDepthPos.y = 1.0f - sampleDepthPos.y;
+        sampleDepthPos = sampleDepthPos * 2.0f - 1.0f;
+        
+        vec4 pixelWorldPos = inverseMvp * vec4(sampleDepthPos, depthSample, 1.0f);
+        pixelWorldPos = pixelWorldPos / pixelWorldPos.w;
 
-        vec3 colorOut = albedoSample.rgb * 0.5f + 0.5f * max(0.0f, -dot(normalSample.xyz, sunDir));
+        vec4 pixelWorldPosInShadowMap = sunMatrix * pixelWorldPos;
+        float shadowValue = 0.0f;
 
-        imageStore(storeTex, pos, vec4(colorOut, 0.0f));
+        // flip y
+        pixelWorldPosInShadowMap.y = -pixelWorldPosInShadowMap.y;
+        pixelWorldPosInShadowMap.xy = pixelWorldPosInShadowMap.xy * 0.5f + 0.5f;
+        pixelWorldPosInShadowMap.z += 0.001f;
+        float shadowDepth = texture(shadowDepthTex, pixelWorldPosInShadowMap.xyz);
+
+        vec3 colorOut = albedoSample.rgb * 0.5f + 0.5f * max(0.0f, -dot(normalSample.xyz, sunDir)) * shadowDepth;
+
+        imageStore(storeTex, pos, vec4(colorOut, pixelWorldPosInShadowMap.z));
+        //imageStore(storeTex, pos, pixelWorldPos);
+        //imageStore(storeTex, pos, pixelWorldPosInShadowMap);
+        
     }
 }
 

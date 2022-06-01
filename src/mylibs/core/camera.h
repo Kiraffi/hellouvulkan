@@ -7,9 +7,11 @@ class Matrix;
 struct Camera
 {
     Matrix perspectiveProjection();
+    Matrix ortographicProjection(float width, float height);
     Matrix getCameraMatrix();
 
     Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);
+    void calculateOrtographicPosition(const Vec3& targetPos);
 
     Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
     float aspectRatioWByH = 1.667f;
@@ -20,7 +22,7 @@ struct Camera
     float roll = 0.0f;
 
     float zNear = 0.1f;
-    float zFar = 2000.0f;
+    float zFar = 200.0f;
 };
 
 

@@ -331,12 +331,12 @@ VkImageView createImageView(VkImage image, VkFormat format)
     createInfo.components.g = VK_COMPONENT_SWIZZLE_G; //VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.components.b = VK_COMPONENT_SWIZZLE_B; //VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.components.a = VK_COMPONENT_SWIZZLE_A; //VK_COMPONENT_SWIZZLE_IDENTITY;
+
     createInfo.subresourceRange.aspectMask = aspectMask;
     createInfo.subresourceRange.baseMipLevel = 0;
     createInfo.subresourceRange.levelCount = 1;
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
-
 
     VkImageView view = 0;
     VK_CHECK(vkCreateImageView(vulk->device, &createInfo, nullptr, &view));
@@ -347,10 +347,9 @@ VkImageView createImageView(VkImage image, VkFormat format)
 
 
 VkImageMemoryBarrier imageBarrier(Image& image,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask)
+    VkAccessFlags dstAccessMask, VkImageLayout newLayout)
 {
-
+    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
     VkImageMemoryBarrier barrier =
         imageBarrier(image.image, image.accessMask, image.layout, dstAccessMask, newLayout, aspectMask);
     image.accessMask = dstAccessMask;
@@ -360,10 +359,9 @@ VkImageMemoryBarrier imageBarrier(Image& image,
 
 VkImageMemoryBarrier imageBarrier(Image& image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask)
+    VkAccessFlags dstAccessMask, VkImageLayout newLayout)
 {
-
+    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
     VkImageMemoryBarrier barrier =
         imageBarrier(image.image, srcAccessMask, oldLayout, dstAccessMask, newLayout, aspectMask);
     image.accessMask = dstAccessMask;
@@ -376,6 +374,8 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout,
     VkImageAspectFlags aspectMask)
 {
+    
+
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     barrier.srcAccessMask = srcAccessMask;
     barrier.dstAccessMask = dstAccessMask;

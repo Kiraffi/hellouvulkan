@@ -25,6 +25,36 @@ Matrix Camera::perspectiveProjection()
         0.0f, 0.0f, -1.0f, 0.0f);
 }
 
+Matrix Camera::ortographicProjection(float width, float height)
+{
+    Vector3 rightDir;
+    Vector3 upDir;
+    Vector3 forwardDir;
+    getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
+
+    float s1 = -1.0f / (zNear - zFar);
+    float s2 = -(zNear) / (zNear - zFar);
+
+    float x = 2.0f / width;
+    float y = 2.0f / height;
+
+    return Matrix(
+        x, 0.0f, 0.0f, 0.0f,
+        0.0f, y, 0.0f, 0.0f,
+        0.0f, 0.0f, s1, s2,
+        0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+void Camera::calculateOrtographicPosition(const Vec3 &targetPos)
+{
+    Vector3 rightDir;
+    Vector3 upDir;
+    Vector3 forwardDir;
+    getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
+
+    position = targetPos - forwardDir * 100.0f;
+}
+
 Matrix Camera::getCameraMatrix()
 {
     Vector3 rightDir;

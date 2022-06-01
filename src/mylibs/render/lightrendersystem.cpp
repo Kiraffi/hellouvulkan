@@ -14,6 +14,7 @@ struct LightBuffer
 LightRenderSystem::~LightRenderSystem()
 {
     destroyPipeline(lightComputePipeline);
+    destroySampler(shadowTextureSampler);
 }
 
 bool LightRenderSystem::init()
@@ -21,17 +22,37 @@ bool LightRenderSystem::init()
     lightBufferHandle = vulk->uniformBufferManager.reserveHandle();
 
     auto& pipeline = lightComputePipeline;
-    if (!createComputePipeline(getShader(ShaderType::LightingShader), pipeline))
+    if (!createComputePipeline(getShader(ShaderType::LightingShader), pipeline, "Light system compute"))
     {
         printf("Failed to create compute pipeline!\n");
+        return false;
+    }
+
+    VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+    samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+
+    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+
+    shadowTextureSampler = createSampler(samplerInfo);
+    if (!shadowTextureSampler)
+    {
+        printf("Failed to create sampler for font rendering");
         return false;
     }
     return true;
 }
 
-bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& normalTex, const Image& outputTex)
+bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& normalTex, const Image& depthTex,
+    const Image& shadowTex, const Image& outputTex)
 {
     ASSERT(albedoTex.width == normalTex.width && albedoTex.height == normalTex.height &&
+        albedoTex.width == depthTex.width && albedoTex.height == depthTex.height &&
         albedoTex.width == outputTex.width && albedoTex.height == outputTex.height);
 
     auto& pipeline = lightComputePipeline;
@@ -44,6 +65,10 @@ bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& n
 
             DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+
+            DescriptorInfo(depthTex.imageView, VK_IMAGE_LAYOUT_GENERAL, shadowTextureSampler),
+            DescriptorInfo(shadowTex.imageView, VK_IMAGE_LAYOUT_GENERAL, shadowTextureSampler),
+
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
         });
     if (!createDescriptor(pipeline))

@@ -8,13 +8,13 @@
 #include <scene/scene.h>
 
 
-
+#include <string>
 
 
 MeshRenderSystem::~MeshRenderSystem()
 {
-    destroyPipeline(animatedGraphicsPipeline);
-    destroyPipeline(nonAnimatedGraphicsPipeline);
+    for (uint32_t i = 0; i < ARRAYSIZES(meshRenderGraphicsPipeline); ++i)
+        destroyPipeline(meshRenderGraphicsPipeline[i]);
 
     destroyBuffer(vertexBuffer);
     destroyBuffer(animationVertexBuffer);
@@ -66,46 +66,28 @@ bool MeshRenderSystem::init()
 
 
     // pipelines.
+    for(uint32_t i = 0; i < ARRAYSIZES(meshRenderGraphicsPipeline); ++i)
     {
-        Pipeline& pipeline = nonAnimatedGraphicsPipeline;
-        if (!createGraphicsPipeline(
-            getShader(ShaderType::Basic3DVert), getShader(ShaderType::Basic3DFrag),
-            { 
+        Pipeline& pipeline = meshRenderGraphicsPipeline[i];
+        PodVector<RenderTarget> renderTargets;
+        //bool animationRender = (i & 2) == 0;
+        bool depthOnlyRender = (i & 1) != 0;
+
+        if (!depthOnlyRender)
+        {
+            renderTargets = {
                 RenderTarget{.format = vulk->defaultColorFormat },
                 RenderTarget{.format = VK_FORMAT_R16G16B16A16_SNORM },
-            },
-            { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
-            pipeline))
-        {
-            printf("Failed to create graphics pipeline\n");
+            };
         }
+        std::string name = "Mesh system render - ";
+        name += std::to_string(i);
 
-
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk->renderFrameBufferHandle),
-                
-                DescriptorInfo(modelRenderMatricesBuffer),
-
-                DescriptorInfo(vertexBuffer),
-            });
-
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
-        {
-            printf("Failed to set descriptor binds!\n");
-            return false;
-        }
-    }
-    {
-        Pipeline& pipeline = animatedGraphicsPipeline;
         if (!createGraphicsPipeline(
-            getShader(ShaderType::Basic3DVert, 3), getShader(ShaderType::Basic3DFrag),
-            {
-              RenderTarget{.format = vulk->defaultColorFormat },
-              RenderTarget{.format = VK_FORMAT_R16G16B16A16_SNORM },
-            },
+            getShader(ShaderType::Basic3DVert, i), depthOnlyRender ? Shader{} : getShader(ShaderType::Basic3DFrag),
+            renderTargets,
             { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
-            pipeline))
+            pipeline, name))
         {
             printf("Failed to create graphics pipeline\n");
         }
@@ -129,19 +111,23 @@ bool MeshRenderSystem::init()
             return false;
         }
     }
+
     return true;
 }
 
 uint32_t MeshRenderSystem::addModel(const RenderModel& renderModel)
 {
+    uint32_t newVertices = renderModel.vertices.size();
+    uint32_t newAnimationVertices = renderModel.animationVertices.size();
+    uint32_t newIndices = renderModel.indices.size();
     // Make sure to add animated models first to keep animatedvertex index same as vertexindex.
-    ASSERT(renderModel.animationVertices.size() == 0 || verticesCount == animatedVerticesCount);
+    ASSERT(newAnimationVertices == 0 || verticesCount == animatedVerticesCount);
     uint32_t result = ~9u;
     beginSingleTimeCommands();
 
     addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, indicesCount * sizeof(uint32_t));
     addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, verticesCount * sizeof(RenderModel::Vertex));
-    if (renderModel.animationVertices.size() > 0)
+    if (newAnimationVertices > 0)
         addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 
             animatedVerticesCount * sizeof(RenderModel::AnimationVertex));
     flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
@@ -150,16 +136,16 @@ uint32_t MeshRenderSystem::addModel(const RenderModel& renderModel)
 
     result = models.size();
     models.push_back(ModelData{
-        .indiceStart = indicesCount, .indices = renderModel.indices.size(),
-        .vertexStart = verticesCount, .vertices = renderModel.vertices.size(),
-        .animatedVertexStart = animatedVerticesCount, .animatedVectices = renderModel.animationVertices.size() 
+        .indiceStart = indicesCount, .indices = newIndices,
+        .vertexStart = verticesCount, .vertices = newVertices,
+        .animatedVertexStart = animatedVerticesCount, .animatedVectices = newAnimationVertices
     });
 
 
 
-    verticesCount += renderModel.vertices.size();
-    indicesCount += renderModel.indices.size();
-    animatedVerticesCount += renderModel.animationVertices.size();
+    verticesCount += newVertices;
+    indicesCount += newIndices;
+    animatedVerticesCount += newAnimationVertices;
     return result;
 }
 
@@ -223,6 +209,31 @@ bool MeshRenderSystem::prepareToRender()
     return true;
 }
 
+void MeshRenderSystem::render(bool isShadowOnly)
+{
+    uint32_t instanceStartIndex = 0u;
+    uint32_t passIndex = isShadowOnly ? 1u : 0u;
+    // draw calls here
+    // Render
+    for (; passIndex < 4; passIndex += 2)
+    {
+        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, meshRenderGraphicsPipeline[passIndex]);
+        for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
+        {
+            bool animationRender = (passIndex & 2) == 0;
+            uint32_t instances = animationRender ? animatedModelRenderMatrices[modelIndex].size() : modelRenderMatrices[modelIndex].size();
+            if (instances)
+            {
+                const ModelData& modelData = models[modelIndex];
+                vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
+                    modelData.indiceStart, modelData.vertexStart, instanceStartIndex);
+                instanceStartIndex += instances;
+            }
+        }
+    }
+}
+
 void MeshRenderSystem::render(const Image& renderColorTarget, 
     const Image& normalMapColorImage, const Image& renderDepthTarget)
 {
@@ -235,53 +246,17 @@ void MeshRenderSystem::render(const Image& renderColorTarget,
         RenderImage{.image = &normalMapColorImage, .clearValue = normlClear }, },
         {.image = &renderDepthTarget, .clearValue = depthClear });
 
-    uint32_t instanceStartIndex = 0u;
-    // draw calls here
-    // Render
-    {
-        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, animatedGraphicsPipeline);
-        for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
-        {
-            uint32_t instances = animatedModelRenderMatrices[modelIndex].size();
-            if (instances)
-            {
-                const ModelData& modelData = models[modelIndex];
-                vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
-                    modelData.indiceStart, modelData.vertexStart, instanceStartIndex);
-                instanceStartIndex += instances;
-            }
-        }
-    }
+    render(false);
 
-    // draw calls here
-    // Render
-    {
-        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, nonAnimatedGraphicsPipeline);
-        for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
-        {
-            uint32_t instances = modelRenderMatrices[modelIndex].size();
-            if (instances)
-            {
-                const ModelData& modelData = models[modelIndex];
-                vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
-                    modelData.indiceStart, modelData.vertexStart, instanceStartIndex);
-                instanceStartIndex += instances;
-            }
-        }
-
-    }
     vkCmdEndRendering(vulk->commandBuffer);
 }
 
 
-void renderShadows(const Image& shadowDepthTarget)
+void MeshRenderSystem::renderShadows(const Image& shadowDepthTarget)
 {
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
 
     beginRendering({}, { .image = &shadowDepthTarget, .clearValue = depthClear });
-
-
+    render(true);
     vkCmdEndRendering(vulk->commandBuffer);
 }

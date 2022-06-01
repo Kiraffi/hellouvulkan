@@ -25,6 +25,10 @@ public:
     void render(const Image& renderColorTarget, const Image& normalMapColorImage, const Image& renderDepthTarget);
     void renderShadows(const Image& shadowDepthTarget);
 private:
+
+    void render(bool isShadowOnly);
+
+
     struct ModelData
     {
         uint32_t indiceStart = 0u;
@@ -43,8 +47,7 @@ private:
     Buffer modelBoneRenderMatricesBuffer;
     Buffer modelRenderNormaMatricesBuffer;
 
-    Pipeline animatedGraphicsPipeline;
-    Pipeline nonAnimatedGraphicsPipeline;
+    Pipeline meshRenderGraphicsPipeline[4];
 
     PodVector<ModelData> models;
 

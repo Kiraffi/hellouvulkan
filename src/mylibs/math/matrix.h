@@ -27,6 +27,10 @@ struct Matrix
         , _20(f20), _21(f21), _22(f22), _23(f23)
         , _30(f30), _31(f31), _32(f32), _33(f33)
     {}
+
+    float &operator[](uint32_t index) { return (&_00)[index]; }
+    float operator[](uint32_t index) const { return (&_00)[index]; }
+
     float _00 = 1.0f;
     float _01 = 0.0f;
     float _02 = 0.0f;
@@ -62,6 +66,8 @@ Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const V
 
 Matrix transpose(const Matrix &m);
 Matrix operator*(const Matrix &a, const Matrix &b);
+
+Matrix inverse(const Matrix& m);
 
 void printMatrix(const Matrix &m, const char name[]);
 

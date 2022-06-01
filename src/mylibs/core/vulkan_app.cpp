@@ -132,6 +132,12 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     glfwSetKeyCallback(window, keyboardHandlerCallback);
     glfwSetWindowUserPointer(window, this);
+
+    camera.fovY = 90.0f;
+    camera.zFar = 200.0f;
+    camera.zNear = 0.125f;
+
+
     return true;
 
 }
@@ -207,25 +213,39 @@ void VulkanApp::renderUpdate()
         Matrix camMat;
         Matrix viewProj;
         Matrix mvp;
-        Matrix padding;
+        Matrix sunMatrix;
 
         Vector2 areaSize;
-        float tmp[12]{};
+        Vector2 tmp1;
+
+        Vector4 camPos;
+        Vector4 tmp3;
+        Vector4 tmp4;
+
+        Matrix inverseMvp;
     };
     FrameBuffer frameBufferData;
 
 
-
-    frameBufferData.camMat = camera.getCameraMatrix();
-
+    sunCamera.calculateOrtographicPosition(camera.position);
     const SwapChain& swapchain = vulk->swapchain;
     camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
 
-
-    frameBufferData.viewProj = camera.perspectiveProjection();
+    if (useSunCamera)
+    {
+        frameBufferData.camMat = sunCamera.getCameraMatrix();
+        frameBufferData.viewProj = sunCamera.ortographicProjection(50.0f, 50.0f);
+    }
+    else
+    {
+        frameBufferData.camMat = camera.getCameraMatrix();
+        frameBufferData.viewProj = camera.perspectiveProjection();
+    }
     frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
+    frameBufferData.inverseMvp = inverse(frameBufferData.mvp);
 
-
+    frameBufferData.sunMatrix = sunCamera.ortographicProjection(50.0f, 50.0f) * sunCamera.getCameraMatrix();
+    frameBufferData.camPos = Vector4(camera.position, 0.0f);
     frameBufferData.areaSize = Vector2(windowWidth, windowHeight);
     addToCopylist(frameBufferData, vulk->renderFrameBufferHandle);
 
@@ -276,6 +296,12 @@ void VulkanApp::logicUpdate()
     dt = timer.getLapDuration();
 
     glfwPollEvents();
+
+
+    if (isPressed(GLFW_KEY_C))
+    {
+        useSunCamera = !useSunCamera;
+    }
 }
 
 void VulkanApp::setTitle(const char *str)
@@ -321,28 +347,28 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     float moveSpeed = deltaTime * 2.0f * moveBooster;
     float rotationSpeed = deltaTime * 1.0f * rotationBooster;
 
-    if (keyDowns[GLFW_KEY_I].isDown)
+    if (isDown(GLFW_KEY_I))
     {
         camera.pitch += rotationSpeed;
     }
-    if (keyDowns[GLFW_KEY_K].isDown)
+    if (isDown(GLFW_KEY_K))
     {
         camera.pitch -= rotationSpeed;
     }
-    if (keyDowns[GLFW_KEY_J].isDown)
+    if (isDown(GLFW_KEY_J))
     {
         camera.yaw += rotationSpeed;
     }
-    if (keyDowns[GLFW_KEY_L].isDown)
+    if (isDown(GLFW_KEY_L))
     {
         camera.yaw -= rotationSpeed;
     }
     /*
-    if (keyDowns[GLFW_KEY_O].isDown)
+    if (isDown(GLFW_KEY_O))
     {
         camera.roll += rotationSpeed;
     }
-    if (keyDowns[GLFW_KEY_P].isDown)
+    if (isDown(GLFW_KEY_P))
     {
         camera.roll -= rotationSpeed;
     }
@@ -358,28 +384,28 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, camera.roll, rightDir, upDir, forwardDir);
 
 
-    if (keyDowns[GLFW_KEY_W].isDown)
+    if (isDown(GLFW_KEY_W))
     {
         camera.position = camera.position - forwardDir * moveSpeed;
     }
-    if (keyDowns[GLFW_KEY_S].isDown)
+    if (isDown(GLFW_KEY_S))
     {
         camera.position = camera.position + forwardDir * moveSpeed;
     }
-    if (keyDowns[GLFW_KEY_A].isDown)
+    if (isDown(GLFW_KEY_A))
     {
         camera.position = camera.position - rightDir * moveSpeed;
     }
-    if (keyDowns[GLFW_KEY_D].isDown)
+    if (isDown(GLFW_KEY_D))
     {
         camera.position = camera.position + rightDir * moveSpeed;
 
     }
-    if (keyDowns[GLFW_KEY_Q].isDown)
+    if (isDown(GLFW_KEY_Q))
     {
         camera.position = camera.position - upDir * moveSpeed;
     }
-    if (keyDowns[GLFW_KEY_E].isDown)
+    if (isDown(GLFW_KEY_E))
     {
         camera.position = camera.position + upDir * moveSpeed;
     }

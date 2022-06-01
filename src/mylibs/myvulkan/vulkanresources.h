@@ -38,13 +38,11 @@ VkImageView createImageView(VkImage image, VkFormat format);
 
 
 VkImageMemoryBarrier imageBarrier(Image& image,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
+    VkAccessFlags dstAccessMask, VkImageLayout newLayout);
 
 VkImageMemoryBarrier imageBarrier(Image& image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
-    VkAccessFlags dstAccessMask, VkImageLayout newLayout,
-    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
+    VkAccessFlags dstAccessMask, VkImageLayout newLayout);
 
 VkImageMemoryBarrier imageBarrier(VkImage image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
