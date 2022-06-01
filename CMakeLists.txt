@@ -55,7 +55,7 @@ function(COMPILE_SHADER SHADER_PERMUTATION)
     add_custom_command(
         OUTPUT ${SPIRV}
         COMMAND ${GLSLC_EXECUTABLE} ${SHADER} -DSPECIAL_PERMUTATION=${SHADER_PERMUTATION} --target-env=vulkan1.1 -o ${SPIRV}
-        DEPENDS ${SHADER})
+        DEPENDS ${SHADER} ${SHADER_DIR}"/common.h")
 endfunction()
 
 foreach(SHADER IN LISTS SPV_SHADERS)
@@ -66,7 +66,7 @@ foreach(SHADER IN LISTS SPV_SHADERS)
     set(VALUE_OUT 1)
     if(FIRST_LETTER STRLESS_EQUAL "999999999999999" AND NOT FILENAME STREQUAL FIRST_LETTER)
         #parse the string number into number.
-        message(STATUS "number ${FIRST_LETTER}")
+        #message(STATUS "number ${FIRST_LETTER}")
         math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
     endif()
     while(VALUE_OUT GREATER 0)

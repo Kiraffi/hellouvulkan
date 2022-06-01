@@ -3,21 +3,7 @@
 #define DEPTH_ONLY ((SPECIAL_PERMUTATION & 1) == 1)
 #define USE_ANIMATION ((SPECIAL_PERMUTATION & 2) == 0)
 
-
-#define MATRIX_ORDER row_major
-//#define MATRIX_ORDER column_major
-
-layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
-{
-    mat4 cameraMatrix;
-    mat4 viewProjMat;
-    mat4 mvp;
-    mat4 sunMatrix;
-
-    vec2 windowSize;
-    float padding[12];
-
-};
+#include "common.h"
 
 struct VData
 {
