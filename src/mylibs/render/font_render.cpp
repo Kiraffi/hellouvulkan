@@ -194,7 +194,7 @@ void FontRenderSystem::render()
     VkCommandBuffer commandBuffer = vulk->commandBuffer;
     if (vertData.size() == 0 || !commandBuffer)
         return;
-
+    beginDebugRegion("Font rendering", Vec4(0.0f, 0.0f, 1.0f, 1.0f));
     beginRenderPass(pipeline, {});
 
     bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -203,5 +203,6 @@ void FontRenderSystem::render()
 
     vkCmdEndRenderPass(vulk->commandBuffer);
     vertData.clear();
+    endDebugRegion();
 }
 

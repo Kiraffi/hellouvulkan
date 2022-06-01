@@ -940,7 +940,7 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         return false;
     }
 
-    if (!initializeVMA())
+    if (!initVulkanResources())
     {
         printf("Failed to initialize VMA!\n");
         return false;
@@ -1065,7 +1065,7 @@ void deinitVulkan()
         vkDestroyFence(vulk->device, vulk->fence, nullptr);
         vkDestroySemaphore(vulk->device, vulk->acquireSemaphore, nullptr);
         vkDestroySemaphore(vulk->device, vulk->releaseSemaphore, nullptr);
-        deinitVMA();
+        deinitVulkanResources();
         vkDestroyDevice(vulk->device, nullptr);
     }
     vkDestroySurfaceKHR(vulk->instance, vulk->surface, nullptr);
@@ -1309,6 +1309,8 @@ void present(Image & imageToPresent)
 {
     // Copy final image to swap chain target
     {
+        beginDebugRegion("Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
             imageBarrier(imageToPresent,
@@ -1323,7 +1325,6 @@ void present(Image & imageToPresent)
                                 VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(copyBeginBarriers), copyBeginBarriers);
 
 
-        insertDebugRegion("Copy to swapchain", Vec4(1.0f, 1.0f, 0.0f, 1.0f));
 
         VkImageBlit imageBlitRegion = {};
 
@@ -1683,14 +1684,14 @@ void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64
 void beginDebugRegion(std::string_view pMarkerName, Vec4 color)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
-//    if (pfnCmdDebugMarkerBegin)
-//    {
-//        VkDebugMarkerMarkerInfoEXT markerInfo = {};
-//        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-//        memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-//        markerInfo.pMarkerName = pMarkerName;
-//        pfnCmdDebugMarkerBegin(vulk->commandBuffer, &markerInfo);
-//    }
+    if (pfnCmdDebugMarkerBegin)
+    {
+        VkDebugMarkerMarkerInfoEXT markerInfo = {};
+        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+        memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+        markerInfo.pMarkerName = pMarkerName.data();
+        pfnCmdDebugMarkerBegin(vulk->commandBuffer, &markerInfo);
+    }
 }
 
 // Insert a new debug marker into the command buffer

@@ -15,6 +15,7 @@ LightRenderSystem::~LightRenderSystem()
 {
     destroyPipeline(lightComputePipeline);
     destroySampler(shadowTextureSampler);
+    destroySampler(colorTextureSampler);
 }
 
 bool LightRenderSystem::init()
@@ -28,22 +29,33 @@ bool LightRenderSystem::init()
         return false;
     }
 
-    VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-    samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-
-    samplerInfo.compareEnable = VK_TRUE;
-    samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_LESS;
-
-    shadowTextureSampler = createSampler(samplerInfo);
-    if (!shadowTextureSampler)
     {
-        printf("Failed to create sampler for font rendering");
-        return false;
+        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+        samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+
+        samplerInfo.compareEnable = VK_TRUE;
+        samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+
+        shadowTextureSampler = createSampler(samplerInfo);
+        if (!shadowTextureSampler)
+        {
+            printf("Failed to create sampler for font rendering");
+            return false;
+        }
+    }
+    {
+        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+        colorTextureSampler = createSampler(samplerInfo);
+        if (!colorTextureSampler)
+        {
+            printf("Failed to create sampler for font rendering");
+            return false;
+        }
     }
     return true;
 }
@@ -63,11 +75,14 @@ bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& n
             DescriptorInfo(vulk->renderFrameBufferHandle),
             DescriptorInfo(lightBufferHandle),
 
-            DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
-            DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+            //DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+            //DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
 
-            DescriptorInfo(depthTex.imageView, VK_IMAGE_LAYOUT_GENERAL, shadowTextureSampler),
-            DescriptorInfo(shadowTex.imageView, VK_IMAGE_LAYOUT_GENERAL, shadowTextureSampler),
+            DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, colorTextureSampler),
+            DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, colorTextureSampler),
+
+            DescriptorInfo(depthTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
+            DescriptorInfo(shadowTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
 
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
         });
@@ -98,8 +113,12 @@ void LightRenderSystem::update()
 
 void LightRenderSystem::render(uint32_t width, uint32_t height)
 {
+    beginDebugRegion("Lighting compute", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    
     bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, lightComputePipeline);
     vkCmdDispatch(vulk->commandBuffer, (width + 7) / 8, (height + 7) / 8, 1);
+
+    endDebugRegion();
 }
 
 void LightRenderSystem::setSunDirection(const Vec3& sunDir)

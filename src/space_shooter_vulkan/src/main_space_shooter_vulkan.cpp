@@ -188,7 +188,7 @@ bool SpaceShooter::createPipelines()
         Pipeline& pipeline = graphicsPipeline;
         if(!createGraphicsPipeline(
             getShader(ShaderType::SpaceShip2DModelVert), getShader(ShaderType::SpaceShip2DModelFrag),
-            { RenderTarget{.format = vulk->defaultColorFormat } }, {  }, pipeline, false))
+            { RenderTarget{.format = vulk->defaultColorFormat } }, {  }, pipeline, "Space shooter 2d rendering", false))
         {
             printf("failed to create pipeline\n");
             return false;

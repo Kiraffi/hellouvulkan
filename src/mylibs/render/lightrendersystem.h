@@ -27,4 +27,5 @@ private:
 
     Pipeline lightComputePipeline;
     VkSampler shadowTextureSampler = nullptr;
+    VkSampler colorTextureSampler = nullptr;
 };

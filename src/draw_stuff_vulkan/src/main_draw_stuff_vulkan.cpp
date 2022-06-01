@@ -189,7 +189,7 @@ void VulkanDrawStuff::resized()
         vulk->swapchain.width, vulk->swapchain.height,
         vulk->defaultColorFormat,
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color target image");
 
@@ -197,7 +197,7 @@ void VulkanDrawStuff::resized()
         vulk->swapchain.width, vulk->swapchain.height,
         VK_FORMAT_R16G16B16A16_SNORM,
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, //VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main normal map target image");
     
@@ -205,7 +205,7 @@ void VulkanDrawStuff::resized()
         vulk->swapchain.width, vulk->swapchain.height,
         VK_FORMAT_R16G16B16A16_SFLOAT,
 
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         "Main color HDR");
 
@@ -218,7 +218,7 @@ void VulkanDrawStuff::resized()
         "Main depth target image");
 
     fontSystem.setRenderTarget(renderColorImage);
-    convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
+    //convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
     lightRenderSystem.updateReadTargets(renderColorImage, renderNormalMapColorImage, 
         renderDepthImage, renderShadowDepthImage,
         renderHdrImage);
@@ -346,13 +346,13 @@ void VulkanDrawStuff::renderDraw()
     else
     {
         addImageBarrier(imageBarrier(renderColorImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
         addImageBarrier(imageBarrier(renderNormalMapColorImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
         addImageBarrier(imageBarrier(renderDepthImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
         addImageBarrier(imageBarrier(renderShadowDepthImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 
         addImageBarrier(imageBarrier(renderHdrImage,
             0, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -367,7 +367,7 @@ void VulkanDrawStuff::renderDraw()
         writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
         addImageBarrier(imageBarrier(renderHdrImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
         addImageBarrier(imageBarrier(renderColorImage,
             VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
         flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);

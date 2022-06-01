@@ -15,8 +15,10 @@ layout (binding = 0, MATRIX_ORDER) uniform ConstantDataStructBlock
 
 };
 
-layout (rgba16f, binding = 16) uniform readonly image2D hdrTex;
+//layout (rgba16f, binding = 16) uniform readonly image2D hdrTex;
+layout (binding = 16) uniform sampler2D hdrTex;
 layout (rgba8, binding = 17) uniform writeonly image2D storeTex;
+
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
@@ -27,7 +29,8 @@ void main()
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
     if(pos.x < windowSize.x && pos.y < windowSize.y)
     {
-        vec4 hdrSample = imageLoad(hdrTex, pos);
+        //vec4 hdrSample = imageLoad(hdrTex, pos);
+        vec4 hdrSample = texelFetch(hdrTex, pos, 0);
         // reinhard tonemapping
         hdrSample = hdrSample / (hdrSample + 1.0f);
         imageStore(storeTex, pos, vec4(hdrSample.rgb, 0.0f));

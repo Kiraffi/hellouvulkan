@@ -153,7 +153,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
         if (!createGraphicsPipeline(
             getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
-            { RenderTarget {.format = vulk->defaultColorFormat } }, {  }, pipeline, false))
+            { RenderTarget {.format = vulk->defaultColorFormat } }, {  }, pipeline, "Font draw render", false))
         {
             printf("Failed to create pipeline\n");
             return false;

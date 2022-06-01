@@ -148,7 +148,7 @@ bool VulkanComputeTest::createPipelines()
 {
     {
         Pipeline &pipeline = computePipeline;
-        if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline))
+        if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline, "Compute copy pipeline test"))
         {
             printf("Failed to create compute pipeline!\n");
             return false;
@@ -162,7 +162,7 @@ bool VulkanComputeTest::createPipelines()
         if (!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
             { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } },
-            {}, pipeline, true))
+            {}, pipeline, "Graphics copy pipeline test", true))
         {
             printf("Failed to create graphics pipeline\n");
             return false;
@@ -324,8 +324,7 @@ void VulkanComputeTest::renderDraw()
 
     addImageBarrier(imageBarrier(renderDepthImage,
         0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_ASPECT_DEPTH_BIT));
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
 
     flushBarriers();
 

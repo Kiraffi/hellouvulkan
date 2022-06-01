@@ -10,8 +10,11 @@
 struct Buffer;
 struct Image;
 
-bool initializeVMA();
-void deinitVMA();
+//bool initializeVMA();
+//void deinitVMA();
+
+bool initVulkanResources();
+bool deinitVulkanResources();
 
 Image createImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,
     VkMemoryPropertyFlags memoryFlags, const char* imageName);
@@ -73,3 +76,12 @@ bool addToCopylist(const void *objectToCopy, VkDeviceSize objectSize, VkBuffer t
 bool addImageBarrier(VkImageMemoryBarrier barrier);
 bool flushBarriers(VkPipelineStageFlagBits srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
     VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+
+bool prepareToGraphicsSampleWrite(Image& image);
+bool prepareToGraphicsSampleRead(Image& image);
+bool prepareToGraphicsImageRead(Image& image);
+
+bool prepareToComputeImageWrite(Image& image);
+bool prepareToComputeImageRead(Image& image);
+bool prepareToComputeSampleRead(Image& image);

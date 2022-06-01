@@ -8,6 +8,7 @@
 TonemapRenderSystem::~TonemapRenderSystem()
 {
     destroyPipeline(tonemapPipeline);
+    destroySampler(colorTextureSampler);
 }
 
 bool TonemapRenderSystem::init()
@@ -17,6 +18,15 @@ bool TonemapRenderSystem::init()
     {
         printf("Failed to create compute pipeline!\n");
         return false;
+    }
+    {
+        VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+        colorTextureSampler = createSampler(samplerInfo);
+        if (!colorTextureSampler)
+        {
+            printf("Failed to create sampler for font rendering");
+            return false;
+        }
     }
     return true;
 }
@@ -32,8 +42,12 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
         {
             DescriptorInfo(vulk->renderFrameBufferHandle),
 
-            DescriptorInfo(hdrTexIn.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+            //DescriptorInfo(hdrTexIn.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+
+            DescriptorInfo(hdrTexIn.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, colorTextureSampler),
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+
+            
         });
     if (!createDescriptor(pipeline))
     {
@@ -50,6 +64,10 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
 
 void TonemapRenderSystem::render(uint32_t width, uint32_t height)
 {
+    beginDebugRegion("Tonemap", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    
     bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, tonemapPipeline);
     vkCmdDispatch(vulk->commandBuffer, (width + 7) / 8, (height + 7) / 8, 1);
+
+    endDebugRegion();
 }

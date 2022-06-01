@@ -215,8 +215,20 @@ void MeshRenderSystem::render(bool isShadowOnly)
     uint32_t passIndex = isShadowOnly ? 1u : 0u;
     // draw calls here
     // Render
+    
     for (; passIndex < 4; passIndex += 2)
     {
+        std::string debugName;
+        if (passIndex == 0)
+            debugName = "Animated normal render";
+        else if (passIndex == 1)
+            debugName = "Animated depth only render";
+        else if (passIndex == 2)
+            debugName = "NonAnimated normal render";
+        else if (passIndex == 3)
+            debugName = "NonAnimated depth only render";
+
+        beginDebugRegion(debugName, Vec4(1.0f, 1.0f, 0.0f, 1.0f));
         bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, meshRenderGraphicsPipeline[passIndex]);
         for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
         {
@@ -231,32 +243,37 @@ void MeshRenderSystem::render(bool isShadowOnly)
                 instanceStartIndex += instances;
             }
         }
+        endDebugRegion();
     }
 }
 
 void MeshRenderSystem::render(const Image& renderColorTarget, 
     const Image& normalMapColorImage, const Image& renderDepthTarget)
 {
+    beginDebugRegion("Mesh rendering colors", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
     static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
     static constexpr VkClearValue normlClear = { .color{0.0f, 0.0f, 0.0f, 0.0f} };
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-
     beginRendering({
         RenderImage{.image = &renderColorTarget, .clearValue = colorClear },
         RenderImage{.image = &normalMapColorImage, .clearValue = normlClear }, },
         {.image = &renderDepthTarget, .clearValue = depthClear });
-
     render(false);
-
     vkCmdEndRendering(vulk->commandBuffer);
+    
+    endDebugRegion();
 }
 
 
 void MeshRenderSystem::renderShadows(const Image& shadowDepthTarget)
 {
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
-
+    beginDebugRegion("Mesh rendering depth only", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    
     beginRendering({}, { .image = &shadowDepthTarget, .clearValue = depthClear });
     render(true);
     vkCmdEndRendering(vulk->commandBuffer);
+    
+    endDebugRegion();
 }

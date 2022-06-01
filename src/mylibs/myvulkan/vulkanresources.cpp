@@ -8,6 +8,8 @@
 
 #include <vk_mem_alloc.h>
 
+static PodVector<Image*> *globalImages = nullptr;
+
 static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
 {
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -20,11 +22,18 @@ static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
         format == VK_FORMAT_D16_UNORM_S8_UINT ||
         format == VK_FORMAT_S8_UINT
         )
+    {
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    else if (format == VK_FORMAT_UNDEFINED)
+    {
+        ASSERT(!"Undefined format");
+        return VK_IMAGE_ASPECT_NONE;
+    }
     return aspectMask;
 }
 
-
+/*
 bool initializeVMA()
 {
     VmaVulkanFunctions vulkanFunctions = {};
@@ -51,7 +60,51 @@ void deinitVMA()
         vulk->allocator = nullptr;
     }
 }
+*/
 
+
+bool initVulkanResources()
+{
+    ASSERT(!globalImages);
+    if (globalImages)
+        return false;
+    globalImages = new PodVector<Image*>();
+    // init VMA
+    {
+        VmaVulkanFunctions vulkanFunctions = {};
+        vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+        vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+        VmaAllocatorCreateInfo allocatorCreateInfo = {};
+        allocatorCreateInfo.vulkanApiVersion = VulkanApiVersion;
+        allocatorCreateInfo.physicalDevice = vulk->physicalDevice;
+        allocatorCreateInfo.device = vulk->device;
+        allocatorCreateInfo.instance = vulk->instance;
+        allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+        VK_CHECK(vmaCreateAllocator(&allocatorCreateInfo, &vulk->allocator));
+        if (!vulk->allocator)
+            return false;
+
+
+    }
+    return true;
+}
+
+bool deinitVulkanResources()
+{
+    if (vulk->device)
+    {
+        if (vulk->allocator)
+            vmaDestroyAllocator(vulk->allocator);
+        vulk->allocator = nullptr;
+    }
+    ASSERT(globalImages);
+
+    delete globalImages;
+    globalImages = nullptr;
+    return true;
+}
 
 bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDepthImages)
 {
@@ -327,10 +380,15 @@ VkImageView createImageView(VkImage image, VkFormat format)
     createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     createInfo.format = format;
 
-    createInfo.components.r = VK_COMPONENT_SWIZZLE_R; // VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.g = VK_COMPONENT_SWIZZLE_G; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.b = VK_COMPONENT_SWIZZLE_B; //VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.a = VK_COMPONENT_SWIZZLE_A; //VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.r = VK_COMPONENT_SWIZZLE_R; // VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.g = VK_COMPONENT_SWIZZLE_G; //VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.b = VK_COMPONENT_SWIZZLE_B; //VK_COMPONENT_SWIZZLE_IDENTITY;
+    //createInfo.components.a = VK_COMPONENT_SWIZZLE_A; //VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
     createInfo.subresourceRange.aspectMask = aspectMask;
     createInfo.subresourceRange.baseMipLevel = 0;
@@ -374,7 +432,8 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout,
     VkImageAspectFlags aspectMask)
 {
-    
+    if (srcAccessMask == dstAccessMask && oldLayout == newLayout)
+        return VkImageMemoryBarrier{};
 
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     barrier.srcAccessMask = srcAccessMask;
@@ -443,17 +502,27 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr)
         return false;
 
+    if (vulk->imageMemoryBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
+        beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
+
     memcpy(((uint8_t*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
    
     VkBufferCopy region = { vulk->scratchBufferOffset, targetOffset, objectSize };
 
     vulk->bufferMemoryBarriers.pushBack({ targetBuffer, region });
     vulk->scratchBufferOffset += objectSize;
+
+
     return true;
 }
 
 bool addImageBarrier(VkImageMemoryBarrier barrier)
 {
+    if (barrier.sType != VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
+        return false;
+    if(vulk->imageMemoryBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
+        beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
+
     vulk->imageMemoryBarriers.pushBack(barrier);
     return true;
 }
@@ -484,5 +553,73 @@ bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits
    
     vulk->bufferMemoryBarriers.clear();
     vulk->imageMemoryBarriers.clear();
+    endDebugRegion();
+
     return true;
+}
+
+bool prepareToGraphicsSampleWrite(Image& image)
+{
+    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
+    if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+    {
+        return addImageBarrier(imageBarrier(image,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    }
+    else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT)
+    {
+        return addImageBarrier(imageBarrier(image,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+    }
+    else
+    {
+        ASSERT(!"Unknown imagetype");
+        return false;
+    }
+    return true;
+}
+
+bool prepareToGraphicsSampleRead(Image& image)
+{
+    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
+    if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+    {
+        return addImageBarrier(imageBarrier(image,
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    }
+    else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT)
+    {
+        return addImageBarrier(imageBarrier(image,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+    }
+    else
+    {
+        ASSERT(!"Unknown imagetype");
+        return false;
+    }
+    return true;
+}
+
+bool prepareToGraphicsImageRead(Image& image)
+{
+    return addImageBarrier(imageBarrier(image,
+        VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+}
+
+bool prepareToComputeImageWrite(Image& image)
+{
+    return addImageBarrier(imageBarrier(image,
+        VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+}
+
+bool prepareToComputeImageRead(Image& image)
+{
+    return addImageBarrier(imageBarrier(image,
+        VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
+}
+
+bool prepareToComputeSampleRead(Image& image)
+{
+    return addImageBarrier(imageBarrier(image,
+        VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 }
