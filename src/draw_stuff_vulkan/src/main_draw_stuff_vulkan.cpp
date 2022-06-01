@@ -294,8 +294,6 @@ void VulkanDrawStuff::renderUpdate()
 
 void VulkanDrawStuff::renderDraw()
 {
-    const SwapChain& swapchain = vulk->swapchain;
-
     prepareToGraphicsSampleWrite(renderColorImage);
     prepareToGraphicsSampleWrite(renderNormalMapColorImage);
     prepareToGraphicsSampleWrite(renderDepthImage);
