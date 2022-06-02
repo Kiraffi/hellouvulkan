@@ -55,7 +55,7 @@ function(COMPILE_SHADER SHADER_PERMUTATION)
     add_custom_command(
         OUTPUT ${SPIRV}
         COMMAND ${GLSLC_EXECUTABLE} ${SHADER} -DSPECIAL_PERMUTATION=${SHADER_PERMUTATION} --target-env=vulkan1.1 -o ${SPIRV}
-        DEPENDS ${SHADER} ${SHADER_DIR}"/common.h")
+        DEPENDS ${SHADER} ${SHADER_DIR}/common.h)
 endfunction()
 
 foreach(SHADER IN LISTS SPV_SHADERS)
