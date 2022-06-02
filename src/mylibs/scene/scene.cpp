@@ -30,10 +30,13 @@ bool Scene::init()
 {
     ScopedTimer timer("Scene init");
 
-    // animated first
+    // animated first, because it makes animatedvertices first so the vertex index is same, otherwise i need to somehow pass special offset
+    // to vertex shader to determine where to read animated vertices.
     if (!loadModelForScene(sceneData, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
         return false;
-
+    if (!loadModelForScene(sceneData, "assets/models/character8.gltf", EntityType::CHARACTER))
+        return false;
+    
 
     // load nonanimated.
     if (!loadModelForScene(sceneData, "assets/models/arrows.gltf", EntityType::ARROW))

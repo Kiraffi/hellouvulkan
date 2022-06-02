@@ -10,6 +10,7 @@ enum class EntityType : uint32_t
 {
     // animated thingies
     WOBBLY_THING,
+    CHARACTER,
 
     // non animated
     ARROW,

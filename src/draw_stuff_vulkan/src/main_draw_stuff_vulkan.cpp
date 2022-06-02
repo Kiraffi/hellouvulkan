@@ -129,6 +129,8 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         entityIndices.push_back(scene.addGameEntity({
             .transform = {.pos = {f * 5.0f, 1.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } },
             .entityType = EntityType::ARROW }));
+    
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, -15.0f } }, .entityType = EntityType::CHARACTER }));
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
 
