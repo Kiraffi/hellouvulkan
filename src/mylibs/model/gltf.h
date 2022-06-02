@@ -42,9 +42,10 @@ struct RenderModel
     PodVector<uint32_t> indices;
     PodVector<Matrix> inverseMatrices;
 
-    Vector<PodVector<BoneAnimationPosOrScale>> animationPosData;
-    Vector<PodVector<BoneAnimationRot>> animationRotData;
-    Vector<PodVector<BoneAnimationPosOrScale>> animationScaleData;
+    // animation index, boneindex?
+    Vector<Vector<PodVector<BoneAnimationPosOrScale>>> animationPosData;
+    Vector<Vector<PodVector<BoneAnimationRot>>> animationRotData;
+    Vector<Vector<PodVector<BoneAnimationPosOrScale>>> animationScaleData;
     Vector<Bone> bones;
     uint32_t boneCount = 0u;
 
@@ -52,7 +53,7 @@ struct RenderModel
     float animEndTime = 0.0f;
 };
 
-bool evaluateAnimation(const RenderModel &model, uint32_t animIndex, float time,
+bool evaluateAnimation(const RenderModel &model, uint32_t animationIndex, float time,
     PodVector<Matrix> &outMatrices);
 
 
