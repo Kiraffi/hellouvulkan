@@ -19,7 +19,7 @@
 
 
 ///// THIS WILL NOT TO WORK WITH MULTIPLE THREADS!
-static constexpr uint32_t MaxAllocations = 1024u;
+static constexpr uint32_t MaxAllocations = 65536u;
 static constexpr uint32_t MaxMemorySize = 1024u * 1024u * 1024u * 1u;
 static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u;
 
