@@ -31,7 +31,7 @@ static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
     else if (format == VK_FORMAT_UNDEFINED)
     {
         ASSERT(!"Undefined format");
-        return VK_IMAGE_ASPECT_NONE;
+        return VK_IMAGE_ASPECT_NONE_KHR;
     }
     return aspectMask;
 }

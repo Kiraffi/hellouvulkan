@@ -504,16 +504,22 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
         vkGetPhysicalDeviceProperties(physicalDevice, &prop);
 
         if(prop.apiVersion < VulkanApiVersion)
+        {
+            printf("Api of device is older than required for %s\n", prop.deviceName);
             continue;
-
+        }
         if(!prop.limits.timestampComputeAndGraphics)
+        {
+            printf("No timestamp and queries for %s\n", prop.deviceName);
             continue;
-
+        }
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, vulk->surface);
         bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         if(!swapChainAdequate)
+        {
+            printf("No swapchain for: %s\n", prop.deviceName);
             continue;
-
+        }
         uint32_t formatIndex = ~0u;
 
         for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
@@ -530,11 +536,17 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
         formatIndexFound:
 
         if(formatIndex == ~0u)
+        {
+            printf("No render target format found: %s\n", prop.deviceName);
             continue;
+        }
         ASSERT(formatIndex != ~0u);
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice, vulk->surface);
         if(!indices.isValid())
+        {
+            printf("No required queue indices found or they are not all possible to be in same queue: %s\n", prop.deviceName);
             continue;
+        }
         bool extensionsSupported = false;
         {
             uint32_t extensionCount;
@@ -561,8 +573,10 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 
         }
         if(!extensionsSupported)
+        {
+            printf("No required extension support found for: %s\n", prop.deviceName);
             continue;
-
+        }
         if(prop.deviceType == wantedDeviceType)
         {
             primary = secondary = devices[i];
