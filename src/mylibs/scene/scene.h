@@ -9,7 +9,7 @@ struct SceneData
 {
     MeshRenderSystem& meshRenderSystem;
 
-    Vector<RenderModel> models;
+    Vector<GltfModel> models;
     PodVector<GameEntity> entities;
     std::unordered_map<EntityType, uint32_t> modelRenderMeshTypes;
 };
@@ -21,7 +21,7 @@ public:
 
 
     bool init();
-    bool update(double currentTime);
+    bool update(double deltaTime);
 
     uint32_t addGameEntity(const GameEntity& entity);
     GameEntity& getEntity(uint32_t index);

@@ -11,6 +11,7 @@ enum class EntityType : uint32_t
     // animated thingies
     WOBBLY_THING,
     CHARACTER,
+    LOW_POLY_CHAR,
 
     // non animated
     ARROW,
@@ -31,4 +32,6 @@ struct GameEntity
 {
     Transform transform;
     EntityType entityType = EntityType::NUM_OF_ENTITY_TYPES;
+    double animationTime = 0.0;
+    uint32_t animationIndex = 0u;
 };

@@ -8,13 +8,12 @@
 
 #include <string_view>
 
-struct RenderModel
+struct GltfModel
 {
     struct Vertex
     {
         Vec4 pos;
         Vec4 norm;
-        Vec4 color;
     };
     struct AnimationVertex
     {
@@ -38,6 +37,8 @@ struct RenderModel
     };
 
     PodVector<Vertex> vertices;
+    PodVector<Vec4> vertexColors;
+    PodVector<Vec2> vertexUvs;
     PodVector<AnimationVertex> animationVertices;
     PodVector<uint32_t> indices;
     PodVector<Matrix> inverseMatrices;
@@ -53,8 +54,8 @@ struct RenderModel
     float animEndTime = 0.0f;
 };
 
-bool evaluateAnimation(const RenderModel &model, uint32_t animationIndex, float time,
+bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
     PodVector<Matrix> &outMatrices);
 
 
-bool readGLTF(std::string_view filename, RenderModel &outModel);
+bool readGLTF(std::string_view filename, GltfModel &outModel);

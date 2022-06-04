@@ -10,9 +10,30 @@
 
 #include <string>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+
+static uint32_t convertVec4ColorToU32(const Vec4& col)
+{
+    ASSERT(
+        col.x >= 0.0f && col.x <= 1.0f &&
+        col.y >= 0.0f && col.y <= 1.0f &&
+        col.z >= 0.0f && col.z <= 1.0f &&
+        col.w >= 0.0f && col.w <= 1.0f);
+
+    uint32_t result = 0u;
+
+    return (
+        (uint32_t(col.x * 255.0f) << 0) +
+        (uint32_t(col.y * 255.0f) << 8) +
+        (uint32_t(col.z * 255.0f) << 16) +
+        (uint32_t(col.w * 255.0f) << 24));
+}
 
 MeshRenderSystem::~MeshRenderSystem()
 {
+    destroyImage(paletteImage);
+
     for (uint32_t i = 0; i < ARRAYSIZES(meshRenderGraphicsPipeline); ++i)
         destroyPipeline(meshRenderGraphicsPipeline[i]);
 
@@ -23,12 +44,38 @@ MeshRenderSystem::~MeshRenderSystem()
     destroyBuffer(modelRenderMatricesBuffer);
     destroyBuffer(modelRenderNormaMatricesBuffer);
     destroyBuffer(modelBoneRenderMatricesBuffer);
-
 }
 
 
 bool MeshRenderSystem::init()
 {
+    int imageWidth;
+    int imageHeight;
+    int imageComponents;
+
+    unsigned char* image = stbi_load("assets/textures/palette.png", &imageWidth, &imageHeight, &imageComponents, STBI_rgb_alpha);
+
+    if (image == nullptr)
+    {
+        printf("Failed to load palette file\n");
+        return false;
+    }
+
+    if (!createImage(imageWidth, imageHeight, VK_FORMAT_R8G8B8A8_SRGB,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        "PaletteTexture", paletteImage))
+    {
+        printf("Failed to create image for text!\n");
+        return false;
+    }
+
+    updateImageWithData(imageWidth, imageHeight, 4u,
+        paletteImage,
+        (uint32_t)imageWidth * imageHeight * 4u, (void*)image);
+    delete image;
+    image = nullptr;
+
     vertexBuffer = createBuffer(32u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
@@ -103,7 +150,12 @@ bool MeshRenderSystem::init()
 
                 DescriptorInfo(vertexBuffer),
                 DescriptorInfo(animationVertexBuffer),
+                
             });
+        if (!depthOnlyRender)
+            pipeline.descriptorSetBinds.push_back(
+                DescriptorInfo(paletteImage.imageView, paletteImage.layout, vulk->globalTextureSampler));
+
 
         if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
         {
@@ -115,21 +167,59 @@ bool MeshRenderSystem::init()
     return true;
 }
 
-uint32_t MeshRenderSystem::addModel(const RenderModel& renderModel)
+uint32_t MeshRenderSystem::addModel(const GltfModel& model)
 {
-    uint32_t newVertices = renderModel.vertices.size();
-    uint32_t newAnimationVertices = renderModel.animationVertices.size();
-    uint32_t newIndices = renderModel.indices.size();
+    uint32_t newVertices = model.vertices.size();
+    uint32_t newAnimationVertices = model.animationVertices.size();
+    uint32_t newIndices = model.indices.size();
     // Make sure to add animated models first to keep animatedvertex index same as vertexindex.
     ASSERT(newAnimationVertices == 0 || verticesCount == animatedVerticesCount);
-    uint32_t result = ~9u;
+    uint32_t result = ~0u;
+
+
+    // Could be packed better
+    struct RenderModel
+    {
+        Vec4 position;
+        Vec4 normal;
+        Vec2 uv;
+        uint32_t color = ~0u;
+
+        // 1, use vertexcolor, 2, use uvs
+        uint32_t attributes = 0u;
+    };
+
+    PodVector<RenderModel> renderModel;
+    renderModel.resize(newVertices);
+
+    for (uint32_t i = 0; i < newVertices; ++i)
+    {
+        RenderModel& rendModel = renderModel[i];
+        
+        rendModel.position = model.vertices[i].pos;
+        rendModel.normal = model.vertices[i].norm;
+
+        if (i < model.vertexColors.size())
+        {
+            rendModel.color = convertVec4ColorToU32(model.vertexColors[i]);
+            rendModel.attributes |= 1;
+        }
+
+        if (i < model.vertexUvs.size())
+        {
+            rendModel.uv = model.vertexUvs[i];
+            rendModel.attributes |= 2;
+        }
+
+    }
+
     beginSingleTimeCommands();
 
-    addToCopylist(sliceFromPodVectorBytes(renderModel.indices), indexDataBuffer.buffer, indicesCount * sizeof(uint32_t));
-    addToCopylist(sliceFromPodVectorBytes(renderModel.vertices), vertexBuffer.buffer, verticesCount * sizeof(RenderModel::Vertex));
+    addToCopylist(sliceFromPodVectorBytes(model.indices), indexDataBuffer.buffer, indicesCount * sizeof(uint32_t));
+    addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer.buffer, verticesCount * sizeof(RenderModel));
     if (newAnimationVertices > 0)
-        addToCopylist(sliceFromPodVectorBytes(renderModel.animationVertices), animationVertexBuffer.buffer, 
-            animatedVerticesCount * sizeof(RenderModel::AnimationVertex));
+        addToCopylist(sliceFromPodVectorBytes(model.animationVertices), animationVertexBuffer.buffer,
+            animatedVerticesCount * sizeof(GltfModel::AnimationVertex));
     flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     endSingleTimeCommands();

@@ -8,10 +8,10 @@ static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
 static bool loadModelForScene(SceneData &sceneData, std::string_view filename, EntityType entityType)
 {
-    sceneData.models.push_back(RenderModel{});
-    RenderModel& renderModel = sceneData.models.back();
+    sceneData.models.push_back(GltfModel{});
+    GltfModel& gltfModel = sceneData.models.back();
 
-    bool readSuccess = readGLTF(filename, renderModel);
+    bool readSuccess = readGLTF(filename, gltfModel);
 
     printf("%s gltf read success: %i\n", filename.data(), readSuccess);
     if (!readSuccess)
@@ -20,7 +20,7 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
         return false;
     }
 
-    sceneData.modelRenderMeshTypes.insert({ entityType, sceneData.meshRenderSystem.addModel(renderModel) });
+    sceneData.modelRenderMeshTypes.insert({ entityType, sceneData.meshRenderSystem.addModel(gltfModel) });
 
     return true;
 }
@@ -30,11 +30,15 @@ bool Scene::init()
 {
     ScopedTimer timer("Scene init");
 
+
+
     // animated first, because it makes animatedvertices first so the vertex index is same, otherwise i need to somehow pass special offset
     // to vertex shader to determine where to read animated vertices.
     if (!loadModelForScene(sceneData, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
         return false;
     if (!loadModelForScene(sceneData, "assets/models/character8.gltf", EntityType::CHARACTER))
+        return false;
+    if (!loadModelForScene(sceneData, "assets/models/lowpoly6.gltf", EntityType::LOW_POLY_CHAR))
         return false;
     
 
@@ -65,9 +69,9 @@ bool Scene::init()
 }
 
 
-bool Scene::update(double currentTime)
+bool Scene::update(double deltaTime)
 {
-    for (const auto& entity : sceneData.entities)
+    for (auto& entity : sceneData.entities)
     {
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES)
             continue;
@@ -84,7 +88,8 @@ bool Scene::update(double currentTime)
 
         if (model.animationVertices.size() > 0)
         {
-            if (!evaluateAnimation(model, 0, currentTime, matrices))
+            entity.animationTime += deltaTime;
+            if (!evaluateAnimation(model, entity.animationIndex, entity.animationTime, matrices))
                 continue;
         }
 

@@ -124,41 +124,27 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
-    for(float f = -2.5f; f <= 2.5f; f += 1.0f)
-        entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 1.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } },
-            .entityType = EntityType::ARROW }));
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
     
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, -15.0f } }, .entityType = EntityType::CHARACTER }));
-
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
 
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, -15.0f } }, .entityType = EntityType::CHARACTER }));
+ 
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
+    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
+
+
+    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
+    {
+        entityIndices.push_back(scene.addGameEntity({ 
+            .transform = {.pos = {f * 5.0f, 1.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW }));
+        entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE }));
+        entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH }));
+        entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, }, .entityType = EntityType::BLOB }));
+        entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, }, .entityType = EntityType::BLOB_FLAT }));
+    }
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING }));
-
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
-
-
-    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
-        entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, },
-            .entityType = EntityType::TREE }));
-
-    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
-        entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, },
-            .entityType = EntityType::TREE_SMOOTH }));
-
-
-    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
-        entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, },
-            .entityType = EntityType::BLOB }));
-
-    for (float f = -2.5f; f <= 2.5f; f += 1.0f)
-        entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, },
-            .entityType = EntityType::BLOB_FLAT }));
 
     if (!createRenderTargetImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
         VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -230,6 +216,24 @@ void VulkanDrawStuff::logicUpdate()
 
     checkCameraKeypresses(dt, camera);
 
+    if (isPressed(GLFW_KEY_KP_ADD))
+    {
+        for (uint32_t entityIndex : entityIndices)
+        {
+            GameEntity& entity = scene.getEntity(entityIndex);
+            ++entity.animationIndex;
+        }
+    }
+    if (isPressed(GLFW_KEY_KP_SUBTRACT))
+    {
+        for (uint32_t entityIndex : entityIndices)
+        {
+            GameEntity& entity = scene.getEntity(entityIndex);
+            if(entity.animationIndex > 0)
+                --entity.animationIndex;
+        }
+    }
+
     if (isPressed(GLFW_KEY_SPACE))
         showNormalMap = !showNormalMap;
 
@@ -285,7 +289,7 @@ void VulkanDrawStuff::renderUpdate()
         while (rotationAmount <= -2.0f * PI) rotationAmount += 2.0f * PI;
     }
 
-    scene.update(getTime());
+    scene.update(dt);
     meshRenderSystem.prepareToRender();
 
     Vec3 sundir = getSunDirection(sunCamera);

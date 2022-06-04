@@ -15,7 +15,7 @@ public:
     ~MeshRenderSystem();
 
     bool init();
-    uint32_t addModel(const RenderModel &renderModel);
+    uint32_t addModel(const GltfModel& renderModel);
 
 
     void clear();
@@ -48,6 +48,8 @@ private:
     Buffer modelRenderMatricesBuffer;
     Buffer modelBoneRenderMatricesBuffer;
     Buffer modelRenderNormaMatricesBuffer;
+
+    Image paletteImage;
 
     Pipeline meshRenderGraphicsPipeline[4];
 

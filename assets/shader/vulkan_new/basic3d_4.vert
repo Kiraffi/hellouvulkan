@@ -5,12 +5,20 @@
 
 #include "common.h"
 
+
+// Could be packed better
 struct VData
 {
     vec4 pos;
     vec4 nor;
-    vec4 color;
+    vec2 uv;
+
+    uint color;
+
+    // 1, use vertexcolor, 2, use uvs
+    uint attributes;
 };
+
 
 layout (binding = 2, MATRIX_ORDER) restrict readonly buffer EnityModelMatrices
 {
@@ -43,12 +51,14 @@ struct AnimationVData
 layout (std430, binding = 6) restrict readonly buffer animationVertexData
 {
     AnimationVData animationVertexValues[];
-};
+}; 
 
 #if DEPTH_ONLY
 #else
-    layout (location = 0) out flat vec4 colOut;
+    layout (location = 0) out vec4 colOut;
     layout (location = 1) out vec3 normalDirOut;
+    layout (location = 2) out flat uint attributesOut;
+    layout (location = 3) out flat vec2 uvOut;
 #endif
 
 void main()
@@ -87,7 +97,14 @@ void main()
     #if DEPTH_ONLY
     #else
         vec3 normalDir =  normalize(enityModelMatrices[instanceIndex] * vec4(normalize(nor.xyz), 0.0f)).xyz;
-        colOut = data.color;
+        colOut = vec4(
+            float((data.color >> 0) & 255), 
+            float((data.color >> 8) & 255),
+            float((data.color >> 16) & 255),
+            float((data.color >> 24) & 255)) / 255.0f;
+
         normalDirOut = normalDir.xyz;
+        attributesOut = data.attributes;
+        uvOut = data.uv;
     #endif
 }

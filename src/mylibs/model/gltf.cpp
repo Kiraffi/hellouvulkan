@@ -475,7 +475,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
 
 
 
-bool readGLTF(std::string_view filename, RenderModel &outModel)
+bool readGLTF(std::string_view filename, GltfModel &outModel)
 {
     GltfData data;
 
@@ -844,16 +844,13 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
         GltfMeshNode &node = data.meshes [0];
         if(node.positionIndex >= data.accessors.size() ||
             node.normalIndex >= data.accessors.size() ||
-            node.colorIndex >= data.accessors.size() ||
-
             node.indicesIndex >= data.accessors.size())
         {
             return false;
         }
         uint32_t vertexCount = data.accessors[node.positionIndex].count;
         if(vertexCount == ~0u || vertexCount == 0u ||
-            vertexCount != data.accessors[node.normalIndex].count ||
-            vertexCount != data.accessors[node.colorIndex].count)
+            vertexCount != data.accessors[node.normalIndex].count )
         {
             return false;
         }
@@ -871,9 +868,19 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
             return false;
         if(data.accessors[node.normalIndex].countType != GltfBufferComponentCountType::VEC3)
             return false;
-        if(data.accessors[node.colorIndex].countType != GltfBufferComponentCountType::VEC4)
-            return false;
 
+        if (node.colorIndex < data.accessors.size() && vertexCount == data.accessors[node.colorIndex].count)
+        {
+            if (data.accessors[node.colorIndex].countType != GltfBufferComponentCountType::VEC4)
+                return false;
+            outModel.vertexColors.resize(vertexCount);
+        }
+        if (node.uvIndex < data.accessors.size() && vertexCount == data.accessors[node.uvIndex].count)
+        {
+            if (data.accessors[node.uvIndex].countType != GltfBufferComponentCountType::VEC2)
+                return false;
+            outModel.vertexUvs.resize(vertexCount);
+        }
         if(data.accessors[node.indicesIndex].countType != GltfBufferComponentCountType::SCALAR)
             return false;
 
@@ -882,21 +889,29 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
 
         ArraySliceViewBytes verticesMemoryRange = sliceFromPodVectorBytes(outModel.vertices);
         if(!gltfReadIntoBuffer(data, node.positionIndex,
-            offsetof(RenderModel::Vertex, pos),
+            offsetof(GltfModel::Vertex, pos),
             verticesMemoryRange))
             return false;
 
         if(!gltfReadIntoBuffer(data, node.normalIndex,
-            offsetof(RenderModel::Vertex, norm),
+            offsetof(GltfModel::Vertex, norm),
             verticesMemoryRange))
             return false;
 
-        if(!gltfReadIntoBuffer(data, node.colorIndex,
-            offsetof(RenderModel::Vertex, color),
-            verticesMemoryRange))
-            return false;
-
-
+        if (node.colorIndex < data.accessors.size())
+        {
+            if (!gltfReadIntoBuffer(data, node.colorIndex,
+                0,
+                sliceFromPodVectorBytes(outModel.vertexColors)))
+                return false;
+        }
+        if (node.uvIndex < data.accessors.size())
+        {
+            if (!gltfReadIntoBuffer(data, node.uvIndex,
+                0,
+                sliceFromPodVectorBytes(outModel.vertexUvs)))
+                return false;
+        }
         if(!gltfReadIntoBuffer(data, node.indicesIndex, 0,
             sliceFromPodVectorBytes(outModel.indices)))
             return false;
@@ -922,12 +937,12 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
                 return false;
 
             if(!gltfReadIntoBuffer(data, node.weightIndex,
-                offsetof(RenderModel::AnimationVertex, weights),
+                offsetof(GltfModel::AnimationVertex, weights),
                 sliceFromPodVectorBytes(outModel.animationVertices)))
                 return false;
 
             if(!gltfReadIntoBuffer(data, node.jointsIndex,
-                offsetof(RenderModel::AnimationVertex, boneIndices),
+                offsetof(GltfModel::AnimationVertex, boneIndices),
                 sliceFromPodVectorBytes(outModel.animationVertices)))
                 return false;
             /*
@@ -985,11 +1000,11 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
                     outModel.animationScaleData[animationIndex].resize(jointCount);
 
 
-                    PodVector<RenderModel::BoneAnimationPosOrScale>& bonePosVector
+                    PodVector<GltfModel::BoneAnimationPosOrScale>& bonePosVector
                         = outModel.animationPosData[animationIndex][boneIndex];
-                    PodVector<RenderModel::BoneAnimationRot>& boneRotVector
+                    PodVector<GltfModel::BoneAnimationRot>& boneRotVector
                         = outModel.animationRotData[animationIndex][boneIndex];
-                    PodVector<RenderModel::BoneAnimationPosOrScale>& boneScaleVector
+                    PodVector<GltfModel::BoneAnimationPosOrScale>& boneScaleVector
                         = outModel.animationScaleData[animationIndex][boneIndex];
 
                     uint32_t positionSamplerIndex = getSamplerIndex(data, animationIndex, jointIndex,
@@ -1087,7 +1102,7 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
         }
     }
 /*
-    const ArraySliceView<RenderModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
+    const ArraySliceView<GltfModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
     for(uint32_t i = 0; i < vertices.size(); ++i)
     {
         printf("pos vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
@@ -1095,7 +1110,7 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
         printf("col vert: %i:   x: %f, y: %f, z: %f, w: %f\n", i, vertices[i].color.x, vertices[i].color.y, vertices[i].color.z, vertices[i].color.w);
     }
 
-    const ArraySliceView<RenderModel::AnimationVertex> animationVertices(
+    const ArraySliceView<GltfModel::AnimationVertex> animationVertices(
         &outModel.animationVertices[0], outModel.animationVertices.size());
     for(uint32_t i = 0; i < animationVertices.size(); ++i)
     {
@@ -1132,7 +1147,7 @@ bool readGLTF(std::string_view filename, RenderModel &outModel)
     return true;
 }
 
-static bool evaluateBone(const RenderModel &model, uint32_t animationIndex, uint32_t boneIndex,
+static bool evaluateBone(const GltfModel &model, uint32_t animationIndex, uint32_t boneIndex,
     float time, const Matrix &parentMatrix, PodVector<Matrix> &outMatrices)
 {
     if(boneIndex >= model.bones.size())
@@ -1152,12 +1167,12 @@ static bool evaluateBone(const RenderModel &model, uint32_t animationIndex, uint
         return frac;
     };
 
-    const PodVector<RenderModel::BoneAnimationPosOrScale> &posTime = model.animationPosData[animationIndex][boneIndex];
+    const PodVector<GltfModel::BoneAnimationPosOrScale> &posTime = model.animationPosData[animationIndex][boneIndex];
     for(uint32_t i = 0; i < posTime.size(); ++i)
     {
         uint32_t nextI = std::min(i + 1, posTime.size() - 1);
-        const RenderModel::BoneAnimationPosOrScale &prev = posTime[i];
-        const RenderModel::BoneAnimationPosOrScale &next = posTime[nextI];
+        const GltfModel::BoneAnimationPosOrScale &prev = posTime[i];
+        const GltfModel::BoneAnimationPosOrScale &next = posTime[nextI];
         if((time <= next.timeStamp) || i == nextI)
         {
             float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
@@ -1166,26 +1181,26 @@ static bool evaluateBone(const RenderModel &model, uint32_t animationIndex, uint
         }
     }
 
-    const PodVector<RenderModel::BoneAnimationRot> &rotTime = model.animationRotData[animationIndex][boneIndex];
+    const PodVector<GltfModel::BoneAnimationRot> &rotTime = model.animationRotData[animationIndex][boneIndex];
     for(uint32_t i = 0; i < rotTime.size(); ++i)
     {
         uint32_t nextI = std::min(i + 1, rotTime.size() - 1);
-        const RenderModel::BoneAnimationRot &prev = rotTime[i];
-        const RenderModel::BoneAnimationRot &next = rotTime[nextI];
+        const GltfModel::BoneAnimationRot &prev = rotTime[i];
+        const GltfModel::BoneAnimationRot &next = rotTime[nextI];
         if((time <= next.timeStamp) || i == nextI)
         {
             float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
-            rot = slerp(prev.value, next.value, frac);
+            rot = normalize(lerp(prev.value, next.value, frac));
             break;
         }
     }
 
-    const PodVector<RenderModel::BoneAnimationPosOrScale> &scaleTime = model.animationScaleData[animationIndex][boneIndex];
+    const PodVector<GltfModel::BoneAnimationPosOrScale> &scaleTime = model.animationScaleData[animationIndex][boneIndex];
     for(uint32_t i = 0; i < scaleTime.size(); ++i)
     {
         uint32_t nextI = std::min(i + 1, scaleTime.size() - 1);
-        const RenderModel::BoneAnimationPosOrScale &prev = scaleTime[i];
-        const RenderModel::BoneAnimationPosOrScale &next = scaleTime[nextI];
+        const GltfModel::BoneAnimationPosOrScale &prev = scaleTime[i];
+        const GltfModel::BoneAnimationPosOrScale &next = scaleTime[nextI];
         if((time <= next.timeStamp) || i == nextI)
         {
             float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
@@ -1206,22 +1221,17 @@ static bool evaluateBone(const RenderModel &model, uint32_t animationIndex, uint
     return true;
 }
 
-bool evaluateAnimation(const RenderModel &model, uint32_t animationIndex, float time,
+bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
     PodVector<Matrix> &outMatrices)
 {
-    time -= model.animStartTime;
-    if(time < 0.0f || model.bones.size() == 0)
+    if(model.bones.size() == 0)
         return false;
 
-    if(model.animStartTime < model.animEndTime)
-    {
-        while(time > model.animEndTime)
-            time -= model.animEndTime - model.animStartTime;
-    }
-    else
-    {
-        time = model.animStartTime;
-    }
+    while (time < model.animStartTime)
+        time += model.animEndTime - model.animStartTime;
+    while (time > model.animEndTime)
+        time -= model.animEndTime - model.animStartTime;
+
     if (model.animationPosData.size() > 255)
         return false;
     outMatrices.resize(256);

@@ -354,6 +354,8 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
     if (writeDescriptorCount < 1u)
         return false;
 
+    ASSERT(descriptors.size() == descriptorInfos.size());
+
     PodVector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
     PodVector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
 
