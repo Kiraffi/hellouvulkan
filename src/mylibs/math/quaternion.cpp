@@ -20,9 +20,11 @@ Quaternion operator *(const Quaternion &a, const Quaternion &b)
 Quaternion normalize(const Quaternion &q)
 {
     Quaternion result;
-    result.w = std::min(q.w, 1.0f);
-    if(result.w != 1.0f && result.w != -1.0f)
+
+    result.w = std::max(std::min(q.w, 1.0f), -1.0f);
+    if(result.w < 1.0f && result.w > -1.0f)
         result.v = normalize(q.v) * fsqrtf(1.0f - result.w * result.w);
+       
     return result;
 }
 
@@ -101,26 +103,45 @@ Quaternion operator*(float t, const Quaternion &q)
     return q * t;
 }
 
- Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
- {
+Quaternion lerp(Quaternion const& q1, Quaternion const& q2, float t)
+{
     float dotAngle = dot(q1, q2);
+    Quaternion other = q2;
+    if (dotAngle < 0.0f)
+        other = Quaternion(-q2.v, q2.w);
 
+    Quaternion result;
+    result.v = q1.v - t * (q1.v - other.v);
+    result.w = q1.w - t * (q1.w - other.w);
+    return result;
+}
+
+Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
+{
+
+    float dotAngle = dot(q1, q2);
     const float DOT_THRESHOLD = 0.9995;
-    if (std::abs(dotAngle) > DOT_THRESHOLD)
+    Quaternion other = q2;
+    if (dotAngle < 0.0f)
+    {
+        other = Quaternion(-q2.v, q2.w);
+    }
+    
+    if (std::abs(dotAngle) > DOT_THRESHOLD)    
     {
         Quaternion result;
-        result.v = q1.v + t * (q2.v - q1.v);
-        result.w = q1.w + t * (q2.w - q1.w);
+        result.v = q1.v - t * (q1.v - other.v);
+        result.w = q1.w - t * (q1.w - other.w);
         return normalize(result);
     }
-
+    
     dotAngle = std::min(1.0f, std::max(-1.0f, dotAngle));
     float thetaDiff = std::acos(dotAngle);
     float theta = thetaDiff * t;
 
     Quaternion result;
-    result.v = q2.v - q1.v * dotAngle;
-    result.w = q2.w - q1.w * dotAngle;
+    result.v = other.v - q1.v * dotAngle;
+    result.w = other.w - q1.w * dotAngle;
     normalize(result);
 
     result = result * sin(theta);
