@@ -9,14 +9,14 @@
 // Could be packed better
 struct VData
 {
-    vec4 pos;
-    vec4 nor;
+    vec3 pos;
+    uint color;
+    
     vec2 uv;
 
-    uint color;
-
+    // 16 bit usigned x, y, z then Attributes
     // 1, use vertexcolor, 2, use uvs
-    uint attributes;
+    uvec2 normalXYZAttributes;
 };
 
 
@@ -65,6 +65,11 @@ void main()
 {
     uint instanceIndex = gl_InstanceIndex;
     VData data = vertexValues[gl_VertexIndex];
+    vec3 dataNormal = vec3(0.0f);
+    
+    dataNormal.x = float(uint(data.normalXYZAttributes.x & 0xffffu)) / 65535.0f * 2.0f - 1.0f;
+    dataNormal.y = float(uint(data.normalXYZAttributes.x >> 16u)) / 65535.0f * 2.0f - 1.0f;
+    dataNormal.z = float(uint(data.normalXYZAttributes.y & 0xffffu)) / 65535.0f * 2.0f - 1.0f;
 
     #if USE_ANIMATION
         AnimationVData animData = animationVertexValues[gl_VertexIndex];
@@ -77,14 +82,15 @@ void main()
         #if DEPTH_ONLY
         #else
             vec4 nor = vec4(0.0f);
-            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.x] * vec4(data.nor.xyz, 1.0f) ) * animData.weights.x;
-            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.y] * vec4(data.nor.xyz, 1.0f) ) * animData.weights.y;
-            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.z] * vec4(data.nor.xyz, 1.0f) ) * animData.weights.z;
-            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.w] * vec4(data.nor.xyz, 1.0f) ) * animData.weights.w;
+            
+            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.x] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.x;
+            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.y] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.y;
+            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.z] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.z;
+            nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.w] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.w;
         #endif
     #else
         vec4 pos = vec4(data.pos.xyz, 1.0f);
-        vec4 nor = vec4(data.nor.xyz, 0.0f);
+        vec4 nor = vec4(dataNormal.xyz, 0.0f);
     #endif
 
     #if DEPTH_ONLY
@@ -104,7 +110,7 @@ void main()
             float((data.color >> 24) & 255)) / 255.0f;
 
         normalDirOut = normalDir.xyz;
-        attributesOut = data.attributes;
+        attributesOut = (data.normalXYZAttributes.y >> 16);
         uvOut = data.uv;
     #endif
 }

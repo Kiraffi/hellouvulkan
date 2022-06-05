@@ -180,13 +180,14 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
     // Could be packed better
     struct RenderModel
     {
-        Vec4 position;
-        Vec4 normal;
-        Vec2 uv;
+        Vec3 position;
         uint32_t color = ~0u;
 
+        Vec2 uv;
+
+        uint16_t normal[3];
         // 1, use vertexcolor, 2, use uvs
-        uint32_t attributes = 0u;
+        uint16_t attributes = 0u;
     };
 
     PodVector<RenderModel> renderModel;
@@ -197,7 +198,10 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
         RenderModel& rendModel = renderModel[i];
         
         rendModel.position = model.vertices[i].pos;
-        rendModel.normal = model.vertices[i].norm;
+        Vec3 norm = (model.vertices[i].norm + Vec3(1.0f, 1.0f, 1.0f)) * 0.5f * 65535.0f;
+        rendModel.normal[0] = uint16_t(norm.x);
+        rendModel.normal[1] = uint16_t(norm.y);
+        rendModel.normal[2] = uint16_t(norm.z);
 
         if (i < model.vertexColors.size())
         {

@@ -12,8 +12,10 @@ struct GltfModel
 {
     struct Vertex
     {
-        Vec4 pos;
-        Vec4 norm;
+        Vec3 pos;
+        float padding1;
+        Vec3 norm;
+        float padding2;
     };
     struct AnimationVertex
     {
