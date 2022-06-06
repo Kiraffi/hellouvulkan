@@ -2,6 +2,7 @@
 
 #define DEPTH_ONLY ((SPECIAL_PERMUTATION & 1) == 1)
 #define USE_ANIMATION ((SPECIAL_PERMUTATION & 2) == 0)
+#define USE_LINE (SPECIAL_PERMUTATION == 5)
 
 #include "common.h"
 
@@ -11,14 +12,13 @@ struct VData
 {
     vec3 pos;
     uint color;
-    
+
     vec2 uv;
 
     // 16 bit usigned x, y, z then Attributes
     // 1, use vertexcolor, 2, use uvs
     uvec2 normalXYZAttributes;
 };
-
 
 layout (binding = 2, MATRIX_ORDER) restrict readonly buffer EnityModelMatrices
 {
@@ -36,7 +36,6 @@ layout (binding = 4, MATRIX_ORDER) restrict readonly buffer AnimationDataNormals
     mat3x3 normalInverses[];
 };
 
-
 layout (std430, binding = 5) restrict readonly buffer vertex_data
 {
     VData vertexValues[];
@@ -51,7 +50,7 @@ struct AnimationVData
 layout (std430, binding = 6) restrict readonly buffer animationVertexData
 {
     AnimationVData animationVertexValues[];
-}; 
+};
 
 #if DEPTH_ONLY
 #else
@@ -65,8 +64,9 @@ void main()
 {
     uint instanceIndex = gl_InstanceIndex;
     VData data = vertexValues[gl_VertexIndex];
+
     vec3 dataNormal = vec3(0.0f);
-    
+
     dataNormal.x = float(uint(data.normalXYZAttributes.x & 0xffffu)) / 65535.0f * 2.0f - 1.0f;
     dataNormal.y = float(uint(data.normalXYZAttributes.x >> 16u)) / 65535.0f * 2.0f - 1.0f;
     dataNormal.z = float(uint(data.normalXYZAttributes.y & 0xffffu)) / 65535.0f * 2.0f - 1.0f;
@@ -82,7 +82,7 @@ void main()
         #if DEPTH_ONLY
         #else
             vec4 nor = vec4(0.0f);
-            
+
             nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.x] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.x;
             nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.y] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.y;
             nor += (animationBoneMatrices[instanceIndex * 256 + animData.boneIndices.z] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.z;
@@ -102,13 +102,13 @@ void main()
     gl_Position = finalMat * vec4(pos.xyz, 1.0f);
     #if DEPTH_ONLY
     #else
-        vec3 normalDir =  normalize(enityModelMatrices[instanceIndex] * vec4(normalize(nor.xyz), 0.0f)).xyz;
         colOut = vec4(
-            float((data.color >> 0) & 255), 
+            float((data.color >> 0) & 255),
             float((data.color >> 8) & 255),
             float((data.color >> 16) & 255),
             float((data.color >> 24) & 255)) / 255.0f;
 
+        vec3 normalDir =  normalize(enityModelMatrices[instanceIndex] * vec4(normalize(nor.xyz), 0.0f)).xyz;
         normalDirOut = normalDir.xyz;
         attributesOut = (data.normalXYZAttributes.y >> 16);
         uvOut = data.uv;

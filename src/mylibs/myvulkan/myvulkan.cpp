@@ -682,6 +682,7 @@ static bool createDeviceWithQueues()
     // createdeviceinfo
     {
         static constexpr VkPhysicalDeviceFeatures deviceFeatures = {
+            //.fillModeNonSolid = VK_TRUE,
             .samplerAnisotropy = VK_FALSE,
         };
         static constexpr  VkPhysicalDeviceVulkan13Features deviceFeatures13 = {
@@ -1467,7 +1468,7 @@ void present(Image & imageToPresent)
 
 bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     const PodVector<RenderTarget> &colorTargets, const DepthTest &depthTest, Pipeline &outPipeline,
-    std::string_view pipelineName, bool useDynamic)
+    std::string_view pipelineName, bool useDynamic, VkPrimitiveTopology topology)
 {
     destroyPipeline(outPipeline);
 
@@ -1503,12 +1504,12 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
             .pName = "main",
             });
     }
-    
+
 
     VkPipelineVertexInputStateCreateInfo vertexInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
     VkPipelineInputAssemblyStateCreateInfo assemblyInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-    assemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    assemblyInfo.topology = topology;
     assemblyInfo.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo viewportInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -1517,9 +1518,17 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
 
     VkPipelineRasterizationStateCreateInfo rasterInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     rasterInfo.lineWidth = 1.0f;
-    rasterInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // VK_FRONT_FACE_CLOCKWISE;
-    rasterInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-
+    if(topology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+    {
+        rasterInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // VK_FRONT_FACE_CLOCKWISE;
+        rasterInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    }
+    else
+    {
+        rasterInfo.cullMode = VK_CULL_MODE_NONE;
+        // notice VkPhysicalDeviceFeatures .fillModeNonSolid = VK_TRUE required
+        //rasterInfo.polygonMode = VK_POLYGON_MODE_LINE;
+    }
     VkPipelineMultisampleStateCreateInfo multiSampleInfo = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
     multiSampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -1629,7 +1638,7 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::s
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
-    
+
     if (!createDescriptor(outPipeline))
     {
         printf("Failed to create compute pipeline descriptor\n");

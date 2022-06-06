@@ -23,12 +23,12 @@ static void check_vk_result(VkResult err)
 
 MyImgui::~MyImgui()
 {
-    // Cleanup
-    VkResult err = vkDeviceWaitIdle(vulk->device);
-    VK_CHECK(err);
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    if(renderPass && descriptorPool && frameBuffer)
+    {
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+    }
     if(renderPass)
         vkDestroyRenderPass(vulk->device, renderPass, nullptr);
     if(descriptorPool)
@@ -44,7 +44,7 @@ MyImgui::~MyImgui()
 bool MyImgui::init(GLFWwindow *window)
 {
 
-    renderPass = 
+    renderPass =
         createRenderPass({ RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, .storeOp = VK_ATTACHMENT_STORE_OP_STORE } }, {});
 
     // Create Descriptor Pool
@@ -86,7 +86,7 @@ bool MyImgui::init(GLFWwindow *window)
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-    
+
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForVulkan(window, true);
     ImGui_ImplVulkan_InitInfo init_info = {};
@@ -104,8 +104,8 @@ bool MyImgui::init(GLFWwindow *window)
     init_info.Allocator = nullptr;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, renderPass);
-    
-    
+
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -161,7 +161,7 @@ bool MyImgui::init(GLFWwindow *window)
         ImGui_ImplVulkan_DestroyFontUploadObjects();
     }
 
-    
+
     return true;
 
 }
@@ -225,6 +225,7 @@ void MyImgui::render()
         // Submit command buffer
         vkCmdEndRenderPass(vulk->commandBuffer);
     }
+    writeStamp();
 }
 
 

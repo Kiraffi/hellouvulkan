@@ -9,6 +9,20 @@ Vector2 operator+(const Vector2 &a, const Vector2 &b)
     return result;
 }
 
+Vector2 operator+(const Vector2 &a, float value)
+{
+    Vector2 result(a);
+    result.x += value;
+    result.y += value;
+    return result;
+}
+
+Vector2 operator+(float value, const Vector2 &a)
+{
+    return a + value;
+}
+
+
 Vector2 operator-(const Vector2 &a)
 {
     Vector2 result;
@@ -23,6 +37,14 @@ Vector2 operator-(const Vector2 &a, const Vector2 &b)
     Vector2 result(a);
     result.x -= b.x;
     result.y -= b.y;
+    return result;
+}
+
+Vector2 operator-(const Vector2 &a, float value)
+{
+    Vector2 result(a);
+    result.x -= value;
+    result.y -= value;
     return result;
 }
 
@@ -42,6 +64,21 @@ Vector2 operator*(float value, const Vector2 &a)
     return result;
 }
 
+Vector2 operator /(const Vector2 &a,float value)
+{
+    Vector2 result(a);
+    result.x /= value;
+    result.y /= value;
+    return result;
+}
+
+Vector2 operator /(const Vector2 &a, const Vector2 &b)
+{
+    Vector2 result(a);
+    result.x /= b.x;
+    result.y /= b.y;
+    return result;
+}
 
 float sqrLen(const Vector2 &a)
 {
@@ -82,6 +119,19 @@ Vector3 operator+(const Vector3 &a, const Vector3 &b)
     result.z += b.z;
     return result;
 }
+Vector3 operator+(const Vector3 &a, float value)
+{
+    Vector3 result(a);
+    result.x += value;
+    result.y += value;
+    result.z += value;
+    return result;
+}
+Vector3 operator+(float value, const Vector3 &a)
+{
+    return a + value;
+}
+
 
 Vector3 operator-(const Vector3 &a)
 {
@@ -99,6 +149,15 @@ Vector3 operator-(const Vector3 &a, const Vector3 &b)
     result.x -= b.x;
     result.y -= b.y;
     result.z -= b.z;
+    return result;
+}
+
+Vector3 operator-(const Vector3 &a, float value)
+{
+    Vector3 result(a);
+    result.x -= value;
+    result.y -= value;
+    result.z -= value;
     return result;
 }
 
@@ -120,6 +179,23 @@ Vector3 operator*(float value, const Vector3 &a)
     return result;
 }
 
+Vector3 operator /(const Vector3 &a,float value)
+{
+    Vector3 result(a);
+    result.x /= value;
+    result.y /= value;
+    result.z /= value;
+    return result;
+}
+
+Vector3 operator /(const Vector3 &a, const Vector3 &b)
+{
+    Vector3 result(a);
+    result.x /= b.x;
+    result.y /= b.y;
+    result.z /= b.z;
+    return result;
+}
 
 float sqrLen(const Vector3 &a)
 {

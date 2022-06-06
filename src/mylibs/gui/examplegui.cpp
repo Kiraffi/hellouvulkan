@@ -1,5 +1,3 @@
-#pragma once
-
 #include "examplegui.h"
 
 #include <imgui/imgui.h>

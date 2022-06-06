@@ -231,7 +231,7 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
         if (!shader.module)
             return false;
 
-            
+
         bool parseSuccess = parseShaderCode(createInfo, filename, shader);
         ASSERT(parseSuccess);
         if (!parseSuccess)
@@ -267,6 +267,8 @@ bool loadShaders()
     if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
     if (!loadShader("basic3d_4.vert", ShaderType::Basic3DVert)) return false;
 
+    if (!loadShader("line.vert", ShaderType::LineVert)) return false;
+
     if (!loadShader("coloredquad.frag", ShaderType::ColoredQuadFrag)) return false;
     if (!loadShader("coloredquad.vert", ShaderType::ColoredQuadVert)) return false;
 
@@ -280,7 +282,7 @@ bool loadShaders()
 
     if (!loadShader("compute_test.comp", ShaderType::ComputeTestComp)) return false;
 
-    
+
     if (!loadShader("lighting.comp", ShaderType::LightingShader)) return false;
     if (!loadShader("tonemap.comp", ShaderType::TonemapShader)) return false;
 
@@ -289,7 +291,7 @@ bool loadShaders()
 
     if (!loadShader("convertrgbas16.comp", ShaderType::ConvertFromRGBAS16)) return false;
 
-    
+
 
     return true;
 }

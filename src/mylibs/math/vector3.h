@@ -41,20 +41,30 @@ struct Vector4
 };
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b);
+Vector2 operator+(const Vector2 &a, float value);
+Vector2 operator+(float value, const Vector2 &a);
 Vector2 operator-(const Vector2 &a);
 Vector2 operator-(const Vector2 &a, const Vector2 &b);
+Vector2 operator-(const Vector2 &a, float value);
 Vector2 operator*(const Vector2 &a, float value);
 Vector2 operator*(float value, const Vector2 &a);
+Vector2 operator /(const Vector2 &a,float value);
+Vector2 operator /(const Vector2 &a, const Vector2 &b);
 float sqrLen(const Vector2 &a);
 float len(const Vector2 &a);
 Vector2 normalize(const Vector2 &a);
 
 
 Vector3 operator+(const Vector3 &a, const Vector3 &b);
+Vector3 operator+(const Vector3 &a, float value);
+Vector3 operator+(float value, const Vector3 &a);
 Vector3 operator-(const Vector3 &a);
 Vector3 operator-(const Vector3 &a, const Vector3 &b);
+Vector3 operator-(const Vector3 &a, float value);
 Vector3 operator*(const Vector3 &a, float value);
 Vector3 operator*(float value, const Vector3 &a);
+Vector3 operator /(const Vector3 &a,float value);
+Vector3 operator /(const Vector3 &a, const Vector3 &b);
 float sqrLen(const Vector3 &a);
 float len(const Vector3 &a);
 Vector3 normalize(const Vector3 &a);

@@ -1,5 +1,6 @@
 #include "meshrendersystem.h"
 
+#include <core/general.h>
 #include <container/arraysliceview.h>
 
 #include <myvulkan/myvulkan.h>
@@ -13,22 +14,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-static uint32_t convertVec4ColorToU32(const Vec4& col)
-{
-    ASSERT(
-        col.x >= 0.0f && col.x <= 1.0f &&
-        col.y >= 0.0f && col.y <= 1.0f &&
-        col.z >= 0.0f && col.z <= 1.0f &&
-        col.w >= 0.0f && col.w <= 1.0f);
-
-    uint32_t result = 0u;
-
-    return (
-        (uint32_t(col.x * 255.0f) << 0) +
-        (uint32_t(col.y * 255.0f) << 8) +
-        (uint32_t(col.z * 255.0f) << 16) +
-        (uint32_t(col.w * 255.0f) << 24));
-}
 
 MeshRenderSystem::~MeshRenderSystem()
 {
@@ -100,7 +85,7 @@ bool MeshRenderSystem::init()
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render normal matrices buffer");
-    
+
 
     modelBoneRenderMatricesBuffer = createBuffer(8u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -150,7 +135,7 @@ bool MeshRenderSystem::init()
 
                 DescriptorInfo(vertexBuffer),
                 DescriptorInfo(animationVertexBuffer),
-                
+
             });
         if (!depthOnlyRender)
             pipeline.descriptorSetBinds.push_back(
@@ -196,7 +181,7 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
     for (uint32_t i = 0; i < newVertices; ++i)
     {
         RenderModel& rendModel = renderModel[i];
-        
+
         rendModel.position = model.vertices[i].pos;
         Vec3 norm = (model.vertices[i].norm + Vec3(1.0f, 1.0f, 1.0f)) * 0.5f * 65535.0f;
         rendModel.normal[0] = uint16_t(norm.x);
@@ -205,7 +190,7 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
 
         if (i < model.vertexColors.size())
         {
-            rendModel.color = convertVec4ColorToU32(model.vertexColors[i]);
+            rendModel.color = getColor(model.vertexColors[i]);
             rendModel.attributes |= 1;
         }
 
@@ -257,7 +242,7 @@ bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Matrix& rende
 {
     if (modelIndex >= models.size())
         return false;
-    
+
     if (boneMatrices.size() > 0u)
     {
         if (modelIndex >= boneAnimatedModelRenderMatrices.size())
@@ -309,7 +294,7 @@ void MeshRenderSystem::render(bool isShadowOnly)
     uint32_t passIndex = isShadowOnly ? 1u : 0u;
     // draw calls here
     // Render
-    
+
     for (; passIndex < 4; passIndex += 2)
     {
         std::string debugName;
@@ -354,7 +339,7 @@ void MeshRenderSystem::render(const MeshRenderTargets& meshRenderTargets)
         {.image = &meshRenderTargets.depthImage, .clearValue = depthClear });
     render(false);
     vkCmdEndRendering(vulk->commandBuffer);
-    
+
     endDebugRegion();
     writeStamp();
 }
@@ -364,11 +349,11 @@ void MeshRenderSystem::renderShadows(const MeshRenderTargets& meshRenderTargets)
 {
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
     beginDebugRegion("Mesh rendering depth only", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    
+
     beginRendering({}, { .image = &meshRenderTargets.shadowDepthImage, .clearValue = depthClear });
     render(true);
     vkCmdEndRendering(vulk->commandBuffer);
-    
+
     endDebugRegion();
     writeStamp();
 }

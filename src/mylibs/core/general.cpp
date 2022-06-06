@@ -70,3 +70,9 @@ uint32_t getColor(float r, float g, float b, float a)
 
     return c;
 }
+
+uint32_t getColor(const Vec4 &col)
+{
+    return getColor(col.x, col.y, col.z, col.w);
+}
+

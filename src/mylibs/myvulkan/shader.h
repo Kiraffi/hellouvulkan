@@ -19,6 +19,8 @@ enum class ShaderType : uint8_t
     Basic3DFrag,
     Basic3DVert,
 
+    LineVert,
+
     ColoredQuadFrag,
     ColoredQuadVert,
 

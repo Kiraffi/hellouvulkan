@@ -17,6 +17,9 @@ add_library(MyLibraries
     "core/json.cpp"
     "core/vulkan_app.cpp"
 
+    "gui/examplegui.h"
+    "gui/examplegui.cpp"
+
     "math/matrix.cpp"
     "math/quaternion.cpp"
     "math/vector3.cpp"
@@ -33,12 +36,20 @@ add_library(MyLibraries
     "render/convertrendertarget.cpp"
     "render/font_render.cpp"
     "render/lightrendersystem.cpp"
+    "render/linerendersystem.cpp"
     "render/meshrendersystem.cpp"
     "render/myimgui.cpp"
     "render/tonemaprendersystem.cpp"
 
+    "render/lightingrendertargets.cpp"
+    "render/meshrendertargets.cpp"
+    "render/meshrendertargets.h"
+    "render/lightingrendertargets.h"
+
+
     "scene/scene.cpp"
- "gui/examplegui.h" "gui/examplegui.cpp" "render/meshrendertargets.h" "render/meshrendertargets.cpp" "render/lightingrendertargets.h" "render/lightingrendertargets.cpp")
+
+)
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"

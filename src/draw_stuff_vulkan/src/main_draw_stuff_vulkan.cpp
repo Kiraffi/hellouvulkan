@@ -23,9 +23,12 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
+
 #include <render/convertrendertarget.h>
 #include <render/lightrendersystem.h>
+#include <render/linerendersystem.h>
 #include <render/meshrendersystem.h>
+#include <render/myimgui.h>
 #include <render/tonemaprendersystem.h>
 
 #include <render/lightingrendertargets.h>
@@ -34,10 +37,12 @@
 
 #include <scene/scene.h>
 
+#include <imgui/imgui.h>
 #include <string.h>
+#include <cmath>
 
-static constexpr int SCREEN_WIDTH = 800;
-static constexpr int SCREEN_HEIGHT = 600;
+static constexpr int SCREEN_WIDTH = 1024;
+static constexpr int SCREEN_HEIGHT = 768;
 
 static constexpr int SHADOW_WIDTH = 2048;
 static constexpr int SHADOW_HEIGHT = 2048;
@@ -70,16 +75,25 @@ public:
 
     LightingRenderTargets lightingRenderTargets;
     MeshRenderTargets meshRenderTargets;
+    LineRenderSystem lineRenderSystem;
 
     PodVector<uint32_t> entityIndices;
 
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
+    MyImgui imgui;
+
+    uint32_t selectedEntityIndex = ~0u;
+
     float rotationAmount = 0.0f;
 
     bool showNormalMap = false;
     bool rotateOn = false;
+    bool mouseHover = false;
+
+    Vec3 lineFrom;
+    Vec3 lineTo;
 };
 
 
@@ -101,7 +115,10 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
-    
+
+    if (!imgui.init(window))
+        return false;
+
     if (!convertFromS16.init(ShaderType::ConvertFromRGBAS16))
         return false;
 
@@ -119,22 +136,25 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     if (!meshRenderTargets.resizeShadowTarget(SHADOW_WIDTH, SHADOW_HEIGHT))
         return false;
+
+    if (!lineRenderSystem.init())
+        return false;
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
-    
+
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING}));
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING }));
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, -15.0f } }, .entityType = EntityType::CHARACTER }));
- 
+
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
 
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
     {
-        entityIndices.push_back(scene.addGameEntity({ 
+        entityIndices.push_back(scene.addGameEntity({
             .transform = {.pos = {f * 5.0f, 1.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW }));
         entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE }));
         entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH }));
@@ -144,7 +164,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING }));
 
 
-   
+
     sunCamera.pitch = toRadians(60.0f);
     sunCamera.yaw = toRadians(30.0f);
 
@@ -164,12 +184,18 @@ bool VulkanDrawStuff::resized()
 
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
+
+    imgui.updateRenderTarget(meshRenderTargets.albedoImage);
     return true;
 }
+
+
 
 void VulkanDrawStuff::logicUpdate()
 {
     VulkanApp::logicUpdate();
+
+    lineRenderSystem.clear();
 
     MouseState mouseState = getMouseState();
 
@@ -219,18 +245,111 @@ void VulkanDrawStuff::logicUpdate()
     snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f, use sun camera: %s",
         showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount), useSunCamera ? "on" : "off");
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f", 
+    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
         toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f", sunCamera.position.x, sunCamera.position.y, sunCamera.position.z);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
     meshRenderSystem.clear();
+
+    if(mouseState.leftButtonDown && !mouseHover)
+        selectedEntityIndex = ~0u;
+
+    if(mouseState.leftButtonDown && !mouseHover &&
+        mouseState.x >= 0 && mouseState.y >= 0 &&
+        mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
+    {
+        Vec2 coord(mouseState.x, mouseState.y);
+        coord = coord / Vec2(vulk->swapchain.width, vulk->swapchain.height);
+
+        coord = coord * 2.0f - 1.0f;
+        coord.y = -coord.y;
+
+        printf("Mouse x: %f, mouse y: %f\n", coord.x, coord.y);
+        Vec3 rayPos = camera.position;
+        Vec3 camDirs[3];
+        getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, 0.0f, camDirs[0], camDirs[1], camDirs[2]);
+
+        Matrix mat = inverse(camera.perspectiveProjection() * camera.getCameraMatrix());
+
+//        Vec4 rayDir4 = mul(mat, Vec4(coord.x, coord.y, 1.0f, 1.0f));
+        Vec4 rayDir4 = mul(Vec4(coord.x, coord.y, 1.0f, 1.0f), mat);
+        Vec3 rayDir(rayDir4.x, rayDir4.y, rayDir4.z);
+        rayDir = normalize(rayDir);
+        printf("R x: %f, R y: %f, Rz: %f\n", rayDir.x, rayDir.y, rayDir.z);
+
+        lineFrom = camera.position;
+        lineTo = camera.position + rayDir * 150.0f;
+
+        Vec3 onePerRayDir(1.0f / rayDir.x, 1.0f / rayDir.y, 1.0 / rayDir.z);
+
+        float closestDist = FLT_MAX;
+        for(uint32_t index : entityIndices)
+        {
+            const auto &entity = scene.getEntity(index);
+            // intersect test ray sphere from game physics cookbook
+            {
+                float sphereRadius = 1.0f;
+                Vec3 spherePos = entity.transform.pos;
+                Vec3 e = spherePos - lineFrom;
+                float rSq = sphereRadius * sphereRadius;
+
+                float eSq = sqrLen(e);
+                float a = dot(e, rayDir);
+                float bSq = eSq - (a * a);
+                float f = sqrt(fabsf((rSq)- bSq));
+
+                // Assume normal intersection!
+                float t = a - f;
+                bool hit = true;
+                // No collision has happened
+                if (rSq - (eSq - a * a) < 0.0f) {
+                    hit = false;
+                }
+                // Ray starts inside the sphere
+                else if (eSq < rSq) {
+                    // Just reverse direction
+                    t = a + f;
+                }
+                Vec3 hitpos = lineFrom + rayDir * t;
+
+                if(hit)
+                {
+                    float dist = sqrLen(hitpos - lineFrom);
+                    if(dist < closestDist)
+                    {
+                        selectedEntityIndex = index;
+                        closestDist = dist;
+                    }
+                }
+
+            }
+        }
+    }
+    lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
+}
+
+static bool drawEntityImgui(GameEntity &entity)
+{
+    static float f = 0.0f;
+    static int counter = 0;
+
+    ImGui::Begin("Entity");
+
+    ImGui::Text("Type: %u", entity.entityType);
+    ImGui::InputFloat3("Position", &entity.transform.pos.x);
+    bool mouseHover = ImGui::IsWindowHovered(
+        ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();
+    ImGui::End();
+
+    return mouseHover;
 }
 
 void VulkanDrawStuff::renderUpdate()
 {
     VulkanApp::renderUpdate();
+    imgui.renderBegin();
 
     for (uint32_t entityIndex : entityIndices)
     {
@@ -255,6 +374,18 @@ void VulkanDrawStuff::renderUpdate()
     lightRenderSystem.setSunDirection(sundir);
 
     lightRenderSystem.update();
+
+    lineRenderSystem.prepareToRender();
+
+    if(selectedEntityIndex < entityIndices.size())
+    {
+        mouseHover = drawEntityImgui(scene.getEntity(selectedEntityIndex));
+    }
+    else
+    {
+        mouseHover = false;
+    }
+
 }
 
 void VulkanDrawStuff::renderDraw()
@@ -274,7 +405,7 @@ void VulkanDrawStuff::renderDraw()
         prepareToComputeImageWrite(meshRenderTargets.albedoImage);
 
         convertFromS16.render(meshRenderTargets.albedoImage.width, meshRenderTargets.albedoImage.height);
-        
+
     }
     else
     {
@@ -295,10 +426,18 @@ void VulkanDrawStuff::renderDraw()
         }
     }
 
+    prepareToGraphicsSampleWrite(meshRenderTargets.albedoImage);
     {
-        prepareToGraphicsSampleWrite(meshRenderTargets.albedoImage);
+        prepareToGraphicsSampleWrite(meshRenderTargets.depthImage);
+        lineRenderSystem.render(meshRenderTargets.albedoImage, meshRenderTargets.depthImage);
+    }
+
+    {
         fontSystem.render();
     }
+
+    imgui.render();
+
     present(meshRenderTargets.albedoImage);
 }
 

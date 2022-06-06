@@ -63,7 +63,8 @@ void dispatchCompute(const Pipeline& pipeline, uint32_t globalXSize, uint32_t gl
 
 bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
     const PodVector<RenderTarget> &colorTargets, const DepthTest& depthTest, Pipeline &outPipeline,
-    std::string_view pipelineName, bool useDynamic = true);
+    std::string_view pipelineName, bool useDynamic = true,
+    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
 bool createComputePipeline(const Shader& csShader, Pipeline& outPipeline, std::string_view pipelineName);
 
