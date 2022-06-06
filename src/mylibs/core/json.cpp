@@ -557,7 +557,11 @@ bool JSONBlock::parseNumber(double& outNumber) const
 bool JSONBlock::parseNumber(float& outNumber) const
 {
     double v = 1234.0;
-    return float(parseNumber(v));
+    if (!parseNumber(v))
+        return false;
+
+    outNumber = float(v);
+    return true;
 }
 
 
