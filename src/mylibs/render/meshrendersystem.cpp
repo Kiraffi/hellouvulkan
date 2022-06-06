@@ -224,7 +224,7 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
     if (newAnimationVertices > 0)
         addToCopylist(sliceFromPodVectorBytes(model.animationVertices), animationVertexBuffer.buffer,
             animatedVerticesCount * sizeof(GltfModel::AnimationVertex));
-    flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    flushBarriers(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     endSingleTimeCommands();
 
@@ -341,8 +341,7 @@ void MeshRenderSystem::render(bool isShadowOnly)
     }
 }
 
-void MeshRenderSystem::render(const Image& renderColorTarget, 
-    const Image& normalMapColorImage, const Image& renderDepthTarget)
+void MeshRenderSystem::render(const MeshRenderTargets& meshRenderTargets)
 {
     beginDebugRegion("Mesh rendering colors", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
@@ -350,24 +349,26 @@ void MeshRenderSystem::render(const Image& renderColorTarget,
     static constexpr VkClearValue normlClear = { .color{0.0f, 0.0f, 0.0f, 0.0f} };
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
     beginRendering({
-        RenderImage{.image = &renderColorTarget, .clearValue = colorClear },
-        RenderImage{.image = &normalMapColorImage, .clearValue = normlClear }, },
-        {.image = &renderDepthTarget, .clearValue = depthClear });
+        RenderImage{.image = &meshRenderTargets.albedoImage, .clearValue = colorClear },
+        RenderImage{.image = &meshRenderTargets.normalMapImage, .clearValue = normlClear }, },
+        {.image = &meshRenderTargets.depthImage, .clearValue = depthClear });
     render(false);
     vkCmdEndRendering(vulk->commandBuffer);
     
     endDebugRegion();
+    writeStamp();
 }
 
 
-void MeshRenderSystem::renderShadows(const Image& shadowDepthTarget)
+void MeshRenderSystem::renderShadows(const MeshRenderTargets& meshRenderTargets)
 {
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
     beginDebugRegion("Mesh rendering depth only", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
     
-    beginRendering({}, { .image = &shadowDepthTarget, .clearValue = depthClear });
+    beginRendering({}, { .image = &meshRenderTargets.shadowDepthImage, .clearValue = depthClear });
     render(true);
     vkCmdEndRendering(vulk->commandBuffer);
     
     endDebugRegion();
+    writeStamp();
 }

@@ -5,12 +5,12 @@
 
 #include <string>
 
-CovertRenderTarget::~CovertRenderTarget()
+ConvertRenderTarget::~ConvertRenderTarget()
 {
     destroyPipeline(computePipeline);
 }
 
-bool CovertRenderTarget::init(ShaderType shapeType)
+bool ConvertRenderTarget::init(ShaderType shapeType)
 {
     // pipelines.
     {
@@ -26,7 +26,12 @@ bool CovertRenderTarget::init(ShaderType shapeType)
     return true;
 }
 
-bool CovertRenderTarget::updateSourceImage(Image& srcImage, Image& toImage)
+bool ConvertRenderTarget::updateSourceImages(const MeshRenderTargets& targets)
+{
+    return updateSourceImages(targets.normalMapImage, targets.albedoImage);
+}
+
+bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image& toImage)
 {
     ASSERT(srcImage.width == toImage.width && srcImage.height == toImage.height);
 
@@ -53,9 +58,10 @@ bool CovertRenderTarget::updateSourceImage(Image& srcImage, Image& toImage)
     return true;
 }
 
-void CovertRenderTarget::render(uint32_t width, uint32_t height)
+void ConvertRenderTarget::render(uint32_t width, uint32_t height)
 {
-
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-    vkCmdDispatch(vulk->commandBuffer, (width + 7) / 8, (height + 7) / 8, 1);
+    beginDebugRegion("Convert S16ToColor", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    dispatchCompute(computePipeline, width, height, 1, 8, 8, 1);
+    endDebugRegion();
+    writeStamp();
 }

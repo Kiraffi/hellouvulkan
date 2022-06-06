@@ -111,7 +111,10 @@ struct VulkanGlobal
     UniformBufferManager uniformBufferManager;
     UniformBufferHandle renderFrameBufferHandle;
 
-    VkQueryPool queryPool = nullptr;
+    VkQueryPool queryPool1 = nullptr;
+    VkQueryPool queryPool2 = nullptr;
+    uint32_t queryPoolIndex = 0u;
+    uint32_t queryPoolIndexCount = 0u;
 
     VkSemaphore acquireSemaphore = nullptr;
     VkSemaphore releaseSemaphore = nullptr;
@@ -136,7 +139,11 @@ struct VulkanGlobal
 
     VulkanApp* vulkanApp = nullptr;
     PodVector< BufferBarrierInfo > bufferMemoryBarriers;
-    PodVector< VkImageMemoryBarrier > imageMemoryBarriers;
+    PodVector< VkImageMemoryBarrier > imageMemoryGraphicsBarriers;
+    PodVector< VkImageMemoryBarrier > imageMemoryComputeBarriers;
+
+    VkPipelineStageFlagBits currentStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
     bool needToResize = false;
     bool waitForFence = true;
 };

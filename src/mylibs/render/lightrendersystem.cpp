@@ -50,12 +50,14 @@ bool LightRenderSystem::init()
     return true;
 }
 
-bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& normalTex, const Image& depthTex,
-    const Image& shadowTex, const Image& outputTex)
+bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTargets, 
+    const LightingRenderTargets &lightingRenderTargets)
 {
-    ASSERT(albedoTex.width == normalTex.width && albedoTex.height == normalTex.height &&
-        albedoTex.width == depthTex.width && albedoTex.height == depthTex.height &&
-        albedoTex.width == outputTex.width && albedoTex.height == outputTex.height);
+    const auto& outputTex = lightingRenderTargets.lightingTargetImage;
+    ASSERT(
+        outputTex.width == meshRenderTargets.albedoImage.width    && outputTex.height == meshRenderTargets.albedoImage.height &&
+        outputTex.width == meshRenderTargets.normalMapImage.width && outputTex.height == meshRenderTargets.normalMapImage.height &&
+        outputTex.width == meshRenderTargets.depthImage.width     && outputTex.height == meshRenderTargets.depthImage.height);
 
     auto& pipeline = lightComputePipeline;
     destroyDescriptor(pipeline.descriptor);
@@ -68,11 +70,11 @@ bool LightRenderSystem::updateReadTargets(const Image& albedoTex, const Image& n
             //DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             //DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
 
-            DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
-            DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
+            DescriptorInfo(meshRenderTargets.normalMapImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
+            DescriptorInfo(meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
 
-            DescriptorInfo(depthTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
-            DescriptorInfo(shadowTex.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
+            DescriptorInfo(meshRenderTargets.depthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
+            DescriptorInfo(meshRenderTargets.shadowDepthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
 
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
         });
@@ -104,11 +106,9 @@ void LightRenderSystem::update()
 void LightRenderSystem::render(uint32_t width, uint32_t height)
 {
     beginDebugRegion("Lighting compute", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, lightComputePipeline);
-    vkCmdDispatch(vulk->commandBuffer, (width + 7) / 8, (height + 7) / 8, 1);
-
+    dispatchCompute(lightComputePipeline, width, height, 1, 8, 8, 1);
     endDebugRegion();
+    writeStamp();
 }
 
 void LightRenderSystem::setSunDirection(const Vec3& sunDir)

@@ -207,5 +207,6 @@ void FontRenderSystem::render()
     vkCmdEndRenderPass(vulk->commandBuffer);
     vertData.clear();
     endDebugRegion();
+    writeStamp();
 }
 

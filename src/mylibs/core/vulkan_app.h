@@ -52,7 +52,7 @@ public:
     bool isReleased(int keyCode);
     bool isDown(int keyCode);
     bool isUp(int keyCode);
-    uint32_t writeStamp(VkPipelineStageFlagBits stage);
+
 public:
     GLFWwindow *window = nullptr;
 
@@ -64,7 +64,6 @@ public:
 
     int windowWidth = 0;
     int windowHeight = 0;
-    uint32_t timeStampCount = 0u;
     VSyncType vSync = VSyncType::FIFO_VSYNC;
     bool inited = false;
     bool needToResize = false;

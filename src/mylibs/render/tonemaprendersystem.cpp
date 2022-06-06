@@ -55,9 +55,7 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
 void TonemapRenderSystem::render(uint32_t width, uint32_t height)
 {
     beginDebugRegion("Tonemap", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, tonemapPipeline);
-    vkCmdDispatch(vulk->commandBuffer, (width + 7) / 8, (height + 7) / 8, 1);
-
+    dispatchCompute(tonemapPipeline, width, height, 1, 8, 8, 1);
     endDebugRegion();
+    writeStamp();
 }

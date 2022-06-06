@@ -7,6 +7,7 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <render/meshrendertargets.h>
 
 // Very unoptimized stuff... no culling or anything
 class MeshRenderSystem
@@ -24,8 +25,8 @@ public:
 
     bool prepareToRender();
 
-    void render(const Image& renderColorTarget, const Image& normalMapColorImage, const Image& renderDepthTarget);
-    void renderShadows(const Image& shadowDepthTarget);
+    void render(const MeshRenderTargets &meshRenderTargets);
+    void renderShadows(const MeshRenderTargets &meshRenderTargets);
 private:
 
     void render(bool isShadowOnly);

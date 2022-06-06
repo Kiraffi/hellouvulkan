@@ -3,6 +3,9 @@
 #include <math/vector3.h>
 #include <myvulkan/shader.h>
 
+#include <render/lightingrendertargets.h>
+#include <render/meshrendertargets.h>
+
 class LightRenderSystem
 {
 public:
@@ -10,8 +13,7 @@ public:
 
     bool init();
 
-    bool updateReadTargets(const Image &albedoTex, const Image &normalTex, const Image &depthTex,
-        const Image &shadowTex, const Image &outputTex);
+    bool updateReadTargets(const MeshRenderTargets &meshRenderTargets, const LightingRenderTargets& lightingRenderTargets);
 
 
     void update();

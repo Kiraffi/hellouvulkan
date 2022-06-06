@@ -38,7 +38,7 @@ add_library(MyLibraries
     "render/tonemaprendersystem.cpp"
 
     "scene/scene.cpp"
- "gui/examplegui.h" "gui/examplegui.cpp")
+ "gui/examplegui.h" "gui/examplegui.cpp" "render/meshrendertargets.h" "render/meshrendertargets.cpp" "render/lightingrendertargets.h" "render/lightingrendertargets.cpp")
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"

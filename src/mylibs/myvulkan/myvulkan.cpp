@@ -927,9 +927,10 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         return false;
     }
 
-    vulk->queryPool = createQueryPool(QUERY_COUNT);
-    ASSERT(vulk->queryPool);
-    if(!vulk->queryPool)
+    vulk->queryPool1 = createQueryPool(QUERY_COUNT);
+    vulk->queryPool2 = createQueryPool(QUERY_COUNT);
+    ASSERT(vulk->queryPool1 && vulk->queryPool2);
+    if(!vulk->queryPool1 || !vulk->queryPool2)
     {
         printf("Failed to create vulkan query pool!\n");
         return false;
@@ -1025,7 +1026,8 @@ void deinitVulkan()
 
         vkDestroyCommandPool(vulk->device, vulk->commandPool, nullptr);
 
-        vkDestroyQueryPool(vulk->device, vulk->queryPool, nullptr);
+        vkDestroyQueryPool(vulk->device, vulk->queryPool1, nullptr);
+        vkDestroyQueryPool(vulk->device, vulk->queryPool2, nullptr);
 
         destroySwapchain(vulk->swapchain);
 
@@ -1211,6 +1213,7 @@ void endSingleTimeCommands()
 
 void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues)
 {
+    flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
     VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     passBeginInfo.renderPass = pipeline.renderPass;
     passBeginInfo.framebuffer = pipeline.framebuffer;
@@ -1230,6 +1233,7 @@ void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& 
 
 void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage depthImage)
 {
+    flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
     uint32_t width = 0u;
     uint32_t height = 0u;
     PodVector< VkRenderingAttachmentInfo> colorAttachments;
@@ -1298,7 +1302,18 @@ void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage
 }
 
 
+void dispatchCompute(const Pipeline &pipeline, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
+    uint32_t localXSize, uint32_t localYSize, uint32_t localZSize)
+{
+    ASSERT(globalXSize && globalYSize && globalZSize && localXSize && localYSize && localZSize);
+    flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdDispatch(vulk->commandBuffer,
+        (globalXSize + localXSize - 1) / localXSize,
+        (globalYSize + localYSize - 1) / localYSize,
+        (globalZSize + localZSize - 1) / localZSize);
 
+}
 
 
 bool startRender()
@@ -1754,3 +1769,10 @@ void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const Pipeline &p
         0, 1, &pipelineWithDescriptor.descriptor.descriptorSet, 0, NULL);
 }
 
+
+void writeStamp()
+{
+    VkQueryPool queryPool = vulk->queryPoolIndex == 0 ? vulk->queryPool1 : vulk->queryPool2;
+    vkCmdWriteTimestamp(vulk->commandBuffer, vulk->currentStage, queryPool, vulk->queryPoolIndexCount);
+    ++vulk->queryPoolIndexCount;
+}

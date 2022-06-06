@@ -2,18 +2,20 @@
 
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanglobal.h>
+#include <render/meshrendertargets.h>
 
 #include <vulkan/vulkan_core.h>
 
-class CovertRenderTarget
+class ConvertRenderTarget
 {
 public:
-    CovertRenderTarget(VkFormat fromFormat) : fromFormat(fromFormat) {}
-    ~CovertRenderTarget();
+    ConvertRenderTarget(VkFormat fromFormat) : fromFormat(fromFormat) {}
+    ~ConvertRenderTarget();
 
 
     bool init(ShaderType shapeType);
-    bool updateSourceImage(Image& srcImage, Image& toImage);
+    bool updateSourceImages(const MeshRenderTargets& targets);
+    bool updateSourceImages(const Image& srcImage, const Image& toImage);
     void render(uint32_t width, uint32_t height);
 private:
     VkFormat fromFormat = VK_FORMAT_UNDEFINED;

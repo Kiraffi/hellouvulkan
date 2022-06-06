@@ -505,7 +505,7 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr)
         return false;
 
-    if (vulk->imageMemoryBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
+    if (vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
         beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
 
     memcpy(((uint8_t*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
@@ -519,22 +519,50 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     return true;
 }
 
-bool addImageBarrier(VkImageMemoryBarrier barrier)
+bool addImageGraphicsBarrier(VkImageMemoryBarrier barrier)
 {
     if (barrier.sType != VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
         return false;
-    if(vulk->imageMemoryBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
+    if(vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() && vulk->bufferMemoryBarriers.size() == 0)
         beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
 
-    vulk->imageMemoryBarriers.pushBack(barrier);
+    vulk->imageMemoryGraphicsBarriers.pushBack(barrier);
     return true;
 }
 
-bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits dstStageMask)
+bool addImageComputeBarrier(VkImageMemoryBarrier barrier)
 {
-    if (vulk->bufferMemoryBarriers.size() == 0 && vulk->imageMemoryBarriers.size() == 0)
+    if (barrier.sType != VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
+        return false;
+    if (vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
+        beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
+
+    vulk->imageMemoryComputeBarriers.pushBack(barrier);
+    return true;
+}
+
+
+bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
+{
+    bool isGraphics = dstStageMask == VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    bool isCompute = dstStageMask == VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    
+    const VkImageMemoryBarrier* imageBarrier = nullptr;
+    uint32_t imageBarrierCount = 0u;
+    if (isGraphics)
+    {
+        imageBarrierCount = vulk->imageMemoryGraphicsBarriers.size();
+        imageBarrier = imageBarrierCount > 0 ? vulk->imageMemoryGraphicsBarriers.data() : nullptr;
+    }
+    else if (isCompute)
+    {
+        imageBarrierCount = vulk->imageMemoryComputeBarriers.size();
+        imageBarrier = imageBarrierCount > 0 ? vulk->imageMemoryComputeBarriers.data() : nullptr;
+    }
+
+    if (vulk->bufferMemoryBarriers.size() == 0 && imageBarrierCount == 0)
         return true;
-   
+   // vkFlushMappedMemoryRanges?????
     PodVector< VkBufferMemoryBarrier > bufferBarriers;
     for (const auto& barrier : vulk->bufferMemoryBarriers)
     {
@@ -546,18 +574,21 @@ bool flushBarriers(VkPipelineStageFlagBits srcStageMask, VkPipelineStageFlagBits
         }
     }
     const VkBufferMemoryBarrier* bufferBarrier = bufferBarriers.size() > 0 ? bufferBarriers.data() : nullptr;
-    const VkImageMemoryBarrier* imageBarrier = vulk->imageMemoryBarriers.size() > 0 ? vulk->imageMemoryBarriers.data() : nullptr;
-
-    vkCmdPipelineBarrier(vulk->commandBuffer, srcStageMask, dstStageMask,
+    
+    vkCmdPipelineBarrier(vulk->commandBuffer, vulk->currentStage, dstStageMask,
         VK_DEPENDENCY_BY_REGION_BIT,
         0, nullptr,
         vulk->bufferMemoryBarriers.size(), bufferBarrier,
-        vulk->imageMemoryBarriers.size(), imageBarrier);
+        imageBarrierCount, imageBarrier);
    
     vulk->bufferMemoryBarriers.clear();
-    vulk->imageMemoryBarriers.clear();
+    if(isGraphics)
+        vulk->imageMemoryGraphicsBarriers.clear();
+    if (isCompute)
+        vulk->imageMemoryComputeBarriers.clear();
     endDebugRegion();
 
+    vulk->currentStage = dstStageMask;
     return true;
 }
 
@@ -566,12 +597,12 @@ bool prepareToGraphicsSampleWrite(Image& image)
     VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
     if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
     {
-        return addImageBarrier(imageBarrier(image,
+        return addImageGraphicsBarrier(imageBarrier(image,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
     }
     else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT)
     {
-        return addImageBarrier(imageBarrier(image,
+        return addImageGraphicsBarrier(imageBarrier(image,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
     }
     else
@@ -587,12 +618,12 @@ bool prepareToGraphicsSampleRead(Image& image)
     VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
     if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
     {
-        return addImageBarrier(imageBarrier(image,
+        return addImageGraphicsBarrier(imageBarrier(image,
             VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
     }
     else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT)
     {
-        return addImageBarrier(imageBarrier(image,
+        return addImageGraphicsBarrier(imageBarrier(image,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
     }
     else
@@ -605,24 +636,24 @@ bool prepareToGraphicsSampleRead(Image& image)
 
 bool prepareToGraphicsImageRead(Image& image)
 {
-    return addImageBarrier(imageBarrier(image,
+    return addImageGraphicsBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 }
 
 bool prepareToComputeImageWrite(Image& image)
 {
-    return addImageBarrier(imageBarrier(image,
+    return addImageComputeBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
 }
 
 bool prepareToComputeImageRead(Image& image)
 {
-    return addImageBarrier(imageBarrier(image,
+    return addImageComputeBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 }
 
 bool prepareToComputeSampleRead(Image& image)
 {
-    return addImageBarrier(imageBarrier(image,
+    return addImageComputeBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 }

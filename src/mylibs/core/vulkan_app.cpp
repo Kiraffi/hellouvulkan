@@ -199,12 +199,15 @@ bool VulkanApp::isUp(int keyCode)
 
 void VulkanApp::renderUpdate()
 {
-    timeStampCount = 0u;
-
+    vulk->queryPoolIndexCount = 0u;
+    ++vulk->queryPoolIndex;
+    if (vulk->queryPoolIndex > 1u)
+        vulk->queryPoolIndex = 0u;
     beginSingleTimeCommands();
-    vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPool, 0, QUERY_COUNT);
+    VkQueryPool queryPool = vulk->queryPoolIndex == 0 ? vulk->queryPool1 : vulk->queryPool2;
+    vkCmdResetQueryPool(vulk->commandBuffer, queryPool, 0, QUERY_COUNT);
 
-    writeStamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    writeStamp();
     vulkanResourceFrameUpdate();
 
     struct FrameBuffer
@@ -261,6 +264,7 @@ void VulkanApp::run()
 
         if (!resizeHappen)
         {
+            vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             renderUpdate();
             renderDraw();
             printStats(*this);
@@ -410,14 +414,6 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     }
 }
 
-uint32_t VulkanApp::writeStamp(VkPipelineStageFlagBits stage)
-{
-    uint32_t result = timeStampCount;
-    vkCmdWriteTimestamp(vulk->commandBuffer, stage, vulk->queryPool, result);
-    ++timeStampCount;
-    return result;
-}
-
 static void printStats(VulkanApp& app)
 {
     static uint32_t gpuframeCount = 0u;
@@ -430,14 +426,15 @@ static void printStats(VulkanApp& app)
         double timeDuration[QUERY_COUNT];
     };
     static TimeValues timeValues = {};
-
-    if (app.timeStampCount < 2u)
+    uint32_t timeStamps = vulk->queryPoolIndexCount;
+    if (timeStamps < 2u)
         return;
 
     uint64_t queryResults[QUERY_COUNT];
     static constexpr size_t querySize = sizeof(uint64_t);
-    VkResult res = (vkGetQueryPoolResults(vulk->device, vulk->queryPool,
-        0, app.timeStampCount, querySize * app.timeStampCount, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
+    VkQueryPool queryPool = vulk->queryPoolIndex == 0 ? vulk->queryPool2 : vulk->queryPool1;
+    VkResult res = (vkGetQueryPoolResults(vulk->device, queryPool,
+        0, vulk->queryPoolIndexCount, querySize * timeStamps, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
 
     if (res == VK_SUCCESS)
     {
@@ -448,7 +445,7 @@ static void printStats(VulkanApp& app)
         for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)
             timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
 
-        gpuTime += (double(queryResults[app.timeStampCount - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
+        gpuTime += (double(queryResults[timeStamps - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
         ++gpuframeCount;
     }
     ++cpuframeCount;
