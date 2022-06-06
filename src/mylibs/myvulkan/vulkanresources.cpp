@@ -617,26 +617,8 @@ bool prepareToGraphicsSampleWrite(Image& image)
 
 bool prepareToGraphicsSampleRead(Image& image)
 {
-    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
-    if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-    {
-        VkAccessFlagBits dstMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-        if (image.accessMask == VK_ACCESS_SHADER_WRITE_BIT)
-            dstMask = VK_ACCESS_SHADER_READ_BIT;
-        return addImageGraphicsBarrier(imageBarrier(image,
-            dstMask, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-    }
-    else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT)
-    {
-        return addImageGraphicsBarrier(imageBarrier(image,
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
-    }
-    else
-    {
-        ASSERT(!"Unknown imagetype");
-        return false;
-    }
-    return true;
+    return addImageGraphicsBarrier(imageBarrier(image,
+        VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 }
 
 bool prepareToGraphicsImageRead(Image& image)

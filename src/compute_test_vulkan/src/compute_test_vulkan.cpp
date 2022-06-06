@@ -273,7 +273,6 @@ void VulkanComputeTest::renderDraw()
 {
     const SwapChain& swapchain = vulk->swapchain;
 
-    prepareToGraphicsSampleWrite(renderColorFinalImage);
     // Drawingg
     {
         meshRenderTargets.prepareTargetsForMeshRendering();
@@ -291,7 +290,8 @@ void VulkanComputeTest::renderDraw()
 
     {
         prepareToGraphicsSampleRead(computeColorImage);
- 
+        prepareToGraphicsSampleWrite(renderColorFinalImage);
+
         //beginRenderPass(graphicsFinalPipeline, {});
         beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
