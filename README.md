@@ -3,9 +3,8 @@
 ## Intro
 This is just my own toy project to test vulkan rendering and other random stuffs. 
 * Json reading in order to be able to read gltf files. Not tested much except that it managed to read the gltf files that blender exports. Doesn't handle any obscure cases.
-* There are some barely/not working implementations for reading gltf-text format, which seems to do enough 
-for my own cases to read blender exported gltfs, and even then it doesn't support most of the features. Reads single mesh with skin and animations to it.
-** If the mesh had animation or keyframes, it didn't seem to find the node index for animations. Still a bug
+* The gltf reader/parser is written to my own needs, and is very bare bones. It reads single mesh and skin and animations for it exported from blender. 
+  * If the mesh had animation or keyframes, it didn't seem to find the node index for animations. I simply deleted the animating the mesh position/rotation/scale in blender.
 
 ## Libraries used
 * Dear imgui for gui: https://github.com/ocornut/imgui
