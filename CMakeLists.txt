@@ -97,10 +97,24 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" )
 #ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
 #ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
+
+
 include_directories("external/")
+include_directories("external/imgui/")
 include_directories("external/glfw/include/")
 include_directories("src/mylibs")
 include_directories("external/VulkanMemoryAllocator/include")
+
+
+add_library(Imgui
+    "external/imgui/backends/imgui_impl_glfw.cpp"
+    "external/imgui/backends/imgui_impl_vulkan.cpp"
+    "external/imgui/imgui.cpp"
+    "external/imgui/imgui_draw.cpp"
+    "external/imgui/imgui_tables.cpp"
+    "external/imgui/imgui_widgets.cpp"
+)
+
 
 #add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")

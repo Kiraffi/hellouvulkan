@@ -23,6 +23,7 @@ add_library(MyLibraries
 
     "model/gltf.cpp"
 
+
     "myvulkan/myvma.cpp"
     "myvulkan/myvulkan.cpp"
     "myvulkan/uniformbuffermanager.cpp"
@@ -33,10 +34,11 @@ add_library(MyLibraries
     "render/font_render.cpp"
     "render/lightrendersystem.cpp"
     "render/meshrendersystem.cpp"
+    "render/myimgui.cpp"
     "render/tonemaprendersystem.cpp"
 
     "scene/scene.cpp"
-)
+ "gui/examplegui.h" "gui/examplegui.cpp")
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
@@ -52,6 +54,7 @@ target_link_libraries(MyLibraries PUBLIC
     glfw
     Vulkan::Vulkan
     ${WINMM_LIB}
+    Imgui
     #meshoptimizer
 )
 

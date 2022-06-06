@@ -41,6 +41,7 @@ struct RenderImage
 
 bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
+VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat);
 bool resizeSwapchain();
 bool startRender();
 void present(Image &imageToPresent);

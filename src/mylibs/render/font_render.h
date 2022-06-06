@@ -40,9 +40,6 @@ public:
 private:
     PodVector<GPUVertexData> vertData;
 
-    VkShaderModule vertexShader = nullptr;
-    VkShaderModule fragShader = nullptr;
-
     UniformBufferHandle letterDataBufferHandle;
     Buffer letterIndexBuffer;
 

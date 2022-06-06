@@ -805,62 +805,6 @@ static VkCommandPool createCommandPool()
 }
 
 
-static VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget&depthFormat)
-{
-    bool hasDepthFormat = depthFormat.format != VK_FORMAT_UNDEFINED;
-    PodVector< VkAttachmentDescription> attachments;
-    PodVector< VkAttachmentReference > colorAttachments;
-    for (const RenderTarget& target : colorTargets)
-    {
-        // To get indexes right
-        colorAttachments.push_back({ VkAttachmentReference{ attachments.size(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL} });
-
-        VkAttachmentDescription attachment = {};
-        attachment.format = target.format;
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = target.loadOp;
-        attachment.storeOp = target.storeOp;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachments.push_back(attachment);
-    }
-
-    VkAttachmentReference depthAttachments = { colorAttachments.size(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-    if(hasDepthFormat)
-    {
-        VkAttachmentDescription attachment = {};
-        attachment.format = depthFormat.format;
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = depthFormat.loadOp;
-        attachment.storeOp = depthFormat.storeOp;
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachments.push_back(attachment);
-    }
-    ASSERT(attachments.size());
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = colorAttachments.size();
-    subpass.pColorAttachments = colorAttachments.size() > 0 ? colorAttachments.data() : nullptr;
-    subpass.pDepthStencilAttachment = hasDepthFormat ? &depthAttachments : nullptr;
-
-    VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    createInfo.attachmentCount = attachments.size();
-    createInfo.pAttachments = attachments.size() > 0 ? attachments.data() : nullptr;
-    createInfo.subpassCount = 1;
-    createInfo.pSubpasses = &subpass;
-
-    VkRenderPass renderPass = 0;
-
-    VK_CHECK(vkCreateRenderPass(vulk->device, &createInfo, nullptr, &renderPass));
-    ASSERT(renderPass);
-    return renderPass;
-}
-
-
 
 static VkQueryPool createQueryPool(uint32_t queryCount)
 {
@@ -906,11 +850,6 @@ static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader>
     }
     return result;
 }
-
-
-
-
-
 
 
 
@@ -1109,6 +1048,65 @@ void deinitVulkan()
     delete vulk;
     vulk = nullptr;
 }
+
+
+
+
+VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat)
+{
+    bool hasDepthFormat = depthFormat.format != VK_FORMAT_UNDEFINED;
+    PodVector< VkAttachmentDescription> attachments;
+    PodVector< VkAttachmentReference > colorAttachments;
+    for (const RenderTarget& target : colorTargets)
+    {
+        // To get indexes right
+        colorAttachments.push_back({ VkAttachmentReference{ attachments.size(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL} });
+
+        VkAttachmentDescription attachment = {};
+        attachment.format = target.format;
+        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment.loadOp = target.loadOp;
+        attachment.storeOp = target.storeOp;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachments.push_back(attachment);
+    }
+
+    VkAttachmentReference depthAttachments = { colorAttachments.size(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+    if (hasDepthFormat)
+    {
+        VkAttachmentDescription attachment = {};
+        attachment.format = depthFormat.format;
+        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment.loadOp = depthFormat.loadOp;
+        attachment.storeOp = depthFormat.storeOp;
+        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments.push_back(attachment);
+    }
+    ASSERT(attachments.size());
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = colorAttachments.size();
+    subpass.pColorAttachments = colorAttachments.size() > 0 ? colorAttachments.data() : nullptr;
+    subpass.pDepthStencilAttachment = hasDepthFormat ? &depthAttachments : nullptr;
+
+    VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+    createInfo.attachmentCount = attachments.size();
+    createInfo.pAttachments = attachments.size() > 0 ? attachments.data() : nullptr;
+    createInfo.subpassCount = 1;
+    createInfo.pSubpasses = &subpass;
+
+    VkRenderPass renderPass = 0;
+
+    VK_CHECK(vkCreateRenderPass(vulk->device, &createInfo, nullptr, &renderPass));
+    ASSERT(renderPass);
+    return renderPass;
+}
+
 
 
 
