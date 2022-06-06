@@ -189,7 +189,8 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
-    PodVector<VkExtensionProperties> availableExtensions(extensionCount);
+    PodVector<VkExtensionProperties> availableExtensions;
+    availableExtensions.resize(extensionCount);
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
     VulkanDeviceOptionals result;
@@ -228,7 +229,8 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
-    PodVector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    PodVector<VkQueueFamilyProperties> queueFamilies;
+    queueFamilies.resize(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
     int i = -1;
@@ -552,7 +554,8 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             uint32_t extensionCount;
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
-            PodVector<VkExtensionProperties> availableExtensions(extensionCount);
+            PodVector<VkExtensionProperties> availableExtensions;
+            availableExtensions.resize(extensionCount);
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
             std::set<std::string_view> requiredExtensions;
@@ -754,7 +757,8 @@ static bool createDeviceWithQueues()
 static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout>& descriptors, VkShaderStageFlags stage)
 {
     ASSERT(descriptors.size() > 0);
-    PodVector<VkDescriptorSetLayoutBinding> setBindings(descriptors.size());
+    PodVector<VkDescriptorSetLayoutBinding> setBindings;
+    setBindings.resize(descriptors.size());
     for (uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
     {
         setBindings[i] = VkDescriptorSetLayoutBinding {

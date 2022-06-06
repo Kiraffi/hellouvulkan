@@ -15,7 +15,8 @@ class PodVector : public VectorBase
 {
 public:
     PodVector();
-    PodVector(uint32_t size);
+    
+    //PodVector(uint32_t size);
 
     PodVector(const T *b, const T* e);
     PodVector(const PodVector<T> &vec);
@@ -56,6 +57,7 @@ PodVector<T>::PodVector() : VectorBase(sizeof(T))
     CHECK_POD_MACRO();
 }
 
+/*
 template <typename T>
 PodVector<T>::PodVector(uint32_t size) : VectorBase(sizeof(T))
 {
@@ -63,6 +65,7 @@ PodVector<T>::PodVector(uint32_t size) : VectorBase(sizeof(T))
     const T t{};
     this->buffer.resize(size, (uint8_t *)&t);
 }
+*/
 
 template <typename T>
 PodVector<T>::PodVector(const T *b, const T* e) : VectorBase(sizeof(T))

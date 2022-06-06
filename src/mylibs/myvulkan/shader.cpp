@@ -314,7 +314,8 @@ bool createDescriptor(Pipeline &pipeline)
     if (pipeline.descriptorSetLayouts.size() == 0)
         return true;
 
-    PodVector<VkDescriptorPoolSize> poolSizes(pipeline.descriptorSetLayouts.size());
+    PodVector<VkDescriptorPoolSize> poolSizes;
+    poolSizes.resize(pipeline.descriptorSetLayouts.size());
 
     for (uint32_t i = 0; i < pipeline.descriptorSetLayouts.size(); ++i)
     {
@@ -356,10 +357,14 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
 
     ASSERT(descriptors.size() == descriptorInfos.size());
 
-    PodVector<VkWriteDescriptorSet> writeDescriptorSets(writeDescriptorCount);
-    PodVector<VkDescriptorBufferInfo> bufferInfos(writeDescriptorCount);
+    PodVector<VkWriteDescriptorSet> writeDescriptorSets;
+    writeDescriptorSets.resize(writeDescriptorCount);
 
-    PodVector<VkDescriptorImageInfo> imageInfos(writeDescriptorCount);
+    PodVector<VkDescriptorBufferInfo> bufferInfos;
+    bufferInfos.resize(writeDescriptorCount);
+
+    PodVector<VkDescriptorImageInfo> imageInfos;
+    imageInfos.resize(writeDescriptorCount);
 
     uint32_t writeIndex = 0u;
     uint32_t bufferCount = 0u;

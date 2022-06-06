@@ -15,7 +15,7 @@ class Vector : public VectorBase
 public:
     Vector();
     virtual ~Vector();
-    Vector(uint32_t size);
+    //Vector(uint32_t size);
 
     Vector(const T *b, const T* e);
     Vector(const Vector<T> &vec);
@@ -65,6 +65,7 @@ Vector<T>::Vector() : VectorBase(sizeof(T))
     CHECK_NO_POD_MACRO();
 }
 
+/*
 template <typename T>
 Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T))
 {
@@ -72,6 +73,7 @@ Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T))
     resize(size);
 
 }
+*/
 
 template <typename T>
 Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T))
