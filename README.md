@@ -1,4 +1,12 @@
-# hellouvulkan
+# CarpEngine - hellouvulkan
+
+## Libraries used
+Dear imgui for gui: https://github.com/ocornut/imgui
+Stb for image read/write: https://github.com/nothings/stb
+GLFW for windowing and platform support: https://github.com/glfw/glfw
+Meshoptimizer for optimising meshes: https://github.com/zeux/meshoptimizer
+
+## Requirements
 
 Requires VulkanSDK 1.3 for using VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME and drivers that support it, I have only tested with win10 and linux mint.
 
@@ -8,7 +16,8 @@ With windows10 + visual stdudio, the project should? work if vulkansdk is config
 installed by just right click the folder and open with Visual Studio. It should compile with ninja without having
 to manually generating Visual Studio solution with cmake.
 
-Some problems I have encountered:
+
+## Problems cases I have encountered
 
 For Linux you can add: "cmake.debugConfig": { "cwd": "${workspaceFolder}" } into cmake tools settings to configure
 the working directory to be the same as workspace directory. Thus you don't need to copy assets over to built folder.
