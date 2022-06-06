@@ -1,10 +1,12 @@
 # CarpEngine - hellouvulkan
 
 ## Intro
-This is just my own toy project to test vulkan rendering and other random stuffs. 
+This is just my own toy project to test vulkan rendering and other random stuffs.
 * Json reading in order to be able to read gltf files. Not tested much except that it managed to read the gltf files that blender exports. Doesn't handle any obscure cases.
-* The gltf reader/parser is written to my own needs, and is very bare bones. It reads single mesh and skin and animations for it exported from blender. 
+* The gltf reader/parser is written to my own needs, and is very bare bones. It reads single mesh and skin and animations for it exported from blender.
   * If the mesh had animation or keyframes, it didn't seem to find the node index for animations. I simply deleted the animating the mesh position/rotation/scale in blender.
+* Clone with git clone url --recursive
+* Update with git submodule update --init --recursive
 
 ## Libraries used
 * Dear imgui for gui: https://github.com/ocornut/imgui
