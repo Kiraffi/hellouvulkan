@@ -105,7 +105,7 @@ include_directories("external/glfw/include/")
 include_directories("src/mylibs")
 include_directories("external/VulkanMemoryAllocator/include")
 
-
+set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
 add_library(Imgui
     "external/imgui/backends/imgui_impl_glfw.cpp"
     "external/imgui/backends/imgui_impl_vulkan.cpp"
