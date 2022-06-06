@@ -163,7 +163,9 @@ void printvector(const Vector<PodVector<uint32_t>> &vectorOfPodVectors)
 void testVector()
 {
     Vector<PodVector<uint32_t>> vectorOfPodVectors{{1}, {2, 99, 43, 3}};
+    
     vectorOfPodVectors.pushBack({1, 2, 3});
+    
     vectorOfPodVectors.pushBack({4, 5, 60});
     vectorOfPodVectors.pushBack({7, 8, 9});
     printvector(vectorOfPodVectors);
@@ -180,6 +182,7 @@ void testVector()
 
     for(uint32_t i = 0; i < vectorOfPodVectors.getSize(); ++i)
         printUints(vectorOfPodVectors[i]);
+        
 
     Vector<PodVector<uint32_t>> v = vectorOfPodVectors;
     printvector(v);
@@ -188,8 +191,19 @@ void testVector()
     printvector(vectorOfPodVectors);
     printvector(v);
 
+    Vector<Vector<PodVector<uint32_t>>> v2;
+    v2.resize(8);
+    for(uint32_t i = 0; i < 3; ++i)
+        v2.push_back(vectorOfPodVectors);
+
     vectorOfPodVectors.clear();
+
+    for(const auto &vec : v2)
+        printvector(vec);
+
+    
     printvector(vectorOfPodVectors);
+    
 }
 
 int main()

@@ -16,7 +16,10 @@ public:
 
     ByteBuffer(uint32_t dataTypeSize);
     ~ByteBuffer();
+    // just sets size to 0
     void clear();
+    // actually deallocate and return to initial state.
+    void reset();
     void copyFrom(const ByteBuffer &other);
     void copyFromArray(uint8_t *arr, uint32_t count);
     void reserve(uint32_t indices);

@@ -50,11 +50,9 @@ public:
 template <typename T>
 Vector<T>::~Vector()
 {
-    T *ptr = (T *)this->buffer.getBegin();
-    for(uint32_t i = 0; i < buffer.getSize(); ++i)
+    for (T& t : *this)
     {
-        ptr->~T();
-        ++ptr;
+        t.~T();
     }
 }
 
@@ -104,7 +102,8 @@ template <typename T>
 Vector<T>::Vector(Vector &&other) noexcept : VectorBase(sizeof(T))
 {
     CHECK_NO_POD_MACRO();
-    this->~Vector<T>();
+    clear();
+    buffer.reset();
     buffer = other.buffer;
     new (&other.buffer) ByteBuffer(sizeof(T));
 }
@@ -131,21 +130,22 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
 {
     CHECK_NO_POD_MACRO();
 
-    if (&vec == this)
+    if (&vec == this || vec.buffer.getBegin() == buffer.getBegin())
         return *this;
 
-    this->~Vector<T>();
-    new (&this->buffer) ByteBuffer(sizeof(T));
+    clear();
+    buffer.reset();
     ASSERT(sizeof(T) == buffer.getDataSize());
     if(vec.size() == 0)
         return *this;
     buffer.resize(vec.size());
-    T* ptr = (T *)this->buffer.getDataIndex(0);
+    T* ptr = (T *)buffer.getBegin();
     for(T &value : vec)
     {
         new(ptr)T(value);
         ptr++;
     }
+    
     return *this;
 }
 
@@ -169,6 +169,17 @@ template <typename T>
 void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
 {
     uint32_t currSize = getSize();
+    if (newSize < currSize)
+    {
+        uint32_t tmpPos = newSize;
+        T* ptr = (T*)buffer.getDataIndex(tmpPos);
+        while (tmpPos < currSize)
+        {
+            ptr->~T();
+            ++ptr;
+            ++tmpPos;
+        }
+    }
     this->buffer.resize(newSize);
     if(currSize < newSize)
     {
@@ -179,17 +190,7 @@ void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
             ++ptr;
             ++currSize;
         }
-    }
-    else if(newSize < currSize)
-    {
-        T* ptr = (T *)buffer.getDataIndex(newSize);
-        while(newSize < currSize)
-        {
-            ptr->~T();
-            ++ptr;
-            ++newSize;
-        }
-    }
+    } 
 }
 
 

@@ -91,7 +91,7 @@ template <typename T>
 PodVector<T>::PodVector(PodVector &&other) noexcept : VectorBase(sizeof(T))
 {
     CHECK_POD_MACRO();
-    buffer.~ByteBuffer();
+    buffer.reset();
     buffer = other.buffer;
     new (&other.buffer) ByteBuffer(sizeof(T));
 }
@@ -117,8 +117,7 @@ PodVector<T>& PodVector<T>::operator=(const PodVector<T> &vec)
 
     if (&vec == this)
         return *this;
-    this->~PodVector<T>();
-    new (&this->buffer) ByteBuffer(sizeof(T));
+    clear();
     this->buffer.copyFrom(vec.buffer);
     return *this;
 }

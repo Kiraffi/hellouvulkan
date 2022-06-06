@@ -11,12 +11,22 @@ ByteBuffer::ByteBuffer(uint32_t dataTypeSize)
          .memory = Memory{}
     }
 {
+    ASSERT(dataTypeSize);
     //printf("ds: %u, ", dataTypeSize);
 }
 
 ByteBuffer::~ByteBuffer()
 {
-    deAllocateMemory(bufferData.memory);
+    reset();
+}
+void ByteBuffer::reset()
+{
+    ASSERT(bufferData.dataTypeSize);
+    if (isValidMemory(bufferData.memory) || bufferData.capasity > 0u || bufferData.size > 0u)
+        ASSERT(deAllocateMemory(bufferData.memory));
+    bufferData.capasity = 0u;
+    bufferData.size = 0u;
+    bufferData.memory = Memory{};
 }
 
 void ByteBuffer::clear()
