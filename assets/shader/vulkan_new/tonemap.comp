@@ -19,7 +19,8 @@ void main()
         //vec4 hdrSample = imageLoad(hdrTex, pos);
         vec4 hdrSample = texelFetch(hdrTex, pos, 0);
         // reinhard tonemapping
-        hdrSample = hdrSample / (hdrSample + 1.0f);
+        float luminance = dot(hdrSample.xyz, vec3(0.2126, 0.7152, 0.0722));
+        hdrSample = hdrSample / (luminance + 1.0f);
         imageStore(storeTex, pos, vec4(hdrSample.rgb, 0.0f));
     }
 }
