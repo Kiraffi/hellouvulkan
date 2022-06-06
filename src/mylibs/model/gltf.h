@@ -52,8 +52,8 @@ struct GltfModel
     Vector<Bone> bones;
     uint32_t boneCount = 0u;
 
-    float animStartTime = 0.0f;
-    float animEndTime = 0.0f;
+    PodVector<float> animStartTimes;
+    PodVector<float> animEndTimes;
 };
 
 bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,

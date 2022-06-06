@@ -486,7 +486,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
     JSONBlock bl;
     bool parseSuccess = bl.parseJSON(ArraySliceView(buffer.data(), buffer.size()));
-   
+
     if (!parseSuccess)
     {
         printf("Failed to parse: %s\n", filename.data());
@@ -985,6 +985,8 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             outModel.animationPosData.resize(data.animationNodes.getSize());
             outModel.animationRotData.resize(data.animationNodes.getSize());
             outModel.animationScaleData.resize(data.animationNodes.getSize());
+            outModel.animStartTimes.resize(data.animationNodes.size());
+            outModel.animEndTimes.resize(data.animationNodes.size());
 
             outModel.bones.resize(jointCount);
             for (uint32_t boneIndex = 0u; boneIndex < jointCount; ++boneIndex)
@@ -1068,16 +1070,16 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
             }
 
-            outModel.animStartTime = 1e10;
-            outModel.animEndTime = -1e10;
+            float animStartTime = 1e10;
+            float animEndTime = -1e10;
             for (uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
             {
                 for (const auto& bones : outModel.animationPosData[animationIndex])
                 {
                     for (const auto& anim : bones)
                     {
-                        outModel.animStartTime = std::min(outModel.animStartTime, anim.timeStamp);
-                        outModel.animEndTime = std::max(outModel.animEndTime, anim.timeStamp);
+                        animStartTime = std::min(animStartTime, anim.timeStamp);
+                        animEndTime = std::max(animEndTime, anim.timeStamp);
                     }
                 }
 
@@ -1085,8 +1087,8 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 {
                     for (const auto& anim : bones)
                     {
-                        outModel.animStartTime = std::min(outModel.animStartTime, anim.timeStamp);
-                        outModel.animEndTime = std::max(outModel.animEndTime, anim.timeStamp);
+                        animStartTime = std::min(animStartTime, anim.timeStamp);
+                        animEndTime = std::max(animEndTime, anim.timeStamp);
                     }
                 }
 
@@ -1094,10 +1096,12 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 {
                     for (const auto& anim : bones)
                     {
-                        outModel.animStartTime = std::min(outModel.animStartTime, anim.timeStamp);
-                        outModel.animEndTime = std::max(outModel.animEndTime, anim.timeStamp);
+                        animStartTime = std::min(animStartTime, anim.timeStamp);
+                        animEndTime = std::max(animEndTime, anim.timeStamp);
                     }
                 }
+                outModel.animStartTimes[animationIndex] = animStartTime;
+                outModel.animEndTimes[animationIndex] = animEndTime;
             }
         }
     }
@@ -1227,14 +1231,21 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
     if(model.bones.size() == 0)
         return false;
 
-    while (time < model.animStartTime)
-        time += model.animEndTime - model.animStartTime;
-    while (time > model.animEndTime)
-        time -= model.animEndTime - model.animStartTime;
+    animationIndex = animationIndex < model.animationPosData.size() ? animationIndex : model.animationPosData.size() - 1;
+
+    if(animationIndex >= model.animStartTimes.size())
+        return false;
+
+    float animStartTime = model.animStartTimes[animationIndex];
+    float animEndTime = model.animEndTimes[animationIndex];
+
+    while (time < animStartTime)
+        time += animEndTime - animStartTime;
+    while (time > animEndTime)
+        time -= animEndTime - animStartTime;
 
     if (model.animationPosData.size() > 255)
         return false;
     outMatrices.resize(256);
-    animationIndex = animationIndex < model.animationPosData.size() ? animationIndex : model.animationPosData.size() - 1;
     return evaluateBone(model, animationIndex, 0, time, Matrix(), outMatrices);
 }
