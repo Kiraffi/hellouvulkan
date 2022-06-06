@@ -9,6 +9,7 @@ struct MeshRenderTargets
     bool resizeShadowTarget(int width, int height);
 
     void prepareTargetsForMeshRendering();
+    void prepareTargetsForShadowRendering();
     void prepareTargetsForLightingComputeSampling();
 
     Image albedoImage;

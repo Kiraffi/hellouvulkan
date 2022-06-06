@@ -61,6 +61,10 @@ void MeshRenderTargets::prepareTargetsForMeshRendering()
     prepareToGraphicsSampleWrite(albedoImage);
     prepareToGraphicsSampleWrite(normalMapImage);
     prepareToGraphicsSampleWrite(depthImage);
+}
+
+void MeshRenderTargets::prepareTargetsForShadowRendering()
+{
     prepareToGraphicsSampleWrite(shadowDepthImage);
 }
 

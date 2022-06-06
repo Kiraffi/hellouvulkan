@@ -443,8 +443,10 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
     barrier.dstAccessMask = dstAccessMask;
     barrier.oldLayout = oldLayout;
     barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.srcQueueFamilyIndex = vulk->queueFamilyIndices.graphicsFamily;
+    barrier.dstQueueFamilyIndex = vulk->queueFamilyIndices.graphicsFamily;
     barrier.image = image;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.aspectMask = aspectMask;
@@ -618,8 +620,11 @@ bool prepareToGraphicsSampleRead(Image& image)
     VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
     if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
     {
+        VkAccessFlagBits dstMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        if (image.accessMask == VK_ACCESS_SHADER_WRITE_BIT)
+            dstMask = VK_ACCESS_SHADER_READ_BIT;
         return addImageGraphicsBarrier(imageBarrier(image,
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+            dstMask, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
     }
     else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT)
     {

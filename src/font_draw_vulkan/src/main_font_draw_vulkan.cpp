@@ -376,11 +376,8 @@ void VulkanFontDraw::renderUpdate()
 
 void VulkanFontDraw::renderDraw()
 {
-    addImageBarrier(imageBarrier(renderColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+    prepareToGraphicsSampleWrite(renderColorImage);
 
-    flushBarriers();
     // Drawingg
 
     {
@@ -398,7 +395,7 @@ void VulkanFontDraw::renderDraw()
         //vkCmdEndRendering(vulk->commandBuffer);
     }
 
-    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    writeStamp();
 
     present(renderColorImage);
 

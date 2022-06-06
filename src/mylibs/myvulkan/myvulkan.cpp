@@ -1214,6 +1214,7 @@ void endSingleTimeCommands()
 void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues)
 {
     flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+
     VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     passBeginInfo.renderPass = pipeline.renderPass;
     passBeginInfo.framebuffer = pipeline.framebuffer;
@@ -1234,6 +1235,7 @@ void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& 
 void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage depthImage)
 {
     flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+
     uint32_t width = 0u;
     uint32_t height = 0u;
     PodVector< VkRenderingAttachmentInfo> colorAttachments;

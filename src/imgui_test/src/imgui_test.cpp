@@ -29,6 +29,9 @@
 #include <render/myimgui.h>
 #include <render/tonemaprendersystem.h>
 
+#include <render/lightingrendertargets.h>
+#include <render/meshrendertargets.h>
+
 #include <gui/examplegui.h>
 
 #include <scene/scene.h>
@@ -67,17 +70,12 @@ public:
     LightRenderSystem lightRenderSystem;
     TonemapRenderSystem tonemapRenderSystem;
 
-    Image renderColorImage;
-    Image renderNormalMapColorImage;
-    Image renderDepthImage;
-
-    Image renderShadowDepthImage;
-
-    Image renderHdrImage;
+    LightingRenderTargets lightingRenderTargets;
+    MeshRenderTargets meshRenderTargets;
 
     PodVector<uint32_t> entityIndices;
 
-    CovertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
+    ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
     MyImgui imgui;
@@ -97,11 +95,6 @@ public:
 
 ImguiTest::~ImguiTest()
 {
-    destroyImage(renderColorImage);
-    destroyImage(renderDepthImage);
-    destroyImage(renderNormalMapColorImage);
-    destroyImage(renderHdrImage);
-    destroyImage(renderShadowDepthImage);
 }
 
 
@@ -116,7 +109,8 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
     if (!imgui.init(window))
         return false;
 
-    convertFromS16.init(ShaderType::ConvertFromRGBAS16);
+    if (!convertFromS16.init(ShaderType::ConvertFromRGBAS16))
+        return false;
 
     if (!meshRenderSystem.init())
         return false;
@@ -130,6 +124,9 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
     if (!tonemapRenderSystem.init())
         return false;
 
+    if (!meshRenderTargets.resizeShadowTarget(SHADOW_WIDTH, SHADOW_HEIGHT))
+        return false;
+
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
@@ -137,15 +134,6 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
  
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, 0.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
 
-
-    if (!createRenderTargetImage(SHADOW_WIDTH, SHADOW_HEIGHT, vulk->depthFormat,
-        VK_IMAGE_USAGE_SAMPLED_BIT,
-        "Main shadow target", renderShadowDepthImage))
-    {
-        printf("Failed to create shadow target image\n");
-        return false;
-    }
-   
     sunCamera.pitch = toRadians(60.0f);
     sunCamera.yaw = toRadians(30.0f);
 
@@ -155,50 +143,18 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
 bool ImguiTest::resized()
 {
-    uint32_t width = vulk->swapchain.width;
-    uint32_t height = vulk->swapchain.height;
-
-    // create color and depth images
-    if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
-            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-            "Main color target image", renderColorImage))
-    {
-        printf("Failed to create %s\n", renderColorImage.imageName);
+    if (!meshRenderTargets.resizeMeshTargets())
         return false;
-    }
-
-    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SNORM,
-            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, //VK_IMAGE_USAGE_STORAGE_BIT,
-            "Main normal map target image", renderNormalMapColorImage))
-    {
-        printf("Failed to create %s\n", renderNormalMapColorImage.imageName);
+    if (!lightingRenderTargets.resizeLightingTargets())
         return false;
-    }
 
-    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        "Main color HDR", renderHdrImage))
-    {
-        printf("Failed to create %s\n", renderHdrImage.imageName);
-        return false;
-    }
+    fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
+    convertFromS16.updateSourceImages(meshRenderTargets);
 
-    if(!createRenderTargetImage(width, height, vulk->depthFormat,
-        VK_IMAGE_USAGE_SAMPLED_BIT,
-        "Main depth target image", renderDepthImage))
-    {
-        printf("Failed to create %s\n", renderDepthImage.imageName);
-        return false;
-    }
+    lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
+    tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
-    fontSystem.setRenderTarget(renderColorImage);
-    convertFromS16.updateSourceImage(renderNormalMapColorImage, renderColorImage);
-    lightRenderSystem.updateReadTargets(renderColorImage, renderNormalMapColorImage, 
-        renderDepthImage, renderShadowDepthImage,
-        renderHdrImage);
-    tonemapRenderSystem.updateReadTargets(renderHdrImage, renderColorImage);
-
-    imgui.updateRenderTarget(renderColorImage);
+    imgui.updateRenderTarget(meshRenderTargets.albedoImage);
     return true;
 }
 
@@ -298,70 +254,48 @@ void ImguiTest::renderUpdate()
 
 void ImguiTest::renderDraw()
 {
-    prepareToGraphicsSampleWrite(renderColorImage);
-    prepareToGraphicsSampleWrite(renderNormalMapColorImage);
-    prepareToGraphicsSampleWrite(renderDepthImage);
-    prepareToGraphicsSampleWrite(renderShadowDepthImage);
-
-    flushBarriers();
-
+    meshRenderTargets.prepareTargetsForMeshRendering();
+    meshRenderTargets.prepareTargetsForShadowRendering();
     // Drawingg
     {
-        meshRenderSystem.render(renderColorImage, renderNormalMapColorImage, renderDepthImage);
-        meshRenderSystem.renderShadows(renderShadowDepthImage);
+        meshRenderSystem.render(meshRenderTargets);
+        meshRenderSystem.renderShadows(meshRenderTargets);
     }
-
-
-    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     if (showNormalMap)
     {
-        prepareToComputeSampleRead(renderNormalMapColorImage);
+        prepareToComputeSampleRead(meshRenderTargets.normalMapImage);
 
-        prepareToComputeImageWrite(renderColorImage);
+        prepareToComputeImageWrite(meshRenderTargets.albedoImage);
 
-        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        convertFromS16.render(meshRenderTargets.albedoImage.width, meshRenderTargets.albedoImage.height);
 
-        convertFromS16.render(renderColorImage.width, renderColorImage.height);
-        writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     }
     else
     {
         {
-            prepareToComputeSampleRead(renderColorImage);
-            prepareToComputeSampleRead(renderNormalMapColorImage);
-            prepareToComputeSampleRead(renderDepthImage);
-            prepareToComputeSampleRead(renderShadowDepthImage);
+            meshRenderTargets.prepareTargetsForLightingComputeSampling();
+            lightingRenderTargets.prepareTargetsForLightingComputeWriting();
 
-            prepareToComputeImageWrite(renderHdrImage);
-
-            flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-            lightRenderSystem.render(renderColorImage.width, renderColorImage.height);
-            writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            lightRenderSystem.render(lightingRenderTargets.lightingTargetImage.width, lightingRenderTargets.lightingTargetImage.height);
         }
 
         {
-            prepareToComputeSampleRead(renderHdrImage);
+            lightingRenderTargets.prepareForTonemapSampling();
 
-            prepareToComputeImageWrite(renderColorImage);
+            prepareToComputeImageWrite(meshRenderTargets.albedoImage);
 
-            flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            tonemapRenderSystem.render(meshRenderTargets.albedoImage.width, meshRenderTargets.albedoImage.height);
 
-            tonemapRenderSystem.render(renderColorImage.width, renderColorImage.height);
-            writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         }
     }
 
     {
-        prepareToGraphicsSampleWrite(renderColorImage);
-        flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
-
+        prepareToGraphicsSampleWrite(meshRenderTargets.albedoImage);
         fontSystem.render();
-        writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
     }
     imgui.render();
-    present(renderColorImage);
+    present(meshRenderTargets.albedoImage);
 }
 
 int main(int argCount, char **argv)

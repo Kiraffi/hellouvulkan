@@ -562,11 +562,7 @@ void SpaceShooter::renderUpdate()
 
 void SpaceShooter::renderDraw()
 {
-    addImageBarrier(imageBarrier(renderColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-
-    flushBarriers();
+    prepareToGraphicsSampleWrite(renderColorImage);
 
     // Drawingg
     {
@@ -586,8 +582,6 @@ void SpaceShooter::renderDraw()
         fontSystem.render();
 
     }
-
-    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     present(renderColorImage);
 }

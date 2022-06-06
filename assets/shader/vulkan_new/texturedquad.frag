@@ -5,9 +5,9 @@ layout (location = 0) out vec4 outColor;
 
 layout (location = 0) in vec4 colIn;
 layout (location = 1) in vec2 uvIn;
-layout(depth_unchanged) out float gl_FragDepth;
+//layout(depth_unchanged) out float gl_FragDepth;
 
-layout (binding = 2) uniform sampler2D textureToSample;
+layout (binding = 16) uniform sampler2D textureToSample;
 
 void main()
 {

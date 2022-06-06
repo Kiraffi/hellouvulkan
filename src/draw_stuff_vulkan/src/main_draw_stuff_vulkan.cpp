@@ -102,7 +102,8 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
     
-    convertFromS16.init(ShaderType::ConvertFromRGBAS16);
+    if (!convertFromS16.init(ShaderType::ConvertFromRGBAS16))
+        return false;
 
     if (!meshRenderSystem.init())
         return false;
@@ -116,6 +117,8 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     if (!tonemapRenderSystem.init())
         return false;
 
+    if (!meshRenderTargets.resizeShadowTarget(SHADOW_WIDTH, SHADOW_HEIGHT))
+        return false;
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
@@ -140,8 +143,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     }
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING }));
 
-    if (!meshRenderTargets.resizeShadowTarget(SHADOW_WIDTH, SHADOW_HEIGHT))
-        return false;
+
    
     sunCamera.pitch = toRadians(60.0f);
     sunCamera.yaw = toRadians(30.0f);
@@ -258,14 +260,12 @@ void VulkanDrawStuff::renderUpdate()
 void VulkanDrawStuff::renderDraw()
 {
     meshRenderTargets.prepareTargetsForMeshRendering();
+    meshRenderTargets.prepareTargetsForShadowRendering();
     // Drawingg
     {
         meshRenderSystem.render(meshRenderTargets);
         meshRenderSystem.renderShadows(meshRenderTargets);
     }
-
-
-    
 
     if (showNormalMap)
     {
@@ -283,7 +283,6 @@ void VulkanDrawStuff::renderDraw()
             lightingRenderTargets.prepareTargetsForLightingComputeWriting();
 
             lightRenderSystem.render(lightingRenderTargets.lightingTargetImage.width, lightingRenderTargets.lightingTargetImage.height);
-            
         }
 
         {

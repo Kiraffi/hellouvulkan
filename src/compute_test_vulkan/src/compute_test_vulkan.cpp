@@ -58,9 +58,7 @@ public:
     Pipeline computePipeline;
     Pipeline graphicsFinalPipeline;
 
-    Image renderColorImage;
-    Image renderNormalMapColorImage;
-    Image renderDepthImage;
+    MeshRenderTargets meshRenderTargets;
 
     Image computeColorImage;
 
@@ -80,10 +78,6 @@ VulkanComputeTest::~VulkanComputeTest()
     destroyPipeline(graphicsFinalPipeline);
 
     destroyBuffer(quadIndexBuffer);
-
-    destroyImage(renderColorImage);
-    destroyImage(renderNormalMapColorImage);
-    destroyImage(renderDepthImage);
 
     destroyImage(computeColorImage);
     destroyImage(renderColorFinalImage);
@@ -116,7 +110,7 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
         beginSingleTimeCommands();
         uint32_t quads[] = {1,0,2, 2,0,3};
         addToCopylist(ArraySliceViewBytes(quads, ARRAYSIZES(quads)), quadIndexBuffer.buffer, 0u);
-        flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         endSingleTimeCommands();
     }
@@ -171,7 +165,7 @@ bool VulkanComputeTest::recreateDescriptor()
             {
                 DescriptorInfo(vulk->renderFrameBufferHandle),
                 //DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureSampler),
-                DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+                DescriptorInfo(meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
                 DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             });
         if (!createDescriptor(pipeline))
@@ -192,7 +186,7 @@ bool VulkanComputeTest::recreateDescriptor()
         {
             DescriptorInfo(vulk->renderFrameBufferHandle),
             DescriptorInfo(quadHandle),
-            DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, vulk->globalTextureSampler),
+            DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
         });
 
         if (!createDescriptor(pipeline))
@@ -213,32 +207,11 @@ bool VulkanComputeTest::recreateDescriptor()
 
 bool VulkanComputeTest::resized()
 {
+    if (!meshRenderTargets.resizeMeshTargets())
+        return false;
+
     uint32_t width = vulk->swapchain.width;
     uint32_t height = vulk->swapchain.height;
-    // create color and depth images
-    if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        "Main color target image", renderColorImage))
-    {
-        printf("Failed to create: %s\n", renderColorImage.imageName);
-        return false;
-    }
-
-    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SNORM,
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        "Main normal map target image", renderNormalMapColorImage))
-    {
-        printf("Failed to create: %s\n", renderNormalMapColorImage.imageName);
-        return false;
-    }
-
-    if (!createRenderTargetImage(width, height, vulk->depthFormat,
-        0,
-        "Main depth target image", renderDepthImage))
-    {
-        printf("Failed to create: %s\n", renderDepthImage.imageName);
-        return false;
-    }
 
     if (!createRenderTargetImage(
         width, height, vulk->defaultColorFormat,
@@ -257,7 +230,7 @@ bool VulkanComputeTest::resized()
         return false;
     }
 
-    fontSystem.setRenderTarget(renderColorImage);
+    fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
     //ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
     recreateDescriptor();
 
@@ -292,7 +265,7 @@ void VulkanComputeTest::logicUpdate()
 void VulkanComputeTest::renderUpdate()
 {
     VulkanApp::renderUpdate();
-    scene.update(getTime());
+    scene.update(dt);
     meshRenderSystem.prepareToRender();
 }
 
@@ -300,57 +273,25 @@ void VulkanComputeTest::renderDraw()
 {
     const SwapChain& swapchain = vulk->swapchain;
 
-    addImageBarrier(imageBarrier(renderColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-
-    addImageBarrier(imageBarrier(renderNormalMapColorImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-
-    addImageBarrier(imageBarrier(renderDepthImage,
-        0, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
-
-    flushBarriers();
-
+    prepareToGraphicsSampleWrite(renderColorFinalImage);
     // Drawingg
     {
-        meshRenderSystem.render(renderColorImage, renderNormalMapColorImage, renderDepthImage);
+        meshRenderTargets.prepareTargetsForMeshRendering();
+        meshRenderSystem.render(meshRenderTargets);
         fontSystem.render();
     }
 
-    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     {
-        addImageBarrier(imageBarrier(renderColorImage,
-            //VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
-
-        addImageBarrier(imageBarrier(computeColorImage,
-            0, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
-
-        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-
-        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-        vkCmdDispatch(vulk->commandBuffer, (swapchain.width + 7) / 8, (swapchain.height + 7) / 8, 1);
-
+        prepareToComputeImageRead(meshRenderTargets.albedoImage);
+        prepareToComputeImageWrite(computeColorImage);
+        dispatchCompute(computePipeline, swapchain.width, swapchain.height, 1, 8, 8, 1);
+        writeStamp();
     }
-    writeStamp(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
     {
-        addImageBarrier(imageBarrier(renderColorFinalImage,
-            0, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
-
-        addImageBarrier(imageBarrier(computeColorImage,
-            VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
-
-        flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
-
-
+        prepareToGraphicsSampleRead(computeColorImage);
+ 
         //beginRenderPass(graphicsFinalPipeline, {});
         beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
@@ -364,12 +305,11 @@ void VulkanComputeTest::renderDraw()
         }
         //vkCmdEndRenderPass(vulk->commandBuffer);
         vkCmdEndRendering(vulk->commandBuffer);
-
+        writeStamp();
     }
 
-    writeStamp(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
-    //present(renderColorImage);
+    //present(meshRenderTargets.albedoImage);
     //present(computeColorImage);
     present(renderColorFinalImage);
 }
