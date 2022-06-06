@@ -1,10 +1,17 @@
 # CarpEngine - hellouvulkan
 
+## Intro
+This is just my own toy project to test vulkan rendering and other random stuffs. 
+* Json reading in order to be able to read gltf files. Not tested much except that it managed to read the gltf files that blender exports. Doesn't handle any obscure cases.
+* There are some barely/not working implementations for reading gltf-text format, which seems to do enough 
+for my own cases to read blender exported gltfs, and even then it doesn't support most of the features. Reads single mesh with skin and animations to it.
+** If the mesh had animation or keyframes, it didn't seem to find the node index for animations. Still a bug
+
 ## Libraries used
-Dear imgui for gui: https://github.com/ocornut/imgui
-Stb for image read/write: https://github.com/nothings/stb
-GLFW for windowing and platform support: https://github.com/glfw/glfw
-Meshoptimizer for optimising meshes: https://github.com/zeux/meshoptimizer
+* Dear imgui for gui: https://github.com/ocornut/imgui
+* Stb for image read/write: https://github.com/nothings/stb
+* GLFW for windowing and platform support: https://github.com/glfw/glfw
+* Meshoptimizer for optimising meshes: https://github.com/zeux/meshoptimizer
 
 ## Requirements
 
