@@ -17,7 +17,7 @@ installed by just right click the folder and open with Visual Studio. It should 
 to manually generating Visual Studio solution with cmake.
 
 
-## Problems cases I have encountered
+## Problems/cases I have run into
 
 For Linux you can add: "cmake.debugConfig": { "cwd": "${workspaceFolder}" } into cmake tools settings to configure
 the working directory to be the same as workspace directory. Thus you don't need to copy assets over to built folder.
