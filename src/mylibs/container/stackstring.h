@@ -34,8 +34,6 @@ public:
     void add(const StackString<U> &s)
     {
         const char *s2 = s.getStr();
-        if (s2 == str)
-            return;
         while (s2 && *s2 && size < MaxSize)
         {
             str[size++] = *s2++;
@@ -154,11 +152,12 @@ public:
     uint32_t getSize() const { return size; }
     uint32_t length() const { return size; }
 private:
-    char str[N] = {};
-    static constexpr uint32_t MaxSize = N - 1;
-    uint32_t size = 0u;
+    char str[N + 1] = {};
+    static constexpr uint32_t MaxSize = N;
+    uint16_t size = 0u;
 };
 
-using SmallStackString = StackString<32>;
-using MediumStackString = StackString<256>;
-using LongStackString = StackString<1024>;
+using TinyStackString = StackString<21>;    // 24 bytes
+using SmallStackString = StackString<29>;   // 32 bytes
+using MediumStackString = StackString<253>; // 256 bytes
+using LongStackString = StackString<1021>;  // 1024 bytes
