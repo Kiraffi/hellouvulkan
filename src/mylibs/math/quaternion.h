@@ -27,7 +27,7 @@ Quaternion operator*(float t, const Quaternion &q);
 Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle);
 Quaternion getQuaternionFromNormalizedVectors(const Vector3 &from, const Vector3 &toVector);
 
-
+Quaternion inverse(const Quaternion &q);
 Vector3 rotateVector(const Vector3 &v, const Quaternion &q);
 
 float dot(const Quaternion &q1, const Quaternion &q2);

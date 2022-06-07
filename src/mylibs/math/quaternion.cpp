@@ -28,6 +28,11 @@ Quaternion normalize(const Quaternion &q)
     return result;
 }
 
+Quaternion inverse(const Quaternion &q)
+{
+    return Quaternion(-q.v, q.w);
+}
+
 Vector3 rotateVector(const Vector3 &v, const Quaternion &q)
 {
 
@@ -107,8 +112,8 @@ Quaternion lerp(Quaternion const& q1, Quaternion const& q2, float t)
 {
     float dotAngle = dot(q1, q2);
     Quaternion other = q2;
-    if (dotAngle < 0.0f)
-        other = Quaternion(-q2.v, q2.w);
+    if(dotAngle < 0.0f)
+        other = inverse(q2);
 
     Quaternion result;
     result.v = q1.v - t * (q1.v - other.v);
@@ -124,7 +129,7 @@ Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
     Quaternion other = q2;
     if (dotAngle < 0.0f)
     {
-        other = Quaternion(-q2.v, q2.w);
+        other = inverse(q2);
     }
     
     if (std::abs(dotAngle) > DOT_THRESHOLD)    

@@ -49,7 +49,7 @@ add_library(MyLibraries
 
     "scene/scene.cpp"
 
-)
+ "math/ray.h" "math/ray.cpp" "math/sphere.h" "math/bounds.h")
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
