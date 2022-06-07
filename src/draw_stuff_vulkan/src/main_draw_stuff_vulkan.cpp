@@ -15,6 +15,7 @@
 #include <math/matrix.h>
 #include <math/plane.h>
 #include <math/quaternion.h>
+#include <math/ray.h>
 #include <math/vector3.h>
 
 #include <model/gltf.h>
@@ -39,7 +40,6 @@
 
 #include <imgui/imgui.h>
 #include <string.h>
-#include <cmath>
 
 static constexpr int SCREEN_WIDTH = 1024;
 static constexpr int SCREEN_HEIGHT = 768;
@@ -155,7 +155,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
     {
         entityIndices.push_back(scene.addGameEntity({
-            .transform = {.pos = {f * 5.0f, 1.0f, -2.0f - float(f * 3.0f)}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW }));
+            .transform = {.pos = {f * 5.0f, 1.0f, -5.0f}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW }));
         entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE }));
         entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH }));
         entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, }, .entityType = EntityType::BLOB }));
@@ -260,85 +260,68 @@ void VulkanDrawStuff::logicUpdate()
         mouseState.x >= 0 && mouseState.y >= 0 &&
         mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
     {
+        // Calculate the click as ndc. Half pixel offset as rendering.
         Vec2 coord(mouseState.x, mouseState.y);
-        coord = coord / Vec2(vulk->swapchain.width, vulk->swapchain.height);
-
+        coord = (coord + 0.5f) / Vec2((vulk->swapchain.width), (vulk->swapchain.height));
         coord = coord * 2.0f - 1.0f;
         coord.y = -coord.y;
 
-        printf("Mouse x: %f, mouse y: %f\n", coord.x, coord.y);
-        Vec3 rayPos = camera.position;
-        Vec3 camDirs[3];
-        getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, 0.0f, camDirs[0], camDirs[1], camDirs[2]);
-
         Matrix mat = inverse(camera.perspectiveProjection() * camera.getCameraMatrix());
 
-//        Vec4 rayDir4 = mul(mat, Vec4(coord.x, coord.y, 1.0f, 1.0f));
         Vec4 rayDir4 = mul(Vec4(coord.x, coord.y, 1.0f, 1.0f), mat);
+        rayDir4 = rayDir4 / rayDir4.w;
         Vec3 rayDir(rayDir4.x, rayDir4.y, rayDir4.z);
-        rayDir = normalize(rayDir);
-        printf("R x: %f, R y: %f, Rz: %f\n", rayDir.x, rayDir.y, rayDir.z);
+        rayDir = normalize(rayDir - camera.position);
 
         lineFrom = camera.position;
         lineTo = camera.position + rayDir * 150.0f;
 
-        Vec3 onePerRayDir(1.0f / rayDir.x, 1.0f / rayDir.y, 1.0 / rayDir.z);
+        Vec3 onePerRayDir = 1.0f / rayDir;
+
+        Ray ray{ .pos = camera.position, .dir = rayDir };
 
         float closestDist = FLT_MAX;
         for(uint32_t index : entityIndices)
         {
             const auto &entity = scene.getEntity(index);
-            // intersect test ray sphere from game physics cookbook
+            Hitpoint hitpoint;
+            /*
+            if(raySphereIntersect(ray, Sphere{ .pos = entity.transform.pos, .radius = 2.0f }, hitpoint))
             {
-                float sphereRadius = 1.0f;
-                Vec3 spherePos = entity.transform.pos;
-                Vec3 e = spherePos - lineFrom;
-                float rSq = sphereRadius * sphereRadius;
-
-                float eSq = sqrLen(e);
-                float a = dot(e, rayDir);
-                float bSq = eSq - (a * a);
-                float f = sqrt(fabsf((rSq)- bSq));
-
-                // Assume normal intersection!
-                float t = a - f;
-                bool hit = true;
-                // No collision has happened
-                if (rSq - (eSq - a * a) < 0.0f) {
-                    hit = false;
-                }
-                // Ray starts inside the sphere
-                else if (eSq < rSq) {
-                    // Just reverse direction
-                    t = a + f;
-                }
-                Vec3 hitpos = lineFrom + rayDir * t;
-
-                if(hit)
+                float dist = sqrLen(hitpoint.point - ray.pos);
+                if(dist < closestDist)
                 {
-                    float dist = sqrLen(hitpos - lineFrom);
-                    if(dist < closestDist)
-                    {
-                        selectedEntityIndex = index;
-                        closestDist = dist;
-                    }
+                    selectedEntityIndex = index;
+                    closestDist = dist;
+                    lineTo = hitpoint.point;
                 }
-
+            }
+            */
+            if(rayOOBBBoundsIntersect(ray, entity.bounds, entity.transform, hitpoint))
+            {
+                float dist = sqrLen(hitpoint.point - ray.pos);
+                if(dist < closestDist)
+                {
+                    selectedEntityIndex = index;
+                    closestDist = dist;
+                    lineTo = hitpoint.point;
+                }
             }
         }
     }
     lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
-static bool drawEntityImgui(GameEntity &entity)
+static bool drawEntityImgui(GameEntity &entity, uint32_t index)
 {
     static float f = 0.0f;
     static int counter = 0;
 
     ImGui::Begin("Entity");
 
-    ImGui::Text("Type: %u", entity.entityType);
+    ImGui::Text("Type: %u, index: %u", entity.entityType, index);
     ImGui::InputFloat3("Position", &entity.transform.pos.x);
+
     bool mouseHover = ImGui::IsWindowHovered(
         ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();
     ImGui::End();
@@ -354,6 +337,43 @@ void VulkanDrawStuff::renderUpdate()
     for (uint32_t entityIndex : entityIndices)
     {
         GameEntity& entity = scene.getEntity(entityIndex);
+
+        Vec4 linePoints4[8];
+        Vec3 linePoints[8];
+        Matrix m = getModelMatrix(entity.transform);
+        const auto &bmin = entity.bounds.min;
+        const auto &bmax = entity.bounds.max;
+
+        linePoints4[0] = mul(Vec4(bmin.x, bmin.y, bmin.z, 1.0f), m);
+        linePoints4[1] = mul(Vec4(bmax.x, bmin.y, bmin.z, 1.0f), m);
+        linePoints4[2] = mul(Vec4(bmin.x, bmax.y, bmin.z, 1.0f), m);
+        linePoints4[3] = mul(Vec4(bmax.x, bmax.y, bmin.z, 1.0f), m);
+        linePoints4[4] = mul(Vec4(bmin.x, bmin.y, bmax.z, 1.0f), m);
+        linePoints4[5] = mul(Vec4(bmax.x, bmin.y, bmax.z, 1.0f), m);
+        linePoints4[6] = mul(Vec4(bmin.x, bmax.y, bmax.z, 1.0f), m);
+        linePoints4[7] = mul(Vec4(bmax.x, bmax.y, bmax.z, 1.0f), m);
+
+        for(uint32_t i = 0; i < 8; ++i)
+            linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
+
+        Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
+        if(selectedEntityIndex == entityIndex)
+            multip = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        lineRenderSystem.addLine(linePoints[1], linePoints[3], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[2], linePoints[3], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[1], linePoints[5], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[2], linePoints[6], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[3], linePoints[7], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[4], linePoints[5], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[4], linePoints[6], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[5], linePoints[7], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[6], linePoints[7], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+
+
+        lineRenderSystem.addLine(linePoints[0], linePoints[1], getColor(multip * Vec4(1.0f, 0.0f, 0.0f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[0], linePoints[2], getColor(multip * Vec4(0.0f, 1.0f, 0.0f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[0], linePoints[4], getColor(multip * Vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES ||
             entity.entityType == EntityType::FLOOR)
             continue;
@@ -379,7 +399,7 @@ void VulkanDrawStuff::renderUpdate()
 
     if(selectedEntityIndex < entityIndices.size())
     {
-        mouseHover = drawEntityImgui(scene.getEntity(selectedEntityIndex));
+        mouseHover = drawEntityImgui(scene.getEntity(selectedEntityIndex), selectedEntityIndex);
     }
     else
     {
