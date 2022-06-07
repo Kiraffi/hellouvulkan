@@ -289,17 +289,17 @@ bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock
             if(eValue > 0)
             {
                 for(int64_t i = 0; i < eValue; ++i)
-                    eDiv *= 10.0;
+                    eMultip *= 10.0;
             }
             else
             {
                 for(int64_t i = 0; i > eValue; --i)
-                    eMultip *= 10.0;
+                    eDiv *= 10.0;
             }
 
         }
         double result = (double(integerPart) +
-            (double(remainderPart) / origDiv)) * eMultip * eDiv;
+            (double(remainderPart) / origDiv)) * eMultip / eDiv;
 
         inOutBlock.jType |= JSONBlock::DOUBLE_TYPE | JSONBlock::VALID_TYPE;
         inOutBlock.valueDbl = neg ? -result : result;
