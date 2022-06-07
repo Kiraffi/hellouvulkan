@@ -85,7 +85,6 @@ public:
     MyImgui imgui;
 
     uint32_t selectedEntityIndex = ~0u;
-
     float rotationAmount = 0.0f;
 
     bool showNormalMap = false;
@@ -256,6 +255,7 @@ void VulkanDrawStuff::logicUpdate()
     if(mouseState.leftButtonDown && !mouseHover)
         selectedEntityIndex = ~0u;
 
+
     if(mouseState.leftButtonDown && !mouseHover &&
         mouseState.x >= 0 && mouseState.y >= 0 &&
         mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
@@ -309,6 +309,7 @@ void VulkanDrawStuff::logicUpdate()
             }
         }
     }
+
     lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
@@ -318,10 +319,16 @@ static bool drawEntityImgui(GameEntity &entity, uint32_t index)
     static int counter = 0;
 
     ImGui::Begin("Entity");
-
     ImGui::Text("Type: %u, index: %u", entity.entityType, index);
-    ImGui::InputFloat3("Position", &entity.transform.pos.x);
-
+    
+    // Forcing delesect item, if selected item changes.
+    ImGui::PushID(index);
+    {
+        ImGui::InputFloat3("Pos", &entity.transform.pos.x);
+        ImGui::InputFloat4("Rot", &entity.transform.rot.v.x);
+        ImGui::InputFloat3("Scale", &entity.transform.scale.x);
+    }
+    ImGui::PopID();
     bool mouseHover = ImGui::IsWindowHovered(
         ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();
     ImGui::End();
