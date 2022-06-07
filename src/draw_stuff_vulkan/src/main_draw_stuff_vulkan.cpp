@@ -268,7 +268,7 @@ void VulkanDrawStuff::logicUpdate()
 
         Matrix mat = inverse(camera.perspectiveProjection() * camera.getCameraMatrix());
 
-        Vec4 rayDir4 = mul(Vec4(coord.x, coord.y, 1.0f, 1.0f), mat);
+        Vec4 rayDir4 = mul(mat, Vec4(coord.x, coord.y, 1.0f, 1.0f));
         rayDir4 = rayDir4 / rayDir4.w;
         Vec3 rayDir(rayDir4.x, rayDir4.y, rayDir4.z);
         rayDir = normalize(rayDir - camera.position);
@@ -320,7 +320,7 @@ static bool drawEntityImgui(GameEntity &entity, uint32_t index)
 
     ImGui::Begin("Entity");
     ImGui::Text("Type: %u, index: %u", entity.entityType, index);
-    
+
     // Forcing delesect item, if selected item changes.
     ImGui::PushID(index);
     {
@@ -351,14 +351,14 @@ void VulkanDrawStuff::renderUpdate()
         const auto &bmin = entity.bounds.min;
         const auto &bmax = entity.bounds.max;
 
-        linePoints4[0] = mul(Vec4(bmin.x, bmin.y, bmin.z, 1.0f), m);
-        linePoints4[1] = mul(Vec4(bmax.x, bmin.y, bmin.z, 1.0f), m);
-        linePoints4[2] = mul(Vec4(bmin.x, bmax.y, bmin.z, 1.0f), m);
-        linePoints4[3] = mul(Vec4(bmax.x, bmax.y, bmin.z, 1.0f), m);
-        linePoints4[4] = mul(Vec4(bmin.x, bmin.y, bmax.z, 1.0f), m);
-        linePoints4[5] = mul(Vec4(bmax.x, bmin.y, bmax.z, 1.0f), m);
-        linePoints4[6] = mul(Vec4(bmin.x, bmax.y, bmax.z, 1.0f), m);
-        linePoints4[7] = mul(Vec4(bmax.x, bmax.y, bmax.z, 1.0f), m);
+        linePoints4[0] = mul(m, Vec4(bmin.x, bmin.y, bmin.z, 1.0f));
+        linePoints4[1] = mul(m, Vec4(bmax.x, bmin.y, bmin.z, 1.0f));
+        linePoints4[2] = mul(m, Vec4(bmin.x, bmax.y, bmin.z, 1.0f));
+        linePoints4[3] = mul(m, Vec4(bmax.x, bmax.y, bmin.z, 1.0f));
+        linePoints4[4] = mul(m, Vec4(bmin.x, bmin.y, bmax.z, 1.0f));
+        linePoints4[5] = mul(m, Vec4(bmax.x, bmin.y, bmax.z, 1.0f));
+        linePoints4[6] = mul(m, Vec4(bmin.x, bmax.y, bmax.z, 1.0f));
+        linePoints4[7] = mul(m, Vec4(bmax.x, bmax.y, bmax.z, 1.0f));
 
         for(uint32_t i = 0; i < 8; ++i)
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);

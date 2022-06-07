@@ -181,7 +181,11 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 {
     Matrix result;
 
-    #define MATRIX_ADD_ROW_MULT(row, col) (a._##row##0 * b._0##col + a._##row##1 * b._1##col + a._##row##2 * b._2##col + a._##row##3 * b._3##col)
+    #define MATRIX_ADD_ROW_MULT(row, col) (\
+        a._##row##0 * b._0##col + \
+        a._##row##1 * b._1##col + \
+        a._##row##2 * b._2##col + \
+        a._##row##3 * b._3##col)
     #define MATRIX_SET(row, col) (result._##row##col)  = MATRIX_ADD_ROW_MULT(row, col)
 
 
@@ -215,21 +219,20 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 Vec4 mul(const Matrix& m, const Vec4& v)
 {
     Vec4 result;
-    result.x = v.x * m._00 + v.y * m._10 + v.z * m._20 + v.w * m._30;
-    result.y = v.x * m._01 + v.y * m._11 + v.z * m._21 + v.w * m._31;
-    result.z = v.x * m._02 + v.y * m._12 + v.z * m._22 + v.w * m._32;
-    result.w = v.x * m._03 + v.y * m._13 + v.z * m._23 + v.w * m._33;
-    return result;
-}
-Vec4 mul(const Vec4& v, const Matrix& m)
-{
-    Vec4 result;
     result.x = v.x * m._00 + v.y * m._01 + v.z * m._02 + v.w * m._03;
     result.y = v.x * m._10 + v.y * m._11 + v.z * m._12 + v.w * m._13;
     result.z = v.x * m._20 + v.y * m._21 + v.z * m._22 + v.w * m._23;
     result.w = v.x * m._30 + v.y * m._31 + v.z * m._32 + v.w * m._33;
     return result;
-
+}
+Vec4 mul(const Vec4& v, const Matrix& m)
+{
+    Vec4 result;
+    result.x = v.x * m._00 + v.y * m._10 + v.z * m._20 + v.w * m._30;
+    result.y = v.x * m._01 + v.y * m._11 + v.z * m._21 + v.w * m._31;
+    result.z = v.x * m._02 + v.y * m._12 + v.z * m._22 + v.w * m._32;
+    result.w = v.x * m._03 + v.y * m._13 + v.z * m._23 + v.w * m._33;
+    return result;
 }
 
 Matrix inverse(const Matrix& m)
@@ -239,7 +242,7 @@ Matrix inverse(const Matrix& m)
         (m[5]  * m[10] * m[15] - m[5]  * m[11] * m[14]) -
         (m[9]  * m[6]  * m[15] - m[9]  * m[7]  * m[14]) +
         (m[13] * m[6]  * m[11] - m[13] * m[7]  * m[10]));
-        
+
     inv[1] = -(
         (m[1]  * m[10] * m[15] - m[1]  * m[11] * m[14]) -
         (m[9]  * m[2]  * m[15] - m[9]  * m[3]  * m[14]) +
@@ -249,7 +252,7 @@ Matrix inverse(const Matrix& m)
         (m[1]  * m[6] * m[15] - m[1]  * m[7] * m[14]) -
         (m[5]  * m[2] * m[15] - m[5]  * m[3] * m[14]) +
         (m[13] * m[2] * m[7]  - m[13] * m[3] * m[6]));
-    
+
     inv[3] = -(
         (m[1] * m[6] * m[11] - m[1] * m[7] * m[10]) -
         (m[5] * m[2] * m[11] - m[5] * m[3] * m[10]) +
