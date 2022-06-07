@@ -2,6 +2,7 @@
 
 #include <core/mytypes.h>
 #include <core/transform.h>
+#include <math/bounds.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
@@ -31,7 +32,8 @@ enum class EntityType : uint32_t
 struct GameEntity
 {
     Transform transform;
-    EntityType entityType = EntityType::NUM_OF_ENTITY_TYPES;
+    Bounds bounds;
     double animationTime = 0.0;
     uint32_t animationIndex = 0u;
+    EntityType entityType = EntityType::NUM_OF_ENTITY_TYPES;
 };

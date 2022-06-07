@@ -893,6 +893,19 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             verticesMemoryRange))
             return false;
 
+        if(data.accessors[node.positionIndex].mins.size() > 2)
+        {
+            outModel.bounds.min.x = data.accessors[node.positionIndex].mins[0];
+            outModel.bounds.min.y = data.accessors[node.positionIndex].mins[1];
+            outModel.bounds.min.z = data.accessors[node.positionIndex].mins[2];
+        }
+        if(data.accessors[node.positionIndex].maxs.size() > 2)
+        {
+            outModel.bounds.max.x = data.accessors[node.positionIndex].maxs[0];
+            outModel.bounds.max.y = data.accessors[node.positionIndex].maxs[1];
+            outModel.bounds.max.z = data.accessors[node.positionIndex].maxs[2];
+        }
+
         if(!gltfReadIntoBuffer(data, node.normalIndex,
             offsetof(GltfModel::Vertex, norm),
             verticesMemoryRange))

@@ -2,6 +2,7 @@
 
 #include <container/podvector.h>
 #include <container/vector.h>
+#include <math/bounds.h>
 #include <math/matrix.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>
@@ -37,6 +38,8 @@ struct GltfModel
     {
         PodVector<uint32_t> childrenIndices;
     };
+    // bounding boxes
+    Bounds bounds;
 
     PodVector<Vertex> vertices;
     PodVector<Vec4> vertexColors;

@@ -21,7 +21,6 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
     }
 
     sceneData.modelRenderMeshTypes.insert({ entityType, sceneData.meshRenderSystem.addModel(gltfModel) });
-
     return true;
 }
 
@@ -104,10 +103,12 @@ uint32_t Scene::addGameEntity(const GameEntity& entity)
 {
     if (uint32_t(entity.entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
         return ~0u;
+    const auto &model = sceneData.models[uint32_t(entity.entityType)];
 
     uint32_t result = sceneData.entities.size();
-
+    
     sceneData.entities.push_back(entity);
+    sceneData.entities.back().bounds = model.bounds;
     return result;
 }
 
