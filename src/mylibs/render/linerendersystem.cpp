@@ -63,12 +63,6 @@ void LineRenderSystem::clear()
 
 void LineRenderSystem::addLine(const Vec3 &posStart, const Vec3 &posEnd, uint32_t color)
 {
-    printf("line [%f, %f, %f] to [%f,%f,%f]\n",
-        posStart.x, posStart.y, posStart.z,
-        posEnd.x, posEnd.y, posEnd.z
-    );
-
-
     lines.push_back( Line{ .start = posStart, .colorStart = color,
         .end = posEnd, .colorEnd = color } );
 }
