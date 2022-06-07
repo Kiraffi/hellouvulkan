@@ -269,7 +269,7 @@ bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JSONBlock
         ++index;
 
         int64_t remainderPart = 0;
-        numCount = parseInt(buffer, marker, remainderPart);
+        numCount = parseInt(buffer, marker, remainderPart, true);
         if(numCount <= 0 || index > marker.endIndex || remainderPart < 0)
             return false;
 
