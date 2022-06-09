@@ -9,7 +9,6 @@
 #include <math/matrix.h>
 #include <math/quaternion.h>
 
-
 struct GltfData;
 
 static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
@@ -565,6 +564,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             rotBlock.getChild(1).parseNumber(node.rot.v.y);
             rotBlock.getChild(2).parseNumber(node.rot.v.z);
             rotBlock.getChild(3).parseNumber(node.rot.w);
+            node.rot = normalize(node.rot);
 
             const JSONBlock &transBlock = child.getChild("translation");
             transBlock.getChild(0).parseNumber(node.trans.x);
@@ -969,14 +969,58 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
 
         }
+
+
+
         for(uint32_t i = 0; i < data.skins.size(); ++i)
         {
             GltfSkinNode &skinNode = data.skins[i];
+
             if(skinNode.inverseMatricesIndex >= data.accessors.size())
                 return false;
 
             if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
                 return false;
+
+            PodVector<Matrix> mat1;
+            PodVector<Matrix> mat2;
+            PodVector<Matrix> mat3;
+            mat1.resize(data.nodes.size());
+            mat2.resize(data.nodes.size());
+            mat3.resize(data.nodes.size());
+
+            auto fu = [&](auto &f, const Matrix &parent, const Matrix &invParent, uint32_t boneIndex)
+            {
+                if(boneIndex >= data.nodes.size())
+                    return;
+
+                const auto &childNode = data.nodes[boneIndex];
+                const auto &pos = childNode.trans;
+                const auto &rot = childNode.rot;
+                const auto &scale = childNode.scale;
+                //printf("boneindex: %u - before\n", boneIndex);
+                if(!isIdentity(mat1[boneIndex]))
+                    return;
+                //printf("boneindex: %u - after\n", boneIndex);
+                Transform t{ .pos = pos, .rot = rot, .scale = scale };
+                Matrix m = getModelMatrix(t);
+                Matrix m2 = getModelMatrixInverse(t);
+                //Matrix newParent = m * parent;
+                Matrix newParent = parent * m;
+                Matrix newInverseParent = m2 * invParent;
+                mat1[boneIndex] = newParent;
+                mat2[boneIndex] = inverse(newParent);
+                mat3[boneIndex] = newInverseParent;
+                ASSERT(isIdentity(newParent * inverse(newParent)));
+                ASSERT(isIdentity(inverse(newParent) * newParent));
+
+                for(uint32_t childNodeIndex : childNode.childNodeIndices)
+                {
+                    f(f, newParent, newInverseParent, childNodeIndex);
+                }
+            };
+            for(uint32_t jointIndex : skinNode.joints)
+                fu(fu, Matrix(), Matrix(), jointIndex);
 
             PodVector<Matrix> &inverseMatrices = outModel.inverseMatrices;
             inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
@@ -984,10 +1028,28 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
                 0, sliceFromPodVectorBytes(inverseMatrices)))
                 return false;
-
+            //printf("\n\n");
             for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
             {
+                uint32_t nodeJointIndex = skinNode.joints[i];
+                
+                const auto &node = data.nodes[nodeJointIndex];
                 inverseMatrices[i] = transpose(inverseMatrices[i]);
+                /*
+                printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, std::string(node.name).c_str());
+                printVector3(node.trans, "Pos");
+                printQuaternion(node.rot, "Rot");
+                printVector3(node.scale, "Scale");
+                printMatrix(inverseMatrices[i], " invmat");
+                printMatrix(inverse(inverseMatrices[i]), "inverse of invmat");
+                printMatrix(mat1[nodeJointIndex], "mat1");
+                printMatrix(mat2[nodeJointIndex], "mat2");
+                //printMatrix(mat3[nodeJointIndex], "mat3");
+                printf("\n\n\n");
+                */
+
+                ASSERT(inverse(inverseMatrices[i]) == mat1[nodeJointIndex]);
+                
             }
         }
 

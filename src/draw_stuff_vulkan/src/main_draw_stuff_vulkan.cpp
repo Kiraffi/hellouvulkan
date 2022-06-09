@@ -114,6 +114,25 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
+    Matrix n = getMatrixFromTranslation(Vec3(1.0f, 2.0f, 3.0f));
+    printMatrix(n, "translation");
+    Matrix m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(0)));
+    printMatrix(m, "Something1");
+    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(10)));
+    printMatrix(m, "Something1");
+    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(45)));
+    printMatrix(m, "Something2");
+    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(90)));
+    printMatrix(m, "Something3");
+    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(135)));
+    printMatrix(m, "Something3");
+
+    Vec3 v = rotateVector(Vector3(1.0f, 0.0f, 1.0f), getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(22.5)));
+    printVector3(v, "vec1");
+    v = rotateVector(Vector3(1.0f, 0.0f, 1.0f), getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), toRadians(45)));
+    printVector3(v, "vec2");
+    v = rotateVector(Vector3(1.0f, 0.0f, 1.0f), getQuaternionFromAxisAngle(Vec3(1.0f, 1.0f, 0.0f), toRadians(45)));
+    printVector3(v, "vec2");
 
     if (!imgui.init(window))
         return false;
@@ -325,7 +344,8 @@ static bool drawEntityImgui(GameEntity &entity, uint32_t index)
     ImGui::PushID(index);
     {
         ImGui::InputFloat3("Pos", &entity.transform.pos.x);
-        ImGui::InputFloat4("Rot", &entity.transform.rot.v.x);
+        if(ImGui::InputFloat4("Rot", &entity.transform.rot.v.x))
+            normalize(entity.transform.rot);
         ImGui::InputFloat3("Scale", &entity.transform.scale.x);
     }
     ImGui::PopID();
@@ -385,7 +405,7 @@ void VulkanDrawStuff::renderUpdate()
             entity.entityType == EntityType::FLOOR)
             continue;
 
-        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), rotationAmount);
+        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 0.0f, 1.0f), rotationAmount);
     }
     if (rotateOn)
     {

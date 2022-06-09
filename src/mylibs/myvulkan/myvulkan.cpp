@@ -905,11 +905,11 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
     }
 
     {
-        VkPhysicalDeviceSubgroupProperties subgroupProperties;
+        VkPhysicalDeviceSubgroupProperties subgroupProperties{};
         subgroupProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
         subgroupProperties.pNext = NULL;
 
-        VkPhysicalDeviceProperties2 physicalDeviceProperties;
+        VkPhysicalDeviceProperties2 physicalDeviceProperties{};
         physicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
         physicalDeviceProperties.pNext = &subgroupProperties;
 
@@ -984,11 +984,11 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
 
 
     {
-        vulk->scratchBuffer = createBuffer(64 * 1024 * 1024,
+        vulk->scratchBuffer = createBuffer(64u * 1024u * 1024u,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
-        vulk->uniformBuffer = createBuffer(64u * 1024 * 1024,
+        vulk->uniformBuffer = createBuffer(64u * 1024u * 1024u,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
 
@@ -1017,8 +1017,9 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
 
 void deinitVulkan()
 {
-
-    if (vulk && vulk->device)
+    if(!vulk)
+        return;
+    if (vulk->device)
     {
         destroySampler(vulk->globalTextureSampler);
         vulk->globalTextureSampler = nullptr;

@@ -25,6 +25,8 @@ Matrix Camera::perspectiveProjection()
         0.0f, 0.0f, -1.0f, 0.0f);
 }
 
+
+
 Matrix Camera::ortographicProjection(float width, float height)
 {
     float s1 = -1.0f / (zNear - zFar);
@@ -45,7 +47,8 @@ void Camera::calculateOrtographicPosition(const Vec3 &targetPos)
     Vector3 rightDir;
     Vector3 upDir;
     Vector3 forwardDir;
-    getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
+    // Invert the camera rotations
+    getDirectionsFromPitchYawRoll(-pitch, -yaw, -roll, rightDir, upDir, forwardDir);
 
     position = targetPos - forwardDir * 100.0f;
 }
@@ -55,6 +58,7 @@ Matrix Camera::getCameraMatrix()
     Vector3 rightDir;
     Vector3 upDir;
     Vector3 forwardDir;
+    // Invert the camera rotations
     getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
     return createMatrixFromLookAt(position, position + forwardDir, upDir);
 }
@@ -70,11 +74,11 @@ Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition
     Vec3 cameraRightdDir;
     Vec3 cameraUpDir;
     Vec3 cameraForwardDir;
-    getDirectionsFromPitchYawRoll(pitch, yaw, roll, cameraRightdDir, cameraUpDir, cameraForwardDir);
+    getDirectionsFromPitchYawRoll(-pitch, -yaw, -roll, cameraRightdDir, cameraUpDir, cameraForwardDir);
 
     camInfoPosition.y += fontSize.y + 2.0f;
 
-    snprintf(tmpStr, 1024, "Camera look: (%.3f, %.3f, %.3f)", -cameraForwardDir.x, -cameraForwardDir.y, -cameraForwardDir.z);
+    snprintf(tmpStr, 1024, "Camera forward (-z): (%.3f, %.3f, %.3f)", -cameraForwardDir.x, -cameraForwardDir.y, -cameraForwardDir.z);
     fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 0.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "Camera up: (%.3f, %.3f, %.3f)", cameraUpDir.x, cameraUpDir.y, cameraUpDir.z);
     fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 1.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
