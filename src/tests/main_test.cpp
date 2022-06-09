@@ -211,7 +211,6 @@ void testVector()
 int main()
 {
     initMemory();
-    /*
     testingMemory();
     testStackString();
     testMemoryStackString();
@@ -219,7 +218,6 @@ int main()
     testArraySliceView();
 
     testVector();
-    */
     testMatrix();
     return 0;
 }
