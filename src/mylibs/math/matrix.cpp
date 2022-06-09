@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+
 Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vector3 &forward)
 {
     Matrix result;
@@ -216,6 +217,19 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 }
 
 
+bool operator==(const Matrix &a, const Matrix &b)
+{
+    static constexpr float EPS_DIFF = 1.0e-1f;
+
+    for(uint32_t i = 0; i < 16; ++i)
+    {
+        float f = fabsf(a[i] - b[i]);
+        if(f > EPS_DIFF)
+            return false;
+    }
+    return true;
+}
+
 Vec4 mul(const Matrix& m, const Vec4& v)
 {
     Vec4 result;
@@ -340,6 +354,23 @@ Matrix inverse(const Matrix& m)
     return result;
 }
 
+
+bool isIdentity(const Matrix &m)
+{
+    static constexpr float EPS_DIFF = 1.0e-4f;
+
+    for(uint32_t i = 0; i < 16; ++i)
+    {
+        float f = m[i];
+
+        if(i == (i / 4) + (i / 4) * 4)
+            f = f - 1.0f;
+
+        if(fabsf(f) > EPS_DIFF)
+            return false;
+    }
+    return true;
+}
 
 void printMatrix(const Matrix &m, const char name[])
 {

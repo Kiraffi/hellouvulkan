@@ -66,9 +66,10 @@ Matrix createMatrixFromLookAt(const Vector3 &pos, const Vector3 &target, const V
 
 Matrix transpose(const Matrix &m);
 Matrix operator*(const Matrix &a, const Matrix &b);
-
+bool operator==(const Matrix &a, const Matrix &b);
 Matrix inverse(const Matrix& m);
 
+bool isIdentity(const Matrix &m);
 void printMatrix(const Matrix &m, const char name[]);
 
 Vec4 mul(const Matrix& m, const Vec4& v);

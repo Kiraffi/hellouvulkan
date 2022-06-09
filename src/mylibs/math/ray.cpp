@@ -37,7 +37,7 @@ bool raySphereIntersect(const Ray &ray, const Sphere &sphere, Hitpoint &outHitpo
 
 bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transform &transform, Hitpoint &outHitpoint)
 {
-    const Quaternion inverseQuat = inverse(transform.rot);
+    const Quaternion inverseQuat = conjugate(transform.rot);
     const Vec3 rayPos = rotateVector(ray.pos - transform.pos, transform.rot);
     const Vec3 rayDir = rotateVector(ray.dir, transform.rot);
     const Vec3 inverseRayDir = 1.0f / rayDir;

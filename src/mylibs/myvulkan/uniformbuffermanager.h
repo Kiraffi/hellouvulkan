@@ -28,6 +28,6 @@ struct UniformBufferManager
 
     // 1 bit per allocation, so index 0 bit 7 is 8th allocation.
     PodVector<MemoryIndexType> usedIndices;
-    Buffer *buffer;
+    Buffer *buffer = nullptr;
     bool inited = false;
 };
