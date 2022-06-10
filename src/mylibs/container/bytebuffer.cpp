@@ -53,8 +53,11 @@ void ByteBuffer::copyFromArray(uint8_t *arr, uint32_t count)
 
 void ByteBuffer::reserve(uint32_t indices)
 {
-    bufferData.memory = resizeMemory(bufferData.memory, indices * bufferData.dataTypeSize);
-    bufferData.capasity = indices;
+    if(bufferData.capasity < indices)
+    {
+        bufferData.memory = resizeMemory(bufferData.memory, indices * bufferData.dataTypeSize);
+        bufferData.capasity = indices;
+    }
 }
 
 

@@ -20,7 +20,7 @@
 
 ///// THIS WILL NOT TO WORK WITH MULTIPLE THREADS!
 static constexpr uint32_t MaxAllocations = 65536u;
-static constexpr uint32_t MaxMemorySize = 1024u * 1024u * 1024u * 1u;
+static constexpr uint32_t MaxMemorySize = 64u * 1024u * 1024u;
 static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u;
 
 static constexpr uint32_t MinimumMemoryChunkSize = 256u;
@@ -48,7 +48,7 @@ struct AllMemory
 {
     ~AllMemory()
     {
-        printf("Deleting memory!\n");
+        printf("Deleting memory, max usage: %u!\n", maxUsed);
         if (allocationCount > 0)
         {
             printf("Allocations alive: %u\n", allocationCount);
@@ -78,7 +78,7 @@ struct AllMemory
     uint32_t allocationCount = 0;
 
     uint32_t memoryUsed = 0;
-
+    uint32_t maxUsed = 0u;
     bool inited = false;
     bool needsDefrag = false;
 };
@@ -203,7 +203,9 @@ Memory allocateMemoryBytes(uint32_t size)
     #endif // PRINT_ALLOCATION_ADDRESS
 
     allMemory.memoryUsed += size;
-
+    //printf("Size: %u, total: %u\n", size, allMemory.memoryUsed);
+    if(allMemory.maxUsed < allMemory.memoryUsed)
+        allMemory.maxUsed = allMemory.memoryUsed;
 
 
     allMemory.usedAllocationIndices[allMemory.allocationCount] = index;
