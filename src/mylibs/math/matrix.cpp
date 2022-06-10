@@ -4,21 +4,22 @@
 
 #include <cmath>
 
+#include <xmmintrin.h>
 
 Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vector3 &forward)
 {
     Matrix result;
 
     result._00 = right.x;
-    result._01 = right.y;
-    result._02 = right.z;
+    result._01 = up.x;
+    result._02 = forward.x;
 
-    result._10 = up.x;
+    result._10 = right.y;
     result._11 = up.y;
-    result._12 = up.z;
+    result._12 = forward.y;
 
-    result._20 = forward.x;
-    result._21 = forward.y;
+    result._20 = right.z;
+    result._21 = up.z;
     result._22 = forward.z;
 
     return result;
@@ -181,6 +182,26 @@ Matrix transpose(const Matrix &m)
 Matrix operator*(const Matrix &a, const Matrix &b)
 {
     Matrix result;
+#ifndef __ISA_AVAILABLE_SSE2
+
+    __m128 bR0 = _mm_load_ps(&b._00);
+    __m128 bR1 = _mm_load_ps(&b._10);
+    __m128 bR2 = _mm_load_ps(&b._20);
+    __m128 bR3 = _mm_load_ps(&b._30);
+
+
+    for(uint32_t i = 0; i < 4; ++i)
+    {
+        __m128 r0 = _mm_mul_ps(_mm_set_ps1(a[i * 4 + 0]), bR0);
+        r0 = _mm_add_ps(r0, _mm_mul_ps(_mm_set_ps1(a[i * 4 + 1]), bR1));
+        r0 = _mm_add_ps(r0, _mm_mul_ps(_mm_set_ps1(a[i * 4 + 2]), bR2));
+        r0 = _mm_add_ps(r0, _mm_mul_ps(_mm_set_ps1(a[i * 4 + 3]), bR3));
+
+        _mm_store_ps(&result._00 + i * 4, r0);
+    }
+
+
+#else
 
     #define MATRIX_ADD_ROW_MULT(row, col) (\
         a._##row##0 * b._0##col + \
@@ -212,14 +233,14 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 
     #undef MATRIX_ADD_ROW_MULT
     #undef MATRIX_SET
+#endif
 
     return result;
 }
 
-
 bool operator==(const Matrix &a, const Matrix &b)
 {
-    static constexpr float EPS_DIFF = 1.0e-1f;
+    static constexpr float EPS_DIFF = 5.0e-2f;
 
     for(uint32_t i = 0; i < 16; ++i)
     {
