@@ -1,6 +1,7 @@
 #include "meshrendersystem.h"
 
 #include <core/general.h>
+#include <core/timer.h>
 #include <container/arraysliceview.h>
 
 #include <myvulkan/myvulkan.h>
@@ -10,6 +11,7 @@
 
 
 #include <string>
+
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -266,8 +268,10 @@ bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Matrix& rende
 
 bool MeshRenderSystem::prepareToRender()
 {
+    ScopedTimer sc("MeshRenderSystem::prepareToRender");
     {
         PodVector<Matrix> allModelRenderMatrices;
+        allModelRenderMatrices.reserve(1024);
         for (const auto& vec : animatedModelRenderMatrices)
             allModelRenderMatrices.pushBack(vec);
 
@@ -279,6 +283,7 @@ bool MeshRenderSystem::prepareToRender()
     }
     {
         PodVector<Matrix> allModelBoneRenderMatrices;
+        allModelBoneRenderMatrices.reserve(1024);
         for (const auto& vec : boneAnimatedModelRenderMatrices)
             allModelBoneRenderMatrices.pushBack(vec);
 
