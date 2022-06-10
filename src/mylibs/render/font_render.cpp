@@ -156,11 +156,11 @@ void FontRenderSystem::addText(std::string_view text, Vector2 pos, Vec2 charSize
     ASSERT(vertData.size() + text.length() < MAX_LETTERS);
     uint16_t charWidth = uint16_t(charSize.x);
     uint16_t charHeight = uint16_t(charSize.y);
-
+    uint32_t col = getColor(color.x, color.y, color.z, color.w);
     for(const char c : text)
     {
         GPUVertexData vdata;
-        vdata.color = getColor(color.x, color.y, color.z, color.w);
+        vdata.color = col;
         vdata.pixelSizeX = charWidth;
         vdata.pixelSizeY = charHeight;
         vdata.pos = pos;

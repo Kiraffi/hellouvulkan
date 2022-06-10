@@ -1331,6 +1331,6 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
 
     if (model.animationPosData.size() > 255)
         return false;
-    outMatrices.uninitializedResize(256);
+    outMatrices.uninitializedResize(model.inverseMatrices.getSize());
     return evaluateBone(model, animationIndex, 0, time, Matrix(), outMatrices);
 }

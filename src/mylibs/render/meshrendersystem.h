@@ -49,6 +49,7 @@ private:
     Buffer modelRenderMatricesBuffer;
     Buffer modelBoneRenderMatricesBuffer;
     Buffer modelRenderNormaMatricesBuffer;
+    Buffer modelRenderBoneStartIndexBuffer;
 
     Image paletteImage;
 
@@ -58,6 +59,7 @@ private:
 
     // these 3 probably should belong somewhere else, since they depend on scenedata, if wanting to have render to texture...
     // maybe MeshRenderScene
+    Vector<PodVector< uint32_t >> modelRenderBoneAmounts;
     Vector<PodVector< Matrix >> modelRenderMatrices;
     Vector<PodVector< Matrix >> animatedModelRenderMatrices;
     Vector<PodVector< Matrix >> boneAnimatedModelRenderMatrices;
