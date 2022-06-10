@@ -182,7 +182,7 @@ Matrix transpose(const Matrix &m)
 Matrix operator*(const Matrix &a, const Matrix &b)
 {
     Matrix result;
-#ifndef __ISA_AVAILABLE_SSE2
+#if _M_IX86_FP > 1 || __AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64
 
     __m128 bR0 = _mm_load_ps(&b._00);
     __m128 bR1 = _mm_load_ps(&b._10);
