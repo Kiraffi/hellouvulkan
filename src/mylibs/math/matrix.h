@@ -76,3 +76,5 @@ Vec4 mul(const Matrix& m, const Vec4& v);
 Vec4 mul(const Vec4& v, const Matrix& m);
 
 using mat4 = Matrix;
+
+double getMatrixTime();

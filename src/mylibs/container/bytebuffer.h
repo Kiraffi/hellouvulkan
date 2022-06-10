@@ -39,3 +39,7 @@ public:
 private:
     ByteBufferData bufferData {};
 };
+
+
+
+double getByteBufferTimer();

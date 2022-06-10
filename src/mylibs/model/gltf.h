@@ -64,3 +64,5 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
 
 
 bool readGLTF(std::string_view filename, GltfModel &outModel);
+
+

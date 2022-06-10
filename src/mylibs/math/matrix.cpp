@@ -6,6 +6,10 @@
 
 #include <xmmintrin.h>
 
+#include <core/timer.h>
+
+static Timer matrixTimer;
+
 Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vector3 &forward)
 {
     Matrix result;
@@ -181,8 +185,9 @@ Matrix transpose(const Matrix &m)
 
 Matrix operator*(const Matrix &a, const Matrix &b)
 {
+    matrixTimer.continueTimer();
     Matrix result;
-#if _M_IX86_FP > 1 || __AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64
+#if (_M_IX86_FP > 1 || __AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64) && 1
 
     __m128 bR0 = _mm_load_ps(&b._00);
     __m128 bR1 = _mm_load_ps(&b._10);
@@ -199,7 +204,35 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 
         _mm_store_ps(&result._00 + i * 4, r0);
     }
+    
 
+    /*
+    __m256 bR0 = _mm_load_ps(&b._00);
+    __m256 bR1 = _mm_load_ps(&b._10);
+    __m256 bR2 = _mm_load_ps(&b._20);
+    __m256 bR3 = _mm_load_ps(&b._30);
+
+
+    for(uint32_t i = 0; i < 4; ++i)
+    {
+        __m128 r0 = _mm_mul_ps(_mm_set_ps1(a[i * 4 + 0]), bR0);
+        r0 = _mm_add_ps(r0, _mm_mul_ps(_mm_set_ps1(a[i * 4 + 1]), bR1));
+        r0 = _mm_add_ps(r0, _mm_mul_ps(_mm_set_ps1(a[i * 4 + 2]), bR2));
+        r0 = _mm_add_ps(r0, _mm_mul_ps(_mm_set_ps1(a[i * 4 + 3]), bR3));
+
+        _mm_store_ps(&result._00 + i * 4, r0);
+    }
+    */
+    for(uint32_t j = 0; j < 4; ++j)
+    {
+        for(uint32_t i = 0; i < 4; ++i)
+        {
+            result[i + j * 4] =  a[j * 4 + 0] * b[i + 0];
+            result[i + j * 4] += a[j * 4 + 1] * b[i + 4];
+            result[i + j * 4] += a[j * 4 + 2] * b[i + 8];
+            result[i + j * 4] += a[j * 4 + 3] * b[i + 12];
+        }
+    }
 
 #else
 
@@ -234,7 +267,7 @@ Matrix operator*(const Matrix &a, const Matrix &b)
     #undef MATRIX_ADD_ROW_MULT
     #undef MATRIX_SET
 #endif
-
+    matrixTimer.pauseTimer();
     return result;
 }
 
@@ -403,3 +436,11 @@ void printMatrix(const Matrix &m, const char name[])
     LOG("\n");
 }
 
+
+double getMatrixTime()
+{
+    double v = matrixTimer.getDuration();
+    matrixTimer.resetTimer();
+    return v;
+
+}

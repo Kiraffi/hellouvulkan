@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#include <core/timer.h>
+
 ByteBuffer::ByteBuffer(uint32_t dataTypeSize)
     : bufferData {
          .size = 0,
@@ -107,12 +109,14 @@ void ByteBuffer::insertIndex(uint32_t index)
     }
     bufferData.size += 1;
 }
-
+static Timer bytebufferTimer;
 void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
 {
+    bytebufferTimer.continueTimer();
     insertIndex(index);
     uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
     memmove(startPtr, obj, bufferData.dataTypeSize);
+    bytebufferTimer.pauseTimer();
 }
 
 void ByteBuffer::removeIndex(uint32_t index)
@@ -151,3 +155,10 @@ uint8_t *ByteBuffer::getEnd() const
     return getMemoryEnd(bufferData.memory);
 }
 
+double getByteBufferTimer()
+{
+    double v = bytebufferTimer.getDuration();
+    bytebufferTimer.resetTimer();
+    return v;
+
+}

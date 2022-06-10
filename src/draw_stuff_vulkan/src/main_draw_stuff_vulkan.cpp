@@ -52,7 +52,7 @@ static Vec3 getSunDirection(const Camera &camera)
     Vec3 sundir[3];
     getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
 
-    return sundir[2];
+    return -sundir[2];
 }
 
 class VulkanDrawStuff : public VulkanApp
@@ -169,6 +169,18 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
     entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
 
+    for(int y = -10; y < 10; ++y)
+    {
+        for(int x = -10; x < 10; ++x)
+        {
+            Vec3 pos(x, 0.0f, -50.0f + y);
+            pos.x += 0.5f;
+            pos.y += 0.5f;
+
+            entityIndices.push_back(scene.addGameEntity({ .transform = { .pos = pos }, .entityType = EntityType::LOW_POLY_CHAR }));
+        }
+    }
+
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
     {
@@ -183,7 +195,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
 
 
-    sunCamera.pitch = toRadians(60.0f);
+    sunCamera.pitch = toRadians(330.0f);
     sunCamera.yaw = toRadians(30.0f);
 
     return resized();
@@ -212,7 +224,13 @@ bool VulkanDrawStuff::resized()
 void VulkanDrawStuff::logicUpdate()
 {
     VulkanApp::logicUpdate();
-
+    static uint32_t counter = 0;
+    if(counter++ >= 100)
+    {
+        printf("Matrix time: %f\n", float(getMatrixTime() / counter));
+        printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
+        counter = 0;
+    }
     lineRenderSystem.clear();
 
     MouseState mouseState = getMouseState();
@@ -495,7 +513,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = true,
+            .useIntegratedGpu = false,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = true,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC

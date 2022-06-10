@@ -8,12 +8,19 @@ class Timer
 {
 public:
     Timer();
+    double getDuration();
     double getDuration() const;
     double getLapDuration();
+
+    void continueTimer();
+    void pauseTimer();
+    void resetTimer();
 
 private:
     std::chrono::high_resolution_clock::time_point startTime;
     std::chrono::high_resolution_clock::time_point lastTime;
+    double wholeDuration = 0.0;
+    bool running = true;
 };
 
 void printTime(const Timer& timer);
