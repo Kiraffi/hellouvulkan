@@ -258,6 +258,7 @@ void VulkanApp::renderUpdate()
 
 void VulkanApp::run()
 {
+    defragMemory();
     while (!glfwWindowShouldClose(window))
     {
         logicUpdate();
@@ -325,7 +326,7 @@ double VulkanApp::getTime()
 
 MouseState VulkanApp::getMouseState()
 {
-    MouseState mouseState;
+    MouseState mouseState{};
 
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
@@ -367,7 +368,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     {
         camera.yaw -= rotationSpeed;
     }
-    /*
+    
     if (isDown(GLFW_KEY_O))
     {
         camera.roll += rotationSpeed;
@@ -376,7 +377,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     {
         camera.roll -= rotationSpeed;
     }
-    */
+    
     camera.pitch = clamp(camera.pitch, -0.499f * PI, 0.4999f * PI);
     camera.yaw = ffmodf(camera.yaw, 2.0f * PI);
     camera.roll = ffmodf(camera.roll, 2.0f * PI);
@@ -385,6 +386,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     Vec3 upDir;
     Vec3 forwardDir;
 
+    // camera forward = -forward.
     getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, camera.roll, rightDir, upDir, forwardDir);
 
 

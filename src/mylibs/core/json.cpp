@@ -467,7 +467,6 @@ bool JSONBlock::parseJSON(const ArraySliceView<char> &data)
 {
     if(data.size() <= 2)
         return false;
-
     JSONMarker marker(0, ( int )data.size() - 1);
     skipWhiteSpace(data, marker);
     while(marker.endIndex > 0 && data [marker.endIndex] != '}')

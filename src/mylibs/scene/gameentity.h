@@ -13,6 +13,7 @@ enum class EntityType : uint32_t
     WOBBLY_THING,
     CHARACTER,
     LOW_POLY_CHAR,
+    ARMATURE_TEST,
 
     // non animated
     ARROW,

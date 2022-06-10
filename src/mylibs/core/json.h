@@ -66,4 +66,3 @@ struct JSONBlock
 
     static const JSONBlock emptyBlock;
 };
-

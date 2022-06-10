@@ -21,6 +21,8 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
     }
 
     sceneData.modelRenderMeshTypes.insert({ entityType, sceneData.meshRenderSystem.addModel(gltfModel) });
+    defragMemory();
+
     return true;
 }
 
@@ -28,8 +30,6 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
 bool Scene::init()
 {
     ScopedTimer timer("Scene init");
-
-
 
     // animated first, because it makes animatedvertices first so the vertex index is same, otherwise i need to somehow pass special offset
     // to vertex shader to determine where to read animated vertices.
@@ -40,6 +40,8 @@ bool Scene::init()
     if (!loadModelForScene(sceneData, "assets/models/lowpoly6.gltf", EntityType::LOW_POLY_CHAR))
         return false;
 
+    if(!loadModelForScene(sceneData, "assets/models/armature_test.gltf", EntityType::ARMATURE_TEST))
+        return false;
 
     // load nonanimated.
     if (!loadModelForScene(sceneData, "assets/models/arrows.gltf", EntityType::ARROW))
@@ -70,8 +72,13 @@ bool Scene::init()
 
 bool Scene::update(double deltaTime)
 {
+    //ScopedTimer timer("anim update");
+    // better pattern for memory when other array gets constantly resized, no need to recreate same temporary array.
+    PodVector<Matrix> matrices;
+    matrices.reserve(256);
     for (auto& entity : sceneData.entities)
     {
+        matrices.clear();
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES)
             continue;
         if (uint32_t(entity.entityType) >= sceneData.models.size())
@@ -83,7 +90,6 @@ bool Scene::update(double deltaTime)
         const auto& model = sceneData.models[uint32_t(entity.entityType)];
         uint32_t renderMeshIndex = iter->second;
 
-        PodVector<Matrix> matrices;
 
         if (model.animationVertices.size() > 0)
         {
