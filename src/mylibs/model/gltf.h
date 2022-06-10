@@ -48,7 +48,7 @@ struct GltfModel
     PodVector<uint32_t> indices;
     PodVector<Matrix> inverseMatrices;
 
-    // animation index, boneindex?
+    // animation index, boneindex, timestamps...
     Vector<Vector<PodVector<BoneAnimationPosOrScale>>> animationPosData;
     Vector<Vector<PodVector<BoneAnimationRot>>> animationRotData;
     Vector<Vector<PodVector<BoneAnimationPosOrScale>>> animationScaleData;

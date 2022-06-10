@@ -9,6 +9,8 @@
 #include <math/matrix.h>
 #include <math/quaternion.h>
 
+#include <core/timer.h>
+
 struct GltfData;
 
 static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
@@ -577,6 +579,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             scaleBlock.getChild(2).parseNumber(node.scale.z);
 
             const JSONBlock& childrenBlock = child.getChild("children");
+            node.childNodeIndices.reserve(childrenBlock.children.size());
             for(const auto &childBlock : childrenBlock.children)
             {
                 uint32_t tmpIndex = ~0u;
@@ -608,7 +611,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 const JSONBlock& jointsBlock = child.getChild("joints");
                 if (!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
                     return false;
-
+                node.joints.reserve(jointsBlock.getChildCount());
                 for (int j = 0; j < jointsBlock.getChildCount(); ++j)
                 {
                     uint32_t tmpInt = ~0u;
@@ -1130,14 +1133,16 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                     }
                     */
                 }
+                outModel.bones[boneIndex].childrenIndices.reserve(32);
                 for (uint32_t index : data.nodes[jointIndex].childNodeIndices)
                 {
                     const auto& joints = data.skins[0].joints;
+
                     for (uint32_t ind = 0u; ind < joints.size(); ++ind)
                     {
                         if (joints[ind] == index)
                         {
-                            outModel.bones[boneIndex].childrenIndices.pushBack(ind);
+                            outModel.bones[boneIndex].childrenIndices.push_back(ind);
                             break;
                         }
                     }
@@ -1247,12 +1252,15 @@ static bool evaluateBone(const GltfModel &model, uint32_t animationIndex, uint32
     };
 
     const PodVector<GltfModel::BoneAnimationPosOrScale> &posTime = model.animationPosData[animationIndex][boneIndex];
-    for(uint32_t i = 0; i < posTime.size(); ++i)
+    if(posTime.size() > 0)
     {
-        uint32_t nextI = std::min(i + 1, posTime.size() - 1);
-        const GltfModel::BoneAnimationPosOrScale &prev = posTime[i];
+        pos = posTime[0].value;
+    }
+    for(uint32_t nextI = 1; nextI < posTime.size(); ++nextI)
+    {
+        const GltfModel::BoneAnimationPosOrScale &prev = posTime[nextI - 1];
         const GltfModel::BoneAnimationPosOrScale &next = posTime[nextI];
-        if((time <= next.timeStamp) || i == nextI)
+        if((time <= next.timeStamp) || nextI == posTime.size() - 1)
         {
             float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
             pos = prev.value * (1.0f - frac) + next.value * frac;
@@ -1287,6 +1295,8 @@ static bool evaluateBone(const GltfModel &model, uint32_t animationIndex, uint32
             break;
         }
     }
+    
+    
     Matrix res = getModelMatrix({pos, rot, scale});
     Matrix newParent = parentMatrix * res;
 
@@ -1321,6 +1331,6 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
 
     if (model.animationPosData.size() > 255)
         return false;
-    outMatrices.resize(256);
+    outMatrices.uninitializedResize(256);
     return evaluateBone(model, animationIndex, 0, time, Matrix(), outMatrices);
 }
