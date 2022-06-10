@@ -9,6 +9,7 @@ struct Camera
     Matrix perspectiveProjection();
     Matrix ortographicProjection(float width, float height);
     Matrix getCameraMatrix();
+    Matrix getCameraMatrix(const Vec3 &target);
 
     Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);
     void calculateOrtographicPosition(const Vec3& targetPos);

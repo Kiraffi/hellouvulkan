@@ -1032,7 +1032,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
             {
                 uint32_t nodeJointIndex = skinNode.joints[i];
-                
+
                 const auto &node = data.nodes[nodeJointIndex];
                 inverseMatrices[i] = transpose(inverseMatrices[i]);
                 /*
@@ -1048,8 +1048,8 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 printf("\n\n\n");
                 */
 
-                ASSERT(inverse(inverseMatrices[i]) == mat1[nodeJointIndex]);
-                
+                //ASSERT(inverse(inverseMatrices[i]) == mat1[nodeJointIndex]);
+
             }
         }
 

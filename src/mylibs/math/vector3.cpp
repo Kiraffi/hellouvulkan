@@ -373,7 +373,7 @@ Vector4 operator-(const Vector4 &a, const Vector4 &b)
     result.x -= b.x;
     result.y -= b.y;
     result.z -= b.z;
-    result.w -= b.w; 
+    result.w -= b.w;
     return result;
 }
 
@@ -513,8 +513,8 @@ void printVector3(const Vector3 &v, const char name[])
 void getDirectionsFromPitchYawRoll(float pitch, float yaw, float roll, Vector3& rightDir, Vector3& upDir, Vector3& forwardDir)
 {
     Quat rotation = getQuaternionFromAxisAngle(Vector3(0.0f, 0.0f, 1.0f), roll);
-    rotation = rotation * getQuaternionFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), pitch);
-    rotation = rotation * getQuaternionFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), yaw);
+    rotation = getQuaternionFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), pitch) * rotation;
+    rotation = getQuaternionFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), yaw) * rotation;
 
     rightDir = rotateVector(Vector3(1.0f, 0.0, 0.0f), rotation);
     upDir = rotateVector(Vector3(0.0, 1.0, 0.0f), rotation);

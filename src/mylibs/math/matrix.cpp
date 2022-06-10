@@ -124,7 +124,7 @@ Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, fl
 
 Matrix createMatrixFromLookAt(const Vec3 &pos, const Vec3 &target, const Vec3 &up)
 {
-    const Vec3 forward = normalize(target - pos);
+    const Vec3 forward = -normalize(target - pos);
     const Vec3 right = normalize(cross(up, forward));
     const Vec3 realUp = normalize(cross(forward, right));
 

@@ -7,12 +7,17 @@
 Quaternion operator *(const Quaternion &a, const Quaternion &b)
 {
     return Quaternion(
-        /*
+
+/*
+        //right to left, aka right operation first
         a.w * b.v.x + a.v.x * b.w   + a.v.y * b.v.z - a.v.z * b.v.y,
         a.w * b.v.y - a.v.x * b.v.z + a.v.y * b.w   + a.v.z * b.v.x,
         a.w * b.v.z + a.v.x * b.v.y - a.v.y * b.v.x + a.v.z * b.w,
         a.w * b.w   - a.v.x * b.v.x - a.v.y * b.v.y - a.v.z * b.v.z
-        */
+*/
+        // multiply left to right cross(b.v, a.v),
+        //cross(b.v, a.v) + a.w * b.v + b.w * a.v, a.w * b.w - dot(a.v, b.v)
+        // multiply right to left cross(a.v, b.v)
         cross(a.v, b.v) + a.w * b.v + b.w * a.v, a.w * b.w - dot(a.v, b.v)
     );
 }
@@ -20,18 +25,13 @@ Quaternion operator *(const Quaternion &a, const Quaternion &b)
 Quaternion normalize(const Quaternion &q)
 {
     Quaternion result;
-    
-    float length = std::sqrtf(dot(q, q)); // std::sqrtf(sqrLen(q.v) + result.w * result.w));
+
+    float length = sqrtf(dot(q, q));
     if(length > 0)
     {
         result.w = q.w / length;
         result.v = q.v / length;
     }
-    /*
-    result.w = std::max(std::min(q.w, 1.0f), -1.0f);
-    if(result.w < 1.0f && result.w > -1.0f)
-        result.v = normalize(q.v) * fsqrtf(1.0f - result.w * result.w);
-        */
     return result;
 }
 
@@ -42,9 +42,11 @@ Quaternion conjugate(const Quaternion &q)
 
 Vector3 rotateVector(const Vector3 &v, const Quaternion &q)
 {
-
     float d = sqrLen(q.v);
-    return (v * (q.w * q.w - d) + 2.0f * (q.v * dot(v, q.v) + cross(v, q.v) * q.w));
+    // RH rotation with cross(q.v, v)
+    return (v * (q.w * q.w - d) + 2.0f * (q.v * dot(v, q.v) + cross(q.v, v) * q.w));
+    // LH rotation cross(v, q.v)
+    //return (v * (q.w * q.w - d) + 2.0f * (q.v * dot(v, q.v) + cross(v, q.v) * q.w));
 }
 
 void getAxis(const Quaternion &quat, Vector3 &right, Vector3 &up, Vector3 &forward)
@@ -120,7 +122,7 @@ Quaternion lerp(Quaternion const& q1, Quaternion const& q2, float t)
     float dotAngle = dot(q1, q2);
     Quaternion other = q2;
     if(dotAngle < 0.0f)
-        other = Quaternion(-q2.v.x, -q2.v.y, -q2.v.z, -q2.w);//conjugate(q2);
+        other = Quaternion(-q2.v.x, -q2.v.y, -q2.v.z, -q2.w);
 
     Quaternion result;
     result.v = q1.v - t * (q1.v - other.v);
@@ -130,7 +132,6 @@ Quaternion lerp(Quaternion const& q1, Quaternion const& q2, float t)
 
 Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
 {
-
     float dotAngle = dot(q1, q2);
 
     Quaternion other = q2;
@@ -139,7 +140,7 @@ Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
         other = Quaternion(-q2.v.x, -q2.v.y, -q2.v.z, -q2.w);//conjugate(q2);
         dotAngle = -dotAngle;
     }
-    
+
     if (std::abs(dotAngle) > 0.9995)
     {
         Quaternion result;
@@ -147,7 +148,7 @@ Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
         result.w = q1.w - t * (q1.w - other.w);
         return normalize(result);
     }
-    
+
     float theta0 = std::acos(dotAngle);
     float theta = theta0 * t;
 

@@ -235,7 +235,7 @@ void VulkanApp::renderUpdate()
 
     if (useSunCamera)
     {
-        frameBufferData.camMat = sunCamera.getCameraMatrix();
+        frameBufferData.camMat = sunCamera.getCameraMatrix(camera.position);
         frameBufferData.viewProj = sunCamera.ortographicProjection(50.0f, 50.0f);
     }
     else
@@ -246,7 +246,8 @@ void VulkanApp::renderUpdate()
     frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
     frameBufferData.inverseMvp = inverse(frameBufferData.mvp);
 
-    frameBufferData.sunMatrix = sunCamera.ortographicProjection(50.0f, 50.0f) * sunCamera.getCameraMatrix();
+    frameBufferData.sunMatrix =
+        sunCamera.ortographicProjection(50.0f, 50.0f) * sunCamera.getCameraMatrix(camera.position);
     frameBufferData.camPos = Vector4(camera.position, 0.0f);
     frameBufferData.areaSize = Vector2(windowWidth, windowHeight);
     addToCopylist(frameBufferData, vulk->renderFrameBufferHandle);
@@ -420,7 +421,7 @@ static void printStats(VulkanApp& app)
     static uint32_t cpuframeCount = 0u;
     static double gpuTime = 0.0;
     static double cpuTimeStamp = app.getTime();
-    
+
     struct TimeValues
     {
         double timeDuration[QUERY_COUNT];
@@ -441,7 +442,7 @@ static void printStats(VulkanApp& app)
         VkPhysicalDeviceProperties props = {};
         vkGetPhysicalDeviceProperties(vulk->physicalDevice, &props);
 
-  
+
         for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)
             timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
 
@@ -467,7 +468,7 @@ static void printStats(VulkanApp& app)
 
         for (uint32_t i = 0; i < QUERY_COUNT; ++i)
             timeValues.timeDuration[i] = 0.0;
-            
+
         gpuTime = 0.0;
         gpuframeCount = 0u;
         cpuframeCount = 0u;

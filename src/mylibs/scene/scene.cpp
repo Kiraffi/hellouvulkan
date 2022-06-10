@@ -39,7 +39,7 @@ bool Scene::init()
         return false;
     if (!loadModelForScene(sceneData, "assets/models/lowpoly6.gltf", EntityType::LOW_POLY_CHAR))
         return false;
-    
+
 
     // load nonanimated.
     if (!loadModelForScene(sceneData, "assets/models/arrows.gltf", EntityType::ARROW))
@@ -59,7 +59,7 @@ bool Scene::init()
 
     if (!loadModelForScene(sceneData, "assets/models/blob_flat.gltf", EntityType::BLOB_FLAT))
         return false;
-    
+
     if (!loadModelForScene(sceneData, "assets/models/floor.gltf", EntityType::FLOOR))
         return false;
 
@@ -106,7 +106,7 @@ uint32_t Scene::addGameEntity(const GameEntity& entity)
     const auto &model = sceneData.models[uint32_t(entity.entityType)];
 
     uint32_t result = sceneData.entities.size();
-    
+
     sceneData.entities.push_back(entity);
     sceneData.entities.back().bounds = model.bounds;
     return result;

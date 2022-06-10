@@ -29,10 +29,11 @@ Matrix Camera::perspectiveProjection()
 
 Matrix Camera::ortographicProjection(float width, float height)
 {
-    float s1 = -1.0f / (zNear - zFar);
-    float s2 = -(zNear) / (zNear - zFar);
+    float divider = zFar - zNear; //Near - zFar;
+    float s1 = -1.0f / (divider);
+    float s2 = -(zNear) / (divider);
 
-    float x = -2.0f / width;
+    float x = 2.0f / width;
     float y = 2.0f / height;
 
     return Matrix(
@@ -48,9 +49,9 @@ void Camera::calculateOrtographicPosition(const Vec3 &targetPos)
     Vector3 upDir;
     Vector3 forwardDir;
     // Invert the camera rotations
-    getDirectionsFromPitchYawRoll(-pitch, -yaw, -roll, rightDir, upDir, forwardDir);
+    getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
 
-    position = targetPos - forwardDir * 100.0f;
+    position = targetPos + forwardDir * 100.0f;
 }
 
 Matrix Camera::getCameraMatrix()
@@ -60,7 +61,12 @@ Matrix Camera::getCameraMatrix()
     Vector3 forwardDir;
     // Invert the camera rotations
     getDirectionsFromPitchYawRoll(pitch, yaw, roll, rightDir, upDir, forwardDir);
-    return createMatrixFromLookAt(position, position + forwardDir, upDir);
+    return createMatrixFromLookAt(position, position - forwardDir, upDir);
+}
+
+Matrix Camera::getCameraMatrix(const Vector3 &target)
+{
+    return createMatrixFromLookAt(position, target, Vec3(0.0f, 1.0f, 0.0));
 }
 
 Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize)
