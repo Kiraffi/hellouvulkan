@@ -63,9 +63,13 @@ void ByteBuffer::reserve(uint32_t indices)
 
 void ByteBuffer::resize(uint32_t dstIndiceCount)
 {
+    
     if(bufferData.capasity < dstIndiceCount)
     {
-        reserve(dstIndiceCount);
+        if(bufferData.capasity * 2 > dstIndiceCount)
+            reserve(bufferData.capasity * 2);
+        else
+            reserve(dstIndiceCount);
     }
     bufferData.size = dstIndiceCount;
 }
@@ -93,10 +97,11 @@ void ByteBuffer::insertIndex(uint32_t index)
         reserve(newCapasity);
         bufferData.capasity = newCapasity;
     }
-    uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
+
     // move everything forward, if not adding to last
     if(index < bufferData.size)
     {
+        uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
         memmove(startPtr + bufferData.dataTypeSize, startPtr,
             bufferData.dataTypeSize * (bufferData.size - index));
     }

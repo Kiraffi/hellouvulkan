@@ -342,7 +342,7 @@ void defragMemory()
 {
     if(!allMemory.needsDefrag)
         return;
-    ScopedTimer("Defrag duration");
+    //ScopedTimer("Defrag duration");
     allMemory.needsDefrag = false;
 
     #if USE_PRINTING
