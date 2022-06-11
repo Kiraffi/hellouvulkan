@@ -227,8 +227,8 @@ void VulkanDrawStuff::logicUpdate()
     static uint32_t counter = 0;
     if(counter++ >= 100)
     {
-        printf("Matrix time: %f\n", float(getMatrixTime() / counter));
-        printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
+//        printf("Matrix time: %f\n", float(getMatrixTime() / counter));
+//        printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
         counter = 0;
     }
     lineRenderSystem.clear();
@@ -379,6 +379,20 @@ void VulkanDrawStuff::renderUpdate()
     VulkanApp::renderUpdate();
     imgui.renderBegin();
 
+    uint32_t grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
+    uint32_t selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
+
+
+    uint32_t unSelectedRedColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    uint32_t unSelectedGreenColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    uint32_t unSelectedBlueColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+
+
+    uint32_t selectedRedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    uint32_t selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    uint32_t selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+
+
     for (uint32_t entityIndex : entityIndices)
     {
         GameEntity& entity = scene.getEntity(entityIndex);
@@ -402,22 +416,24 @@ void VulkanDrawStuff::renderUpdate()
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
-        if(selectedEntityIndex == entityIndex)
-            multip = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
-        lineRenderSystem.addLine(linePoints[1], linePoints[3], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[2], linePoints[3], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[1], linePoints[5], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[2], linePoints[6], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[3], linePoints[7], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[4], linePoints[5], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[4], linePoints[6], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[5], linePoints[7], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[6], linePoints[7], getColor(multip * Vec4(0.75f, 0.75f, 0.75f, 1.0f)));
+        uint32_t drawColor = selectedEntityIndex == entityIndex ? selectedColor : grayColor;
+        lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
+        lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
+        lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
+        lineRenderSystem.addLine(linePoints[2], linePoints[6], drawColor);
+        lineRenderSystem.addLine(linePoints[3], linePoints[7], drawColor);
+        lineRenderSystem.addLine(linePoints[4], linePoints[5], drawColor);
+        lineRenderSystem.addLine(linePoints[4], linePoints[6], drawColor);
+        lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
+        lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
+        
+        uint32_t redColor = selectedEntityIndex == entityIndex ? selectedRedColor : unSelectedRedColor;
+        uint32_t greenColor = selectedEntityIndex == entityIndex ? selectedGreenColor : unSelectedGreenColor;
+        uint32_t blueColor = selectedEntityIndex == entityIndex ? selectedBlueColor : unSelectedBlueColor;
 
-
-        lineRenderSystem.addLine(linePoints[0], linePoints[1], getColor(multip * Vec4(1.0f, 0.0f, 0.0f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[0], linePoints[2], getColor(multip * Vec4(0.0f, 1.0f, 0.0f, 1.0f)));
-        lineRenderSystem.addLine(linePoints[0], linePoints[4], getColor(multip * Vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+        lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
+        lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);
+        lineRenderSystem.addLine(linePoints[0], linePoints[4], blueColor);
 
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES ||
             entity.entityType == EntityType::FLOOR)
