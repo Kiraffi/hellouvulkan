@@ -186,11 +186,10 @@ Matrix transpose(const Matrix &m)
 
 Matrix operator*(const Matrix &a, const Matrix &b)
 {
-    matrixTimer.continueTimer();
+    //matrixTimer.continueTimer();
     // remove the initializer
     alignas(16) float  resultFloats[16];
     Matrix &result = (Matrix &)resultFloats;
-
 #if (__AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64) && 1
 
     __m128 aRows[4];
@@ -247,7 +246,7 @@ Matrix operator*(const Matrix &a, const Matrix &b)
     #undef MATRIX_SET
     
 #endif
-    matrixTimer.pauseTimer();
+    //matrixTimer.pauseTimer();
     return result;
 }
 

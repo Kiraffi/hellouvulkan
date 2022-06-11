@@ -112,11 +112,11 @@ void ByteBuffer::insertIndex(uint32_t index)
 static Timer bytebufferTimer;
 void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
 {
-    bytebufferTimer.continueTimer();
+    //bytebufferTimer.continueTimer();
     insertIndex(index);
     uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
     memmove(startPtr, obj, bufferData.dataTypeSize);
-    bytebufferTimer.pauseTimer();
+    //bytebufferTimer.pauseTimer();
 }
 
 void ByteBuffer::removeIndex(uint32_t index)
