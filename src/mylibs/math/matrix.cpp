@@ -187,7 +187,7 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 {
     matrixTimer.continueTimer();
     Matrix result;
-#if (_M_IX86_FP > 1 || __AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64) && 1
+#if (__AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64) && 1
 
     __m128 bR0 = _mm_load_ps(&b._00);
     __m128 bR1 = _mm_load_ps(&b._10);
@@ -204,7 +204,7 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 
         _mm_store_ps(&result._00 + i * 4, r0);
     }
-    
+
 
     /*
     __m256 bR0 = _mm_load_ps(&b._00);

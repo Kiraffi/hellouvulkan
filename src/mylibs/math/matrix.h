@@ -13,7 +13,7 @@ struct Quaternion;
 // It makes easy to convert to 4x3 or from 4x3 to 4x4,
 // since no need to transpose and shaders use rowmatrix,
 // so its direct copy.
-struct Matrix
+struct alignas(16) Matrix
 {
     Matrix() {}
     Matrix(float f) : _00(f), _11(f), _22(f), _33(f) {}
