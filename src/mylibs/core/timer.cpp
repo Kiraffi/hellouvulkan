@@ -29,9 +29,9 @@ double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoin
 Timer::Timer()
 {
     #if USE_UNIX_CLOCK_COARSE
-        TimePoint p;
-        clock_getres(clockIdt, &p);
-        printf("res: %llu, %llu\n", p.tv_sec, p.tv_nsec);
+        //TimePoint p;
+        //clock_getres(clockIdt, &p);
+        //printf("res: %llu, %llu\n", p.tv_sec, p.tv_nsec);
     #endif
     startTime =  Timer::getTime();
     lastTime = startTime;
