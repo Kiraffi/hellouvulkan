@@ -1,21 +1,48 @@
 #include "timer.h"
 #include <core/mytypes.h>
 
+
+TimePoint Timer::getTime()
+{
+    #if USE_UNIX_CLOCK_COARSE
+        TimePoint newTime;
+        clock_gettime(clockIdt, &newTime);
+    #else
+        TimePoint newTime = std::chrono::high_resolution_clock::now();
+    #endif
+    return newTime;
+}
+
+double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoint &toTime)
+{
+    #if USE_UNIX_CLOCK_COARSE
+        double dur = double(toTime.tv_sec - fromTime.tv_sec) +
+            double(toTime.tv_nsec - fromTime.tv_nsec) * 1.0e-9;
+    #else
+        double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
+            (toTime - fromTime).count() * 1.0e-9;
+    #endif
+    return dur;
+}
+
+
 Timer::Timer()
 {
-    startTime = std::chrono::high_resolution_clock::now();
+    #if USE_UNIX_CLOCK_COARSE
+        TimePoint p;
+        clock_getres(clockIdt, &p);
+        printf("res: %llu, %llu\n", p.tv_sec, p.tv_nsec);
+    #endif
+    startTime =  Timer::getTime();
     lastTime = startTime;
 }
 
-double Timer::getDuration() 
+double Timer::getDuration()
 {
     if(running)
     {
-        std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
-
-        double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-            (newTime - startTime).count() * 1.0e-9;
-
+        lastTime = getTime();
+        double dur = Timer::getTimeDifferenceInNanos(startTime, lastTime);
         wholeDuration += dur;
     }
     return wholeDuration;
@@ -26,10 +53,8 @@ double Timer::getDuration() const
     double dur = 0.0;
     if(running)
     {
-        std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
-
-        dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-            (newTime - startTime).count() * 1.0e-9;
+        TimePoint newTime = getTime();
+        dur = Timer::getTimeDifferenceInNanos(startTime, newTime);
     }
     return wholeDuration + dur;
 }
@@ -40,12 +65,9 @@ double Timer::getLapDuration()
     double dur = 0.0;
     if(running)
     {
-        std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
-
-        dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-            (newTime - lastTime).count() * 1.0e-9;
+        TimePoint newTime = getTime();
+        dur = Timer::getTimeDifferenceInNanos(lastTime, newTime);
         lastTime = newTime;
-
         wholeDuration += dur;
     }
     return dur;
@@ -56,7 +78,7 @@ void Timer::continueTimer()
     if(running)
         return;
     running = true;
-    lastTime = std::chrono::high_resolution_clock::now();
+    lastTime = getTime();
 }
 
 void Timer::pauseTimer()
@@ -64,19 +86,17 @@ void Timer::pauseTimer()
     if(!running)
         return;
     running = false;
-    std::chrono::high_resolution_clock::time_point newTime = std::chrono::high_resolution_clock::now();
-
-    double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-        (newTime - lastTime).count() * 1.0e-9;
+    TimePoint newTime = getTime();
+    double dur = Timer::getTimeDifferenceInNanos(lastTime, newTime);
     lastTime = newTime;
-
     wholeDuration += dur;
 }
 
 void Timer::resetTimer()
 {
     wholeDuration = 0.0;
-    lastTime = std::chrono::high_resolution_clock::now();
+    startTime = getTime();
+    lastTime = startTime;
 }
 
 
