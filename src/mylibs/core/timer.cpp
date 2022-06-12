@@ -2,11 +2,12 @@
 #include <core/mytypes.h>
 
 
-TimePoint Timer::getTime()
+Timer::TimePoint Timer::getTime(ClockType clockType)
 {
+    int timerType = int(clockType);
     #if USE_UNIX_CLOCK_COARSE
         TimePoint newTime;
-        clock_gettime(clockIdt, &newTime);
+        clock_gettime(timerType, &newTime);
     #else
         TimePoint newTime = std::chrono::high_resolution_clock::now();
     #endif
@@ -26,22 +27,29 @@ double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoin
 }
 
 
-Timer::Timer()
+Timer::Timer() : clockType(ClockType::ClockId)
+{
+    startTime =  Timer::getTime(clockType);
+    lastTime = startTime;
+}
+
+Timer::Timer(ClockType clockType) : clockType(clockType)
 {
     #if USE_UNIX_CLOCK_COARSE
         //TimePoint p;
-        //clock_getres(clockIdt, &p);
+        //clock_getres(timerType, &p);
         //printf("res: %llu, %llu\n", p.tv_sec, p.tv_nsec);
     #endif
-    startTime =  Timer::getTime();
+    startTime =  Timer::getTime(clockType);
     lastTime = startTime;
+
 }
 
 double Timer::getDuration()
 {
     if(running)
     {
-        lastTime = getTime();
+        lastTime = getTime(clockType);
         double dur = Timer::getTimeDifferenceInNanos(startTime, lastTime);
         wholeDuration += dur;
     }
@@ -53,7 +61,7 @@ double Timer::getDuration() const
     double dur = 0.0;
     if(running)
     {
-        TimePoint newTime = getTime();
+        TimePoint newTime = getTime(clockType);
         dur = Timer::getTimeDifferenceInNanos(startTime, newTime);
     }
     return wholeDuration + dur;
@@ -65,7 +73,7 @@ double Timer::getLapDuration()
     double dur = 0.0;
     if(running)
     {
-        TimePoint newTime = getTime();
+        TimePoint newTime = getTime(clockType);
         dur = Timer::getTimeDifferenceInNanos(lastTime, newTime);
         lastTime = newTime;
         wholeDuration += dur;
@@ -78,7 +86,7 @@ void Timer::continueTimer()
     if(running)
         return;
     running = true;
-    lastTime = getTime();
+    lastTime = getTime(clockType);
 }
 
 void Timer::pauseTimer()
@@ -86,7 +94,7 @@ void Timer::pauseTimer()
     if(!running)
         return;
     running = false;
-    TimePoint newTime = getTime();
+    TimePoint newTime = getTime(clockType);
     double dur = Timer::getTimeDifferenceInNanos(lastTime, newTime);
     lastTime = newTime;
     wholeDuration += dur;
@@ -95,7 +103,7 @@ void Timer::pauseTimer()
 void Timer::resetTimer()
 {
     wholeDuration = 0.0;
-    startTime = getTime();
+    startTime = getTime(clockType);
     lastTime = startTime;
 }
 

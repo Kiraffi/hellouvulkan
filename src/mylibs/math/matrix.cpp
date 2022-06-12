@@ -9,7 +9,7 @@
 
 #include <core/timer.h>
 
-static Timer matrixTimer;
+static Timer matrixTimer(Timer::ClockType::ClockCoarseId);
 
 Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vector3 &forward)
 {
@@ -214,7 +214,7 @@ Matrix operator*(const Matrix &a, const Matrix &b)
     }
 
 #else
- 
+
     #define MATRIX_ADD_ROW_MULT(row, col) (\
         a._##row##0 * b._0##col + \
         a._##row##1 * b._1##col + \
@@ -241,10 +241,10 @@ Matrix operator*(const Matrix &a, const Matrix &b)
     MATRIX_SET(3, 1);
     MATRIX_SET(3, 2);
     MATRIX_SET(3, 3);
-    
+
     #undef MATRIX_ADD_ROW_MULT
     #undef MATRIX_SET
-    
+
 #endif
     //matrixTimer.pauseTimer();
     return result;
