@@ -315,7 +315,7 @@ void VulkanDrawStuff::logicUpdate()
 
         Vec3 onePerRayDir = 1.0f / rayDir;
 
-        Ray ray{ .pos = camera.position, .dir = rayDir };
+        Ray ray(camera.position, rayDir);
 
         float closestDist = FLT_MAX;
         for(uint32_t index : entityIndices)
