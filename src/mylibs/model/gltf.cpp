@@ -14,7 +14,7 @@
 struct GltfData;
 
 static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
-        uint32_t writeStartOffsetInBytes, ArraySliceViewBytes memoryRange);
+        uint32_t writeStartOffsetInBytes, ArraySliceViewBytesMutable memoryRange);
 
 static uint32_t findAccessorIndexAndParseTimeStamps(
     const GltfData &data, uint32_t samplerIndex,
@@ -218,7 +218,7 @@ static bool parseAnimationChannel(const GltfData &data, uint32_t animationIndex,
         return false;
 
     outVector.resize(timeStampAccessor.count);
-    ArraySliceViewBytes memoryRange = sliceFromPodVectorBytes(outVector);
+    ArraySliceViewBytesMutable memoryRange = sliceFromPodVectorBytesMutable(outVector);
     if(!gltfReadIntoBuffer(data, sampler.outputIndex,
         animationValueOffset, memoryRange))
         return false;
@@ -257,7 +257,7 @@ static uint32_t findAccessorIndexAndParseTimeStamps(
         timeStamps.resize(accessor.count);
 
         if(!gltfReadIntoBuffer(data, sampler.inputIndex,
-            0, sliceFromPodVectorBytes(timeStamps)))
+            0, sliceFromPodVectorBytesMutable(timeStamps)))
             return ~0u;
 
         // merge the timestamps
@@ -306,7 +306,7 @@ static uint32_t findAccessorIndexAndParseTimeStamps(
 // Reads u32, from u8, u16, u32
 // doesnt handle i8, i16 nor i32 reading, should probably just read them into i32.
 static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
-        uint32_t writeStartOffsetInBytes, ArraySliceViewBytes memoryRange)
+        uint32_t writeStartOffsetInBytes, ArraySliceViewBytesMutable memoryRange)
 {
     if(index >= data.accessors.size())
         return false;
@@ -890,7 +890,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
         outModel.vertices.resize(vertexCount);
         outModel.indices.resize(indicesCount);
 
-        ArraySliceViewBytes verticesMemoryRange = sliceFromPodVectorBytes(outModel.vertices);
+        ArraySliceViewBytesMutable verticesMemoryRange = sliceFromPodVectorBytesMutable(outModel.vertices);
         if(!gltfReadIntoBuffer(data, node.positionIndex,
             offsetof(GltfModel::Vertex, pos),
             verticesMemoryRange))
@@ -918,18 +918,18 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
         {
             if (!gltfReadIntoBuffer(data, node.colorIndex,
                 0,
-                sliceFromPodVectorBytes(outModel.vertexColors)))
+                sliceFromPodVectorBytesMutable(outModel.vertexColors)))
                 return false;
         }
         if (node.uvIndex < data.accessors.size())
         {
             if (!gltfReadIntoBuffer(data, node.uvIndex,
                 0,
-                sliceFromPodVectorBytes(outModel.vertexUvs)))
+                sliceFromPodVectorBytesMutable(outModel.vertexUvs)))
                 return false;
         }
         if(!gltfReadIntoBuffer(data, node.indicesIndex, 0,
-            sliceFromPodVectorBytes(outModel.indices)))
+            sliceFromPodVectorBytesMutable(outModel.indices)))
             return false;
 
         // Animation vertices?
@@ -954,12 +954,12 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
             if(!gltfReadIntoBuffer(data, node.weightIndex,
                 offsetof(GltfModel::AnimationVertex, weights),
-                sliceFromPodVectorBytes(outModel.animationVertices)))
+                sliceFromPodVectorBytesMutable(outModel.animationVertices)))
                 return false;
 
             if(!gltfReadIntoBuffer(data, node.jointsIndex,
                 offsetof(GltfModel::AnimationVertex, boneIndices),
-                sliceFromPodVectorBytes(outModel.animationVertices)))
+                sliceFromPodVectorBytesMutable(outModel.animationVertices)))
                 return false;
             /*
             for(const auto &v : outModel.animationVertices)
@@ -1029,7 +1029,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
 
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
-                0, sliceFromPodVectorBytes(inverseMatrices)))
+                0, sliceFromPodVectorBytesMutable(inverseMatrices)))
                 return false;
             //printf("\n\n");
             for(uint32_t i = 0; i < inverseMatrices.size(); ++i)

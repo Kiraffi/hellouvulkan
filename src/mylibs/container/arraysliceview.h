@@ -74,27 +74,24 @@ class ArraySliceViewBytes final
 {
 public:
     ArraySliceViewBytes(const void* const ptrData, uint32_t length, uint32_t typeSize) :
-        ptr((uint8_t *)ptrData),
+        ptr((const uint8_t *const)ptrData),
         length(ptrData ? length : 0),
         dataTypeSize(typeSize) {}
 
     template <typename T>
     ArraySliceViewBytes(const T* const ptrData, uint32_t length) :
-        ptr((uint8_t *)ptrData),
+        ptr((const uint8_t *const)ptrData),
         length(ptrData ? length : 0),
         dataTypeSize(sizeof(T)) {}
 
     template <typename T>
     ArraySliceViewBytes(ArraySliceView<T> view) :
-        ptr((uint8_t *)view.begin()),
+        ptr((const uint8_t *const)view.begin()),
         length(view.length),
         dataTypeSize(sizeof(T)) {}
 
-    const uint8_t *begin() const { return ptr; }
-    const uint8_t *end() const { return ptr + dataTypeSize * length; }
-
-    uint8_t *const begin() { return ptr; }
-    uint8_t *const end() { return ptr + dataTypeSize * length; }
+    const uint8_t *const begin() const { return ptr; }
+    const uint8_t *const end() const { return ptr + dataTypeSize * length; }
 
     const uint8_t* operator[] (uint32_t index) const
     {
@@ -110,11 +107,53 @@ public:
 
     uint32_t size() const { return length; }
     const uint8_t *const data() const { return ptr; }
-    uint8_t *const ptr = nullptr;
+    const uint8_t *const ptr = nullptr;
     uint32_t length = 0u;
     uint32_t dataTypeSize = 0u;
 };
 
+
+class ArraySliceViewBytesMutable final
+{
+public:
+    ArraySliceViewBytesMutable(const void *ptrData, uint32_t length, uint32_t typeSize) :
+        ptr((uint8_t *)ptrData),
+        length(ptrData ? length : 0),
+        dataTypeSize(typeSize) {}
+
+    template <typename T>
+    ArraySliceViewBytesMutable(const T *ptrData, uint32_t length) :
+        ptr((uint8_t *)ptrData),
+        length(ptrData ? length : 0),
+        dataTypeSize(sizeof(T)) {}
+
+    template <typename T>
+    ArraySliceViewBytesMutable(ArraySliceViewMutable<T> view) :
+        ptr((uint8_t *)view.begin()),
+        length(view.length),
+        dataTypeSize(sizeof(T)) {}
+
+    uint8_t *const begin() const { return ptr; }
+    uint8_t *const end() const { return ptr + dataTypeSize * length; }
+
+    const uint8_t *operator[] (uint32_t index) const
+    {
+        ASSERT(index < length);
+        ASSERT(ptr);
+        return &ptr[index * dataTypeSize];
+    }
+
+    bool isValid() const
+    {
+        return (ptr != nullptr && length > 0u && dataTypeSize > 0u) || (ptr == nullptr && length == 0);
+    }
+
+    uint32_t size() const { return length; }
+    uint8_t *const data() const { return ptr; }
+    uint8_t *const ptr = nullptr;
+    uint32_t length = 0u;
+    uint32_t dataTypeSize = 0u;
+};
 
 
 
@@ -143,6 +182,9 @@ ArraySliceViewBytes sliceFromVectorBytes(const Vector<T>& v)
     return {v.data(), v.size()};
 }
 
+
+
+
 template <typename T>
 ArraySliceViewMutable<T> sliceFromPodVectorMutable(PodVector<T> &v)
 {
@@ -151,6 +193,18 @@ ArraySliceViewMutable<T> sliceFromPodVectorMutable(PodVector<T> &v)
 
 template <typename T>
 ArraySliceViewMutable<T> sliceFromVectorMutable(Vector<T> &v)
+{
+    return { v.data(), v.size() };
+}
+
+template <typename T>
+ArraySliceViewBytesMutable sliceFromPodVectorBytesMutable(PodVector<T> &v)
+{
+    return { v.data(), v.size() };
+}
+
+template <typename T>
+ArraySliceViewBytesMutable sliceFromVectorBytesMutable(Vector<T> &v)
 {
     return { v.data(), v.size() };
 }
