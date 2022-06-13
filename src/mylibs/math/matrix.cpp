@@ -2,7 +2,7 @@
 #include <math/quaternion.h>
 #include <math/general_math.h>
 
-#include <cmath>
+#include <math.h>
 
 #include <xmmintrin.h>
 #include <immintrin.h>
@@ -215,27 +215,47 @@ Matrix operator*(const Matrix &a, const Matrix &b)
 
 #if (__AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64) && 1
 
-    __m128 aRows[4];
-    aRows[0] = _mm_load_ps(&a._00);
-    aRows[1] = _mm_load_ps(&a._10);
-    aRows[2] = _mm_load_ps(&a._20);
-    aRows[3] = _mm_load_ps(&a._30);
+    const __m128 aRows0 = _mm_load_ps(&a._00);
+    const __m128 aRows1 = _mm_load_ps(&a._10);
+    const __m128 aRows2 = _mm_load_ps(&a._20);
+    const __m128 aRows3 = _mm_load_ps(&a._30);
 
-    __m128 bR0 = _mm_load_ps(&b._00);
-    __m128 bR1 = _mm_load_ps(&b._10);
-    __m128 bR2 = _mm_load_ps(&b._20);
-    __m128 bR3 = _mm_load_ps(&b._30);
-
-    for(uint32_t i = 0; i < 4; ++i)
+    const __m128 bR0 = _mm_load_ps(&b._00);
+    const __m128 bR1 = _mm_load_ps(&b._10);
+    const __m128 bR2 = _mm_load_ps(&b._20);
+    const __m128 bR3 = _mm_load_ps(&b._30);
     {
-        __m128 r0 = _mm_mul_ps(_mm_shuffle_ps(aRows[i], aRows[i], _MM_SHUFFLE(0, 0, 0, 0)), bR0);
-        __m128 r1 = _mm_mul_ps(_mm_shuffle_ps(aRows[i], aRows[i], _MM_SHUFFLE(1, 1, 1, 1)), bR1);
-        __m128 r2 = _mm_mul_ps(_mm_shuffle_ps(aRows[i], aRows[i], _MM_SHUFFLE(2, 2, 2, 2)), bR2);
-        __m128 r3 = _mm_mul_ps(_mm_shuffle_ps(aRows[i], aRows[i], _MM_SHUFFLE(3, 3, 3, 3)), bR3);
-        __m128 rRes = _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
-        _mm_store_ps(&result._00 + i * 4, rRes);
+        const __m128 r00 = _mm_mul_ps(_mm_shuffle_ps(aRows0, aRows0, _MM_SHUFFLE(0, 0, 0, 0)), bR0);
+        const __m128 r01 = _mm_mul_ps(_mm_shuffle_ps(aRows0, aRows0, _MM_SHUFFLE(1, 1, 1, 1)), bR1);
+        const __m128 r02 = _mm_mul_ps(_mm_shuffle_ps(aRows0, aRows0, _MM_SHUFFLE(2, 2, 2, 2)), bR2);
+        const __m128 r03 = _mm_mul_ps(_mm_shuffle_ps(aRows0, aRows0, _MM_SHUFFLE(3, 3, 3, 3)), bR3);
+        const __m128 r0Res = _mm_add_ps(_mm_add_ps(r00, r01), _mm_add_ps(r02, r03));
+        _mm_store_ps(&result._00, r0Res);
     }
-
+    {
+        const __m128 r10 = _mm_mul_ps(_mm_shuffle_ps(aRows1, aRows1, _MM_SHUFFLE(0, 0, 0, 0)), bR0);
+        const __m128 r11 = _mm_mul_ps(_mm_shuffle_ps(aRows1, aRows1, _MM_SHUFFLE(1, 1, 1, 1)), bR1);
+        const __m128 r12 = _mm_mul_ps(_mm_shuffle_ps(aRows1, aRows1, _MM_SHUFFLE(2, 2, 2, 2)), bR2);
+        const __m128 r13 = _mm_mul_ps(_mm_shuffle_ps(aRows1, aRows1, _MM_SHUFFLE(3, 3, 3, 3)), bR3);
+        const __m128 r1Res = _mm_add_ps(_mm_add_ps(r10, r11), _mm_add_ps(r12, r13));
+        _mm_store_ps(&result._10, r1Res);
+    }
+    {
+        const __m128 r20 = _mm_mul_ps(_mm_shuffle_ps(aRows2, aRows2, _MM_SHUFFLE(0, 0, 0, 0)), bR0);
+        const __m128 r21 = _mm_mul_ps(_mm_shuffle_ps(aRows2, aRows2, _MM_SHUFFLE(1, 1, 1, 1)), bR1);
+        const __m128 r22 = _mm_mul_ps(_mm_shuffle_ps(aRows2, aRows2, _MM_SHUFFLE(2, 2, 2, 2)), bR2);
+        const __m128 r23 = _mm_mul_ps(_mm_shuffle_ps(aRows2, aRows2, _MM_SHUFFLE(3, 3, 3, 3)), bR3);
+        const __m128 r2Res = _mm_add_ps(_mm_add_ps(r20, r21), _mm_add_ps(r22, r23));
+        _mm_store_ps(&result._20, r2Res);
+    }
+    {
+        const __m128 r30 = _mm_mul_ps(_mm_shuffle_ps(aRows3, aRows3, _MM_SHUFFLE(0, 0, 0, 0)), bR0);
+        const __m128 r31 = _mm_mul_ps(_mm_shuffle_ps(aRows3, aRows3, _MM_SHUFFLE(1, 1, 1, 1)), bR1);
+        const __m128 r32 = _mm_mul_ps(_mm_shuffle_ps(aRows3, aRows3, _MM_SHUFFLE(2, 2, 2, 2)), bR2);
+        const __m128 r33 = _mm_mul_ps(_mm_shuffle_ps(aRows3, aRows3, _MM_SHUFFLE(3, 3, 3, 3)), bR3);
+        const __m128 r3Res = _mm_add_ps(_mm_add_ps(r30, r31), _mm_add_ps(r32, r33));
+        _mm_store_ps(&result._30, r3Res);
+    }
 #else
 
     #define MATRIX_ADD_ROW_MULT(row, col) (\
@@ -403,7 +423,7 @@ Matrix inverse(const Matrix& m)
         return Matrix();
 
     det = 1.0f / det;
-    Matrix result;
+    Matrix result{ Uninit };
     for (uint32_t i = 0; i < 16; i++)
         result[i] = inv[i] * det;
 

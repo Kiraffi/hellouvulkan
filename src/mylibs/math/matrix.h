@@ -37,25 +37,25 @@ struct alignas(16) Matrix
     float &operator[](uint32_t index) { return (&_00)[index]; }
     float operator[](uint32_t index) const { return (&_00)[index]; }
 
-    float _00 = 1.0f;
-    float _01 = 0.0f;
-    float _02 = 0.0f;
-    float _03 = 0.0f;
+    float _00;
+    float _01;
+    float _02;
+    float _03;
 
-    float _10 = 0.0f;
-    float _11 = 1.0f;
-    float _12 = 0.0f;
-    float _13 = 0.0f;
+    float _10;
+    float _11;
+    float _12;
+    float _13;
 
-    float _20 = 0.0f;
-    float _21 = 0.0f;
-    float _22 = 1.0f;
-    float _23 = 0.0f;
+    float _20;
+    float _21;
+    float _22;
+    float _23;
 
-    float _30 = 0.0f;
-    float _31 = 0.0f;
-    float _32 = 0.0f;
-    float _33 = 1.0f;
+    float _30;
+    float _31;
+    float _32;
+    float _33;
 
 };
 
