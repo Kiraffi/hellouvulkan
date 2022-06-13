@@ -8,6 +8,7 @@
 #include <myvulkan/vulkanresources.h>
 
 #include <render/meshrendertargets.h>
+#include <scene/gameentity.h>
 
 // Very unoptimized stuff... no culling or anything
 class MeshRenderSystem
@@ -16,7 +17,7 @@ public:
     ~MeshRenderSystem();
 
     bool init();
-    uint32_t addModel(const GltfModel& renderModel);
+    bool addModel(const GltfModel& renderModel, EntityType entityType);
 
 
     void clear();
@@ -31,15 +32,13 @@ private:
 
     void render(bool isShadowOnly);
 
-
+    // maybe there should be something that indicates its animated model or not?
     struct ModelData
     {
         uint32_t indiceStart = 0u;
         uint32_t indices = 0u;
         uint32_t vertexStart = 0u;
         uint32_t vertices = 0u;
-        uint32_t animatedVertexStart = 0u;
-        uint32_t animatedVectices = 0u;
     };
 
     Buffer vertexBuffer;
@@ -59,10 +58,10 @@ private:
 
     // these 3 probably should belong somewhere else, since they depend on scenedata, if wanting to have render to texture...
     // maybe MeshRenderScene
-    Vector<PodVector< uint32_t >> modelRenderBoneAmounts;
+    Vector<PodVector< uint32_t >> modelRenderBoneStartIndices;
     Vector<PodVector< Matrix >> modelRenderMatrices;
     Vector<PodVector< Matrix >> animatedModelRenderMatrices;
-    Vector<PodVector< Matrix >> boneAnimatedModelRenderMatrices;
+    PodVector< Matrix > boneAnimatedModelRenderMatrices;
 
     uint32_t indicesCount = 0u;
     uint32_t verticesCount = 0u;

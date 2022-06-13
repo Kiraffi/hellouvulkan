@@ -8,8 +8,9 @@ static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
 static bool loadModelForScene(SceneData &sceneData, std::string_view filename, EntityType entityType)
 {
-    sceneData.models.push_back(GltfModel{});
-    GltfModel& gltfModel = sceneData.models.back();
+    if(uint32_t(entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
+        return false;
+    GltfModel& gltfModel = sceneData.models[uint32_t(entityType)];
 
     bool readSuccess = readGLTF(filename, gltfModel);
 
@@ -17,10 +18,15 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
     if (!readSuccess)
     {
         sceneData.models.removeIndex(sceneData.models.size() - 1);
+        defragMemory();
         return false;
     }
 
-    sceneData.modelRenderMeshTypes.insert({ entityType, sceneData.meshRenderSystem.addModel(gltfModel) });
+    if(!sceneData.meshRenderSystem.addModel(gltfModel, entityType))
+    {
+        defragMemory();
+        return false;
+    }
     defragMemory();
 
     return true;
@@ -30,9 +36,9 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
 bool Scene::init()
 {
     ScopedTimer timer("Scene init");
+    sceneData.models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
 
-    // animated first, because it makes animatedvertices first so the vertex index is same, otherwise i need to somehow pass special offset
-    // to vertex shader to determine where to read animated vertices.
+    // load animated, can be loaded in any order nowadays, since animated vertices has separate buffer from non-animated ones
     if (!loadModelForScene(sceneData, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
         return false;
     if (!loadModelForScene(sceneData, "assets/models/character8.gltf", EntityType::CHARACTER))
@@ -42,6 +48,8 @@ bool Scene::init()
 
     if(!loadModelForScene(sceneData, "assets/models/armature_test.gltf", EntityType::ARMATURE_TEST))
         return false;
+
+
 
     // load nonanimated.
     if (!loadModelForScene(sceneData, "assets/models/arrows.gltf", EntityType::ARROW))
@@ -83,14 +91,10 @@ bool Scene::update(double deltaTime)
             continue;
         if (uint32_t(entity.entityType) >= sceneData.models.size())
             continue;
-        const auto iter = sceneData.modelRenderMeshTypes.find(entity.entityType);
-        if (iter == sceneData.modelRenderMeshTypes.end())
+        uint32_t renderMeshIndex = uint32_t(entity.entityType);
+        const auto& model = sceneData.models[renderMeshIndex];
+        if(model.vertices.size() == 0 && model.animationVertices.size() == 0)
             continue;
-
-        const auto& model = sceneData.models[uint32_t(entity.entityType)];
-        uint32_t renderMeshIndex = iter->second;
-
-
         if (model.animationVertices.size() > 0)
         {
             entity.animationTime += deltaTime;
@@ -107,11 +111,11 @@ bool Scene::update(double deltaTime)
 
 uint32_t Scene::addGameEntity(const GameEntity& entity)
 {
+    uint32_t result = ~0u;
     if (uint32_t(entity.entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
-        return ~0u;
+        return result;
     const auto &model = sceneData.models[uint32_t(entity.entityType)];
-
-    uint32_t result = sceneData.entities.size();
+    result = sceneData.entities.size();
 
     sceneData.entities.push_back(entity);
     sceneData.entities.back().bounds = model.bounds;

@@ -20,6 +20,16 @@ struct VData
     uvec2 normalXYZAttributes;
 };
 
+// Could be packed better
+struct AnimatedVData
+{
+    VData data;
+    // packed to uint16_t x 4
+    uvec2 weights;
+    uint boneIndices;
+    uint tmp;
+};
+
 layout (binding = 2, MATRIX_ORDER) restrict readonly buffer EnityModelMatrices
 {
     mat4 enityModelMatrices[];
@@ -41,15 +51,9 @@ layout (std430, binding = 5) restrict readonly buffer vertex_data
     VData vertexValues[];
 };
 
-struct AnimationVData
-{
-    vec4 weights;
-    uvec4 boneIndices;
-};
-
 layout (std430, binding = 6) restrict readonly buffer animationVertexData
 {
-    AnimationVData animationVertexValues[];
+    AnimatedVData animationVertexValues[];
 };
 
 layout (std430, binding = 7) restrict readonly buffer boneStartIndexData
@@ -68,8 +72,12 @@ layout (std430, binding = 7) restrict readonly buffer boneStartIndexData
 void main()
 {
     uint instanceIndex = gl_InstanceIndex;
-    VData data = vertexValues[gl_VertexIndex];
-
+    #if USE_ANIMATION
+        AnimatedVData animData = animationVertexValues[gl_VertexIndex];
+        VData data = animData.data;
+    #else
+        VData data = vertexValues[gl_VertexIndex];
+    #endif
     vec3 dataNormal = vec3(0.0f);
 
     dataNormal.x = float(uint(data.normalXYZAttributes.x & 0xffffu)) / 65535.0f * 2.0f - 1.0f;
@@ -77,21 +85,31 @@ void main()
     dataNormal.z = float(uint(data.normalXYZAttributes.y & 0xffffu)) / 65535.0f * 2.0f - 1.0f;
 
     #if USE_ANIMATION
-        AnimationVData animData = animationVertexValues[gl_VertexIndex];
         vec4 pos = vec4(0.0f);
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.x] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.x;
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.y] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.y;
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.z] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.z;
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.w] * vec4(data.pos.xyz, 1.0f) ) * animData.weights.w;
+        vec4 weights = vec4(
+            (animData.weights.x & 0xffffu),
+            (animData.weights.x >> 16u),
+            (animData.weights.y & 0xffffu),
+            (animData.weights.y >> 16u)) / 65535.0f;
+        uvec4 boneIndices = uvec4(
+            (animData.boneIndices >> 0 ) & 255,
+            (animData.boneIndices >> 8 ) & 255,
+            (animData.boneIndices >> 16 ) & 255,
+            (animData.boneIndices >> 24 ) & 255 );
+
+        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.x] * vec4(data.pos.xyz, 1.0f) ) * weights.x;
+        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.y] * vec4(data.pos.xyz, 1.0f) ) * weights.y;
+        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.z] * vec4(data.pos.xyz, 1.0f) ) * weights.z;
+        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.w] * vec4(data.pos.xyz, 1.0f) ) * weights.w;
 
         #if DEPTH_ONLY
         #else
             vec4 nor = vec4(0.0f);
 
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.x] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.x;
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.y] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.y;
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.z] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.z;
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + animData.boneIndices.w] * vec4(dataNormal.xyz, 0.0f) ) * animData.weights.w;
+            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.x] * vec4(dataNormal.xyz, 0.0f) ) * weights.x;
+            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.y] * vec4(dataNormal.xyz, 0.0f) ) * weights.y;
+            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.z] * vec4(dataNormal.xyz, 0.0f) ) * weights.z;
+            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.w] * vec4(dataNormal.xyz, 0.0f) ) * weights.w;
         #endif
     #else
         vec4 pos = vec4(data.pos.xyz, 1.0f);

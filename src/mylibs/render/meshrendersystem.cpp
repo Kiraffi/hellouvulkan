@@ -66,12 +66,10 @@ bool MeshRenderSystem::init()
 
     vertexBuffer = createBuffer(32u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
 
     animationVertexBuffer = createBuffer(32u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Animation vertex buffer");
 
     indexDataBuffer = createBuffer(32 * 1024 * 1024,
@@ -81,31 +79,28 @@ bool MeshRenderSystem::init()
 
     modelRenderMatricesBuffer = createBuffer(8u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render matrices buffer");
 
     modelRenderNormaMatricesBuffer = createBuffer(8u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render normal matrices buffer");
 
 
     modelBoneRenderMatricesBuffer = createBuffer(8u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render bone matrices buffer");
 
     modelRenderBoneStartIndexBuffer = createBuffer(8u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render model bone start indices");
 
     
 
     modelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
     animatedModelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
-    boneAnimatedModelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
-
+    modelRenderBoneStartIndices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
+    boneAnimatedModelRenderMatrices.reserve(65536);
+    models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
 
     // pipelines.
     for(uint32_t i = 0; i < ARRAYSIZES(meshRenderGraphicsPipeline); ++i)
@@ -163,15 +158,12 @@ bool MeshRenderSystem::init()
     return true;
 }
 
-uint32_t MeshRenderSystem::addModel(const GltfModel& model)
+bool MeshRenderSystem::addModel(const GltfModel& model, EntityType entityType)
 {
-    uint32_t newVertices = model.vertices.size();
-    uint32_t newAnimationVertices = model.animationVertices.size();
-    uint32_t newIndices = model.indices.size();
-    // Make sure to add animated models first to keep animatedvertex index same as vertexindex.
-    ASSERT(newAnimationVertices == 0 || verticesCount == animatedVerticesCount);
-    uint32_t result = ~0u;
+    bool isAnimated = model.animationVertices.size() > 0;
 
+    uint32_t newVertices = model.vertices.size();
+    uint32_t newIndices = model.indices.size();
 
     // Could be packed better
     struct RenderModel
@@ -185,13 +177,25 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
         // 1, use vertexcolor, 2, use uvs
         uint16_t attributes = 0u;
     };
+    struct AnimatedRenderModel
+    {
+        RenderModel model;
+        uint16_t boneWeights[4];
+        uint32_t boneIndices = 0;
+        uint32_t padding;
+    };
 
     PodVector<RenderModel> renderModel;
-    renderModel.resize(newVertices);
+    PodVector<AnimatedRenderModel> animatedRenderModel;
+
+    if(isAnimated)
+        animatedRenderModel.resize(newVertices);
+    else
+        renderModel.resize(newVertices);
 
     for (uint32_t i = 0; i < newVertices; ++i)
     {
-        RenderModel& rendModel = renderModel[i];
+        RenderModel& rendModel = isAnimated ? animatedRenderModel[i].model : renderModel[i];
 
         rendModel.position = model.vertices[i].pos;
         Vec3 norm = (model.vertices[i].norm + Vec3(1.0f, 1.0f, 1.0f)) * 0.5f * 65535.0f;
@@ -211,32 +215,50 @@ uint32_t MeshRenderSystem::addModel(const GltfModel& model)
             rendModel.attributes |= 2;
         }
 
+        if(isAnimated)
+        {
+            AnimatedRenderModel &animatedModel = animatedRenderModel[i];
+            const auto &animationVertex = model.animationVertices[i];
+            Vec4 weights = (animationVertex.weights) * 65535.0f;
+            animatedModel.boneWeights[0] = uint16_t(weights.x);
+            animatedModel.boneWeights[1] = uint16_t(weights.y);
+            animatedModel.boneWeights[2] = uint16_t(weights.z);
+            animatedModel.boneWeights[3] = uint16_t(weights.w);
+
+            //printf("[%u, %u, %u, %u]\n", animationVertex.boneIndices[0], animationVertex.boneIndices[1], animationVertex.boneIndices[2], animationVertex.boneIndices[3]);
+            
+            animatedModel.boneIndices =
+                (animationVertex.boneIndices[0] << 0) |
+                (animationVertex.boneIndices[1] << 8) |
+                (animationVertex.boneIndices[2] << 16) |
+                (animationVertex.boneIndices[3] << 24);
+        }
     }
 
     beginSingleTimeCommands();
 
     addToCopylist(sliceFromPodVectorBytes(model.indices), indexDataBuffer.buffer, indicesCount * sizeof(uint32_t));
-    addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer.buffer, verticesCount * sizeof(RenderModel));
-    if (newAnimationVertices > 0)
-        addToCopylist(sliceFromPodVectorBytes(model.animationVertices), animationVertexBuffer.buffer,
-            animatedVerticesCount * sizeof(GltfModel::AnimationVertex));
+    if(isAnimated)
+        addToCopylist(sliceFromPodVectorBytes(animatedRenderModel), animationVertexBuffer.buffer, animatedVerticesCount * sizeof(AnimatedRenderModel));
+    else
+        addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer.buffer, verticesCount * sizeof(RenderModel));
     flushBarriers(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     endSingleTimeCommands();
 
-    result = models.size();
-    models.push_back(ModelData{
+    
+    models[uint32_t(entityType)] = ModelData{
         .indiceStart = indicesCount, .indices = newIndices,
-        .vertexStart = verticesCount, .vertices = newVertices,
-        .animatedVertexStart = animatedVerticesCount, .animatedVectices = newAnimationVertices
-    });
+        .vertexStart = isAnimated ? animatedVerticesCount : verticesCount, .vertices = newVertices,
+    };
 
 
-
-    verticesCount += newVertices;
+    if(isAnimated)
+        animatedVerticesCount += newVertices;
+    else
+        verticesCount += newVertices;
     indicesCount += newIndices;
-    animatedVerticesCount += newAnimationVertices;
-    return result;
+    return true;
 }
 
 void MeshRenderSystem::clear()
@@ -245,10 +267,9 @@ void MeshRenderSystem::clear()
         matrices.clear();
     for (auto& matrices : animatedModelRenderMatrices)
         matrices.clear();
-    for (auto& matrices : boneAnimatedModelRenderMatrices)
-        matrices.clear();
-    for(auto &boneAmounts : modelRenderBoneAmounts)
+    for(auto &boneAmounts : modelRenderBoneStartIndices)
         boneAmounts.clear();
+    boneAnimatedModelRenderMatrices.clear();
 }
 
 bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Matrix& renderMatrix, const PodVector<Matrix>& boneMatrices)
@@ -258,22 +279,12 @@ bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Matrix& rende
 
     if (boneMatrices.size() > 0u)
     {
-        if (modelIndex >= boneAnimatedModelRenderMatrices.size())
-            boneAnimatedModelRenderMatrices.resize(modelIndex + 1);
-        if (modelIndex >= animatedModelRenderMatrices.size())
-            animatedModelRenderMatrices.resize(modelIndex + 1);
-        if(modelIndex >= modelRenderBoneAmounts.size())
-            modelRenderBoneAmounts.resize(modelIndex + 1);
-        
-        boneAnimatedModelRenderMatrices[modelIndex].pushBack(boneMatrices);
         animatedModelRenderMatrices[modelIndex].pushBack(renderMatrix);
-        modelRenderBoneAmounts[modelIndex].pushBack(boneMatrices.size());
+        modelRenderBoneStartIndices[modelIndex].pushBack(boneAnimatedModelRenderMatrices.size());
+        boneAnimatedModelRenderMatrices.pushBack(boneMatrices);
     }
     else
     {
-        if (modelIndex >= modelRenderMatrices.size())
-            modelRenderMatrices.resize(modelIndex + 1);
-
         modelRenderMatrices[modelIndex].push_back(renderMatrix);
     }
 
@@ -295,13 +306,11 @@ bool MeshRenderSystem::prepareToRender()
         for (const auto& vec : modelRenderMatrices)
             allModelRenderMatrices.pushBack(vec);
 
-        uint32_t startBoneIndex = 0u;
-        for(const auto & boneAmounts : modelRenderBoneAmounts)
+        for(const auto & boneAmounts : modelRenderBoneStartIndices)
         {
-            for(uint32_t boneAmount : boneAmounts)
+            for(uint32_t boneStartIndex : boneAmounts)
             {
-                startIndices.push_back(startBoneIndex);
-                startBoneIndex += boneAmount;
+                startIndices.push_back(boneStartIndex);
             }
         }
         if(startIndices.size() > 0)
@@ -311,13 +320,8 @@ bool MeshRenderSystem::prepareToRender()
             addToCopylist(sliceFromPodVectorBytes(allModelRenderMatrices), modelRenderMatricesBuffer);
     }
     {
-        PodVector<Matrix> allModelBoneRenderMatrices;
-        allModelBoneRenderMatrices.reserve(65536);
-        for (const auto& vec : boneAnimatedModelRenderMatrices)
-            allModelBoneRenderMatrices.pushBack(vec);
-
-        if (allModelBoneRenderMatrices.size() > 0)
-            addToCopylist(sliceFromPodVectorBytes(allModelBoneRenderMatrices), modelBoneRenderMatricesBuffer);
+        if (boneAnimatedModelRenderMatrices.size() > 0)
+            addToCopylist(sliceFromPodVectorBytes(boneAnimatedModelRenderMatrices), modelBoneRenderMatricesBuffer);
     }
     return true;
 }
@@ -345,11 +349,14 @@ void MeshRenderSystem::render(bool isShadowOnly)
         bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, meshRenderGraphicsPipeline[passIndex]);
         for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
         {
+            const ModelData &modelData = models[modelIndex];
+            if(modelData.vertices == 0)
+                continue;
             bool animationRender = (passIndex & 2) == 0;
             uint32_t instances = animationRender ? animatedModelRenderMatrices[modelIndex].size() : modelRenderMatrices[modelIndex].size();
             if (instances)
             {
-                const ModelData& modelData = models[modelIndex];
+                
                 vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
                     modelData.indiceStart, modelData.vertexStart, instanceStartIndex);
