@@ -9,12 +9,16 @@ template <typename T>
 class ArraySliceView final
 {
 public:
-    ArraySliceView(const T* const ptrData, uint32_t length) : ptr(ptrData), length(ptrData ? length : 0) {}
-    //ArraySliceView(const std::initializer_list<T>& initializerList) :
-    //    ptr(initializerList.size() ? initializerList.begin() : nullptr), length(initializerList.size()) {}
+    ArraySliceView(const T *const ptrData, uint32_t length) : ptr(ptrData), length(ptrData ? length : 0) {}
+    ArraySliceView(const ArraySliceView &view, uint32_t start, uint32_t length) :
+        ptr(view.ptr == nullptr || start >= view.length ? view.ptr : view.ptr + start),
+        length(view.ptr == nullptr || start >= view.length ? 0 : 
+            start + length >= view.length ? view.length - start : length)
+    {
+    }
 
-    const T* begin() const { return ptr; }
-    const T* end() const { return ptr + length; }
+    const T *const begin() const { return ptr; }
+    const T *const end() const { return ptr + length; }
 
     const T& operator[] (uint32_t index) const
     {
@@ -29,8 +33,39 @@ public:
     }
 
     uint32_t size() const { return length; }
-    const T* data() const { return ptr; }
-    const T* ptr = nullptr;
+    const T *const data() const { return ptr; }
+    const T *const ptr = nullptr;
+    uint32_t length = 0u;
+};
+
+template <typename T>
+class ArraySliceViewMutable final
+{
+public:
+    ArraySliceViewMutable(T *const ptrData, uint32_t length) : ptr(ptrData), length(ptrData ? length : 0) {}
+    ArraySliceViewMutable(const ArraySliceViewMutable &view, uint32_t start, uint32_t length) :
+        ptr(view.ptr == nullptr || start >= view.length ? view.ptr : view.ptr + start),
+        length(view.ptr == nullptr || start >= view.length ? 0 :
+            start + length >= view.length ? view.length - start : length) {}
+    
+    T *const begin() const { return ptr; }
+    T *const end() const { return ptr + length; }
+
+    T &operator[] (uint32_t index)
+    {
+        ASSERT(index < length);
+        ASSERT(ptr);
+        return ptr[index];
+    }
+
+    bool isValid() const
+    {
+        return (ptr != nullptr && length > 0u) || (ptr == nullptr && length == 0);
+    }
+
+    uint32_t size() const { return length; }
+    T *const data() const { return ptr; }
+    T *const ptr = nullptr;
     uint32_t length = 0u;
 };
 
@@ -55,11 +90,11 @@ public:
         length(view.length),
         dataTypeSize(sizeof(T)) {}
 
-    const uint8_t* begin() const { return ptr; }
-    const uint8_t* end() const { return ptr + dataTypeSize * length; }
+    const uint8_t *begin() const { return ptr; }
+    const uint8_t *end() const { return ptr + dataTypeSize * length; }
 
-    uint8_t* begin() { return ptr; }
-    uint8_t* end() { return ptr + dataTypeSize * length; }
+    uint8_t *const begin() { return ptr; }
+    uint8_t *const end() { return ptr + dataTypeSize * length; }
 
     const uint8_t* operator[] (uint32_t index) const
     {
@@ -74,8 +109,8 @@ public:
     }
 
     uint32_t size() const { return length; }
-    const uint8_t* data() const { return ptr; }
-    uint8_t* ptr = nullptr;
+    const uint8_t *const data() const { return ptr; }
+    uint8_t *const ptr = nullptr;
     uint32_t length = 0u;
     uint32_t dataTypeSize = 0u;
 };
@@ -106,4 +141,16 @@ template <typename T>
 ArraySliceViewBytes sliceFromVectorBytes(const Vector<T>& v)
 {
     return {v.data(), v.size()};
+}
+
+template <typename T>
+ArraySliceViewMutable<T> sliceFromPodVectorMutable(PodVector<T> &v)
+{
+    return { v.data(), v.size() };
+}
+
+template <typename T>
+ArraySliceViewMutable<T> sliceFromVectorMutable(Vector<T> &v)
+{
+    return { v.data(), v.size() };
 }
