@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.15)
 
 
 # Add source to this project's executable.
-add_executable (tests "main_test.cpp" "matrixtest.cpp" "matrixtest.h")
+add_executable (tests "main_test.cpp" "matrixtest.cpp" "vectortest.cpp")
 
 target_link_libraries(tests PRIVATE
     MyLibraries

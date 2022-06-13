@@ -8,7 +8,7 @@
 
 #include <myvulkan/uniformbuffermanager.h>
 
-#include "matrixtest.h"
+#include "testfuncs.h"
 
 struct Foos
 {
@@ -218,6 +218,8 @@ int main()
     testArraySliceView();
 
     testVector();
+    
     testMatrix();
+    testMathVector();
     return 0;
 }

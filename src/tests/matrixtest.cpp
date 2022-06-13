@@ -1,4 +1,4 @@
-#include "matrixtest.h"
+#include "testfuncs.h"
 
 #include <math/general_math.h>
 #include <math/matrix.h>
