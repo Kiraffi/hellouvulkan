@@ -321,7 +321,7 @@ void VulkanDrawStuff::logicUpdate()
         for(uint32_t index : entityIndices)
         {
             const auto &entity = scene.getEntity(index);
-            Hitpoint hitpoint;
+            Hitpoint hitpoint{ Uninit };
             /*
             if(raySphereIntersect(ray, Sphere{ .pos = entity.transform.pos, .radius = 2.0f }, hitpoint))
             {
