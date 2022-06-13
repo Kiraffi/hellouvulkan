@@ -1,6 +1,6 @@
 #include "ray.h"
 
-#include <cmath>
+#include <math.h>
 
 // intersect test ray sphere from game physics cookbook
 bool raySphereIntersect(const Ray &ray, const Sphere &sphere, Hitpoint &outHitpoint)
@@ -48,8 +48,8 @@ bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transfor
     Vec3 tMins = Vec3(min(tMin, tMax));
     Vec3 tMaxs = Vec3(max(tMin, tMax));
 
-    float tMind = std::max(std::max(tMins.x, tMins.y), tMins.z);
-    float tMaxd = std::min(std::min(tMaxs.x, tMaxs.y), tMaxs.z);
+    float tMind = fmaxf(fmaxf(tMins.x, tMins.y), tMins.z);
+    float tMaxd = fminf(fminf(tMaxs.x, tMaxs.y), tMaxs.z);
 
     // can have negative tMinD, then we are inside, if both are negative then the hit is behind
     outHitpoint.distance = tMind >= 0.0f ? tMind : 0.0f;

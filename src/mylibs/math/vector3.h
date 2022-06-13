@@ -73,10 +73,12 @@ Vector2 operator/(const Vector2 &a, const Vector2 &b);
 Vector2 operator/(float value, const Vector2 &a);
 Vector2 min(const Vector2 &v1, const Vector2 &v2);
 Vector2 max(const Vector2 &v1, const Vector2 &v2);
+float min(const Vector2 &v1);
+float max(const Vector2 &v1);
 float sqrLen(const Vector2 &a);
 float len(const Vector2 &a);
 Vector2 normalize(const Vector2 &a);
-
+float dot(const Vector2 &a, const Vector2 &b);
 
 Vector3 operator+(const Vector3 &a, const Vector3 &b);
 Vector3 operator+(const Vector3 &a, float value);
@@ -92,6 +94,8 @@ Vector3 operator/(const Vector3 &a, const Vector3 &b);
 Vector3 operator/(float value, const Vector3 &a);
 Vector3 min(const Vector3 &v1, const Vector3 &v2);
 Vector3 max(const Vector3 &v1, const Vector3 &v2);
+float min(const Vector3 &v1);
+float max(const Vector3 &v1);
 float sqrLen(const Vector3 &a);
 float len(const Vector3 &a);
 Vector3 normalize(const Vector3 &a);
@@ -115,9 +119,12 @@ Vector4 operator/(const Vector4 &a, const Vector4 &b);
 Vector4 operator/(float value, const Vector4 &a);
 Vector4 min(const Vector4 &v1, const Vector4 &v2);
 Vector4 max(const Vector4 &v1, const Vector4 &v2);
+float min(const Vector4 &v1);
+float max(const Vector4 &v1);
 float sqrLen(const Vector4 &a);
 float len(const Vector4 &a);
 Vector4 normalize(const Vector4 &a);
+float dot(const Vector4 &a, const Vector4 &b);
 
 void printVector3(const Vector3 &v, const char name[]);
 

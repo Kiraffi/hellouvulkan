@@ -1,6 +1,6 @@
 #include "quaternion.h"
 //#include <algorithm>
-#include <cmath>
+#include <math.h>
 //#include <stdio.h>
 
 
@@ -141,7 +141,7 @@ Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
         dotAngle = -dotAngle;
     }
 
-    if (std::abs(dotAngle) > 0.9995)
+    if (fabsf(dotAngle) > 0.9995)
     {
         Quaternion result;
         result.v = q1.v - t * (q1.v - other.v);
@@ -149,14 +149,14 @@ Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
         return normalize(result);
     }
 
-    float theta0 = std::acos(dotAngle);
+    float theta0 = acosf(dotAngle);
     float theta = theta0 * t;
 
-    float sinTheta = sin(theta);
-    float sinTheta0 = sin(theta0);
+    float sinTheta = sinf(theta);
+    float sinTheta0 = sinf(theta0);
 
     float s2 = sinTheta / sinTheta0;
-    float s1 = cos(theta) - dotAngle * s2;
+    float s1 = cosf(theta) - dotAngle * s2;
 
     Quaternion result;
     result = q1 * s1;
