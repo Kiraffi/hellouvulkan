@@ -5,17 +5,17 @@
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b)
 {
-    Vector2 result(a);
-    result.x += b.x;
-    result.y += b.y;
+    Vector2 result{ Uninit };
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
     return result;
 }
 
 Vector2 operator+(const Vector2 &a, float value)
 {
-    Vector2 result(a);
-    result.x += value;
-    result.y += value;
+    Vector2 result{ Uninit };
+    result.x = a.x + value;
+    result.y = a.y + value;
     return result;
 }
 
@@ -27,7 +27,7 @@ Vector2 operator+(float value, const Vector2 &a)
 
 Vector2 operator-(const Vector2 &a)
 {
-    Vector2 result;
+    Vector2 result{ Uninit };
     result.x = -a.x;
     result.y = -a.y;
     return result;
@@ -36,63 +36,63 @@ Vector2 operator-(const Vector2 &a)
 
 Vector2 operator-(const Vector2 &a, const Vector2 &b)
 {
-    Vector2 result(a);
-    result.x -= b.x;
-    result.y -= b.y;
+    Vector2 result{ Uninit };
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
     return result;
 }
 
 Vector2 operator-(const Vector2 &a, float value)
 {
-    Vector2 result(a);
-    result.x -= value;
-    result.y -= value;
+    Vector2 result{ Uninit };
+    result.x = a.x - value;
+    result.y = a.y - value;
     return result;
 }
 
 Vector2 operator*(const Vector2 &a, float value)
 {
-    Vector2 result(a);
-    result.x *= value;
-    result.y *= value;
+    Vector2 result{ Uninit };
+    result.x = a.x * value;
+    result.y = a.y * value;
     return result;
 }
 
 Vector2 operator*(float value, const Vector2 &a)
 {
-    Vector2 result(a);
-    result.x *= value;
-    result.y *= value;
+    Vector2 result{ Uninit };
+    result.x = a.x * value;
+    result.y = a.y * value;
     return result;
 }
 
 Vector2 operator*(const Vector2 &a, const Vector2 &b)
 {
-    Vector2 result(a);
-    result.x *= b.x;
-    result.y *= b.y;
+    Vector2 result{ Uninit };
+    result.x = a.x * b.x;
+    result.y = a.y * b.y;
     return result;
 }
 
 Vector2 operator/(const Vector2 &a,float value)
 {
-    Vector2 result(a);
-    result.x /= value;
-    result.y /= value;
+    Vector2 result{ Uninit };
+    result.x = a.x / value;
+    result.y = a.y / value;
     return result;
 }
 
 Vector2 operator/(const Vector2 &a, const Vector2 &b)
 {
-    Vector2 result(a);
-    result.x /= b.x;
-    result.y /= b.y;
+    Vector2 result{ Uninit };
+    result.x = a.x / b.x;
+    result.y = a.y / b.y;
     return result;
 }
 
 Vector2 operator/(float value, const Vector2 &a)
 {
-    Vector2 result;
+    Vector2 result{ Uninit };
     result.x = value / a.x;
     result.y = value / a.y;
     return result;
@@ -101,7 +101,7 @@ Vector2 operator/(float value, const Vector2 &a)
 
 Vector2 min(const Vector2 &v1, const Vector2 &v2)
 {
-    Vector2 result;
+    Vector2 result{ Uninit };
     result.x = std::min(v1.x, v2.x);
     result.y = std::min(v1.y, v2.y);
     return result;
@@ -109,7 +109,7 @@ Vector2 min(const Vector2 &v1, const Vector2 &v2)
 
 Vector2 max(const Vector2 &v1, const Vector2 &v2)
 {
-    Vector2 result;
+    Vector2 result{ Uninit };
     result.x = std::max(v1.x, v2.x);
     result.y = std::max(v1.y, v2.y);
     return result;
@@ -128,12 +128,15 @@ float len(const Vector2 &a)
 
 Vector2 normalize(const Vector2 &a)
 {
-    float l = len(a);
+    float l = sqrLen(a);
     ASSERT(l != 0.0f);
-    float perLen = 1.0f / l;
-    Vector2 result(a.x * perLen, a.y * perLen);
-
-    return result;
+    if(l > 0.0f)
+    {
+        l = fsqrtf(l);
+        float perLen = 1.0f / l;
+        return Vector2(a.x * perLen, a.y * perLen);
+    }
+    return a;
 }
 
 
@@ -149,18 +152,18 @@ Vector2 normalize(const Vector2 &a)
 
 Vector3 operator+(const Vector3 &a, const Vector3 &b)
 {
-    Vector3 result(a);
-    result.x += b.x;
-    result.y += b.y;
-    result.z += b.z;
+    Vector3 result{ Uninit };
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
     return result;
 }
 Vector3 operator+(const Vector3 &a, float value)
 {
-    Vector3 result(a);
-    result.x += value;
-    result.y += value;
-    result.z += value;
+    Vector3 result{ Uninit };
+    result.x = a.x + value;
+    result.y = a.y + value;
+    result.z = a.z + value;
     return result;
 }
 Vector3 operator+(float value, const Vector3 &a)
@@ -171,7 +174,7 @@ Vector3 operator+(float value, const Vector3 &a)
 
 Vector3 operator-(const Vector3 &a)
 {
-    Vector3 result;
+    Vector3 result{ Uninit };
     result.x = -a.x;
     result.y = -a.y;
     result.z = -a.z;
@@ -181,71 +184,71 @@ Vector3 operator-(const Vector3 &a)
 
 Vector3 operator-(const Vector3 &a, const Vector3 &b)
 {
-    Vector3 result(a);
-    result.x -= b.x;
-    result.y -= b.y;
-    result.z -= b.z;
+    Vector3 result{ Uninit };
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.z - b.z;
     return result;
 }
 
 Vector3 operator-(const Vector3 &a, float value)
 {
-    Vector3 result(a);
-    result.x -= value;
-    result.y -= value;
-    result.z -= value;
+    Vector3 result{ Uninit };
+    result.x = a.x - value;
+    result.y = a.y - value;
+    result.z = a.z - value;
     return result;
 }
 
 Vector3 operator*(const Vector3 &a, float value)
 {
-    Vector3 result(a);
-    result.x *= value;
-    result.y *= value;
-    result.z *= value;
+    Vector3 result{ Uninit };
+    result.x = a.x * value;
+    result.y = a.y * value;
+    result.z = a.z * value;
     return result;
 }
 
 Vector3 operator*(float value, const Vector3 &a)
 {
-    Vector3 result(a);
-    result.x *= value;
-    result.y *= value;
-    result.z *= value;
+    Vector3 result{ Uninit };
+    result.x = a.x * value;
+    result.y = a.y * value;
+    result.z = a.z * value;
     return result;
 }
 
 Vector3 operator*(const Vector3 &a, const Vector3 &b)
 {
-    Vector3 result(a);
-    result.x *= b.x;
-    result.y *= b.y;
-    result.z *= b.z;
+    Vector3 result{ Uninit };
+    result.x = a.x * b.x;
+    result.y = a.y * b.y;
+    result.z = a.z * b.z;
     return result;
 }
 
 
 Vector3 operator/(const Vector3 &a,float value)
 {
-    Vector3 result(a);
-    result.x /= value;
-    result.y /= value;
-    result.z /= value;
+    Vector3 result{ Uninit };
+    result.x = a.x / value;
+    result.y = a.y / value;
+    result.z = a.z / value;
     return result;
 }
 
 Vector3 operator/(const Vector3 &a, const Vector3 &b)
 {
-    Vector3 result(a);
-    result.x /= b.x;
-    result.y /= b.y;
-    result.z /= b.z;
+    Vector3 result{ Uninit };
+    result.x = a.x / b.x;
+    result.y = a.y / b.y;
+    result.z = a.z / b.z;
     return result;
 }
 
 Vector3 operator/(float value, const Vector3 &a)
 {
-    Vector3 result;
+    Vector3 result{ Uninit };
     result.x = value / a.x;
     result.y = value / a.y;
     result.z = value / a.z;
@@ -254,7 +257,7 @@ Vector3 operator/(float value, const Vector3 &a)
 
 Vector3 min(const Vector3 &v1, const Vector3 &v2)
 {
-    Vector3 result;
+    Vector3 result{ Uninit };
     result.x = std::min(v1.x, v2.x);
     result.y = std::min(v1.y, v2.y);
     result.z = std::min(v1.z, v2.z);
@@ -263,7 +266,7 @@ Vector3 min(const Vector3 &v1, const Vector3 &v2)
 
 Vector3 max(const Vector3 &v1, const Vector3 &v2)
 {
-    Vector3 result;
+    Vector3 result{ Uninit };
     result.x = std::max(v1.x, v2.x);
     result.y = std::max(v1.y, v2.y);
     result.z = std::max(v1.z, v2.z);
@@ -283,15 +286,15 @@ float len(const Vector3 &a)
 
 Vector3 normalize(const Vector3 &a)
 {
-    float l = len(a);
-    Vector3 result;
+    float l = sqrLen(a);
+    ASSERT(l > 0.0f);
     if(l > 0.0f)
     {
-        //ASSERT(l != 0.0f);
+        l = fsqrtf(l);
         float perLen = 1.0f / l;
-        result = Vector3(a.x * perLen, a.y * perLen, a.z * perLen);
+        return Vector3(a.x * perLen, a.y * perLen, a.z * perLen);
     }
-    return result;
+    return a;
 }
 
 
@@ -302,7 +305,7 @@ float dot(const Vector3 &a, const Vector3 &b)
 
 Vector3 cross(const Vector3 &a, const Vector3 &b)
 {
-    Vector3 result;
+    Vector3 result {Uninit};
     result.x = a.y * b.z - a.z * b.y;
     result.y = a.z * b.x - a.x * b.z;
     result.z = a.x * b.y - a.y * b.x;
@@ -334,20 +337,20 @@ Vector3 reject(const Vector3 &a, const Vector3 &b)
 
 Vector4 operator+(const Vector4 &a, const Vector4 &b)
 {
-    Vector4 result(a);
-    result.x += b.x;
-    result.y += b.y;
-    result.z += b.z;
-    result.w += b.w;
+    Vector4 result{ Uninit };
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.w + b.z;
+    result.w = a.z + b.w;
     return result;
 }
 Vector4 operator+(const Vector4 &a, float value)
 {
-    Vector4 result(a);
-    result.x += value;
-    result.y += value;
-    result.z += value;
-    result.w += value;
+    Vector4 result{ Uninit };
+    result.x = a.x + value;
+    result.y = a.y + value;
+    result.z = a.w + value;
+    result.w = a.z + value;
     return result;
 }
 Vector4 operator+(float value, const Vector4 &a)
@@ -358,99 +361,99 @@ Vector4 operator+(float value, const Vector4 &a)
 
 Vector4 operator-(const Vector4 &a)
 {
-    Vector4 result;
+    Vector4 result{ Uninit };
     result.x = -a.x;
     result.y = -a.y;
-    result.z = -a.z;
-    result.w = -a.w;
+    result.z = -a.w;
+    result.w = -a.z;
     return result;
 }
 
 
 Vector4 operator-(const Vector4 &a, const Vector4 &b)
 {
-    Vector4 result(a);
-    result.x -= b.x;
-    result.y -= b.y;
-    result.z -= b.z;
-    result.w -= b.w;
+    Vector4 result{ Uninit };
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.w - b.z;
+    result.w = a.z - b.w;
     return result;
 }
 
 Vector4 operator-(const Vector4 &a, float value)
 {
-    Vector4 result(a);
-    result.x -= value;
-    result.y -= value;
-    result.z -= value;
-    result.w -= value;
+    Vector4 result{ Uninit };
+    result.x = a.x - value;
+    result.y = a.y - value;
+    result.z = a.w - value;
+    result.w = a.z - value;
     return result;
 }
 
 Vector4 operator*(const Vector4 &a, float value)
 {
-    Vector4 result(a);
-    result.x *= value;
-    result.y *= value;
-    result.z *= value;
-    result.w *= value;
+    Vector4 result{ Uninit };
+    result.x = a.x * value;
+    result.y = a.y * value;
+    result.z = a.w * value;
+    result.w = a.z * value;
     return result;
 }
 
 Vector4 operator*(float value, const Vector4 &a)
 {
-    Vector4 result(a);
-    result.x *= value;
-    result.y *= value;
-    result.z *= value;
-    result.w *= value;
+    Vector4 result{ Uninit };
+    result.x = a.x * value;
+    result.y = a.y * value;
+    result.z = a.w * value;
+    result.w = a.z * value;
     return result;
 }
 
 Vector4 operator*(const Vector4 &a, const Vector4 &b)
 {
-    Vector4 result(a);
-    result.x *= b.x;
-    result.y *= b.y;
-    result.z *= b.z;
-    result.w *= b.w;
+    Vector4 result{ Uninit };
+    result.x = a.x * b.x;
+    result.y = a.y * b.y;
+    result.z = a.w * b.z;
+    result.w = a.z * b.w;
     return result;
 }
 
 
 Vector4 operator/(const Vector4 &a, float value)
 {
-    Vector4 result(a);
-    result.x /= value;
-    result.y /= value;
-    result.z /= value;
-    result.w /= value;
+    Vector4 result{ Uninit };
+    result.x = a.x / value;
+    result.y = a.y / value;
+    result.z = a.w / value;
+    result.w = a.z / value;
     return result;
 }
 
 Vector4 operator/(const Vector4 &a, const Vector4 &b)
 {
-    Vector4 result(a);
-    result.x /= b.x;
-    result.y /= b.y;
-    result.z /= b.z;
-    result.w /= b.w;
+    Vector4 result{ Uninit };
+    result.x = a.x / b.x;
+    result.y = a.y / b.y;
+    result.z = a.w / b.z;
+    result.w = a.z / b.w;
     return result;
 }
 
 Vector4 operator/(float value, const Vector4 &a)
 {
-    Vector4 result;
+    Vector4 result{ Uninit };
     result.x = value / a.x;
     result.y = value / a.y;
-    result.z = value / a.z;
-    result.w = value / a.w;
+    result.z = value / a.w;
+    result.w = value / a.z;
     return result;
 }
 
 Vector4 min(const Vector4 &v1, const Vector4 &v2)
 {
-    Vector4 result;
+    Vector4 result{ Uninit };
     result.x = std::min(v1.x, v2.x);
     result.y = std::min(v1.y, v2.y);
     result.z = std::min(v1.z, v2.z);
@@ -460,7 +463,7 @@ Vector4 min(const Vector4 &v1, const Vector4 &v2)
 
 Vector4 max(const Vector4 &v1, const Vector4 &v2)
 {
-    Vector4 result;
+    Vector4 result{ Uninit };
     result.x = std::max(v1.x, v2.x);
     result.y = std::max(v1.y, v2.y);
     result.z = std::max(v1.z, v2.z);
@@ -481,15 +484,15 @@ float len(const Vector4 &a)
 
 Vector4 normalize(const Vector4 &a)
 {
-    float l = len(a);
-    Vector4 result;
+    float l = sqrLen(a);
+    ASSERT(l > 0.0f);
     if(l > 0.0f)
     {
-        //ASSERT(l != 0.0f);
+        l = fsqrtf(l);
         float perLen = 1.0f / l;
-        result = a * perLen;
+        return a * perLen;
     }
-    return result;
+    return a;
 }
 
 

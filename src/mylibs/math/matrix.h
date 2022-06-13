@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/mytypes.h>
+#include <core/uninittype.h>
 #include <math/vector3.h>
 
 struct Quaternion;
@@ -15,7 +16,12 @@ struct Quaternion;
 // so its direct copy.
 struct alignas(16) Matrix
 {
-    Matrix() {}
+    Matrix() : 
+        _00(1.0f), _01(0.0f), _02(0.0f), _03(0.0f),
+        _10(0.0f), _11(1.0f), _12(0.0f), _13(0.0f),
+        _20(0.0f), _21(0.0f), _22(1.0f), _23(0.0f),
+        _30(0.0f), _31(0.0f), _32(0.0f), _33(1.0f){}
+    Matrix(UninitType) {}
     Matrix(float f) : _00(f), _11(f), _22(f), _33(f) {}
     Matrix(
         float f00, float f01, float f02, float f03,

@@ -21,6 +21,7 @@ add_library(MyLibraries
     "gui/examplegui.cpp"
 
     "math/matrix.cpp"
+    "math/ray.cpp"
     "math/quaternion.cpp"
     "math/vector3.cpp"
 
@@ -49,7 +50,8 @@ add_library(MyLibraries
 
     "scene/scene.cpp"
 
- "math/ray.h" "math/ray.cpp" "math/sphere.h" "math/bounds.h")
+    
+ "core/uninittype.h")
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"

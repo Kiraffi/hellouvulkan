@@ -13,7 +13,7 @@ static Timer matrixTimer(Timer::ClockType::ClockCoarseId);
 
 Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vector3 &forward)
 {
-    Matrix result;
+    Matrix result{ Uninit };
 
     result._00 = right.x;
     result._01 = up.x;
@@ -27,12 +27,20 @@ Matrix getMatrixFromRotation(const Vector3 &right, const Vector3 &up, const Vect
     result._21 = up.z;
     result._22 = forward.z;
 
+    result._03 = 0.0f;
+    result._13 = 0.0f;
+    result._23 = 0.0f;
+
+    result._30 = 0.0f;
+    result._31 = 0.0f;
+    result._32 = 0.0f;
+    result._33 = 1.0f;
     return result;
 }
 
 Matrix getMatrixFromQuaternionLH(const Quaternion &quat)
 {
-    Matrix result;
+    Matrix result{ Uninit };
     result._00 = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
     result._01 = 2.0f * quat.v.x * quat.v.y + 2.0f * quat.w * quat.v.z;
     result._02 = 2.0f * quat.v.x * quat.v.z - 2.0f * quat.w * quat.v.y;
@@ -45,12 +53,20 @@ Matrix getMatrixFromQuaternionLH(const Quaternion &quat)
     result._21 = 2.0f * quat.v.y * quat.v.z - 2.0f * quat.w * quat.v.x;
     result._22 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.y * quat.v.y;
 
+    result._03 = 0.0f;
+    result._13 = 0.0f;
+    result._23 = 0.0f;
+
+    result._30 = 0.0f;
+    result._31 = 0.0f;
+    result._32 = 0.0f;
+    result._33 = 1.0f;
     return result;
 }
 
 Matrix getMatrixFromQuaternion(const Quaternion &quat)
 {
-    Matrix result;
+    Matrix result{ Uninit };
     result._00 = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
     result._01 = 2.0f * quat.v.x * quat.v.y - 2.0f * quat.w * quat.v.z;
     result._02 = 2.0f * quat.v.x * quat.v.z + 2.0f * quat.w * quat.v.y;
@@ -63,6 +79,14 @@ Matrix getMatrixFromQuaternion(const Quaternion &quat)
     result._21 = 2.0f * quat.v.y * quat.v.z + 2.0f * quat.w * quat.v.x;
     result._22 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.y * quat.v.y;
 
+    result._03 = 0.0f;
+    result._13 = 0.0f;
+    result._23 = 0.0f;
+
+    result._30 = 0.0f;
+    result._31 = 0.0f;
+    result._32 = 0.0f;
+    result._33 = 1.0f;
     return result;
 }
 
@@ -134,7 +158,7 @@ Matrix createMatrixFromLookAt(const Vec3 &pos, const Vec3 &target, const Vec3 &u
     const Vec3 right = normalize(cross(up, forward));
     const Vec3 realUp = normalize(cross(forward, right));
 
-    Matrix result;
+    Matrix result{ Uninit };
     result._00 = right.x;
     result._01 = right.y;
     result._02 = right.z;
@@ -160,7 +184,7 @@ Matrix createMatrixFromLookAt(const Vec3 &pos, const Vec3 &target, const Vec3 &u
 
 Matrix transpose(const Matrix &m)
 {
-    Matrix result;
+    Matrix result{Uninit};
     result._00 = m._00;
     result._01 = m._10;
     result._02 = m._20;
@@ -187,9 +211,8 @@ Matrix transpose(const Matrix &m)
 Matrix operator*(const Matrix &a, const Matrix &b)
 {
     //matrixTimer.continueTimer();
-    // remove the initializer
-    alignas(16) float  resultFloats[16];
-    Matrix &result = (Matrix &)resultFloats;
+    Matrix result{ Uninit };
+
 #if (__AVX__ || __SSE__ || __SSE2__ || __SSE3__ || __SSE4_1__ || _M_AMD64 || _M_X64) && 1
 
     __m128 aRows[4];
@@ -265,7 +288,7 @@ bool operator==(const Matrix &a, const Matrix &b)
 
 Vec4 mul(const Matrix& m, const Vec4& v)
 {
-    Vec4 result;
+    Vec4 result {Uninit};
     result.x = v.x * m._00 + v.y * m._01 + v.z * m._02 + v.w * m._03;
     result.y = v.x * m._10 + v.y * m._11 + v.z * m._12 + v.w * m._13;
     result.z = v.x * m._20 + v.y * m._21 + v.z * m._22 + v.w * m._23;
@@ -274,7 +297,7 @@ Vec4 mul(const Matrix& m, const Vec4& v)
 }
 Vec4 mul(const Vec4& v, const Matrix& m)
 {
-    Vec4 result;
+    Vec4 result{ Uninit };
     result.x = v.x * m._00 + v.y * m._10 + v.z * m._20 + v.w * m._30;
     result.y = v.x * m._01 + v.y * m._11 + v.z * m._21 + v.w * m._31;
     result.z = v.x * m._02 + v.y * m._12 + v.z * m._22 + v.w * m._32;
@@ -284,7 +307,7 @@ Vec4 mul(const Vec4& v, const Matrix& m)
 
 Matrix inverse(const Matrix& m)
 {
-    Matrix inv;
+    Matrix inv{Uninit};
     inv[0] = (
         (m[5]  * m[10] * m[15] - m[5]  * m[11] * m[14]) -
         (m[9]  * m[6]  * m[15] - m[9]  * m[7]  * m[14]) +
