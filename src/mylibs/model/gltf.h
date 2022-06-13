@@ -29,15 +29,28 @@ struct GltfModel
         Vec3 value;
         float timeStamp = 0.0f;
     };
+    // having 5 float doesnt seem to pack nicely? Maybe time stamps should be on separate arrays?
     struct BoneAnimationRot
     {
         Quat value;
         float timeStamp = 0.0f;
     };
-    struct Bone
+
+    struct AnimationIndexData
     {
-        PodVector<uint32_t> childrenIndices;
+        // which is the start index for example animation 1, animation samples
+        uint32_t posStartIndex;
+        uint32_t posIndexCount;
+        uint32_t rotStartIndex;
+        uint32_t rotIndexCount;
+        uint32_t scaleStartIndex;
+        uint32_t scaleIndexCount;
+
+        // For a node of a bone, the children indices
+        uint32_t childStartIndex;
+        uint32_t childIndexCount;
     };
+
     // bounding boxes
     Bounds bounds;
 
@@ -48,12 +61,14 @@ struct GltfModel
     PodVector<uint32_t> indices;
     PodVector<Matrix> inverseMatrices;
 
-    // animation index, boneindex, timestamps...
-    Vector<Vector<PodVector<BoneAnimationPosOrScale>>> animationPosData;
-    Vector<Vector<PodVector<BoneAnimationRot>>> animationRotData;
-    Vector<Vector<PodVector<BoneAnimationPosOrScale>>> animationScaleData;
-    Vector<Bone> bones;
-    uint32_t boneCount = 0u;
+    // These are indices to animationPosData, animationRotData and animationScaleData, and childrenJointIndices.
+    Vector<PodVector<AnimationIndexData>> animationIndices;
+
+    // pos, rot scale animation data. Each animation data is just set after each other, to get indices, must use animationIndices
+    PodVector<BoneAnimationPosOrScale> animationPosData;
+    PodVector<BoneAnimationRot> animationRotData;
+    PodVector<BoneAnimationPosOrScale> animationScaleData;
+    PodVector<uint32_t> childrenJointIndices;
 
     PodVector<float> animStartTimes;
     PodVector<float> animEndTimes;
