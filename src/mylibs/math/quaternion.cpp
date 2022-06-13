@@ -24,15 +24,14 @@ Quaternion operator *(const Quaternion &a, const Quaternion &b)
 
 Quaternion normalize(const Quaternion &q)
 {
-    Quaternion result;
 
-    float length = sqrtf(dot(q, q));
-    if(length > 0)
+    float sqrLength = dot(q, q);
+    if(sqrLength > 0)
     {
-        result.w = q.w / length;
-        result.v = q.v / length;
+        float length = 1.0f / fsqrtf(sqrLength);
+        return Quaternion(q.v * length, q.w * length);
     }
-    return result;
+    return Quaternion();
 }
 
 Quaternion conjugate(const Quaternion &q)
