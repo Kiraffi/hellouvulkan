@@ -17,6 +17,7 @@
 
 #include <math/general_math.h>
 #include <math/matrix.h>
+#include <math/quaternion.h>
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>

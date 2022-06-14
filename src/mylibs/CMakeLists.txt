@@ -25,6 +25,11 @@ add_library(MyLibraries
     "math/quaternion.cpp"
     "math/vector3.cpp"
 
+    "math/matrix.h"
+    "math/ray.h"
+    "math/quaternion.h"
+    "math/vector3.h"
+
     "model/gltf.cpp"
 
 

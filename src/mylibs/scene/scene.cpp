@@ -87,11 +87,12 @@ bool Scene::update(double deltaTime)
     for (auto& entity : sceneData.entities)
     {
         matrices.clear();
+        uint32_t renderMeshIndex = uint32_t(entity.entityType);
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES)
             continue;
-        if (uint32_t(entity.entityType) >= sceneData.models.size())
+        if (renderMeshIndex >= sceneData.models.size())
             continue;
-        uint32_t renderMeshIndex = uint32_t(entity.entityType);
+        
         const auto& model = sceneData.models[renderMeshIndex];
         if(model.vertices.size() == 0 && model.animationVertices.size() == 0)
             continue;
