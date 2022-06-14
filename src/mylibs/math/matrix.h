@@ -154,7 +154,7 @@ using mat4 = Matrix;
 
 
 
-static Mat3x4 getMatrixFromQuaternion(const Quaternion &quat)
+static FORCE_INLINE Mat3x4 getMatrixFromQuaternion(const Quaternion &quat)
 {
     Mat3x4 result{ Uninit };
     result._00 = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
@@ -177,7 +177,7 @@ static Mat3x4 getMatrixFromQuaternion(const Quaternion &quat)
 }
 
 
-static Mat3x4 getMatrixFromScale(const Vector3 &scale)
+static FORCE_INLINE Mat3x4 getMatrixFromScale(const Vector3 &scale)
 {
     Mat3x4 result;
     result._00 = scale.x;
@@ -187,7 +187,7 @@ static Mat3x4 getMatrixFromScale(const Vector3 &scale)
     return result;
 }
 
-static Mat3x4 getMatrixFromTranslation(const Vector3 &pos)
+static FORCE_INLINE Mat3x4 getMatrixFromTranslation(const Vector3 &pos)
 {
     Mat3x4 result;
     result._03 = pos.x;
@@ -198,7 +198,7 @@ static Mat3x4 getMatrixFromTranslation(const Vector3 &pos)
 
 }
 
-static Matrix transpose(const Matrix &m)
+static FORCE_INLINE Matrix transpose(const Matrix &m)
 {
     Matrix result{ Uninit };
     result._00 = m._00;
@@ -225,7 +225,7 @@ static Matrix transpose(const Matrix &m)
 }
 
 
-static Vec4 mul(const Matrix &m, const Vec4 &v)
+static FORCE_INLINE Vec4 mul(const Matrix &m, const Vec4 &v)
 {
     Vec4 result{ Uninit };
     result.x = v.x * m._00 + v.y * m._01 + v.z * m._02 + v.w * m._03;
@@ -234,7 +234,7 @@ static Vec4 mul(const Matrix &m, const Vec4 &v)
     result.w = v.x * m._30 + v.y * m._31 + v.z * m._32 + v.w * m._33;
     return result;
 }
-static Vec4 mul(const Vec4 &v, const Matrix &m)
+static FORCE_INLINE Vec4 mul(const Vec4 &v, const Matrix &m)
 {
     Vec4 result{ Uninit };
     result.x = v.x * m._00 + v.y * m._10 + v.z * m._20 + v.w * m._30;
@@ -244,7 +244,7 @@ static Vec4 mul(const Vec4 &v, const Matrix &m)
     return result;
 }
 
-static Vec4 mul(const Mat3x4 &m, const Vec4 &v)
+static FORCE_INLINE Vec4 mul(const Mat3x4 &m, const Vec4 &v)
 {
     Vec4 result{ Uninit };
     result.x = v.x * m._00 + v.y * m._01 + v.z * m._02 + v.w * m._03;
@@ -253,7 +253,7 @@ static Vec4 mul(const Mat3x4 &m, const Vec4 &v)
     result.w = v.w;
     return result;
 }
-static Vec4 mul(const Vec4 &v, const Mat3x4 &m)
+static FORCE_INLINE Vec4 mul(const Vec4 &v, const Mat3x4 &m)
 {
     Vec4 result{ Uninit };
     result.x = v.x * m._00 + v.y * m._10 + v.z * m._20;
@@ -265,7 +265,7 @@ static Vec4 mul(const Vec4 &v, const Mat3x4 &m)
 
 
 
-static Matrix operator*(const Matrix &a, const Matrix &b)
+static FORCE_INLINE Matrix operator*(const Matrix &a, const Matrix &b)
 {
     Matrix result{ Uninit };
 
@@ -349,7 +349,7 @@ static Matrix operator*(const Matrix &a, const Matrix &b)
 }
 
 
-static Mat3x4 operator*(const Mat3x4 &a, const Mat3x4 &b)
+static FORCE_INLINE Mat3x4 operator*(const Mat3x4 &a, const Mat3x4 &b)
 {
     Mat3x4 result{ Uninit };
 

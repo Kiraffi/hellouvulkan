@@ -48,13 +48,13 @@ using Quat = Quaternion;
 
 
 
-static float dot(const Quaternion &q1, const Quaternion &q2)
+static FORCE_INLINE float dot(const Quaternion &q1, const Quaternion &q2)
 {
     return q1.v.x * q2.v.x + q1.v.y * q2.v.y + q1.v.z * q2.v.z + q1.w * q2.w;
 }
 
 
-static Quaternion operator *(const Quaternion &a, const Quaternion &b)
+static FORCE_INLINE Quaternion operator *(const Quaternion &a, const Quaternion &b)
 {
     return Quaternion(
 
@@ -72,7 +72,7 @@ static Quaternion operator *(const Quaternion &a, const Quaternion &b)
     );
 }
 
-static Quaternion normalize(const Quaternion &q)
+static FORCE_INLINE Quaternion normalize(const Quaternion &q)
 {
     if(q.v.x == 0.0f && q.v.y == 0.0f && q.v.z == 0.0f && q.w == 0.0f)
     {
@@ -89,12 +89,12 @@ static Quaternion normalize(const Quaternion &q)
     return result;
 }
 
-static Quaternion conjugate(const Quaternion &q)
+static FORCE_INLINE Quaternion conjugate(const Quaternion &q)
 {
     return Quaternion(-q.v, q.w);
 }
 
-static Vector3 rotateVector(const Vector3 &v, const Quaternion &q)
+static FORCE_INLINE Vector3 rotateVector(const Vector3 &v, const Quaternion &q)
 {
     float d = sqrLen(q.v);
     // RH rotation with cross(q.v, v)
@@ -103,7 +103,7 @@ static Vector3 rotateVector(const Vector3 &v, const Quaternion &q)
     //return (v * (q.w * q.w - d) + 2.0f * (q.v * dot(v, q.v) + cross(v, q.v) * q.w));
 }
 
-static void getAxis(const Quaternion &quat, Vector3 &right, Vector3 &up, Vector3 &forward)
+static FORCE_INLINE void getAxis(const Quaternion &quat, Vector3 &right, Vector3 &up, Vector3 &forward)
 {
     right.x = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
     right.y = 2.0f * quat.v.x * quat.v.y + 2.0f * quat.w * quat.v.z;
@@ -120,7 +120,7 @@ static void getAxis(const Quaternion &quat, Vector3 &right, Vector3 &up, Vector3
 }
 
 
-static Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
+static FORCE_INLINE Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
 {
     float s = fsinf(angle * 0.5f);
 
@@ -131,7 +131,7 @@ static Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
     return result;
 }
 
-static Quaternion getQuaternionFromNormalizedVectors(const Vector3 &from, const Vector3 &toVector)
+static FORCE_INLINE Quaternion getQuaternionFromNormalizedVectors(const Vector3 &from, const Vector3 &toVector)
 {
     Quaternion result;
     float d = dot(from, toVector);
@@ -155,19 +155,19 @@ static Quaternion getQuaternionFromNormalizedVectors(const Vector3 &from, const 
     }
 }
 
-static Quaternion operator*(const Quaternion &q, float t)
+static FORCE_INLINE Quaternion operator*(const Quaternion &q, float t)
 {
     Quaternion result;
     result.v = q.v * t;
     result.w = q.w * t;
     return result;
 }
-static Quaternion operator*(float t, const Quaternion &q)
+static FORCE_INLINE Quaternion operator*(float t, const Quaternion &q)
 {
     return q * t;
 }
 
-static Quaternion lerp(Quaternion const &q1, Quaternion const &q2, float t)
+static FORCE_INLINE Quaternion lerp(Quaternion const &q1, Quaternion const &q2, float t)
 {
     float dotAngle = dot(q1, q2);
     Quaternion result{ Uninit };
@@ -188,7 +188,7 @@ static Quaternion lerp(Quaternion const &q1, Quaternion const &q2, float t)
     return result;
 }
 
-static Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
+static FORCE_INLINE Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
 {
     float dotAngle = dot(q1, q2);
 
@@ -223,7 +223,7 @@ static Quaternion slerp(Quaternion const &q1, Quaternion const &q2, float t)
     return normalize(result);
 }
 
-static void getDirectionsFromPitchYawRoll(float pitch, float yaw, float roll, Vector3 &rightDir, Vector3 &upDir, Vector3 &forwardDir)
+static FORCE_INLINE void getDirectionsFromPitchYawRoll(float pitch, float yaw, float roll, Vector3 &rightDir, Vector3 &upDir, Vector3 &forwardDir)
 {
     Quat rotation = getQuaternionFromAxisAngle(Vector3(0.0f, 0.0f, 1.0f), roll);
     rotation = getQuaternionFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), pitch) * rotation;
