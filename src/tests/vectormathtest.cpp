@@ -51,7 +51,7 @@ void testVec2()
     {
         const Vec2 vec1(9.0f, -20.0f);
         const Vec2 vec2(3.0f, 4.0f);
-        
+
         const Vec2 res1 = vec1 / vec2;
         ASSERT(res1.x == 3.0f && res1.y == -5.0f);
 
@@ -69,10 +69,10 @@ void testVec2()
         ASSERT(res2.x == 5.0f && res2.y == 7.0f);
 
         const float res3 = min(v);
-        ASSERT(-3.0f);
+        ASSERT(res3 == -3.0f);
 
         const float res4 = max(v);
-        ASSERT(2.0f);
+        ASSERT(res4 == 2.0f);
     }
 
     {
@@ -239,10 +239,10 @@ void testVec4()
         ASSERT(res2.x == 5.0f && res2.y == 7.0f && res2.z == 13.0f && res2.w == 27.0f);
 
         const float res3 = min(v);
-        ASSERT(-3.0f);
+        ASSERT(res3 == -3.0f);
 
         const float res4 = max(v);
-        ASSERT(27.0f);
+        ASSERT(res4 == 27.0f);
     }
 
     {
@@ -260,8 +260,8 @@ void testVec4()
     {
         const Vec4 res = normalize(Vec4(1.0f, -2.0f, 2.0f, -4.0f));
         ASSERT(
-            fabs(res.x - 1.0f / 5.0f) < VecEpsilon && 
-            fabs(res.y + 2.0f / 5.0f) < VecEpsilon && 
+            fabs(res.x - 1.0f / 5.0f) < VecEpsilon &&
+            fabs(res.y + 2.0f / 5.0f) < VecEpsilon &&
             fabs(res.z - 2.0f / 5.0f) < VecEpsilon &&
             fabs(res.w + 4.0f / 5.0f) < VecEpsilon);
     }
