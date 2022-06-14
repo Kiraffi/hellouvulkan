@@ -23,6 +23,7 @@ public:
         //ClockId = CLOCK_THREAD_CPUTIME_ID, //, not as slow but still slower, takes hit to spam this
         //ClockId = CLOCK_PROCESS_CPUTIME_ID,
         ClockId = CLOCK_MONOTONIC, // // slow one
+        //ClockId = CLOCK_REALTIME, // // slow one
         ClockThreadId = CLOCK_THREAD_CPUTIME_ID,
         ClockCoarseId = CLOCK_MONOTONIC_COARSE,
     };
