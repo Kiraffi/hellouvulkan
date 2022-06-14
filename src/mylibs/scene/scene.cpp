@@ -161,7 +161,11 @@ bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntitie
     uint32_t magicNumber;
     if(!bl.getChild("magicNumber").parseUInt(magicNumber))
         return false;
-    if(magicNumber != 1385621965)
+    if(magicNumber != SceneMagicNumber)
+        return false;
+
+    uint32_t versionNumber;
+    if(!bl.getChild("versionNumber").parseUInt(versionNumber))
         return false;
 
     std::string mapName;

@@ -2,6 +2,10 @@
 
 #include <render/meshrendersystem.h>
 #include <scene/gameentity.h>
+
+static constexpr uint32_t SceneMagicNumber = 1385621965u;
+static constexpr uint32_t SceneVersionNumber = 1u;
+
 struct SceneData
 {
     MeshRenderSystem& meshRenderSystem;
@@ -26,3 +30,4 @@ private:
 };
 
 bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntities);
+ 

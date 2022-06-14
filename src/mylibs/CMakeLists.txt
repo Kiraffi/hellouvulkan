@@ -56,7 +56,7 @@ add_library(MyLibraries
     "scene/scene.cpp"
 
     
- "core/uninittype.h" "scene/gameentity.cpp")
+ "core/uninittype.h" "scene/gameentity.cpp" "core/writejson.cpp" "core/writejson.h")
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"

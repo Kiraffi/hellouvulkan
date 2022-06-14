@@ -16,5 +16,5 @@ bool findEntityType(std::string_view name, EntityType &outType)
 
 bool writeJson(const GameEntity &entity)
 {
-
+    return true;
 }

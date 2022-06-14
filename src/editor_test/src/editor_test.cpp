@@ -8,6 +8,7 @@
 #include <core/mytypes.h>
 #include <core/transform.h>
 #include <core/vulkan_app.h>
+#include <core/writejson.h>
 
 #include <container/arraysliceview.h>
 
@@ -112,7 +113,28 @@ bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
     // TEMPORARY!
-    //glfwSetWindowPos(window, 2000, 100);
+    glfwSetWindowPos(window, 2000, 100);
+
+    WriteJson writeJson(SceneMagicNumber, SceneVersionNumber);
+    writeJson.addString("levelName", "Testmap");
+    writeJson.addInteger("num1", 1);
+    writeJson.addNumber("num2", 2.5f);
+    writeJson.addNumber("num3", 72.5);
+    writeJson.addInteger("num4", -4u);
+    writeJson.addInteger("num5", 65u);
+    writeJson.addBool("bool1", true);
+    writeJson.addBool("bool2", false);
+
+    writeJson.addArray("arr");
+        writeJson.addObject("");
+            writeJson.addInteger("num1", 1);
+            writeJson.writeVec3("position", Vector3(1.0f, 2.0f, 3.0f));
+            writeJson.writeQuat("rotation", Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
+            writeJson.writeVec3("scale", Vector3(1.0f, 2.0f, 3.0f));
+            writeJson.endObject();
+    writeJson.endArray();
+    writeJson.finishWrite("foo");
+
     PodVector<GameEntity> gameEntities;
     if(!readLevel("assets/levels/testmap.json", gameEntities))
         return false;

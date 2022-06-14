@@ -1,44 +1,49 @@
 {
-    "magicNumber": 1385621965,
-    "version": 1,
-    "levelName": "Testmap",
-    "objects": [
+    "magicNumber" : 1385621965,
+    "versionNumber" : 1,
+    "levelName" : "Testmap",
+    "objects" : [
         {
-            "position": [ 0.0, -0.1, 0.0 ],
-            "rotation": [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale": [ 10.0, 1.0, 10.0 ],
+            "position" : [ 0.0, -0.1, 0.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 10.0, 1.0, 10.0 ],
             "modelType": "Floor"
         },
         {
-            "position": [ -3.0, 0.0, 0.0 ],
-            "rotation": [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale": [ 1.0, 1.0, 1.0 ],
-            "modelType": "Wobbly"
+            "position" : [ -3.0, 0.0, 0.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 1.0, 1.0, 1.0 ],
+            "modelType" : "Wobbly"
         },
         {
-            "position": [ 3.0, 0.0, 0.0 ],
-            "rotation": [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale": [ 1.0, 1.0, 1.0 ],
-            "modelType": "Wobbly"
+            "position" : [ 3.0, 0.0, 0.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 1.0, 1.0, 1.0 ],
+            "modelType" : "Wobbly"
         },
         {
-            "position": [ 0.0, 0.0, -10.0 ],
-            "rotation": [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale": [ 1.0, 1.0, 1.0 ],
-            "modelType": "Character"
+            "position" : [ 0.0, 0.0, -10.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 1.0, 1.0, 1.0 ],
+            "modelType" : "Character"
         },
         {
-            "position": [ -3.0, 0.0, -20.0 ],
-            "rotation": [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale": [ 1.0, 1.0, 1.0 ],
-            "modelType": "LowPolyChar"
+            "position" : [ 0.0, 10.0, -10.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 1.0, 1.0, 1.0 ],
+            "modelType" : "Character"
         },
         {
-            "position": [ 3.0, 0.0, -20.0 ],
-            "rotation": [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale": [ 1.0, 1.0, 1.0 ],
-            "modelType": "LowPolyChar"
+            "position" : [ -3.0, 0.0, -20.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 1.0, 1.0, 1.0 ],
+            "modelType" : "LowPolyChar"
+        },
+        {
+            "position" : [ 3.0, 0.0, -20.0 ],
+            "rotation" : [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale" : [ 1.0, 1.0, 1.0 ],
+            "modelType" : "LowPolyChar"
         }
-
     ]
 }
