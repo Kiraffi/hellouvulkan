@@ -119,10 +119,15 @@ struct VulkanGlobal
     VkSemaphore acquireSemaphore = nullptr;
     VkSemaphore releaseSemaphore = nullptr;
 
-    VkFence fence = nullptr;
+    VkFence fences[4] = {};
+    VkFence fence = nullptr; // current fence
     VkCommandPool commandPool = nullptr;
 
-    VkCommandBuffer commandBuffer = nullptr;
+    VkCommandBuffer commandBuffers[4] = {};
+    VkCommandBuffer commandBuffer = nullptr; // current commandbuffer
+    uint32_t fenceIndex = 0u;
+    uint32_t minFrames = 4u;
+
     VmaAllocator_T *allocator = nullptr;
 
 

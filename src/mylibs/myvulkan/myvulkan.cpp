@@ -369,6 +369,8 @@ static bool createSwapchain(VSyncType vsyncMode)
         {
             imageCount = swapChainSupport.capabilities.maxImageCount;
         }
+        vulk->minFrames = imageCount <= 4 ? imageCount : 4;
+
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface = vulk->surface;
         createInfo.minImageCount = imageCount;
@@ -514,12 +516,12 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
         VkPhysicalDeviceProperties prop;
         VkPhysicalDevice physicalDevice = devices[i];
         vkGetPhysicalDeviceProperties(physicalDevice, &prop);
-
         if(prop.apiVersion < VulkanApiVersion)
         {
             printf("Api of device is older than required for %s\n", prop.deviceName);
             continue;
         }
+
         if(!prop.limits.timestampComputeAndGraphics)
         {
             printf("No timestamp and queries for %s\n", prop.deviceName);
@@ -964,15 +966,17 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         printf("Failed to create vulkan release semaphore!\n");
         return false;
     }
-
-    vulk->fence = createFence();
-    ASSERT(vulk->fence);
-    if(!vulk->fence)
+    for(uint32_t i = 0; i < 4; ++i)
     {
-        printf("Failed to create vulkan fence!\n");
-        return false;
+        vulk->fences[i] = createFence();
+        ASSERT(vulk->fences[i]);
+        if(!vulk->fences[i])
+        {
+            printf("Failed to create vulkan fence!\n");
+            return false;
+        }
     }
-
+    vulk->fence = vulk->fences[0];
     vulk->commandPool = createCommandPool();
     ASSERT(vulk->commandPool);
     if(!vulk->commandPool)
@@ -986,17 +990,23 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.commandBufferCount = 1;
 
-    VK_CHECK(vkAllocateCommandBuffers(vulk->device, &allocateInfo, &vulk->commandBuffer));
-    if(!vulk->commandBuffer)
+    for(uint32_t i = 0; i < 4; ++i)
     {
-        printf("Failed to create vulkan command buffer!\n");
-        return false;
+        VK_CHECK(vkAllocateCommandBuffers(vulk->device, &allocateInfo, &vulk->commandBuffers[i]));
+        if(!vulk->commandBuffers[i])
+        {
+            printf("Failed to create vulkan command buffer!\n");
+            return false;
+        }
+        std::string s = "Main command buffer";
+        s += std::to_string(i);
+        setObjectName((uint64_t)vulk->commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s);
     }
-    setObjectName((uint64_t)vulk->commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, "Main command buffer");
+    vulk->commandBuffer = vulk->commandBuffers[0];
 
 
     {
-        vulk->scratchBuffer = createBuffer(64u * 1024u * 1024u,
+        vulk->scratchBuffer = createBuffer(128u * 1024u * 1024u,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
@@ -1046,8 +1056,8 @@ void deinitVulkan()
         destroySwapchain(vulk->swapchain);
 
         deleteLoadedShaders();
-
-        vkDestroyFence(vulk->device, vulk->fence, nullptr);
+        for(uint32_t i = 0; i < 4; ++i)
+            vkDestroyFence(vulk->device, vulk->fences[i], nullptr);
         vkDestroySemaphore(vulk->device, vulk->acquireSemaphore, nullptr);
         vkDestroySemaphore(vulk->device, vulk->releaseSemaphore, nullptr);
         deinitVulkanResources();
@@ -1336,17 +1346,24 @@ void dispatchCompute(const Pipeline &pipeline, uint32_t globalXSize, uint32_t gl
 
 bool startRender()
 {
-    VK_CHECK(vkWaitForFences(vulk->device, 1, &vulk->fence, VK_TRUE, UINT64_MAX));
+    vulk->fenceIndex++;
+    if(vulk->fenceIndex == 4)
+    {
+        vulk->fenceIndex = 0;
+    }
+    vulk->fence = vulk->fences[vulk->fenceIndex];
+    vulk->commandBuffer = vulk->commandBuffers[vulk->fenceIndex];
+
+    {
+        //ScopedTimer aq("Acquire");
+        VK_CHECK(vkWaitForFences(vulk->device, 1, &vulk->fence, VK_TRUE, UINT64_MAX));
+    }
     if (vulk->acquireSemaphore == VK_NULL_HANDLE)
         return false;
     VkResult res = ( vkAcquireNextImageKHR(vulk->device, vulk->swapchain.swapchain, UINT64_MAX,
         vulk->acquireSemaphore, VK_NULL_HANDLE, &vulk->imageIndex) );
 
-    if (vulk->scratchBufferOffset > 32 * 1024 * 1024)
-        vulk->scratchBufferOffset = 0u;
-    else
-        vulk->scratchBufferOffset = 32 * 1024 * 1024u;
-
+    vulk->scratchBufferOffset = vulk->fenceIndex * 32u * 1024u * 1024u;
 
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
