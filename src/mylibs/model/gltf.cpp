@@ -1366,8 +1366,7 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
         scale.z = curr->value.z + (next->value.z - curr->value.z) * frac;
     }
 
-    Mat3x4 res = getModelMatrix({pos, rot, scale});
-    Mat3x4 newParent = parentMatrix * res;
+    Mat3x4 newParent = parentMatrix * getModelMatrix({ pos, rot, scale });
 
     outMatrices[jointIndex] =  newParent * params.inverseMatrices[jointIndex];
     const ArraySliceView< uint32_t > childIndices(

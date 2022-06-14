@@ -20,7 +20,7 @@
 #include <string_view>
 #include <set>
 #include <string.h>
-
+#include <string>
 
 static constexpr uint32_t FormatFlagBits =
     VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
@@ -369,7 +369,6 @@ static bool createSwapchain(VSyncType vsyncMode)
         {
             imageCount = swapChainSupport.capabilities.maxImageCount;
         }
-        vulk->minFrames = imageCount <= 4 ? imageCount : 4;
 
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface = vulk->surface;
@@ -810,7 +809,7 @@ static VkCommandPool createCommandPool()
 {
     uint32_t familyIndex = vulk->queueFamilyIndices.graphicsFamily;
     VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-    poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+    poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolCreateInfo.queueFamilyIndex = familyIndex;
 
     VkCommandPool commandPool = 0;
@@ -942,32 +941,36 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         return false;
     }
 
-    vulk->queryPool1 = createQueryPool(QUERY_COUNT);
-    vulk->queryPool2 = createQueryPool(QUERY_COUNT);
-    ASSERT(vulk->queryPool1 && vulk->queryPool2);
-    if(!vulk->queryPool1 || !vulk->queryPool2)
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
-        printf("Failed to create vulkan query pool!\n");
-        return false;
+        vulk->queryPools[i] = createQueryPool(QUERY_COUNT);
+        ASSERT(vulk->queryPools[i]);
+        if(!vulk->queryPools[i])
+        {
+            printf("Failed to create vulkan query pool!\n");
+            return false;
+        }
     }
 
-    vulk->acquireSemaphore = createSemaphore();
-    ASSERT(vulk->acquireSemaphore);
-    if(!vulk->acquireSemaphore)
-    {
-        printf("Failed to create vulkan acquire semapohore!\n");
-        return false;
-    }
 
-    vulk->releaseSemaphore = createSemaphore();
-    ASSERT(vulk->releaseSemaphore);
-    if(!vulk->releaseSemaphore)
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
-        printf("Failed to create vulkan release semaphore!\n");
-        return false;
-    }
-    for(uint32_t i = 0; i < 4; ++i)
-    {
+        vulk->acquireSemaphores[i] = createSemaphore();
+        ASSERT(vulk->acquireSemaphores[i]);
+        if(!vulk->acquireSemaphores[i])
+        {
+            printf("Failed to create vulkan acquire semapohore!\n");
+            return false;
+        }
+
+        vulk->releaseSemaphores[i] = createSemaphore();
+        ASSERT(vulk->releaseSemaphores[i]);
+        if(!vulk->releaseSemaphores[i])
+        {
+            printf("Failed to create vulkan release semaphore!\n");
+            return false;
+        }
+
         vulk->fences[i] = createFence();
         ASSERT(vulk->fences[i]);
         if(!vulk->fences[i])
@@ -976,7 +979,6 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
             return false;
         }
     }
-    vulk->fence = vulk->fences[0];
     vulk->commandPool = createCommandPool();
     ASSERT(vulk->commandPool);
     if(!vulk->commandPool)
@@ -988,19 +990,21 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
     VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
     allocateInfo.commandPool = vulk->commandPool;
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandBufferCount = 1;
+    allocateInfo.commandBufferCount = VulkanGlobal::FramesInFlight;
 
-    for(uint32_t i = 0; i < 4; ++i)
     {
-        VK_CHECK(vkAllocateCommandBuffers(vulk->device, &allocateInfo, &vulk->commandBuffers[i]));
-        if(!vulk->commandBuffers[i])
+        VK_CHECK(vkAllocateCommandBuffers(vulk->device, &allocateInfo, vulk->commandBuffers));
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
-            printf("Failed to create vulkan command buffer!\n");
-            return false;
+            if(!vulk->commandBuffers[i])
+            {
+                printf("Failed to create vulkan command buffer!\n");
+                return false;
+            }
+            std::string s = "Main command buffer";
+            s += std::to_string(i);
+            setObjectName((uint64_t)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s);
         }
-        std::string s = "Main command buffer";
-        s += std::to_string(i);
-        setObjectName((uint64_t)vulk->commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s);
     }
     vulk->commandBuffer = vulk->commandBuffers[0];
 
@@ -1050,16 +1054,19 @@ void deinitVulkan()
 
         vkDestroyCommandPool(vulk->device, vulk->commandPool, nullptr);
 
-        vkDestroyQueryPool(vulk->device, vulk->queryPool1, nullptr);
-        vkDestroyQueryPool(vulk->device, vulk->queryPool2, nullptr);
+
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+            vkDestroyQueryPool(vulk->device, vulk->queryPools[i], nullptr);
 
         destroySwapchain(vulk->swapchain);
 
         deleteLoadedShaders();
-        for(uint32_t i = 0; i < 4; ++i)
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
             vkDestroyFence(vulk->device, vulk->fences[i], nullptr);
-        vkDestroySemaphore(vulk->device, vulk->acquireSemaphore, nullptr);
-        vkDestroySemaphore(vulk->device, vulk->releaseSemaphore, nullptr);
+            vkDestroySemaphore(vulk->device, vulk->acquireSemaphores[i], nullptr);
+            vkDestroySemaphore(vulk->device, vulk->releaseSemaphores[i], nullptr);
+        }
         deinitVulkanResources();
         vkDestroyDevice(vulk->device, nullptr);
     }
@@ -1346,24 +1353,19 @@ void dispatchCompute(const Pipeline &pipeline, uint32_t globalXSize, uint32_t gl
 
 bool startRender()
 {
-    vulk->fenceIndex++;
-    if(vulk->fenceIndex == 4)
-    {
-        vulk->fenceIndex = 0;
-    }
-    vulk->fence = vulk->fences[vulk->fenceIndex];
-    vulk->commandBuffer = vulk->commandBuffers[vulk->fenceIndex];
+    vulk->frameIndex = (vulk->frameIndex + 1) % VulkanGlobal::FramesInFlight;
+    vulk->commandBuffer = vulk->commandBuffers[vulk->frameIndex];
 
     {
         //ScopedTimer aq("Acquire");
-        VK_CHECK(vkWaitForFences(vulk->device, 1, &vulk->fence, VK_TRUE, UINT64_MAX));
+        VK_CHECK(vkWaitForFences(vulk->device, 1, &vulk->fences[vulk->frameIndex], VK_TRUE, UINT64_MAX));
     }
-    if (vulk->acquireSemaphore == VK_NULL_HANDLE)
+    if (vulk->acquireSemaphores[vulk->frameIndex] == VK_NULL_HANDLE)
         return false;
     VkResult res = ( vkAcquireNextImageKHR(vulk->device, vulk->swapchain.swapchain, UINT64_MAX,
-        vulk->acquireSemaphore, VK_NULL_HANDLE, &vulk->imageIndex) );
+        vulk->acquireSemaphores[vulk->frameIndex], VK_NULL_HANDLE, &vulk->imageIndex));
 
-    vulk->scratchBufferOffset = vulk->fenceIndex * 32u * 1024u * 1024u;
+    vulk->scratchBufferOffset = vulk->frameIndex * 32u * 1024u * 1024u;
 
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -1441,21 +1443,21 @@ void present(Image & imageToPresent)
     {
         VkPipelineStageFlags submitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; //VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-        vkResetFences(vulk->device, 1, &vulk->fence);
+        vkResetFences(vulk->device, 1, &vulk->fences[vulk->frameIndex]);
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &vulk->acquireSemaphore;
+        submitInfo.pWaitSemaphores = &vulk->acquireSemaphores[vulk->frameIndex];
         submitInfo.pWaitDstStageMask = &submitStageMask;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &vulk->commandBuffer;
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &vulk->releaseSemaphore;
-        VK_CHECK(vkQueueSubmit(vulk->graphicsQueue, 1, &submitInfo, vulk->fence));
+        submitInfo.pSignalSemaphores = &vulk->releaseSemaphores[vulk->frameIndex];
+        VK_CHECK(vkQueueSubmit(vulk->graphicsQueue, 1, &submitInfo, vulk->fences[vulk->frameIndex]));
 
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &vulk->releaseSemaphore;
+        presentInfo.pWaitSemaphores = &vulk->releaseSemaphores[vulk->frameIndex];
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &vulk->swapchain.swapchain;
         presentInfo.pImageIndices = &vulk->imageIndex;
@@ -1815,7 +1817,7 @@ void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const Pipeline &p
 
 void writeStamp()
 {
-    VkQueryPool queryPool = vulk->queryPoolIndex == 0 ? vulk->queryPool1 : vulk->queryPool2;
-    vkCmdWriteTimestamp(vulk->commandBuffer, vulk->currentStage, queryPool, vulk->queryPoolIndexCount);
-    ++vulk->queryPoolIndexCount;
+    VkQueryPool queryPool = vulk->queryPools[vulk->frameIndex];
+    vkCmdWriteTimestamp(vulk->commandBuffer, vulk->currentStage, queryPool, vulk->queryPoolIndexCounts[vulk->frameIndex]);
+    ++vulk->queryPoolIndexCounts[vulk->frameIndex];
 }

@@ -30,6 +30,7 @@
 
 static double timer_frequency = 0.0;
 static void printStats(VulkanApp& app);
+static void updateStats(VulkanApp &app);
 
 static void error_callback(int error, const char* description)
 {
@@ -200,13 +201,15 @@ bool VulkanApp::isUp(int keyCode)
 
 void VulkanApp::renderUpdate()
 {
-    vulk->queryPoolIndexCount = 0u;
-    ++vulk->queryPoolIndex;
-    if (vulk->queryPoolIndex > 1u)
-        vulk->queryPoolIndex = 0u;
-    beginSingleTimeCommands();
-    VkQueryPool queryPool = vulk->queryPoolIndex == 0 ? vulk->queryPool1 : vulk->queryPool2;
-    vkCmdResetQueryPool(vulk->commandBuffer, queryPool, 0, QUERY_COUNT);
+    vulk->queryPoolIndexCounts[vulk->frameIndex] = 0u;
+
+    //beginSingleTimeCommands();
+    VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(vulk->commandBuffer, &beginInfo));
+
+    vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPools[vulk->frameIndex], 0, QUERY_COUNT);
 
     writeStamp();
     vulkanResourceFrameUpdate();
@@ -267,6 +270,7 @@ void VulkanApp::run()
 
         if (!resizeHappen)
         {
+            updateStats(*this);
             vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             renderUpdate();
             renderDraw();
@@ -418,7 +422,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     }
 }
 
-static void printStats(VulkanApp& app)
+static void updateStats(VulkanApp &app)
 {
     static uint32_t gpuframeCount = 0u;
     static uint32_t cpuframeCount = 0u;
@@ -430,29 +434,31 @@ static void printStats(VulkanApp& app)
         double timeDuration[QUERY_COUNT];
     };
     static TimeValues timeValues = {};
-    uint32_t timeStamps = vulk->queryPoolIndexCount;
-    if (timeStamps < 2u)
+    uint32_t oldPoolIndex = vulk->frameIndex;
+    uint32_t timeStamps = vulk->queryPoolIndexCounts[oldPoolIndex];
+
+    ++cpuframeCount;
+    if(timeStamps < 2u)
         return;
 
     uint64_t queryResults[QUERY_COUNT];
     static constexpr size_t querySize = sizeof(uint64_t);
-    VkQueryPool queryPool = vulk->queryPoolIndex == 0 ? vulk->queryPool2 : vulk->queryPool1;
+    VkQueryPool queryPool = vulk->queryPools[oldPoolIndex];
     VkResult res = (vkGetQueryPoolResults(vulk->device, queryPool,
-        0, vulk->queryPoolIndexCount, querySize * timeStamps, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
+        0, timeStamps, querySize * timeStamps, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
 
-    if (res == VK_SUCCESS)
+    if(res == VK_SUCCESS)
     {
         VkPhysicalDeviceProperties props = {};
         vkGetPhysicalDeviceProperties(vulk->physicalDevice, &props);
 
 
-        for (uint32_t i = QUERY_COUNT - 1; i > 0; --i)
+        for(uint32_t i = QUERY_COUNT - 1; i > 0; --i)
             timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
 
         gpuTime += (double(queryResults[timeStamps - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
         ++gpuframeCount;
     }
-    ++cpuframeCount;
 
     double currTime = app.getTime();
 
@@ -460,23 +466,26 @@ static void printStats(VulkanApp& app)
     app.gpuFps = gpuframeCount / gpuTime;
     app.cpuFps = cpuframeCount / cpuTime;
 
-    if (currTime - cpuTimeStamp >= 1.0)
+    if(currTime - cpuTimeStamp >= 1.0)
     {
 
         cpuTimeStamp += 1.0f;
 
         printf("Gpu: %4.3fms, cpu: %4.3fms.  GpuFps:%4.2f, CpuFps:%4.2f\n",
-            float(gpuTime* 1000.0 / gpuframeCount), (float)(cpuTime * 1000.0f / cpuframeCount),
+            float(gpuTime * 1000.0 / gpuframeCount), (float)(cpuTime * 1000.0f / cpuframeCount),
             app.gpuFps, app.cpuFps);
 
-        for (uint32_t i = 0; i < QUERY_COUNT; ++i)
+        for(uint32_t i = 0; i < QUERY_COUNT; ++i)
             timeValues.timeDuration[i] = 0.0;
 
         gpuTime = 0.0;
         gpuframeCount = 0u;
         cpuframeCount = 0u;
     }
+}
 
+static void printStats(VulkanApp &app)
+{
     MouseState mouseState = app.getMouseState();
 
     char str[100];

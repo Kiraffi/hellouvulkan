@@ -111,22 +111,20 @@ struct VulkanGlobal
     UniformBufferManager uniformBufferManager;
     UniformBufferHandle renderFrameBufferHandle;
 
-    VkQueryPool queryPool1 = nullptr;
-    VkQueryPool queryPool2 = nullptr;
-    uint32_t queryPoolIndex = 0u;
-    uint32_t queryPoolIndexCount = 0u;
+    static constexpr uint32_t FramesInFlight = 2;
+    VkQueryPool queryPools[FramesInFlight] = {};
+    uint32_t frameIndex = 0u;
+    uint32_t queryPoolIndexCounts[FramesInFlight] = {};
 
-    VkSemaphore acquireSemaphore = nullptr;
-    VkSemaphore releaseSemaphore = nullptr;
+    VkSemaphore acquireSemaphores[FramesInFlight] = {};
+    VkSemaphore releaseSemaphores[FramesInFlight] = {};
 
-    VkFence fences[4] = {};
-    VkFence fence = nullptr; // current fence
+    VkFence fences[FramesInFlight] = {};
     VkCommandPool commandPool = nullptr;
 
-    VkCommandBuffer commandBuffers[4] = {};
+    VkCommandBuffer commandBuffers[FramesInFlight] = {};
     VkCommandBuffer commandBuffer = nullptr; // current commandbuffer
-    uint32_t fenceIndex = 0u;
-    uint32_t minFrames = 4u;
+
 
     VmaAllocator_T *allocator = nullptr;
 
