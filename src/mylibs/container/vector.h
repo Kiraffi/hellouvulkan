@@ -38,9 +38,9 @@ public:
 
     void clear();
 
-    T* begin() const { return (T*)(getBegin()); }
-    T* data() const  { return (T*)(getBegin()); }
-    T* end() const   { return (T*)(getEnd()  ); }
+    T *const begin() const { return (T *const)(getBegin()); }
+    T *const data() const  { return (T *const)(getBegin()); }
+    T *const end() const   { return (T *const)(getEnd()  ); }
 
     T& front() const { return *((T*)(getBegin())); }
     T& back()  const { return *((T*)(getBack() )); }

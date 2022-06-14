@@ -24,3 +24,5 @@ public:
 private:
     SceneData sceneData;
 };
+
+bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntities);

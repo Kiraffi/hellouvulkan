@@ -1022,9 +1022,11 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         vulk->renderFrameBufferHandle = vulk->uniformBufferManager.reserveHandle();
     }
 
-    if (!loadShaders())
+    if(!loadShaders())
+    {
+        printf("Failed to load shaders\n");
         return false;
-
+    }
     {
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         vulk->globalTextureSampler = createSampler(samplerInfo);

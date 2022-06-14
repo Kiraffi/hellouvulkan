@@ -241,7 +241,12 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
 
         ++permutationIndex;
     }
-    return permutationIndex > 0u;
+    bool loadSuccess = permutationIndex > 0u;
+    if(!loadSuccess)
+    {
+        printf("Failed to load shader: %s\n", std::string(filename).c_str());
+    }
+    return loadSuccess;
 }
 
 

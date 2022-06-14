@@ -1,7 +1,9 @@
 
 #include "scene.h"
 
+#include <core/json.h>
 #include <core/timer.h>
+#include <core/general.h>
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
@@ -130,4 +132,64 @@ GameEntity& Scene::getEntity(uint32_t index)
         return ConstEntity;
 
     return sceneData.entities[index];
+}
+
+
+bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntities)
+{
+    PodVector<char> buffer;
+
+    if(!loadBytes(levelName, buffer))
+        return false;
+
+    JSONBlock bl;
+    bool parseSuccess = bl.parseJSON(ArraySliceView(buffer.data(), buffer.size()));
+
+    if(!parseSuccess)
+    {
+        printf("Failed to parse: %s\n", levelName.data());
+        return false;
+    }
+    else
+    {
+        //bl.print();
+    }
+
+    if(!bl.isObject() || bl.getChildCount() < 1)
+        return false;
+
+    uint32_t magicNumber;
+    if(!bl.getChild("magicNumber").parseUInt(magicNumber))
+        return false;
+    if(magicNumber != 1385621965)
+        return false;
+
+    std::string mapName;
+    if(!bl.getChild("levelName").parseString(levelName))
+        return false;
+
+    if(bl.getChild("objects").getChildCount() == 0)
+        return false;
+
+    std::string_view objTypeName;
+    for(auto const &obj : bl.getChild("objects"))
+    {
+        GameEntity ent;
+        int index = 0;
+        if(!obj.getChild("position").parseVec3(ent.transform.pos))
+            return false;
+        if(!obj.getChild("rotation").parseQuat(ent.transform.rot))
+            return false;
+        if(!obj.getChild("scale").parseVec3(ent.transform.scale))
+            return false;
+
+        if(!obj.getChild("modelType").parseString(objTypeName))
+            return false;
+
+        if(!findEntityType(objTypeName, ent.entityType))
+            return false;
+        outGameEntities.push_back(ent);
+    }
+
+    return true;
 }
