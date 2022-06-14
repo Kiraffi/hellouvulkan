@@ -561,23 +561,13 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             child.getChild("skin").parseUInt(node.skinIndex);
 
 
-            const JSONBlock &rotBlock = child.getChild("rotation");
-            rotBlock.getChild(0).parseNumber(node.rot.v.x);
-            rotBlock.getChild(1).parseNumber(node.rot.v.y);
-            rotBlock.getChild(2).parseNumber(node.rot.v.z);
-            rotBlock.getChild(3).parseNumber(node.rot.w);
+            child.getChild("rotation").parseQuat(node.rot);
             node.rot = normalize(node.rot);
 
-            const JSONBlock &transBlock = child.getChild("translation");
-            transBlock.getChild(0).parseNumber(node.trans.x);
-            transBlock.getChild(1).parseNumber(node.trans.y);
-            transBlock.getChild(2).parseNumber(node.trans.z);
+            child.getChild("translation").parseVec3(node.trans);
 
-            const JSONBlock &scaleBlock = child.getChild("scale");
-            scaleBlock.getChild(0).parseNumber(node.scale.x);
-            scaleBlock.getChild(1).parseNumber(node.scale.y);
-            scaleBlock.getChild(2).parseNumber(node.scale.z);
-
+            child.getChild("scale").parseVec3(node.scale);
+            
             const JSONBlock& childrenBlock = child.getChild("children");
             node.childNodeIndices.reserve(childrenBlock.children.size());
             for(const auto &childBlock : childrenBlock.children)

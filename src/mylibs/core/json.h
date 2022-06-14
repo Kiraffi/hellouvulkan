@@ -6,6 +6,9 @@
 #include <container/podvector.h>
 #include <container/vector.h>
 
+#include <math/quaternion.h>
+#include <math/vector3.h>
+
 #include <string_view>
 
 struct JSONBlock
@@ -44,11 +47,17 @@ struct JSONBlock
     bool parseBool(bool &outBool) const;
     bool parseBuffer(PodVector<uint8_t> &outBuffer) const;
 
+    bool parseVec3(Vector3 &v) const;
+    bool parseQuat(Quaternion &q) const;
+
     bool hasChild(std::string_view childName) const;
 
     int getChildCount() const { return ( int )children.size(); }
     const JSONBlock &getChild(int index) const;
     const JSONBlock &getChild(std::string_view childName) const;
+
+    const JSONBlock *const begin() const;
+    const JSONBlock *const end() const;
 
     bool print() const;
 

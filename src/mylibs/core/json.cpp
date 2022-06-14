@@ -638,6 +638,41 @@ bool JSONBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
     return true;
 }
 
+bool JSONBlock::parseVec3(Vector3 &v) const
+{
+    if(children.size() != 3)
+        return false;
+    float f[3];
+
+    for(uint32_t i = 0; i < 3; ++i)
+    {
+        if(!children[i].parseFloat(f[i]))
+            return false;
+    }
+    v.x = f[0];
+    v.y = f[1];
+    v.z = f[2];
+    return true;
+}
+
+bool JSONBlock::parseQuat(Quaternion &q) const
+{
+    if(children.size() != 4)
+        return false;
+    float f[4];
+    for(uint32_t i = 0; i < 4; ++i)
+    {
+        if(!children[i].parseFloat(f[i]))
+            return false;
+    }
+    q.v.x = f[0];
+    q.v.y = f[1];
+    q.v.z = f[2];
+    q.w = f[3];
+    return true;
+}
+
+
 bool JSONBlock::hasChild(std::string_view childName) const
 {
     for(const JSONBlock &child : children)
@@ -670,7 +705,14 @@ const JSONBlock &JSONBlock::getChild(std::string_view childName) const
     return emptyBlock;
 }
 
-
+const JSONBlock *const JSONBlock::begin() const
+{
+    return children.begin();
+}
+const JSONBlock *const JSONBlock::end() const
+{
+    return children.end();
+}
 
 bool JSONBlock::print() const
 {
