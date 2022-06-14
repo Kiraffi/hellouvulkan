@@ -24,13 +24,18 @@ struct GltfModel
         uint32_t boneIndices[4];
     };
 
-    struct BoneAnimationPosOrScale
+    struct AnimPos
+    {
+        Vec3 value;
+        float timeStamp = 0.0f;
+    };
+    struct AnimScale
     {
         Vec3 value;
         float timeStamp = 0.0f;
     };
     // having 5 float doesnt seem to pack nicely? Maybe time stamps should be on separate arrays?
-    struct BoneAnimationRot
+    struct AnimRot
     {
         Quat value;
         float timeStamp = 0.0f;
@@ -65,9 +70,9 @@ struct GltfModel
     Vector<PodVector<AnimationIndexData>> animationIndices;
 
     // pos, rot scale animation data. Each animation data is just set after each other, to get indices, must use animationIndices
-    PodVector<BoneAnimationPosOrScale> animationPosData;
-    PodVector<BoneAnimationRot> animationRotData;
-    PodVector<BoneAnimationPosOrScale> animationScaleData;
+    PodVector<AnimPos> animationPosData;
+    PodVector<AnimRot> animationRotData;
+    PodVector<AnimScale> animationScaleData;
     PodVector<uint32_t> childrenJointIndices;
 
     PodVector<float> animStartTimes;

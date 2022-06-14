@@ -1089,7 +1089,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
                     // parse positions
                     {
-                        PodVector<GltfModel::BoneAnimationPosOrScale> bonePosVector;
+                        PodVector<GltfModel::AnimPos> bonePosVector;
 
                         if(!parseAnimationChannel(data, animationIndex, positionSamplerIndex,
                             GltfBufferComponentCountType::VEC3, bonePosVector))
@@ -1112,7 +1112,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                     }
                     // parse rot
                     {
-                        PodVector<GltfModel::BoneAnimationRot> boneRotVector;
+                        PodVector<GltfModel::AnimRot> boneRotVector;
 
                         if(!parseAnimationChannel(data, animationIndex, rotationSamplerIndex,
                             GltfBufferComponentCountType::VEC4, boneRotVector))
@@ -1135,7 +1135,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                     }
                     // parse scale
                     {
-                        PodVector<GltfModel::BoneAnimationPosOrScale> boneScaleVector;
+                        PodVector<GltfModel::AnimScale> boneScaleVector;
 
                         if(!parseAnimationChannel(data, animationIndex, scaleSamplerIndex,
                             GltfBufferComponentCountType::VEC3, boneScaleVector))
@@ -1196,20 +1196,20 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 {
                     for(uint32_t ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
                     {
-                        animStartTime = std::min(animStartTime, outModel.animationPosData[ind].timeStamp);
-                        animEndTime = std::max(animEndTime, outModel.animationPosData[ind].timeStamp);
+                        animStartTime = fminf(animStartTime, outModel.animationPosData[ind].timeStamp);
+                        animEndTime = fmaxf(animEndTime, outModel.animationPosData[ind].timeStamp);
                     }
 
                     for(uint32_t ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
                     {
-                        animStartTime = std::min(animStartTime, outModel.animationRotData[ind].timeStamp);
-                        animEndTime = std::max(animEndTime, outModel.animationRotData[ind].timeStamp);
+                        animStartTime = fminf(animStartTime, outModel.animationRotData[ind].timeStamp);
+                        animEndTime = fmaxf(animEndTime, outModel.animationRotData[ind].timeStamp);
                     }
 
                     for(uint32_t ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
                     {
-                        animStartTime = std::min(animStartTime, outModel.animationScaleData[ind].timeStamp);
-                        animEndTime = std::max(animEndTime, outModel.animationScaleData[ind].timeStamp);
+                        animStartTime = fminf(animStartTime, outModel.animationScaleData[ind].timeStamp);
+                        animEndTime = fmaxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
                     }
                 }
                 outModel.animStartTimes[animationIndex] = animStartTime;
@@ -1267,9 +1267,9 @@ struct EvaluateBoneParams
 {
     const ArraySliceView< GltfModel::AnimationIndexData > animationData;
     const ArraySliceView< uint32_t > childIndices;
-    const ArraySliceView< GltfModel::BoneAnimationPosOrScale > posses;
-    const ArraySliceView< GltfModel::BoneAnimationRot > rots;
-    const ArraySliceView< GltfModel::BoneAnimationPosOrScale > scales;
+    const ArraySliceView< GltfModel::AnimPos > posses;
+    const ArraySliceView< GltfModel::AnimRot > rots;
+    const ArraySliceView< GltfModel::AnimScale > scales;
     const ArraySliceView< Mat3x4> inverseMatrices;
 };
 
@@ -1278,10 +1278,14 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
     if(jointIndex >= params.animationData.size())
         return false;
     const auto &animData = params.animationData[jointIndex];
-
-    Vec3 pos;
-    Quat rot;
-    Vec3 scale;
+    if(animData.posIndexCount == 0 || animData.rotIndexCount == 0 || animData.scaleIndexCount == 0)
+    {
+        outMatrices[jointIndex] = Mat3x4();
+        return false;
+    }
+    Vec3 pos{Uninit};
+    Quat rot{ Uninit };
+    Vec3 scale{ Uninit };
 
     auto getInterpolationValue = [](float prevTime, float nextTime, float currTime)
     {
@@ -1293,59 +1297,81 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
         return frac;
     };
 
+
     if(animData.posIndexCount > 0)
     {
-        pos = params.posses[animData.posStartIndex].value;
-    }
-    for(uint32_t nextI = animData.posStartIndex + 1; nextI < animData.posStartIndex + animData.posIndexCount; ++nextI)
-    {
-        const auto &prev = params.posses[nextI - 1];
-        const auto &next = params.posses[nextI];
-        if((time <= next.timeStamp) || nextI == animData.posStartIndex + animData.posIndexCount - 1)
+        const auto *curr = &params.posses[0];
+        const auto *next = curr;
+        float frac = 1.0f;
+        const ArraySliceView< GltfModel::AnimPos > sliceView(
+            params.posses, animData.posStartIndex + 1, animData.posIndexCount);
+
+        for(const auto &nextPos : sliceView)
         {
-            float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
-            pos = prev.value * (1.0f - frac) + next.value * frac;
-            break;
+            curr = next;
+            next = &nextPos;
+            if(time <= next->timeStamp)
+            {
+                float frac = getInterpolationValue(curr->timeStamp, next->timeStamp, time);
+                break;
+            }
         }
-    }
-    if(animData.rotIndexCount > 0)
-    {
-        rot= params.rots[animData.rotStartIndex].value;
-    }
-    for(uint32_t nextI = animData.rotStartIndex + 1; nextI < animData.rotStartIndex + animData.rotIndexCount; ++nextI)
-    {
-        const auto &prev = params.rots[nextI - 1];
-        const auto &next = params.rots[nextI];
-        if((time <= next.timeStamp) || nextI == animData.rotStartIndex + animData.rotIndexCount - 1)
-        {
-            float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
-            rot = normalize(lerp(prev.value, next.value, frac));
-            break;
-        }
+        //pos = lerp(curr->value, next->value, frac);
+        pos.x = curr->value.x + (next->value.x - curr->value.x) * frac;
+        pos.y = curr->value.y + (next->value.y - curr->value.y) * frac;
+        pos.z = curr->value.z + (next->value.z - curr->value.z) * frac;
     }
 
+    if(animData.rotIndexCount > 0)
+    {
+        const auto *curr = &params.rots[0];
+        const auto *next = curr;
+        float frac = 1.0f;
+        const ArraySliceView< GltfModel::AnimRot > sliceView(
+            params.rots, animData.rotStartIndex + 1, animData.rotIndexCount);
+
+        for(const auto &nextPos : sliceView)
+        {
+            curr = next;
+            next = &nextPos;
+            if(time <= next->timeStamp)
+            {
+                float frac = getInterpolationValue(curr->timeStamp, next->timeStamp, time);
+                break;
+            }
+        }
+        rot = normalize(lerp(curr->value, next->value, frac));
+    }
 
     if(animData.scaleIndexCount > 0)
     {
-        scale = params.scales[animData.scaleStartIndex].value;
-    }
-    for(uint32_t nextI = animData.scaleStartIndex + 1; nextI < animData.scaleStartIndex + animData.scaleIndexCount; ++nextI)
-    {
-        const auto &prev = params.scales[nextI - 1];
-        const auto &next = params.scales[nextI];
-        if((time <= next.timeStamp) || nextI == animData.scaleStartIndex + animData.scaleIndexCount - 1)
+        const auto *curr = &params.scales[0];
+        const auto *next = curr;
+        float frac = 1.0f;
+        const ArraySliceView< GltfModel::AnimScale > sliceView(
+            params.scales, animData.scaleStartIndex + 1, animData.scaleIndexCount);
+
+        for(const auto &nextPos : sliceView)
         {
-            float frac = getInterpolationValue(prev.timeStamp, next.timeStamp, time);
-            scale = prev.value * (1.0f - frac) + next.value * frac;
-            break;
+            curr = next;
+            next = &nextPos;
+            if(time <= next->timeStamp)
+            {
+                float frac = getInterpolationValue(curr->timeStamp, next->timeStamp, time);
+                break;
+            }
         }
+        scale.x = curr->value.x + (next->value.x - curr->value.x) * frac;
+        scale.y = curr->value.y + (next->value.y - curr->value.y) * frac;
+        scale.z = curr->value.z + (next->value.z - curr->value.z) * frac;
     }
 
     Mat3x4 res = getModelMatrix({pos, rot, scale});
     Mat3x4 newParent = parentMatrix * res;
 
     outMatrices[jointIndex] =  newParent * params.inverseMatrices[jointIndex];
-    const ArraySliceView< uint32_t > childIndices(params.childIndices, animData.childStartIndex, animData.childIndexCount);
+    const ArraySliceView< uint32_t > childIndices(
+        params.childIndices, animData.childStartIndex, animData.childIndexCount);
     for(uint32_t childIndex : childIndices)
     {
         bool success = evaluateBone(params, childIndex, time, newParent, outMatrices);
@@ -1374,7 +1400,7 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
     while (time > animEndTime)
         time -= animEndTime - animStartTime;
 
-    if (model.animationPosData.size() > 255)
+    if (model.inverseMatrices.size() > 255)
         return false;
     outMatrices.uninitializedResize(model.inverseMatrices.getSize());
     const EvaluateBoneParams params{
