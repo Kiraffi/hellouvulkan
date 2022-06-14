@@ -114,25 +114,6 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
-    Mat3x4 n = getMatrixFromTranslation(Vec3(1.0f, 2.0f, 3.0f));
-    printMatrix(n, "translation");
-    Mat3x4 m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(0)));
-    printMatrix(m, "Something1");
-    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(10)));
-    printMatrix(m, "Something1");
-    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(45)));
-    printMatrix(m, "Something2");
-    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(90)));
-    printMatrix(m, "Something3");
-    m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(135)));
-    printMatrix(m, "Something3");
-
-    Vec3 v = rotateVector(Vector3(1.0f, 0.0f, 1.0f), getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(22.5)));
-    printVector3(v, "vec1");
-    v = rotateVector(Vector3(1.0f, 0.0f, 1.0f), getQuaternionFromAxisAngle(Vec3(1.0f, 0.0f, 0.0f), toRadians(45)));
-    printVector3(v, "vec2");
-    v = rotateVector(Vector3(1.0f, 0.0f, 1.0f), getQuaternionFromAxisAngle(Vec3(1.0f, 1.0f, 0.0f), toRadians(45)));
-    printVector3(v, "vec2");
 
     if (!imgui.init(window))
         return false;
@@ -529,7 +510,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = false,
+            .useIntegratedGpu = true,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = true,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC
