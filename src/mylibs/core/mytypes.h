@@ -24,6 +24,15 @@ static constexpr float PI = 3.14159265358979323846264338f;
 
 void printOutBuffer(const char *buffer);
 
+#if _MSC_VER 
+    #define RESTRICT __restrict
+    #define FORCE_INLINE __forceinline
+#else
+    #define RESTRICT __restrict
+    //#define RESTRICT __restrict__
+    #define FORCE_INLINE __attribute__((always_inline))
+#endif
+
 #define LOGDEBUG 1
 #if LOGDEBUG == 1
 #define LOG_LEN 1024
