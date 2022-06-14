@@ -272,7 +272,7 @@ void MeshRenderSystem::clear()
     boneAnimatedModelRenderMatrices.clear();
 }
 
-bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Matrix& renderMatrix, const PodVector<Matrix>& boneMatrices)
+bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Mat3x4& renderMatrix, const PodVector<Mat3x4>& boneMatrices)
 {
     if (modelIndex >= models.size())
         return false;
@@ -297,7 +297,7 @@ bool MeshRenderSystem::prepareToRender()
     {
         PodVector<uint32_t> startIndices;
         startIndices.reserve(65536);
-        PodVector<Matrix> allModelRenderMatrices;
+        PodVector<Mat3x4> allModelRenderMatrices;
         allModelRenderMatrices.reserve(65536);
         for (const auto& vec : animatedModelRenderMatrices)
             allModelRenderMatrices.pushBack(vec);

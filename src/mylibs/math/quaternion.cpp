@@ -119,13 +119,17 @@ Quaternion operator*(float t, const Quaternion &q)
 Quaternion lerp(Quaternion const& q1, Quaternion const& q2, float t)
 {
     float dotAngle = dot(q1, q2);
-    Quaternion other = q2;
+    Quaternion result{Uninit};
     if(dotAngle < 0.0f)
-        other = Quaternion(-q2.v.x, -q2.v.y, -q2.v.z, -q2.w);
-
-    Quaternion result;
-    result.v = q1.v - t * (q1.v - other.v);
-    result.w = q1.w - t * (q1.w - other.w);
+    {
+        result.v = q1.v - t * (q1.v + q2.v);
+        result.w = q1.w - t * (q1.w + q2.w);
+    }
+    else
+    {
+        result.v = q1.v - t * (q1.v - q2.v);
+        result.w = q1.w - t * (q1.w - q2.w);
+    }
     return result;
 }
 

@@ -82,7 +82,7 @@ bool Scene::update(double deltaTime)
 {
     //ScopedTimer timer("anim update");
     // better pattern for memory when other array gets constantly resized, no need to recreate same temporary array.
-    PodVector<Matrix> matrices;
+    PodVector<Mat3x4> matrices;
     matrices.reserve(256);
     for (auto& entity : sceneData.entities)
     {
@@ -102,7 +102,7 @@ bool Scene::update(double deltaTime)
                 continue;
         }
 
-        Matrix renderMatrix = getModelMatrix(entity.transform);
+        Mat3x4 renderMatrix = getModelMatrix(entity.transform);
         sceneData.meshRenderSystem.addModelToRender(renderMeshIndex, renderMatrix, matrices);
     }
     return true;

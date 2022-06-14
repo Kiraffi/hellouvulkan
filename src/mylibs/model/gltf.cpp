@@ -1025,8 +1025,9 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             for(uint32_t jointIndex : skinNode.joints)
                 fu(fu, Matrix(), Matrix(), jointIndex);
              */
-            PodVector<Matrix> &inverseMatrices = outModel.inverseMatrices;
+            PodVector<Matrix> inverseMatrices;
             inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
+            outModel.inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
 
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
                 0, sliceFromPodVectorBytesMutable(inverseMatrices)))
@@ -1034,11 +1035,11 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             //printf("\n\n");
             for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
             {
-                uint32_t nodeJointIndex = skinNode.joints[i];
-
-                const auto &node = data.nodes[nodeJointIndex];
                 inverseMatrices[i] = transpose(inverseMatrices[i]);
+                outModel.inverseMatrices[i] = inverseMatrices[i];
                 /*
+                uint32_t nodeJointIndex = skinNode.joints[i];
+                const auto &node = data.nodes[nodeJointIndex];
                 printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, std::string(node.name).c_str());
                 printVector3(node.trans, "Pos");
                 printQuaternion(node.rot, "Rot");
@@ -1269,10 +1270,10 @@ struct EvaluateBoneParams
     const ArraySliceView< GltfModel::BoneAnimationPosOrScale > posses;
     const ArraySliceView< GltfModel::BoneAnimationRot > rots;
     const ArraySliceView< GltfModel::BoneAnimationPosOrScale > scales;
-    const ArraySliceView< Matrix> inverseMatrices;
+    const ArraySliceView< Mat3x4> inverseMatrices;
 };
 
-static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, float time, const Matrix &parentMatrix, ArraySliceViewMutable<Matrix> outMatrices)
+static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, float time, const Mat3x4 &parentMatrix, ArraySliceViewMutable<Mat3x4> outMatrices)
 {
     if(jointIndex >= params.animationData.size())
         return false;
@@ -1340,8 +1341,8 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
         }
     }
 
-    Matrix res = getModelMatrix({pos, rot, scale});
-    Matrix newParent = parentMatrix * res;
+    Mat3x4 res = getModelMatrix({pos, rot, scale});
+    Mat3x4 newParent = parentMatrix * res;
 
     outMatrices[jointIndex] =  newParent * params.inverseMatrices[jointIndex];
     const ArraySliceView< uint32_t > childIndices(params.childIndices, animData.childStartIndex, animData.childIndexCount);
@@ -1355,7 +1356,7 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
 }
 
 bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
-    PodVector<Matrix> &outMatrices)
+    PodVector<Mat3x4> &outMatrices)
 {
     if(model.animationIndices.size() == 0)
         return false;
@@ -1385,5 +1386,5 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
         .inverseMatrices = sliceFromPodVector(model.inverseMatrices)
     };
 
-    return evaluateBone(params, 0, time, Matrix(), sliceFromPodVectorMutable(outMatrices));
+    return evaluateBone(params, 0, time, Mat3x4(), sliceFromPodVectorMutable(outMatrices));
 }

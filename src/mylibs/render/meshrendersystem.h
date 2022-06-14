@@ -22,7 +22,7 @@ public:
 
     void clear();
 
-    bool addModelToRender(uint32_t modelIndex, const Matrix& renderMatrix, const PodVector<Matrix>& boneMatrices);
+    bool addModelToRender(uint32_t modelIndex, const Mat3x4 & renderMatrix, const PodVector<Mat3x4>& boneMatrices);
 
     bool prepareToRender();
 
@@ -59,9 +59,9 @@ private:
     // these 3 probably should belong somewhere else, since they depend on scenedata, if wanting to have render to texture...
     // maybe MeshRenderScene
     Vector<PodVector< uint32_t >> modelRenderBoneStartIndices;
-    Vector<PodVector< Matrix >> modelRenderMatrices;
-    Vector<PodVector< Matrix >> animatedModelRenderMatrices;
-    PodVector< Matrix > boneAnimatedModelRenderMatrices;
+    Vector<PodVector< Mat3x4 >> modelRenderMatrices;
+    Vector<PodVector< Mat3x4 >> animatedModelRenderMatrices;
+    PodVector< Mat3x4 > boneAnimatedModelRenderMatrices;
 
     uint32_t indicesCount = 0u;
     uint32_t verticesCount = 0u;

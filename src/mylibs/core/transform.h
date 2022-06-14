@@ -11,26 +11,26 @@ struct Transform
     Vec3 scale{ 1.0f, 1.0f, 1.0f };
 };
 
-static Matrix getModelMatrix(const Transform &trans)
+static Mat3x4 getModelMatrix(const Transform &trans)
 {
-    Matrix posMat = getMatrixFromTranslation(trans.pos);
-    Matrix scaleMat = getMatrixFromScale(trans.scale);
-    Matrix rotMat = getMatrixFromQuaternion(trans.rot);
-    Matrix result = posMat * rotMat * scaleMat;
+    Mat3x4 posMat = getMatrixFromTranslation(trans.pos);
+    Mat3x4 scaleMat = getMatrixFromScale(trans.scale);
+    Mat3x4 rotMat = getMatrixFromQuaternion(trans.rot);
+    Mat3x4 result = posMat * rotMat * scaleMat;
     return result;
 }
 
-static Matrix getModelMatrixInverse(const Transform &trans)
+static Mat3x4 getModelMatrixInverse(const Transform &trans)
 {
-    Matrix posMat = getMatrixFromTranslation(-trans.pos);
+    Mat3x4 posMat = getMatrixFromTranslation(-trans.pos);
     Vec3 scale = trans.scale;
     scale.x = 1.0f / scale.x;
     scale.y = 1.0f / scale.y;
     scale.z = 1.0f / scale.z;
     Quat rot = trans.rot;
     rot.v = -rot.v;
-    Matrix scaleMat = getMatrixFromScale(scale);
-    Matrix rotMat = getMatrixFromQuaternion(rot);
+    Mat3x4 scaleMat = getMatrixFromScale(scale);
+    Mat3x4 rotMat = getMatrixFromQuaternion(rot);
 
     return scaleMat * rotMat * posMat;
 }

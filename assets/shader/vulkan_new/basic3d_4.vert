@@ -32,13 +32,13 @@ struct AnimatedVData
 
 layout (binding = 2, MATRIX_ORDER) restrict readonly buffer EnityModelMatrices
 {
-    mat4 enityModelMatrices[];
+    mat4x3 enityModelMatrices[];
 };
 
 
 layout (binding = 3, MATRIX_ORDER) restrict readonly buffer AnimationBoneMatrices
 {
-    mat4 animationBoneMatrices[];
+    mat4x3 animationBoneMatrices[];
 };
 
 layout (binding = 4, MATRIX_ORDER) restrict readonly buffer AnimationDataNormals
@@ -97,32 +97,55 @@ void main()
             (animData.boneIndices >> 16 ) & 255,
             (animData.boneIndices >> 24 ) & 255 );
 
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.x] * vec4(data.pos.xyz, 1.0f) ) * weights.x;
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.y] * vec4(data.pos.xyz, 1.0f) ) * weights.y;
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.z] * vec4(data.pos.xyz, 1.0f) ) * weights.z;
-        pos += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.w] * vec4(data.pos.xyz, 1.0f) ) * weights.w;
+        uint boneStartIndex = boneStartIndices[instanceIndex];
+        mat4x3 boneMat = animationBoneMatrices[boneStartIndex + boneIndices.x] * weights.x;
+        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.y] * weights.y;
+        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.z] * weights.z;
+        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.w] * weights.w;
+        
+        mat4 boneMat4;
+        boneMat4[0] = vec4(boneMat[0], 0.0f);
+        boneMat4[1] = vec4(boneMat[1], 0.0f);
+        boneMat4[2] = vec4(boneMat[2], 0.0f);
+        boneMat4[3] = vec4(boneMat[3], 1.0f);
+
+        pos = boneMat4 *  vec4(data.pos.xyz, 1.0f);
 
         #if DEPTH_ONLY
         #else
-            vec4 nor = vec4(0.0f);
+            vec4 nor = normalize(vec4(1.0f));
+            
+            uint boneNormalStartIndex = boneStartIndices[instanceIndex];
+            mat4x3 boneNormalMat4x3 = animationBoneMatrices[boneNormalStartIndex + boneIndices.x] * weights.x;
+            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.y] * weights.y;
+            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.z] * weights.z;
+            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.w] * weights.w;
 
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.x] * vec4(dataNormal.xyz, 0.0f) ) * weights.x;
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.y] * vec4(dataNormal.xyz, 0.0f) ) * weights.y;
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.z] * vec4(dataNormal.xyz, 0.0f) ) * weights.z;
-            nor += (animationBoneMatrices[boneStartIndices[instanceIndex] + boneIndices.w] * vec4(dataNormal.xyz, 0.0f) ) * weights.w;
+            mat4 boneNormalMat4;
+            boneNormalMat4[0] = vec4(boneNormalMat4x3[0], 0.0f);
+            boneNormalMat4[1] = vec4(boneNormalMat4x3[1], 0.0f);
+            boneNormalMat4[2] = vec4(boneNormalMat4x3[2], 0.0f);
+            boneNormalMat4[3] = vec4(boneNormalMat4x3[3], 1.0f);
+
+            nor = boneNormalMat4 *  vec4(dataNormal.xyz, 0.0f);
         #endif
     #else
         vec4 pos = vec4(data.pos.xyz, 1.0f);
         vec4 nor = vec4(dataNormal.xyz, 0.0f);
     #endif
-
+    mat4x3 entityMatrix4x3 = enityModelMatrices[instanceIndex]; 
+    mat4 entityMatrix;
+    entityMatrix[0] = vec4(entityMatrix4x3[0], 0.0f);
+    entityMatrix[1] = vec4(entityMatrix4x3[1], 0.0f);
+    entityMatrix[2] = vec4(entityMatrix4x3[2], 0.0f);
+    entityMatrix[3] = vec4(entityMatrix4x3[3], 1.0f);
     #if DEPTH_ONLY
-        mat4 finalMat = sunMatrix * enityModelMatrices[instanceIndex];
+        mat4 finalMat = sunMatrix * entityMatrix;
     #else
-        mat4 finalMat = mvp * enityModelMatrices[instanceIndex];
+        mat4 finalMat = mvp * entityMatrix;
     #endif
 
-    gl_Position = finalMat * vec4(pos.xyz, 1.0f);
+    gl_Position = finalMat * pos;
     #if DEPTH_ONLY
     #else
         colOut = vec4(
@@ -131,7 +154,7 @@ void main()
             float((data.color >> 16) & 255),
             float((data.color >> 24) & 255)) / 255.0f;
 
-        vec3 normalDir =  normalize(enityModelMatrices[instanceIndex] * vec4(normalize(nor.xyz), 0.0f)).xyz;
+        vec3 normalDir =  normalize(entityMatrix * vec4(normalize(nor.xyz), 0.0f)).xyz;
         normalDirOut = normalDir.xyz;
         attributesOut = (data.normalXYZAttributes.y >> 16);
         uvOut = data.uv;

@@ -114,9 +114,9 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
-    Matrix n = getMatrixFromTranslation(Vec3(1.0f, 2.0f, 3.0f));
+    Mat3x4 n = getMatrixFromTranslation(Vec3(1.0f, 2.0f, 3.0f));
     printMatrix(n, "translation");
-    Matrix m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(0)));
+    Mat3x4 m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(0)));
     printMatrix(m, "Something1");
     m = getMatrixFromQuaternion(getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), toRadians(10)));
     printMatrix(m, "Something1");
@@ -227,8 +227,8 @@ void VulkanDrawStuff::logicUpdate()
     static uint32_t counter = 0;
     if(counter++ >= 100)
     {
-//        printf("Matrix time: %f\n", float(getMatrixTime() / counter));
-//        printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
+        //printf("Matrix time: %f\n", float(getMatrixTime() / counter));
+        //printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
         counter = 0;
     }
     lineRenderSystem.clear();
@@ -399,7 +399,7 @@ void VulkanDrawStuff::renderUpdate()
 
         Vec4 linePoints4[8];
         Vec3 linePoints[8];
-        Matrix m = getModelMatrix(entity.transform);
+        Mat3x4 m = getModelMatrix(entity.transform);
         const auto &bmin = entity.bounds.min;
         const auto &bmax = entity.bounds.max;
 

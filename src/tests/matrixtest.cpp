@@ -59,10 +59,37 @@ static void testMatrixMultiply()
     ASSERT(mulM._33 == 18710);
 }
 
+static void testMatrixMultiply3x4()
+{
+    Mat3x4 m1 = {
+        2, 3, 5, 7,
+        11, 13, 17, 19,
+        23, 29, 31, 37,
+    };
+
+    Mat3x4 m2 = {
+        59, 61, 67, 71,
+        73, 79, 83, 89,
+        97, 101, 103, 107,
+    };
+
+    Mat3x4 mulM = m1 * m2;
+    Matrix mulMat = Matrix(m1) * Matrix(m2);
+
+    printMatrix(mulM, "matrix3x4 multiply");
+    printMatrix(mulMat, "matrix4x4 multiply of mat3x4");
+
+
+    for(uint32_t i = 0; i < 12; ++i)
+    {
+        ASSERT(mulM[i] == mulMat[i]);
+    }
+}
+
+
 void testQuaternion()
 {
     Quat q = getQuaternionFromAxisAngle(Vector3(0, 1, 0), toRadians(45));
-
 }
 
 
@@ -77,6 +104,7 @@ void testMatrix()
 {
     testIdentity();
     testMatrixMultiply();
+    testMatrixMultiply3x4();
     testQuaternion();
     testMatrixFromQuaternion();
 }

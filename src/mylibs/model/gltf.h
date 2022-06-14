@@ -59,7 +59,7 @@ struct GltfModel
     PodVector<Vec2> vertexUvs;
     PodVector<AnimationVertex> animationVertices;
     PodVector<uint32_t> indices;
-    PodVector<Matrix> inverseMatrices;
+    PodVector<Mat3x4> inverseMatrices;
 
     // These are indices to animationPosData, animationRotData and animationScaleData, and childrenJointIndices.
     Vector<PodVector<AnimationIndexData>> animationIndices;
@@ -75,7 +75,7 @@ struct GltfModel
 };
 
 bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
-    PodVector<Matrix> &outMatrices);
+    PodVector<Mat3x4> &outMatrices);
 
 
 bool readGLTF(std::string_view filename, GltfModel &outModel);
