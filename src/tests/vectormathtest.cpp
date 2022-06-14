@@ -98,7 +98,7 @@ void testVec3()
     const Vec3 v(2.0f, -3.0f, 11.0f);
     const Vec3 v2(5.0f, 7.0f, 13.0f);
     {
-        ASSERT(v.x == 2.0f && v.y == -3.0f, v.z == 11.0f);
+        ASSERT(v.x == 2.0f && v.y == -3.0f && v.z == 11.0f);
     }
 
     {
@@ -183,7 +183,7 @@ void testVec4()
     const Vec4 v(2.0f, -3.0f, 11.0f, 27.0f);
     const Vec4 v2(5.0f, 7.0f, 13.0f, 23.0f);
     {
-        ASSERT(v.x == 2.0f && v.y == -3.0f, v.z == 11.0f, v.w == 27.0f);
+        ASSERT(v.x == 2.0f && v.y == -3.0f && v.z == 11.0f && v.w == 27.0f);
     }
 
     {
