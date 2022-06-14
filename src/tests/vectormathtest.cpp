@@ -154,10 +154,10 @@ void testVec3()
         ASSERT(res2.x == 5.0f && res2.y == 7.0f && res2.z == 13.0f);
 
         const float res3 = min(v);
-        ASSERT(-3.0f);
+        ASSERT(res3 == -3.0f);
 
         const float res4 = max(v);
-        ASSERT(11.0f);
+        ASSERT(res4 == 11.0f);
     }
 
     {
