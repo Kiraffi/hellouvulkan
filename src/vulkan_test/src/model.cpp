@@ -92,8 +92,8 @@ static void buildMeshlets(Mesh &mesh)
         for(u32 j = 0; j < maxAmount; ++j)
         {
             float d = dot(dirs[j], normal);
-            maxAngle = std::max(maxAngle, d);
-            minAngleRadius = std::min(minAngleRadius, d);
+            maxAngle = fmaxf(maxAngle, d);
+            minAngleRadius = fminf(minAngleRadius, d);
         }
 
         Meshlet &meshlet = meshlets[meshletIndex];
