@@ -1196,20 +1196,20 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 {
                     for(uint32_t ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
                     {
-                        animStartTime = fminf(animStartTime, outModel.animationPosData[ind].timeStamp);
-                        animEndTime = fmaxf(animEndTime, outModel.animationPosData[ind].timeStamp);
+                        animStartTime = ffminf(animStartTime, outModel.animationPosData[ind].timeStamp);
+                        animEndTime = ffmaxf(animEndTime, outModel.animationPosData[ind].timeStamp);
                     }
 
                     for(uint32_t ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
                     {
-                        animStartTime = fminf(animStartTime, outModel.animationRotData[ind].timeStamp);
-                        animEndTime = fmaxf(animEndTime, outModel.animationRotData[ind].timeStamp);
+                        animStartTime = ffminf(animStartTime, outModel.animationRotData[ind].timeStamp);
+                        animEndTime = ffmaxf(animEndTime, outModel.animationRotData[ind].timeStamp);
                     }
 
                     for(uint32_t ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
                     {
-                        animStartTime = fminf(animStartTime, outModel.animationScaleData[ind].timeStamp);
-                        animEndTime = fmaxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
+                        animStartTime = ffminf(animStartTime, outModel.animationScaleData[ind].timeStamp);
+                        animEndTime = ffmaxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
                     }
                 }
                 outModel.animStartTimes[animationIndex] = animStartTime;
