@@ -13,6 +13,7 @@ extern "C" int printf (const char *__restrict __format, ...);
 float ftanf(float a);
 float fsinf(float a);
 float fcosf(float a);
+float facosf(float a);
 float ffabsf(float a);
 float fsqrtf(float a);
 float ffmodf(float a, float b);
