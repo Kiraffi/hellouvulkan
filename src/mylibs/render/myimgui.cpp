@@ -23,7 +23,7 @@ static void check_vk_result(VkResult err)
 
 MyImgui::~MyImgui()
 {
-    if(renderPass && descriptorPool && frameBuffer)
+    //if(renderPass && descriptorPool && frameBuffer)
     {
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
