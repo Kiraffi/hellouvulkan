@@ -4,46 +4,53 @@
     "levelName" : "Testmap",
     "objects" : [
         {
-            "pos" : [ 0.0, -0.1, 0.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 10.0, 1.0, 10.0 ],
-            "modelType": "Floor"
+            "pos": [ 0.0, -0.1, 0.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 10.0, 1.0, 10.0 ],
+            "modelType": "Floor",
+            "name": "Name"
         },
         {
-            "pos" : [ -3.0, 0.0, 0.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 1.0, 1.0, 1.0 ],
-            "modelType" : "Wobbly"
+            "pos": [ -3.0, 0.0, 0.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 1.0, 1.0, 1.0 ],
+            "modelType": "Wobbly",
+            "name": "Name"
         },
         {
-            "pos" : [ 3.0, 0.0, 0.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 1.0, 1.0, 1.0 ],
-            "modelType" : "Wobbly"
+            "pos": [ 3.0, 0.0, 0.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 1.0, 1.0, 1.0 ],
+            "modelType": "Wobbly",
+            "name": "Name"
         },
         {
-            "pos" : [ 0.0, 0.0, -10.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 1.0, 1.0, 1.0 ],
-            "modelType" : "Character"
+            "pos": [ 0.0, 0.0, -10.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 1.0, 1.0, 1.0 ],
+            "modelType": "Character",
+            "name": "Name"
         },
         {
-            "pos" : [ 0.0, 10.0, -10.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 1.0, 1.0, 1.0 ],
-            "modelType" : "Character"
+            "pos": [ 0.0, 10.0, -10.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 1.0, 1.0, 1.0 ],
+            "modelType": "Character",
+            "name": "Name"
         },
         {
-            "pos" : [ -3.0, 0.0, -20.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 1.0, 1.0, 1.0 ],
-            "modelType" : "LowPolyChar"
+            "pos": [ -3.0, 0.0, -20.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 1.0, 1.0, 1.0 ],
+            "modelType": "LowPolyChar",
+            "name": "Name"
         },
         {
-            "pos" : [ 3.0, 0.0, -20.0 ],
-            "rot" : [ 0.0, 0.0, 0.0, 1.0 ],
-            "scale" : [ 1.0, 1.0, 1.0 ],
-            "modelType" : "LowPolyChar"
+            "pos": [ 3.0, 0.0, -20.0 ],
+            "rot": [ 0.0, 0.0, 0.0, 1.0 ],
+            "scale": [ 1.0, 1.0, 1.0 ],
+            "modelType": "LowPolyChar",
+            "name": "Name"
         }
     ]
 }

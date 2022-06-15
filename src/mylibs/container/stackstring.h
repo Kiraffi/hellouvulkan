@@ -2,8 +2,10 @@
 
 #include <core/assert.h>
 #include <core/mytypes.h>
+
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 template<uint32_t N>
 class StackString
@@ -42,6 +44,16 @@ public:
         str[size] = '\0';
     }
 
+    // buff len must include space for 0 character terminator
+    void copyToCharStr(char *outStr, uint32_t buffLenWithZeroTerminator)
+    {
+        uint32_t charCount = size < buffLenWithZeroTerminator - 1 ? size : buffLenWithZeroTerminator - 1;
+        if(charCount > 0)
+        {
+            memcpy(outStr, str, charCount);
+            outStr[charCount] = '\0';
+        }
+    }
     void add(const char *s)
     {
         while (s && *s && size < MaxSize)

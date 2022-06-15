@@ -487,8 +487,8 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
     if(!loadBytes(filename, buffer))
         return false;
 
-    JSONBlock bl;
-    bool parseSuccess = bl.parseJSON(ArraySliceView(buffer.data(), buffer.size()));
+    JsonBlock bl;
+    bool parseSuccess = bl.parseJson(ArraySliceView(buffer.data(), buffer.size()));
 
     if (!parseSuccess)
     {
@@ -506,7 +506,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
     // Parse meshes
     {
-        const JSONBlock &meshBlock = bl.getChild("meshes");
+        const JsonBlock &meshBlock = bl.getChild("meshes");
         ASSERT(meshBlock.getChildCount() == 1);
         if(!meshBlock.isValid() || meshBlock.getChildCount() != 1)
             return false;
@@ -515,12 +515,12 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
         for(int i = 0; i < meshBlock.getChildCount(); ++i)
         {
-            const JSONBlock &child = meshBlock.children [i];
+            const JsonBlock &child = meshBlock.children [i];
             GltfMeshNode &node = data.meshes [i];
             if(!child.getChild("name").parseString(node.name))
                 return false;
             ASSERT(child.getChild("primitives").getChildCount() == 1);
-            const JSONBlock &prims = child.getChild("primitives").getChild(0);
+            const JsonBlock &prims = child.getChild("primitives").getChild(0);
             if(!prims.isValid())
                 return false;
 
@@ -528,7 +528,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 !prims.getChild("material").parseUInt(node.materialIndex))
                 return false;
 
-            const JSONBlock &attribs = prims.getChild("attributes");
+            const JsonBlock &attribs = prims.getChild("attributes");
             if(!attribs.isValid() || attribs.getChildCount() < 1)
                 return false;
 
@@ -547,14 +547,14 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
         }
     }
     {
-        const JSONBlock &nodeBlock = bl.getChild("nodes");
+        const JsonBlock &nodeBlock = bl.getChild("nodes");
         if(!nodeBlock.isValid() || nodeBlock.getChildCount() < 1)
             return false;
 
         data.nodes.resize(nodeBlock.getChildCount());
         for(int i = 0; i < nodeBlock.getChildCount(); ++i)
         {
-            const JSONBlock &child = nodeBlock.children [i];
+            const JsonBlock &child = nodeBlock.children [i];
             GltfSceneNode &node = data.nodes [i];
             if(!child.getChild("name").parseString(node.name))
                 return false;
@@ -570,7 +570,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
             child.getChild("scale").parseVec3(node.scale);
             
-            const JSONBlock& childrenBlock = child.getChild("children");
+            const JsonBlock& childrenBlock = child.getChild("children");
             node.childNodeIndices.reserve(childrenBlock.children.size());
             for(const auto &childBlock : childrenBlock.children)
             {
@@ -583,7 +583,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
     }
 
     {
-        const JSONBlock& skinBlock = bl.getChild("skins");
+        const JsonBlock& skinBlock = bl.getChild("skins");
         if (skinBlock.isValid() && skinBlock.getChildCount() > 0)
         {
             ASSERT(skinBlock.getChildCount() == 1);
@@ -592,7 +592,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
             for (int i = 0; i < skinBlock.getChildCount(); ++i)
             {
                 GltfSkinNode& node = data.skins[i];
-                const JSONBlock& child = skinBlock.children[i];
+                const JsonBlock& child = skinBlock.children[i];
 
                 if (!child.getChild("name").parseString(node.name))
                     return false;
@@ -600,7 +600,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
                 if (!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
                     return false;
 
-                const JSONBlock& jointsBlock = child.getChild("joints");
+                const JsonBlock& jointsBlock = child.getChild("joints");
                 if (!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
                     return false;
                 node.joints.reserve(jointsBlock.getChildCount());
@@ -618,7 +618,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
     }
 
     {
-        const JSONBlock &bufferBlock = bl.getChild("buffers");
+        const JsonBlock &bufferBlock = bl.getChild("buffers");
         if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
             return false;
         ASSERT(bufferBlock.getChildCount() == 1);
@@ -627,7 +627,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
         for(int i = 0; i < bufferBlock.getChildCount(); ++i)
         {
-            const JSONBlock &child = bufferBlock.children [i];
+            const JsonBlock &child = bufferBlock.children [i];
             PodVector<uint8_t> &buffer = data.buffers [i];
 
             uint32_t bufLen = 0u;
@@ -643,21 +643,21 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
     }
 
     {
-        const JSONBlock &animationBlocks = bl.getChild("animations");
+        const JsonBlock &animationBlocks = bl.getChild("animations");
         if(animationBlocks.isValid() && animationBlocks.getChildCount() > 0)
         {
             data.animationNodes.resize(animationBlocks.getChildCount());
             for(uint32_t animIndex = 0u; animIndex < animationBlocks.getChildCount(); ++animIndex)
             {
-                const JSONBlock &animationBlock = animationBlocks.getChild(animIndex);
+                const JsonBlock &animationBlock = animationBlocks.getChild(animIndex);
                 if(!animationBlock.isValid())
                     return false;
                 GltfAnimationNode &animationNode = data.animationNodes[animIndex];
                 if(!animationBlock.getChild("name").parseString(animationNode.name))
                     return false;
 
-                const JSONBlock &channelsBlock = animationBlock.getChild("channels");
-                const JSONBlock &samplersBlock = animationBlock.getChild("samplers");
+                const JsonBlock &channelsBlock = animationBlock.getChild("channels");
+                const JsonBlock &samplersBlock = animationBlock.getChild("samplers");
                 if(!channelsBlock.isValid() || !samplersBlock.isValid() ||
                     channelsBlock.getChildCount() == 0 || samplersBlock.getChildCount() == 0)
                     return false;
@@ -667,7 +667,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
                 for(uint32_t i = 0; i < channelsBlock.getChildCount(); ++i)
                 {
-                    const JSONBlock &channelBlock = channelsBlock.getChild(i);
+                    const JsonBlock &channelBlock = channelsBlock.getChild(i);
                     GltfAnimationNode::Channel &channel = animationNode.channels[i];
                     if(!channelBlock.getChild("sampler").parseUInt(channel.samplerIndex))
                         return false;
@@ -694,7 +694,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
                 for(uint32_t i = 0; i < samplersBlock.getChildCount(); ++i)
                 {
-                    const JSONBlock &samplerBlock = samplersBlock.getChild(i);
+                    const JsonBlock &samplerBlock = samplersBlock.getChild(i);
                     GltfAnimationNode::Sampler &sampler = animationNode.samplers[i];
                     if(!samplerBlock.getChild("input").parseUInt(sampler.inputIndex))
                         return false;
@@ -718,11 +718,11 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
     }
 
     {
-        const JSONBlock &accessorBlocks = bl.getChild("accessors");
+        const JsonBlock &accessorBlocks = bl.getChild("accessors");
         if(!accessorBlocks.isValid() || accessorBlocks.getChildCount() < 1)
             return false;
 
-        const JSONBlock &bufferViewBlocks = bl.getChild("bufferViews");
+        const JsonBlock &bufferViewBlocks = bl.getChild("bufferViews");
         if(!bufferViewBlocks.isValid() || bufferViewBlocks.getChildCount() < 1)
             return false;
 
@@ -732,7 +732,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
         for(uint32_t index = 0u; index < bufferViewBlocks.getChildCount(); ++index)
         {
             GltfBufferView &bufferView = data.bufferViews[index];
-            const JSONBlock &bufferViewBlock = bufferViewBlocks.getChild(index);
+            const JsonBlock &bufferViewBlock = bufferViewBlocks.getChild(index);
             if(!bufferViewBlock.isValid())
                 return false;
 
@@ -750,7 +750,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
         for(uint32_t index = 0u; index < accessorBlocks.getChildCount(); ++index)
         {
             GltfBufferAccessor &accessor = data.accessors[index];
-            const JSONBlock &accessorBlock = accessorBlocks.getChild(index);
+            const JsonBlock &accessorBlock = accessorBlocks.getChild(index);
             if(!accessorBlock.isValid())
                 return false;
 

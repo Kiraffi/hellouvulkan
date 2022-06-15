@@ -7,7 +7,7 @@
 
 void drawVec3(const char *name, Vector3 &v)
 {
-    ImGui::InputFloat3(name, &v.x);
+    ImGui::DragFloat3(name, &v.x);
 }
 void drawQuat(const char *name, Quaternion &q)
 {

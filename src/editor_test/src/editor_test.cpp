@@ -75,6 +75,9 @@ public:
 
 public:
     bool drawSaveDialog();
+    bool drawEntities();
+    bool drawEntityAddTypes();
+    bool drawMenubar();
 
     Scene scene;
     MeshRenderSystem meshRenderSystem;
@@ -103,6 +106,8 @@ public:
 
     Vec3 lineFrom;
     Vec3 lineTo;
+
+    GameEntity entityToAdd;
 };
 
 
@@ -127,10 +132,10 @@ bool EditorTest::drawSaveDialog()
     {
         ImGui::Text("Save scene: \"%s\"", scene.getSceneName().getStr());
        
-        char arr[30];
-        memcpy(arr, levelName.getStr(), levelName.length() + 1);
-        ImGui::InputText("Filename", arr, 30);
-        levelName = arr;
+        char nameStr[32];
+        levelName.copyToCharStr(nameStr, 32);
+        ImGui::InputText("Filename", nameStr, 32);
+        levelName = nameStr;
 
         ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
         if(ImGui::Button("Save", button_size))
@@ -151,6 +156,77 @@ bool EditorTest::drawSaveDialog()
     return saved;
 }
 
+bool EditorTest::drawMenubar()
+{
+
+    if(ImGui::BeginMainMenuBar())
+    {
+        if(ImGui::BeginMenu("File"))
+        {
+            if(ImGui::MenuItem("Open", "Ctrl+O")) {}
+            if(ImGui::MenuItem("Save", "Ctrl+S")) { showSaveDialog = true; }
+            if(ImGui::MenuItem("Save As..")) {}
+
+            ImGui::EndMenu();
+        }
+        if(ImGui::BeginMenu("Edit"))
+        {
+            if(ImGui::MenuItem("Undo", "CTRL+Z")) {}
+            if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+            ImGui::Separator();
+            if(ImGui::MenuItem("Cut", "CTRL+X")) {}
+            if(ImGui::MenuItem("Copy", "CTRL+C")) {}
+            if(ImGui::MenuItem("Paste", "CTRL+V")) {}
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+    return true;
+}
+
+bool EditorTest::drawEntities()
+{
+    ImGui::Begin("Entities");
+    if(ImGui::BeginListBox("Entities", ImVec2(-FLT_MIN, 0.0f)))
+    {
+        for(const auto &entity : scene.getEntities())
+        {
+            char s[256];
+            snprintf(s, 256, "Name: %s, Type: %s, index: %u", entity.name.getStr(), getStringFromEntityType(entity.entityType), entity.index);
+            const bool isSelected = (selectedEntityIndex == entity.index);
+            if(ImGui::Selectable(s, isSelected))
+                selectedEntityIndex = entity.index;
+
+            if(isSelected)
+                ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::EndListBox();
+    }
+
+    mouseHover |= ImGui::IsWindowHovered(
+        ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();
+
+    ImGui::End();
+
+    return mouseHover;
+}
+
+bool EditorTest::drawEntityAddTypes()
+{
+    ImGui::Begin("Entity types");
+    drawEntityContents(entityToAdd);
+    if(ImGui::Button("Add entity"))
+    {
+        selectedEntityIndex = scene.addGameEntity(entityToAdd);
+    }
+    mouseHover |= ImGui::IsWindowHovered(
+        ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();
+
+    ImGui::End();
+
+    return mouseHover;
+}
 
 bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
@@ -284,6 +360,7 @@ void EditorTest::logicUpdate()
             {
                 lineFrom = ray.pos;
                 lineTo = hitpoint.point;
+                entityToAdd.transform.pos = lineTo;
             }
         }
     }
@@ -310,31 +387,13 @@ void EditorTest::logicUpdate()
 
 void EditorTest::renderUpdate()
 {
+    mouseHover = false;
     VulkanApp::renderUpdate();
     imgui.renderBegin();
     
-    if(ImGui::BeginMainMenuBar())
-    {
-        if(ImGui::BeginMenu("File"))
-        {
-            if(ImGui::MenuItem("Open", "Ctrl+O")) {}            
-            if(ImGui::MenuItem("Save", "Ctrl+S")) { showSaveDialog = true; }
-            if(ImGui::MenuItem("Save As..")) {}
-
-            ImGui::EndMenu();
-        }
-        if(ImGui::BeginMenu("Edit"))
-        {
-            if(ImGui::MenuItem("Undo", "CTRL+Z")) {}
-            if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-            ImGui::Separator();
-            if(ImGui::MenuItem("Cut", "CTRL+X")) {}
-            if(ImGui::MenuItem("Copy", "CTRL+C")) {}
-            if(ImGui::MenuItem("Paste", "CTRL+V")) {}
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
+    drawMenubar();
+    drawEntities();
+    drawEntityAddTypes();
 
     if(showSaveDialog && drawSaveDialog())
         scene.writeLevel(levelName.getStr());
@@ -358,8 +417,9 @@ void EditorTest::renderUpdate()
         Vec4 linePoints4[8];
         Vec3 linePoints[8];
         Mat3x4 m = getModelMatrix(entity.transform);
-        const auto &bmin = entity.bounds.min;
-        const auto &bmax = entity.bounds.max;
+        const auto &bounds = scene.getBounds(entity.index);
+        const auto &bmin = bounds.min;
+        const auto &bmax = bounds.max;
 
         linePoints4[0] = mul(m, Vec4(bmin.x, bmin.y, bmin.z, 1.0f));
         linePoints4[1] = mul(m, Vec4(bmax.x, bmin.y, bmin.z, 1.0f));
@@ -416,13 +476,8 @@ void EditorTest::renderUpdate()
 
     if(selectedEntityIndex != ~0u)
     {
-        mouseHover = drawEntity(scene.getEntity(selectedEntityIndex));
+        mouseHover = drawEntity("Selected entity", scene.getEntity(selectedEntityIndex));
     }
-    else
-    {
-        mouseHover = false;
-    }
-
 }
 
 void EditorTest::renderDraw()
@@ -485,7 +540,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = true,
+            .useIntegratedGpu = false,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = true,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC

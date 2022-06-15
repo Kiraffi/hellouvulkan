@@ -50,7 +50,7 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
 bool Scene::init()
 {
     ScopedTimer timer("Scene init");
-    sceneData.models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
+    sceneData.models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES) + 1);
 
     // load animated, can be loaded in any order nowadays, since animated vertices has separate buffer from non-animated ones
     if (!loadModelForScene(sceneData, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
@@ -102,7 +102,7 @@ bool Scene::update(double deltaTime)
     {
         matrices.clear();
         uint32_t renderMeshIndex = uint32_t(entity.entityType);
-        if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES)
+        if (entity.entityType >= EntityType::NUM_OF_ENTITY_TYPES)
             continue;
         if (renderMeshIndex >= sceneData.models.size())
             continue;
@@ -127,13 +127,15 @@ bool Scene::update(double deltaTime)
 uint32_t Scene::addGameEntity(const GameEntity& entity)
 {
     uint32_t result = ~0u;
-    if (uint32_t(entity.entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
+    if (uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
         return result;
-    const auto &model = sceneData.models[uint32_t(entity.entityType)];
-    result = sceneData.entities.size();
+    if(sceneData.freeEnityIndices.size() > 0)
+        result = sceneData.freeEnityIndices.popBack();
+    else
+        result = sceneData.entities.size();
+    
 
     sceneData.entities.push_back(entity);
-    sceneData.entities.back().bounds = model.bounds;
     sceneData.entities.back().index = result;
     return result;
 }
@@ -147,6 +149,21 @@ GameEntity &Scene::getEntity(uint32_t index) const
     return sceneData.entities[index];
 }
 
+Bounds Scene::getBounds(uint32_t entityIndex) const
+{
+    Bounds result;
+    if(entityIndex >= sceneData.entities.size())
+        return result;
+
+    const auto &entity = sceneData.entities[entityIndex];
+    if(uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
+        return result;
+
+    const auto &model = sceneData.models[uint32_t(entity.entityType)];
+    return model.bounds;
+}
+
+
 
 bool Scene::readLevel(std::string_view levelName)
 {
@@ -155,8 +172,8 @@ bool Scene::readLevel(std::string_view levelName)
     if(!loadBytes(levelName, buffer))
         return false;
 
-    JSONBlock bl;
-    bool parseSuccess = bl.parseJSON(ArraySliceView(buffer.data(), buffer.size()));
+    JsonBlock json;
+    bool parseSuccess = json.parseJson(ArraySliceView(buffer.data(), buffer.size()));
 
     if(!parseSuccess)
     {
@@ -165,49 +182,34 @@ bool Scene::readLevel(std::string_view levelName)
     }
     else
     {
-        //bl.print();
+        //json.print();
     }
 
-    if(!bl.isObject() || bl.getChildCount() < 1)
+    if(!json.isObject() || json.getChildCount() < 1)
         return false;
 
-    uint32_t magicNumber;
-    if(!bl.getChild("magicNumber").parseUInt(magicNumber))
-        return false;
-    if(magicNumber != Scene::MagicNumber)
+    if(!json.getChild("magicNumber").equals(Scene::MagicNumber))
         return false;
 
     uint32_t versionNumber;
-    if(!bl.getChild("versionNumber").parseUInt(versionNumber))
+    if(!json.getChild("versionNumber").parseUInt(versionNumber))
         return false;
 
     std::string mapName;
-    if(!bl.getChild("levelName").parseString(levelName))
+    if(!json.getChild("levelName").parseString(levelName))
         return false;
 
-    if(bl.getChild("objects").getChildCount() == 0)
+    if(json.getChild("objects").getChildCount() == 0)
         return false;
 
     std::string_view objTypeName;
     PodVector<GameEntity> newEntities;
-    for(auto const &obj : bl.getChild("objects"))
+    for(auto const &obj : json.getChild("objects"))
     {
         GameEntity ent;
-        int index = 0;
-        if(!obj.getChild("pos").parseVec3(ent.transform.pos))
-            return false;
-        if(!obj.getChild("rot").parseQuat(ent.transform.rot))
-            return false;
-        if(!obj.getChild("scale").parseVec3(ent.transform.scale))
+        if(!loadGameObject(obj, ent))
             return false;
 
-        if(!obj.getChild("modelType").parseString(objTypeName))
-            return false;
-
-        if(!findEntityType(objTypeName, ent.entityType))
-            return false;
-        const auto &model = sceneData.models[uint32_t(ent.entityType)];
-        ent.bounds = model.bounds;
         ent.index = newEntities.size();
         newEntities.push_back(ent);
     }
@@ -249,8 +251,10 @@ uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
             }
         }
         */
+        const auto &model = sceneData.models[uint32_t(entity.entityType)];
+
         HitPoint hitpoint{ Uninit };
-        if(rayOOBBBoundsIntersect(ray, entity.bounds, entity.transform, hitpoint))
+        if(rayOOBBBoundsIntersect(ray, model.bounds, entity.transform, hitpoint))
         {
             float dist = sqrLen(hitpoint.point - ray.pos);
             if(dist < closestDist)

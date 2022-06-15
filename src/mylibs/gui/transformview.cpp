@@ -6,9 +6,7 @@
 
 void drawTransform(Transform &transform)
 {
-    ImGui::PushID(&transform);
     drawVec3("Pos", transform.pos);
     drawQuat("Rot", transform.rot);
     drawVec3("Scale", transform.scale);
-    ImGui::PopID();
 }

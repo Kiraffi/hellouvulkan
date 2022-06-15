@@ -2,7 +2,10 @@
 
 #include <components/transform.h>
 
+#include <container/stackstring.h>
+
 #include <core/mytypes.h>
+
 #include <math/bounds.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>
@@ -10,6 +13,7 @@
 #include <string_view>
 
 class WriteJson;
+class JsonBlock;
 
 enum class EntityType : uint32_t
 {
@@ -64,8 +68,9 @@ struct GameEntity
 {
     static constexpr uint32_t MagicNumber = 9084352;
     static constexpr uint32_t VersionNumber = 1u;
+    SmallStackString name = "Name";
     Transform transform;
-    Bounds bounds;
+
     double animationTime = 0.0;
     uint32_t animationIndex = 0u;
     EntityType entityType = EntityType::NUM_OF_ENTITY_TYPES;
@@ -74,6 +79,7 @@ struct GameEntity
 
 bool writeGameObject(std::string_view name, const GameEntity &entity, WriteJson &json);
 bool writeGameObject(const GameEntity &entity, WriteJson &json);
+bool loadGameObject(const JsonBlock &json, GameEntity &outEntity);
 bool findEntityType(std::string_view name, EntityType &outType);
 const char *getStringFromEntityType(const EntityType &type);
 

@@ -11,8 +11,9 @@
 
 #include <string_view>
 
-struct JSONBlock
+class JsonBlock
 {
+public:
     enum ValueTypes : int32_t
     {
         VALID_TYPE = 1 << 0,
@@ -24,7 +25,7 @@ struct JSONBlock
         BOOL_TYPE = 1 << 6
     };
 
-    bool parseJSON(const ArraySliceView<char> &data);
+    bool parseJson(const ArraySliceView<char> &data);
 
     bool isValid() const { return ( jType & VALID_TYPE ) == VALID_TYPE; }
     bool isArray() const { return jType == (VALID_TYPE | ARRAY_TYPE); }
@@ -50,18 +51,22 @@ struct JSONBlock
     bool parseVec3(Vector3 &v) const;
     bool parseQuat(Quaternion &q) const;
 
+
+    bool equals(uint32_t value) const;
+
+
     bool hasChild(std::string_view childName) const;
 
     int getChildCount() const { return ( int )children.size(); }
-    const JSONBlock &getChild(int index) const;
-    const JSONBlock &getChild(std::string_view childName) const;
+    const JsonBlock &getChild(int index) const;
+    const JsonBlock &getChild(std::string_view childName) const;
 
-    const JSONBlock *const begin() const;
-    const JSONBlock *const end() const;
+    const JsonBlock *const begin() const;
+    const JsonBlock *const end() const;
 
     bool print() const;
 
-    Vector< JSONBlock > children;
+    Vector< JsonBlock > children;
     std::string_view blockName;
 
     bool named = false;
@@ -73,5 +78,5 @@ struct JSONBlock
 
     int jType = 0;
 
-    static const JSONBlock emptyBlock;
+    static const JsonBlock emptyBlock;
 };

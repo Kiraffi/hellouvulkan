@@ -39,6 +39,8 @@ public:
     void resize(uint32_t newSize, const T &defaultValue);
     void uninitializedResize(uint32_t newSize);
 
+    T popBack();
+
     void clear() { doClear(); }
 
     T* begin() const { return (T*)(getBegin()); }
@@ -149,6 +151,13 @@ void PodVector<T>::uninitializedResize(uint32_t newSize)
     this->buffer.resize(newSize);
 }
 
+template <typename T>
+T PodVector<T>::popBack()
+{ 
+    T t = back(); 
+    buffer.removeIndex(buffer.getSize() - 1); 
+    return t; 
+}
 
 
 

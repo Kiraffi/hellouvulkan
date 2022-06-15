@@ -1,6 +1,7 @@
 
 #include "gameentity.h"
 
+#include <core/json.h>
 #include <core/writejson.h>
 
 bool findEntityType(std::string_view name, EntityType &outType)
@@ -32,6 +33,7 @@ const char *getStringFromEntityType(const EntityType &type)
 static bool writeGameObjectContent(const GameEntity &entity, WriteJson &json)
 {
     json.addMagicNumberAndVersion(GameEntity::MagicNumber, GameEntity::VersionNumber);
+    json.addString("name", entity.name.getStr());
     writeTransform(entity.transform, json);
     json.addString("modelType", getStringFromEntityType(entity.entityType));
     json.endObject();
@@ -48,4 +50,33 @@ bool writeGameObject(std::string_view name, const GameEntity &entity, WriteJson 
 {
     json.addObject(name);
     return writeGameObjectContent(entity, json);
+}
+
+
+bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
+{
+    int index = 0;
+    std::string_view objTypeName;
+
+    if(!json.getChild("magicNumber").equals(GameEntity::MagicNumber))
+        return false;
+    std::string_view name;
+    if(!json.getChild("name").parseString(name))
+        return false;
+
+    if(!json.getChild("pos").parseVec3(outEntity.transform.pos))
+        return false;
+    if(!json.getChild("rot").parseQuat(outEntity.transform.rot))
+        return false;
+    if(!json.getChild("scale").parseVec3(outEntity.transform.scale))
+        return false;
+
+    if(!json.getChild("modelType").parseString(objTypeName))
+        return false;
+
+    if(!findEntityType(objTypeName, outEntity.entityType))
+        return false;
+
+    outEntity.name = std::string(name).c_str();
+    return true;
 }

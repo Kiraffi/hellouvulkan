@@ -322,8 +322,9 @@ void VulkanDrawStuff::renderUpdate()
         Vec3 linePoints[8];
 
         Mat3x4 m = getModelMatrix(entity.transform);
-        const auto &bmin = entity.bounds.min;
-        const auto &bmax = entity.bounds.max;
+        const auto &bounds = scene.getBounds(entity.index);
+        const auto &bmin = bounds.min;
+        const auto &bmax = bounds.max;
 
         linePoints4[0] = mul(m, Vec4(bmin.x, bmin.y, bmin.z, 1.0f));
         linePoints4[1] = mul(m, Vec4(bmax.x, bmin.y, bmin.z, 1.0f));
