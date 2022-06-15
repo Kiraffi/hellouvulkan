@@ -6,6 +6,7 @@
 #include <render/font_render.h>
 
 struct GLFWwindow;
+struct Vector2;
 
 struct MouseState
 {
@@ -41,6 +42,8 @@ public:
     void setVsync(VSyncType vSyncType);
     void setClearColor(float r, float g, float b, float a);
     void setTitle(const char *str);
+
+    Vector2 getWindowSize() const;
 
     void checkCameraKeypresses(float dt, Camera& camera);
 

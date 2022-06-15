@@ -3,20 +3,38 @@
 
 #include <math/general_math.h>
 #include <math/matrix.h>
+#include <math/matrix_inline_functions.h>
 #include <math/quaternion_inline_functions.h>
+#include <math/ray.h>
 
 #include <render/font_render.h>
 
 #include <math.h>
 #include <stdio.h>
 
-Matrix Camera::perspectiveProjection()
+void Camera::updateCameraState(float width, float height)
+{
+    ASSERT(width > 0.0f && height > 0.0f);
+    this->width = width;
+    this->height = height;
+    if(cameraType == CameraType::PERSPECTIVE)
+    {
+        worldToViewMat = getPerspectiveProjection() * getCameraMatrix();
+    }
+    else
+    {
+        worldToViewMat = getOrtographicProjection(width, height) * getCameraMatrix();
+    }
+    viewToWorldMat = inverse(worldToViewMat);
+}
+
+Matrix Camera::getPerspectiveProjection()
 {
     float f = 1.0f / tanf(toRadians(fovY * 0.5f));
 
     float s1 = -zFar / (zFar - zNear);
     float s2 = zNear * s1;
-
+    float aspectRatioWByH = width / height;
     return Matrix(
         f / aspectRatioWByH, 0.0f, 0.0f, 0.0f,
         0.0f, f, 0.0f, 0.0f,
@@ -26,7 +44,7 @@ Matrix Camera::perspectiveProjection()
 
 
 
-Matrix Camera::ortographicProjection(float width, float height)
+Matrix Camera::getOrtographicProjection(float width, float height)
 {
     float divider = zFar - zNear; //Near - zFar;
     float s1 = -1.0f / (divider);
@@ -91,3 +109,41 @@ Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition
     fontSystem.addText(tmpStr, camInfoPosition + Vec2(0.0f, fontSize.y) * 2.0f, fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     return camInfoPosition + Vec2(0.0f, fontSize.y) * 3.0f;
 }
+
+
+Ray Camera::getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates)
+{
+    Ray result{ Uninit };
+
+    // Calculate the click as ndc. Half pixel offset as rendering.
+    Vec2 coord = normalizedCoordinates;
+    coord = coord * 2.0f - 1.0f;
+    coord.y = -coord.y;
+
+    Vec4 rayDir4 = mul(viewToWorldMat, Vec4(coord.x, coord.y, 1.0f, 1.0f));
+    rayDir4 = rayDir4 / rayDir4.w;
+    Vec3 rayDir(rayDir4.x, rayDir4.y, rayDir4.z);
+
+    Vec3 fromPos{ Uninit };
+    if(cameraType == CameraType::PERSPECTIVE)
+    {
+        fromPos = position;
+    }
+    else
+    {
+        Vec4 fromDir4 = mul(viewToWorldMat, Vec4(coord.x, coord.y, 0.0f, 1.0f));
+        fromDir4 = fromDir4 / fromDir4.w;
+        fromPos = Vec3(fromDir4.x, fromDir4.y, fromDir4.z);
+    }
+
+    rayDir = normalize(rayDir - fromPos);
+    return Ray(fromPos, rayDir);
+}
+
+Ray Camera::getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize)
+{
+    // Calculate the click as ndc. Half pixel offset as rendering.
+    Vec2 coord = (screenPixelCoordinates + 0.5f) / windowSize;
+    return getRayFromNormalizedCoordinates(coord);
+}
+

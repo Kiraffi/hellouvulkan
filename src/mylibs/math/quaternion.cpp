@@ -1,6 +1,6 @@
 #include "quaternion.h"
 
-#include <stdio.h>
+#include <core/log.h>
 
 void printQuaternion(const Quaternion &q, const char *name)
 {

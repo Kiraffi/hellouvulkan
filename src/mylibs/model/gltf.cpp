@@ -4,6 +4,7 @@
 
 #include <components/transform_functions.h>
 
+#include <core/file.h>
 #include <core/general.h>
 #include <core/json.h>
 

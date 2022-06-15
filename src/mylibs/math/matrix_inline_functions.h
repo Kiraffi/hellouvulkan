@@ -1,6 +1,12 @@
 #pragma once
 
 #include "matrix.h"
+
+#include <core/assert.h>
+#include <core/general.h>
+
+#include <math/quaternion.h>
+
 #include <xmmintrin.h>
 #include <immintrin.h>
 

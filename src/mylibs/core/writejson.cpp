@@ -4,23 +4,20 @@
 #include <string.h>
 #include <string>
 
-WriteJson::WriteJson(uint32_t magicNumber, uint32_t versionNumber) : indentAmount(4), isValid(true)
+WriteJson::WriteJson(uint32_t magicNumber, uint32_t versionNumber) : indentAmount(INDENT_INSPACES), valid(true)
 {
-    writtenJson += "{\n    \"magicNumber\" : ";
-    writtenJson += std::to_string(magicNumber);
-    writtenJson += ",\n    \"versionNumber\" : ";
-    writtenJson += std::to_string(versionNumber);
-    writtenJson += ",\n";
+    writtenJson += "{\n";
+    addMagicNumberAndVersion(magicNumber, versionNumber);
 }
 
 bool WriteJson::addString(std::string_view name, std::string_view value, bool addQuotes)
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
     if(name.size() == 0 || value.size() == 0)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     addIndentSpaces();
@@ -28,66 +25,87 @@ bool WriteJson::addString(std::string_view name, std::string_view value, bool ad
     writtenJson += " : ";
     addNamedString(value, addQuotes);
     writtenJson += ", \n";
-    return isValid;
+    return valid;
 }
 
 bool WriteJson::addInteger(std::string_view name, int64_t number) { return addString(name, std::to_string(number), false); }
 bool WriteJson::addNumber(std::string_view name, double number) { return addString(name, std::to_string(number), false); }
 bool WriteJson::addBool(std::string_view name, bool b) { return addString(name, b ? "true" : "false", false); }
 
+bool WriteJson::addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber)
+{
+    if(!valid)
+        return false;
+    addIndentSpaces();
+    writtenJson += "\"magicNumber\" : ";
+    writtenJson += std::to_string(magicNumber);
+    writtenJson += ",\n";
+    addIndentSpaces();
+    writtenJson += "\"versionNumber\" : ";
+    writtenJson += std::to_string(versionNumber);
+    writtenJson += ",\n";
+    return valid;
+}
 
 bool WriteJson::addArray(std::string_view name)
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
     if(name.size() == 0)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     addIndentSpaces();
     addNamedString(name, true);
     writtenJson += " : [\n";
 
-    indentAmount += 4u;
+    indentAmount += INDENT_INSPACES;
     blockTypes += "]";
-    return isValid;
+    return valid;
 }
 
 
 bool WriteJson::endArray()
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
-    if(blockTypes.size() == 0 && indentAmount > 4)
+    if(blockTypes.size() == 0 && indentAmount > INDENT_INSPACES)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     if(blockTypes.back() != ']')
     {
-        isValid = false;
+        valid = false;
         return false;
     }
-    indentAmount -= 4u;
+    indentAmount -= INDENT_INSPACES;
     addIndentSpaces();
     writtenJson += "],\n";
     blockTypes.erase(blockTypes.size() - 1);
-    return isValid;
+    return valid;
 }
 
 bool WriteJson::addObject(std::string_view name)
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
-    if(blockTypes.size() < 1 || blockTypes[blockTypes.size() - 1] != ']')
+    if(name.size() == 0)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
+    // should not have named objects inside array? Maybe this is actually possible for specs
+    if(blockTypes.size() >= 1 && blockTypes[blockTypes.size() - 1] == ']')
+    {
+        valid = false;
+        return false;
+    }
+
     addIndentSpaces();
     if(name.size() > 0)
     {
@@ -96,42 +114,67 @@ bool WriteJson::addObject(std::string_view name)
     }
     writtenJson += "{\n";
 
-    indentAmount += 4u;
+    indentAmount += INDENT_INSPACES;
     blockTypes += "}";
-    return isValid;
+    return valid;
 }
 
+bool WriteJson::addObject()
+{
+    if(!valid)
+        return false;
+
+    if(blockTypes.size() < 1 || blockTypes[blockTypes.size() - 1] != ']')
+    {
+        valid = false;
+        return false;
+    }
+    addIndentSpaces();
+    writtenJson += "{\n";
+
+    indentAmount += INDENT_INSPACES;
+    blockTypes += "}";
+    return valid;
+}
+
+bool WriteJson::addObject(uint32_t magicNumber, uint32_t versionNumber)
+{
+    addObject();
+    addMagicNumberAndVersion(magicNumber, versionNumber);
+
+    return valid;
+}
 
 bool WriteJson::endObject()
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
-    if(blockTypes.size() == 0 && indentAmount > 4)
+    if(blockTypes.size() == 0 && indentAmount > INDENT_INSPACES)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     if(blockTypes.back() != '}')
     {
-        isValid = false;
+        valid = false;
         return false;
     }
-    indentAmount -= 4u;
+    indentAmount -= INDENT_INSPACES;
     addIndentSpaces();
     writtenJson += "},\n";
     blockTypes.erase(blockTypes.size() - 1);
-    return isValid;
+    return valid;
 }
 
 bool WriteJson::writeVec3(std::string_view name, const Vector3 &v)
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
     if(name.size() == 0)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     addIndentSpaces();
@@ -148,12 +191,12 @@ bool WriteJson::writeVec3(std::string_view name, const Vector3 &v)
 }
 bool WriteJson::writeQuat(std::string_view name, const Quaternion &q)
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
     if(name.size() == 0)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     addIndentSpaces();
@@ -175,17 +218,17 @@ bool WriteJson::writeQuat(std::string_view name, const Quaternion &q)
 
 bool WriteJson::finishWrite()
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
-    if(indentAmount != 4)
+    if(indentAmount != INDENT_INSPACES)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     if(blockTypes.size() != 0)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
     writtenJson += "}\n";
@@ -212,12 +255,12 @@ bool WriteJson::addNamedString(std::string_view name, bool quoteValue)
 
 bool WriteJson::addIndentSpaces()
 {
-    if(!isValid)
+    if(!valid)
         return false;
 
     if(indentAmount == 0 || indentAmount > 128)
     {
-        isValid = false;
+        valid = false;
         return false;
     }
 

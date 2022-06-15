@@ -2,6 +2,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <core/file.h>
 #include <core/general.h>
 #include <core/mytypes.h>
 #include <core/timer.h>

@@ -138,6 +138,9 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     camera.zFar = 200.0f;
     camera.zNear = 0.125f;
 
+    sunCamera.width = 50.0f;
+    sunCamera.height = 50.0f;
+    sunCamera.cameraType = CameraType::ORTHO;
 
     return true;
 
@@ -232,28 +235,25 @@ void VulkanApp::renderUpdate()
     };
     FrameBuffer frameBufferData;
 
-
+    // bit ugly.......
     sunCamera.calculateOrtographicPosition(camera.position);
-    const SwapChain& swapchain = vulk->swapchain;
-    camera.aspectRatioWByH = float(swapchain.width) / float(swapchain.height);
+
+    camera.updateCameraState(windowWidth, windowHeight);
+    sunCamera.updateCameraState(50.0f, 50.0f);
 
     if (useSunCamera)
     {
-        frameBufferData.camMat = sunCamera.getCameraMatrix(camera.position);
-        frameBufferData.viewProj = sunCamera.ortographicProjection(50.0f, 50.0f);
+        frameBufferData.mvp = sunCamera.worldToViewMat;
+        frameBufferData.inverseMvp = sunCamera.viewToWorldMat;
     }
     else
     {
-        frameBufferData.camMat = camera.getCameraMatrix();
-        frameBufferData.viewProj = camera.perspectiveProjection();
+        frameBufferData.mvp = camera.worldToViewMat;
+        frameBufferData.inverseMvp = camera.viewToWorldMat;
     }
-    frameBufferData.mvp = frameBufferData.viewProj * frameBufferData.camMat;
-    frameBufferData.inverseMvp = inverse(frameBufferData.mvp);
-
-    frameBufferData.sunMatrix =
-        sunCamera.ortographicProjection(50.0f, 50.0f) * sunCamera.getCameraMatrix(camera.position);
+    frameBufferData.sunMatrix = sunCamera.worldToViewMat;
     frameBufferData.camPos = Vector4(camera.position, 0.0f);
-    frameBufferData.areaSize = Vector2(windowWidth, windowHeight);
+    frameBufferData.areaSize = getWindowSize();
     addToCopylist(frameBufferData, vulk->renderFrameBufferHandle);
 
     fontSystem.update();
@@ -317,6 +317,11 @@ void VulkanApp::logicUpdate()
 void VulkanApp::setTitle(const char *str)
 {
     glfwSetWindowTitle(window, str);
+}
+
+Vec2 VulkanApp::getWindowSize() const
+{
+    return Vec2(windowWidth, windowHeight);
 }
 
 double VulkanApp::getDeltaTime()

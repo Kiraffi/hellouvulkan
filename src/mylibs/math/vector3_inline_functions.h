@@ -2,6 +2,10 @@
 
 #include "vector3.h"
 
+#include <core/assert.h>
+#include <core/general.h>
+#include <core/log.h>
+
 #include <math.h>
 
 /*

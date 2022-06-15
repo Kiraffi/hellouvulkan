@@ -15,6 +15,15 @@ Matrix::Matrix(const Mat3x4 &mat)
     , _30(0.0f), _31(0.0f), _32(0.0f), _33(1.0f)
 {}
 
+Mat3x4::Mat3x4(const Matrix &mat) 
+    : _00(mat._00), _01(mat._01), _02(mat._02), _03(mat._03)
+    , _10(mat._10), _11(mat._11), _12(mat._12), _13(mat._13)
+    , _20(mat._20), _21(mat._21), _22(mat._22), _23(mat._23)
+{
+    ASSERT(mat._30 == 0.0f && mat._31 == 0.0f && mat._32 == 0.0f && mat._33 == 1.0f);
+}
+
+
 Mat3x4 getMatrixFromQuaternionLH(const Quaternion &quat)
 {
     Mat3x4 result{ Uninit };

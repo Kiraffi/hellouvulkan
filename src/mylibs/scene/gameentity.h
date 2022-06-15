@@ -9,6 +9,8 @@
 
 #include <string_view>
 
+class WriteJson;
+
 enum class EntityType : uint32_t
 {
     // animated thingies
@@ -55,16 +57,23 @@ static constexpr EntityNameString nameStrings[]
     EntityNameString{ .type = EntityType::BLOB_FLAT, .name = "BlobFlat" },
 
     EntityNameString{ .type = EntityType::FLOOR, .name = "Floor" },
+    EntityNameString{ .type = EntityType::NUM_OF_ENTITY_TYPES, .name = "Unknown" },
 };
 
 struct GameEntity
 {
+    static constexpr uint32_t MagicNumber = 9084352;
+    static constexpr uint32_t VersionNumber = 1u;
     Transform transform;
     Bounds bounds;
     double animationTime = 0.0;
     uint32_t animationIndex = 0u;
     EntityType entityType = EntityType::NUM_OF_ENTITY_TYPES;
+    uint32_t index = 0;
 };
 
-
+bool writeGameObject(std::string_view name, const GameEntity &entity, WriteJson &json);
+bool writeGameObject(const GameEntity &entity, WriteJson &json);
 bool findEntityType(std::string_view name, EntityType &outType);
+const char *getStringFromEntityType(const EntityType &type);
+

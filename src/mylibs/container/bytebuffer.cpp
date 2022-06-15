@@ -1,9 +1,10 @@
 #include "bytebuffer.h"
+
+#include <core/assert.h>
 #include <core/mytypes.h>
+#include <core/timer.h>
 
 #include <string.h>
-
-#include <core/timer.h>
 
 ByteBuffer::ByteBuffer(uint32_t dataTypeSize)
     : bufferData {

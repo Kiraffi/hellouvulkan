@@ -2,6 +2,7 @@
 
 #include "bytebuffer.h"
 
+#include <core/assert.h>
 #include <core/mytypes.h>
 
 #include <memory>

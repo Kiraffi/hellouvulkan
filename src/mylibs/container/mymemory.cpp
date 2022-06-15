@@ -1,9 +1,4 @@
-#include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-
+#include <core/assert.h>
 
 #if _MSC_VER
     #include <intrin.h>

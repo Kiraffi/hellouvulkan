@@ -3,10 +3,15 @@
 
 #include <components/transform_functions.h>
 
+#include <core/file.h>
+#include <core/general.h>
 #include <core/json.h>
 #include <core/timer.h>
-#include <core/general.h>
+#include <core/writejson.h>
 
+#include <math/hitpoint.h>
+#include <math/ray.h>
+#include <math/vector3_inline_functions.h>
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
@@ -122,9 +127,10 @@ uint32_t Scene::addGameEntity(const GameEntity& entity)
         return result;
     const auto &model = sceneData.models[uint32_t(entity.entityType)];
     result = sceneData.entities.size();
-
+    
     sceneData.entities.push_back(entity);
     sceneData.entities.back().bounds = model.bounds;
+    sceneData.entities.back().index = result;
     return result;
 }
 
@@ -138,7 +144,7 @@ GameEntity& Scene::getEntity(uint32_t index)
 }
 
 
-bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntities)
+bool Scene::readLevel(std::string_view levelName)
 {
     PodVector<char> buffer;
 
@@ -164,7 +170,7 @@ bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntitie
     uint32_t magicNumber;
     if(!bl.getChild("magicNumber").parseUInt(magicNumber))
         return false;
-    if(magicNumber != SceneMagicNumber)
+    if(magicNumber != Scene::MagicNumber)
         return false;
 
     uint32_t versionNumber;
@@ -179,6 +185,7 @@ bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntitie
         return false;
 
     std::string_view objTypeName;
+    PodVector<GameEntity> newEntities;
     for(auto const &obj : bl.getChild("objects"))
     {
         GameEntity ent;
@@ -195,8 +202,62 @@ bool readLevel(std::string_view levelName, PodVector<GameEntity> &outGameEntitie
 
         if(!findEntityType(objTypeName, ent.entityType))
             return false;
-        outGameEntities.push_back(ent);
+        const auto &model = sceneData.models[uint32_t(ent.entityType)];
+        ent.bounds = model.bounds;
+        ent.index = newEntities.size();
+        newEntities.push_back(ent);
     }
-
+    sceneData.entities = newEntities;
     return true;
 }
+
+bool Scene::writeLevel(std::string_view filename) const
+{
+    WriteJson writeJson(Scene::MagicNumber, Scene::VersionNumber);
+    writeJson.addString("levelName", "Testmap");
+    writeJson.addArray("objects");
+    for(const auto &entity : sceneData.entities)
+        writeGameObject(entity, writeJson);
+    writeJson.endArray();
+    writeJson.finishWrite();
+    return writeJson.isValid();
+}
+
+uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
+{
+    uint32_t result = ~0u;
+
+    float closestDist = FLT_MAX;
+    uint32_t index = 0;
+    
+    for(const auto &entity : sceneData.entities)
+    {
+        /*
+        if(raySphereIntersect(ray, Sphere{ .pos = entity.transform.pos, .radius = 2.0f }, hitpoint))
+        {
+            float dist = sqrLen(hitpoint.point - ray.pos);
+            if(dist < closestDist)
+            {
+                selectedEntityIndex = index;
+                closestDist = dist;
+                lineTo = hitpoint.point;
+            }
+        }
+        */
+        HitPoint hitpoint{ Uninit };
+        if(rayOOBBBoundsIntersect(ray, entity.bounds, entity.transform, hitpoint))
+        {
+            float dist = sqrLen(hitpoint.point - ray.pos);
+            if(dist < closestDist)
+            {
+                result = index;
+                closestDist = dist;
+                outHitpoint = hitpoint;
+            }
+        }
+        ++index;
+    }
+
+    return result;
+}
+

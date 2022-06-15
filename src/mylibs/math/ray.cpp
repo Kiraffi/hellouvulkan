@@ -1,11 +1,12 @@
 #include "ray.h"
 
-#include <math/vector3_inline_functions.h>
+#include <math/bounds.h>
+#include <math/hitpoint.h>
 #include <math/quaternion_inline_functions.h>
+#include <math/vector3_inline_functions.h>
 
-#include <math.h>
 // intersect test ray sphere from game physics cookbook
-bool raySphereIntersect(const Ray &ray, const Sphere &sphere, Hitpoint &outHitpoint)
+bool raySphereIntersect(const Ray &ray, const Sphere &sphere, HitPoint &outHitpoint)
 {
     float sphereRadius = 1.0f;
     Vec3 e = sphere.pos - ray.pos;
@@ -37,7 +38,7 @@ bool raySphereIntersect(const Ray &ray, const Sphere &sphere, Hitpoint &outHitpo
 
 
 
-bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transform &transform, Hitpoint &outHitpoint)
+bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transform &transform, HitPoint &outHitpoint)
 {
     const Quaternion inverseQuat = conjugate(transform.rot);
     const Vec3 rayPos = rotateVector(ray.pos - transform.pos, inverseQuat);

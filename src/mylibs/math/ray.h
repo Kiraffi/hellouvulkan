@@ -3,9 +3,11 @@
 #include <components/transform.h>
 
 #include <core/uninittype.h>
-#include <math/bounds.h>
 #include <math/sphere.h>
 #include <math/vector3.h>
+
+struct Bounds;
+struct HitPoint;
 
 struct Ray
 {
@@ -17,15 +19,7 @@ struct Ray
     Vec3 dir; // assuming normalized
 };
 
-struct Hitpoint
-{
-    Hitpoint() : point(0.0f, 0.0f, 0.0f), distance(0.0f) {}
-    Hitpoint(UninitType) {}
 
-    Vec3 point;
-    float distance;
-};
+bool raySphereIntersect(const Ray &ray, const Sphere &sphere, HitPoint &outHitpoint);
 
-bool raySphereIntersect(const Ray &ray, const Sphere &sphere, Hitpoint &outHitpoint);
-
-bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transform &transform, Hitpoint &outHitpoint);
+bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transform &transform, HitPoint &outHitpoint);

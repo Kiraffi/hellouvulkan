@@ -12,7 +12,10 @@
 
 #include <container/arraysliceview.h>
 
+#include <gui/componentviews.h>
+
 #include <math/general_math.h>
+#include <math/hitpoint.h>
 #include <math/matrix.h>
 #include <math/plane.h>
 #include <math/quaternion.h>
@@ -280,81 +283,23 @@ void VulkanDrawStuff::logicUpdate()
         mouseState.x >= 0 && mouseState.y >= 0 &&
         mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
     {
-        // Calculate the click as ndc. Half pixel offset as rendering.
-        Vec2 coord(mouseState.x, mouseState.y);
-        coord = (coord + 0.5f) / Vec2((vulk->swapchain.width), (vulk->swapchain.height));
-        coord = coord * 2.0f - 1.0f;
-        coord.y = -coord.y;
+        Vec2 coord = Vec2(mouseState.x, mouseState.y);
+        Ray ray{ Uninit };
+        if(useSunCamera)
+            ray = sunCamera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
+        else
+            ray = camera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
 
-        Matrix mat = inverse(camera.perspectiveProjection() * camera.getCameraMatrix());
-
-        Vec4 rayDir4 = mul(mat, Vec4(coord.x, coord.y, 1.0f, 1.0f));
-        rayDir4 = rayDir4 / rayDir4.w;
-        Vec3 rayDir(rayDir4.x, rayDir4.y, rayDir4.z);
-        rayDir = normalize(rayDir - camera.position);
-
-        lineFrom = camera.position;
-        lineTo = camera.position + rayDir * 150.0f;
-
-        Vec3 onePerRayDir = 1.0f / rayDir;
-
-        Ray ray(camera.position, rayDir);
-
-        float closestDist = FLT_MAX;
-        for(uint32_t index : entityIndices)
+        HitPoint hitpoint{ Uninit };
+        selectedEntityIndex = scene.castRay(ray, hitpoint);
+        if(selectedEntityIndex != ~0u)
         {
-            const auto &entity = scene.getEntity(index);
-            Hitpoint hitpoint{ Uninit };
-            /*
-            if(raySphereIntersect(ray, Sphere{ .pos = entity.transform.pos, .radius = 2.0f }, hitpoint))
-            {
-                float dist = sqrLen(hitpoint.point - ray.pos);
-                if(dist < closestDist)
-                {
-                    selectedEntityIndex = index;
-                    closestDist = dist;
-                    lineTo = hitpoint.point;
-                }
-            }
-            */
-            if(rayOOBBBoundsIntersect(ray, entity.bounds, entity.transform, hitpoint))
-            {
-                float dist = sqrLen(hitpoint.point - ray.pos);
-                if(dist < closestDist)
-                {
-                    selectedEntityIndex = index;
-                    closestDist = dist;
-                    lineTo = hitpoint.point;
-                }
-            }
+            lineTo = lineTo = hitpoint.point;
+            lineFrom = ray.pos;
         }
     }
 
     lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
-}
-
-static bool drawEntityImgui(GameEntity &entity, uint32_t index)
-{
-    static float f = 0.0f;
-    static int counter = 0;
-
-    ImGui::Begin("Entity");
-    ImGui::Text("Type: %u, index: %u", entity.entityType, index);
-
-    // Forcing delesect item, if selected item changes.
-    ImGui::PushID(index);
-    {
-        ImGui::InputFloat3("Pos", &entity.transform.pos.x);
-        if(ImGui::InputFloat4("Rot", &entity.transform.rot.v.x))
-            normalize(entity.transform.rot);
-        ImGui::InputFloat3("Scale", &entity.transform.scale.x);
-    }
-    ImGui::PopID();
-    bool mouseHover = ImGui::IsWindowHovered(
-        ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();
-    ImGui::End();
-
-    return mouseHover;
 }
 
 void VulkanDrawStuff::renderUpdate()
@@ -376,12 +321,11 @@ void VulkanDrawStuff::renderUpdate()
     uint32_t selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
 
-    for (uint32_t entityIndex : entityIndices)
+    for (auto &entity : scene.getEntities())
     {
-        GameEntity& entity = scene.getEntity(entityIndex);
-
         Vec4 linePoints4[8];
         Vec3 linePoints[8];
+
         Mat3x4 m = getModelMatrix(entity.transform);
         const auto &bmin = entity.bounds.min;
         const auto &bmax = entity.bounds.max;
@@ -399,7 +343,7 @@ void VulkanDrawStuff::renderUpdate()
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
-        uint32_t drawColor = selectedEntityIndex == entityIndex ? selectedColor : grayColor;
+        uint32_t drawColor = selectedEntityIndex == entity.index ? selectedColor : grayColor;
         lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
         lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
         lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
@@ -410,9 +354,9 @@ void VulkanDrawStuff::renderUpdate()
         lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
         lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
         
-        uint32_t redColor = selectedEntityIndex == entityIndex ? selectedRedColor : unSelectedRedColor;
-        uint32_t greenColor = selectedEntityIndex == entityIndex ? selectedGreenColor : unSelectedGreenColor;
-        uint32_t blueColor = selectedEntityIndex == entityIndex ? selectedBlueColor : unSelectedBlueColor;
+        uint32_t redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
+        uint32_t greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
+        uint32_t blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
 
         lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
         lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);
@@ -441,9 +385,9 @@ void VulkanDrawStuff::renderUpdate()
 
     lineRenderSystem.prepareToRender();
 
-    if(selectedEntityIndex < entityIndices.size())
+    if(selectedEntityIndex != ~0u)
     {
-        mouseHover = drawEntityImgui(scene.getEntity(selectedEntityIndex), selectedEntityIndex);
+        mouseHover = drawEntity(scene.getEntity(selectedEntityIndex));
     }
     else
     {

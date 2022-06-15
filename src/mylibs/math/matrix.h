@@ -2,11 +2,7 @@
 
 #include <core/mytypes.h>
 #include <core/uninittype.h>
-#include <math/quaternion.h>
 #include <math/vector3.h>
-
-#include <xmmintrin.h>
-#include <immintrin.h>
 
 // The matrices are used mostly in row order where
 // row 0 = x vec, transpose.x
@@ -82,13 +78,7 @@ struct alignas(16) Mat3x4
         , _20(f20), _21(f21), _22(f22), _23(f23)
     {}
 
-    Mat3x4(const Matrix &mat)
-        : _00(mat._00), _01(mat._01), _02(mat._02), _03(mat._03)
-        , _10(mat._10), _11(mat._11), _12(mat._12), _13(mat._13)
-        , _20(mat._20), _21(mat._21), _22(mat._22), _23(mat._23)
-    {
-        ASSERT(mat._30 == 0.0f && mat._31 == 0.0f && mat._32 == 0.0f && mat._33 == 1.0f);
-    }
+    Mat3x4(const Matrix &mat);
 
     float &operator[](uint32_t index) { return (&_00)[index]; }
     float operator[](uint32_t index) const { return (&_00)[index]; }
