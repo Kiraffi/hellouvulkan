@@ -130,13 +130,16 @@ uint32_t Scene::addGameEntity(const GameEntity& entity)
     if (uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
         return result;
     if(sceneData.freeEnityIndices.size() > 0)
+    {
         result = sceneData.freeEnityIndices.popBack();
+        sceneData.entities[result] = entity;
+    }
     else
+    {
         result = sceneData.entities.size();
-    
-
-    sceneData.entities.push_back(entity);
-    sceneData.entities.back().index = result;
+        sceneData.entities.push_back(entity);
+    }
+    sceneData.entities[result].index = result;
     return result;
 }
 
