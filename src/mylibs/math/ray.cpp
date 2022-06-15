@@ -1,7 +1,9 @@
 #include "ray.h"
 
-#include <math.h>
+#include <math/vector3_inline_functions.h>
+#include <math/quaternion_inline_functions.h>
 
+#include <math.h>
 // intersect test ray sphere from game physics cookbook
 bool raySphereIntersect(const Ray &ray, const Sphere &sphere, Hitpoint &outHitpoint)
 {
@@ -45,8 +47,8 @@ bool rayOOBBBoundsIntersect(const Ray &ray, const Bounds &bounds, const Transfor
     Vec3 tMin = ((bounds.min * transform.scale) - rayPos) * inverseRayDir;
     Vec3 tMax = ((bounds.max * transform.scale) - rayPos) * inverseRayDir;
 
-    Vec3 tMins = Vec3(min(tMin, tMax));
-    Vec3 tMaxs = Vec3(max(tMin, tMax));
+    Vec3 tMins = Vec3(minVec(tMin, tMax));
+    Vec3 tMaxs = Vec3(maxVec(tMin, tMax));
 
     float tMind = fmaxf(fmaxf(tMins.x, tMins.y), tMins.z);
     float tMaxd = fminf(fminf(tMaxs.x, tMaxs.y), tMaxs.z);

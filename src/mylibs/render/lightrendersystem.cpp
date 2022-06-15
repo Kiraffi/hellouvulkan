@@ -1,5 +1,6 @@
 #include "lightrendersystem.h"
 
+#include <math/vector3_inline_functions.h>
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>

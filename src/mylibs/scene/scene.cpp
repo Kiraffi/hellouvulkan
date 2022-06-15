@@ -1,9 +1,12 @@
 
 #include "scene.h"
 
+#include <components/transform_functions.h>
+
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/general.h>
+
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 

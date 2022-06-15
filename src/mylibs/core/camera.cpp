@@ -3,8 +3,7 @@
 
 #include <math/general_math.h>
 #include <math/matrix.h>
-#include <math/quaternion.h>
-#include <math/vector3.h>
+#include <math/quaternion_inline_functions.h>
 
 #include <render/font_render.h>
 

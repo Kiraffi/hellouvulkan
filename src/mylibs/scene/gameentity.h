@@ -1,7 +1,8 @@
 #pragma once
 
+#include <components/transform.h>
+
 #include <core/mytypes.h>
-#include <core/transform.h>
 #include <math/bounds.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>

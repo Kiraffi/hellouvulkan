@@ -1,15 +1,7 @@
 #pragma once
 
-#include <math/matrix.h>
-#include <math/quaternion.h>
-#include <math/vector3.h>
-
-struct Transform
-{
-    Vec3 pos;
-    Quat rot;
-    Vec3 scale{ 1.0f, 1.0f, 1.0f };
-};
+#include <components/transform.h>
+#include <math/matrix_inline_functions.h>
 
 static Mat3x4 getModelMatrix(const Transform &trans)
 {
@@ -26,10 +18,9 @@ static Mat3x4 getModelMatrixInverse(const Transform &trans)
     scale.x = 1.0f / scale.x;
     scale.y = 1.0f / scale.y;
     scale.z = 1.0f / scale.z;
-    Quat rot = trans.rot;
-    rot.v = -rot.v;
-
-    Mat3x4 posMat = getMatrixFromTranslation(-trans.pos);
+    Quat rot(-trans.rot.v.x, -trans.rot.v.y, -trans.rot.v.z, trans.rot.w);
+    Vec3 pos(-trans.pos.x, -trans.pos.y, -trans.pos.z);
+    Mat3x4 posMat = getMatrixFromTranslation(pos);
     Mat3x4 scaleMat = getMatrixFromScale(scale);
     Mat3x4 rotMat = getMatrixFromQuaternion(rot);
 

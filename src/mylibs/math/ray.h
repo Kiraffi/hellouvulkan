@@ -1,6 +1,7 @@
 #pragma once
 
-#include <core/transform.h>
+#include <components/transform.h>
+
 #include <core/uninittype.h>
 #include <math/bounds.h>
 #include <math/sphere.h>

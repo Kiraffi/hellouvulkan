@@ -2,12 +2,13 @@
 
 #include <container/arraysliceview.h>
 
+#include <components/transform_functions.h>
+
 #include <core/general.h>
 #include <core/json.h>
-#include <core/transform.h>
 
 #include <math/matrix.h>
-#include <math/quaternion.h>
+#include <math/quaternion_inline_functions.h>
 
 #include <core/timer.h>
 

@@ -1,7 +1,7 @@
 #include "testfuncs.h"
 
 #include <core/mytypes.h>
-#include <math/vector3.h>
+#include <math/vector3_inline_functions.h>
 
 #include <math.h>
 
@@ -62,16 +62,16 @@ void testVec2()
         ASSERT(res3.x == 3.0f && res3.y == -6.0f);
     }
     {
-        const Vec2 res1 = min(v, v2);
+        const Vec2 res1 = minVec(v, v2);
         ASSERT(res1.x == 2.0f && res1.y == -3.0f);
 
-        const Vec2 res2 = max(v, v2);
+        const Vec2 res2 = maxVec(v, v2);
         ASSERT(res2.x == 5.0f && res2.y == 7.0f);
 
-        const float res3 = min(v);
+        const float res3 = minVec(v);
         ASSERT(res3 == -3.0f);
 
-        const float res4 = max(v);
+        const float res4 = maxVec(v);
         ASSERT(res4 == 2.0f);
     }
 
@@ -147,16 +147,16 @@ void testVec3()
         ASSERT(res3.x == 3.0f && res3.y == -6.0f && res3.z == 2.0f);
     }
     {
-        const Vec3 res1 = min(v, v2);
+        const Vec3 res1 = minVec(v, v2);
         ASSERT(res1.x == 2.0f && res1.y == -3.0f && res1.z == 11.0f);
 
-        const Vec3 res2 = max(v, v2);
+        const Vec3 res2 = maxVec(v, v2);
         ASSERT(res2.x == 5.0f && res2.y == 7.0f && res2.z == 13.0f);
 
-        const float res3 = min(v);
+        const float res3 = minVec(v);
         ASSERT(res3 == -3.0f);
 
-        const float res4 = max(v);
+        const float res4 = maxVec(v);
         ASSERT(res4 == 11.0f);
     }
 
@@ -232,16 +232,16 @@ void testVec4()
         ASSERT(res3.x == 3.0f && res3.y == -6.0f && res3.z == 2.0f && res3.w == -0.5f);
     }
     {
-        const Vec4 res1 = min(v, v2);
+        const Vec4 res1 = minVec(v, v2);
         ASSERT(res1.x == 2.0f && res1.y == -3.0f && res1.z == 11.0f && res1.w == 23.0f);
 
-        const Vec4 res2 = max(v, v2);
+        const Vec4 res2 = maxVec(v, v2);
         ASSERT(res2.x == 5.0f && res2.y == 7.0f && res2.z == 13.0f && res2.w == 27.0f);
 
-        const float res3 = min(v);
+        const float res3 = minVec(v);
         ASSERT(res3 == -3.0f);
 
-        const float res4 = max(v);
+        const float res4 = maxVec(v);
         ASSERT(res4 == 27.0f);
     }
 

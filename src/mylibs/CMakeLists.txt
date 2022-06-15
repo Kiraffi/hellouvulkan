@@ -56,7 +56,7 @@ add_library(MyLibraries
     "scene/scene.cpp"
 
     
- "core/uninittype.h" "scene/gameentity.cpp" "core/writejson.cpp" "core/writejson.h")
+ "core/uninittype.h" "scene/gameentity.cpp" "core/writejson.cpp" "core/writejson.h" "components/componentmacros.h" "components/transform_functions.h" "math/vector3_inline_functions.h" "math/quaternion_inline_functions.h" "math/matrix_inline_functions.h")
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"

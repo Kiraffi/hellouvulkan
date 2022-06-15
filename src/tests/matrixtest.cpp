@@ -1,8 +1,8 @@
 #include "testfuncs.h"
 
 #include <math/general_math.h>
-#include <math/matrix.h>
-#include <math/quaternion.h>
+#include <math/matrix_inline_functions.h>
+#include <math/quaternion_inline_functions.h>
 
 static void testIdentity()
 {

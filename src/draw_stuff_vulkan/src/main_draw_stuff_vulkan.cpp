@@ -1,12 +1,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <components/transform_functions.h>
+
 #include <core/camera.h>
 #include <core/general.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/transform.h>
 #include <core/vulkan_app.h>
 
 #include <container/arraysliceview.h>
@@ -17,6 +18,7 @@
 #include <math/quaternion.h>
 #include <math/ray.h>
 #include <math/vector3.h>
+#include <math/quaternion_inline_functions.h>
 
 #include <model/gltf.h>
 

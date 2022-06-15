@@ -1,10 +1,12 @@
 #include "matrix.h"
-#include <math/quaternion.h>
+
+#include <core/timer.h>
 #include <math/general_math.h>
+#include <math/quaternion.h>
+#include <math/vector3_inline_functions.h>
 
 #include <math.h>
 
-#include <core/timer.h>
 
 Matrix::Matrix(const Mat3x4 &mat)
     : _00(mat._00), _01(mat._01), _02(mat._02), _03(mat._03)

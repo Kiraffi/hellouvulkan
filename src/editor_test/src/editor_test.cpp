@@ -1,12 +1,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <components/transform_functions.h>
+
 #include <core/camera.h>
 #include <core/general.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/transform.h>
 #include <core/vulkan_app.h>
 #include <core/writejson.h>
 
@@ -15,7 +16,7 @@
 #include <math/general_math.h>
 #include <math/matrix.h>
 #include <math/plane.h>
-#include <math/quaternion.h>
+#include <math/quaternion_inline_functions.h>
 #include <math/ray.h>
 #include <math/vector3.h>
 
@@ -133,7 +134,7 @@ bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, 
             writeJson.writeVec3("scale", Vector3(1.0f, 2.0f, 3.0f));
             writeJson.endObject();
     writeJson.endArray();
-    writeJson.finishWrite("foo");
+    writeJson.finishWrite();
 
     PodVector<GameEntity> gameEntities;
     if(!readLevel("assets/levels/testmap.json", gameEntities))
