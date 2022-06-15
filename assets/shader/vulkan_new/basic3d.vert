@@ -1,5 +1,6 @@
 #version 450 core
 
+#define PERMUTATIONS 4
 #define DEPTH_ONLY ((SPECIAL_PERMUTATION & 1) == 1)
 #define USE_ANIMATION ((SPECIAL_PERMUTATION & 2) == 0)
 #define USE_LINE (SPECIAL_PERMUTATION == 5)
@@ -102,7 +103,7 @@ void main()
         boneMat += animationBoneMatrices[boneStartIndex + boneIndices.y] * weights.y;
         boneMat += animationBoneMatrices[boneStartIndex + boneIndices.z] * weights.z;
         boneMat += animationBoneMatrices[boneStartIndex + boneIndices.w] * weights.w;
-        
+
         mat4 boneMat4;
         boneMat4[0] = vec4(boneMat[0], 0.0f);
         boneMat4[1] = vec4(boneMat[1], 0.0f);
@@ -114,7 +115,7 @@ void main()
         #if DEPTH_ONLY
         #else
             vec4 nor = normalize(vec4(1.0f));
-            
+
             uint boneNormalStartIndex = boneStartIndices[instanceIndex];
             mat4x3 boneNormalMat4x3 = animationBoneMatrices[boneNormalStartIndex + boneIndices.x] * weights.x;
             boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.y] * weights.y;
@@ -133,7 +134,7 @@ void main()
         vec4 pos = vec4(data.pos.xyz, 1.0f);
         vec4 nor = vec4(dataNormal.xyz, 0.0f);
     #endif
-    mat4x3 entityMatrix4x3 = enityModelMatrices[instanceIndex]; 
+    mat4x3 entityMatrix4x3 = enityModelMatrices[instanceIndex];
     mat4 entityMatrix;
     entityMatrix[0] = vec4(entityMatrix4x3[0], 0.0f);
     entityMatrix[1] = vec4(entityMatrix4x3[1], 0.0f);

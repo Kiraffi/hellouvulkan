@@ -205,7 +205,7 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
 
     while(true)
     {
-        std::string newFilename = "assets/shader/vulkan_new/";
+        std::string newFilename = "assets/shader/vulkan_new/spvs/";
         newFilename += filename;
         newFilename += "_";
         newFilename += std::to_string(permutationIndex);
@@ -270,7 +270,7 @@ bool loadShaders()
 {
     globalShaders.shaders.resize(uint8_t(ShaderType::NumShaders));
     if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
-    if (!loadShader("basic3d_4.vert", ShaderType::Basic3DVert)) return false;
+    if (!loadShader("basic3d.vert", ShaderType::Basic3DVert)) return false;
 
     if (!loadShader("line.vert", ShaderType::LineVert)) return false;
 

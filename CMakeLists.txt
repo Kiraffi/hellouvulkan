@@ -16,6 +16,22 @@ include(${PROJECT_SOURCE_DIR}/cmake/my_cmake.cmake)
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
 
+#FILE(READ "${file}" contents)
+#FILE(READ "assets/shader/vulkan_new/basic3d_4.vert" contents)
+##foreach(line IN LISTS contents)
+#    STRING(REGEX REPLACE ".*#define[ \t]+(PERMUTATIONS[ \t]+[0-9]*).*" "\\1" permutations ${contents} )
+#    STRING(REGEX REPLACE "(PERMUTATIONS).*" "\\1" permutation ${permutations})
+#    #STRING(REGEX REPLACE ":" "\\\\;" line "${line}")
+#    message(STATUS "${permutations}")
+#    if(permutation STREQUAL "PERMUTATIONS")
+#        STRING(REGEX REPLACE "PERMUTATIONS[ \t]([0-9]*).*" "\\1" amount ${permutations} )
+#
+#        message(STATUS "Permutation amount ${amount}")
+##        break()
+#    endif()
+##endforeach()
+
+
 if (UNIX)
     #do something
 endif (UNIX)
@@ -26,7 +42,7 @@ endif (UNIX)
 if (DEFINED VULKAN_SDK_PATH)
   set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include")
   set(Vulkan_LIBRARIES "${VULKAN_SDK_PATH}/Lib")
-  set(Vulkan_FOUND "True") 
+  set(Vulkan_FOUND "True")
 else()
   find_package(Vulkan REQUIRED)
   message(STATUS "Found Vulkan: $ENV{VULKAN_SDK}")
@@ -45,42 +61,48 @@ include_directories(${Vulkan_INCLUDE_DIRS})
 set(GLSLC_EXECUTABLE glslc)
 
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/shader/vulkan_new)
+set(SPIRV_BINARY_OUT_DIR ${SHADER_DIR}/spvs)
 
 file(GLOB_RECURSE SPV_SHADERS CONFIGURE_DEPENDS ${SHADER_DIR}/*.vert ${SHADER_DIR}/*.frag ${SHADER_DIR}/*.comp)
 
 set(SPIRV_BINARY_FILES, "")
-
 # helper function to generate custom commands for filename
 function(COMPILE_SHADER SHADER_PERMUTATION)
-    set(SPIRV "${SHADER}_${SHADER_PERMUTATION}.spv" PARENT_SCOPE)
-    set(SPIRV "${SHADER}_${SHADER_PERMUTATION}.spv")
+    set(SPIRVLocal "${SPIRV_BINARY_OUT_DIR}/${SHADER_FILENAME}_${SHADER_PERMUTATION}.spv")
+    set(SPIRV "${SPIRVLocal}" PARENT_SCOPE)
     message(STATUS "Compiling ${SHADER} into ${SPIRV}")
     add_custom_command(
-        OUTPUT ${SPIRV}
-        COMMAND ${GLSLC_EXECUTABLE} ${SHADER} -DSPECIAL_PERMUTATION=${SHADER_PERMUTATION} --target-env=vulkan1.1 -o ${SPIRV}
+        OUTPUT ${SPIRVLocal}
+        COMMAND ${GLSLC_EXECUTABLE} ${SHADER} -DSPECIAL_PERMUTATION=${SHADER_PERMUTATION} --target-env=vulkan1.1 -o ${SPIRVLocal}
         DEPENDS ${SHADER} ${SHADER_DIR}/common.h)
 endfunction()
 
 foreach(SHADER IN LISTS SPV_SHADERS)
-    get_filename_component(FILENAME ${SHADER} NAME)
+    get_filename_component(SHADER_FILENAME ${SHADER} NAME)
+    get_filename_component(SHADER_FILENAME_DIR ${SHADER} DIRECTORY)
 
-    # probably the most horrible way to get first number from string?
-    string(REGEX REPLACE "[A-Za-z0-9_]+[_]([0-9]+).[A-Za-z]+" "\\1" FIRST_LETTER ${FILENAME} )
     set(VALUE_OUT 1)
-    if(FIRST_LETTER STRLESS_EQUAL "999999999999999" AND NOT FILENAME STREQUAL FIRST_LETTER)
-        #parse the string number into number.
-        #message(STATUS "number ${FIRST_LETTER}")
-        math(EXPR VALUE_OUT "${FIRST_LETTER}" OUTPUT_FORMAT DECIMAL)
+
+    #Read shader file, and find line #define PERMUTATIONS number, if not we have VALUE_OUT 1
+    #if found, evaluate string to number, which will be set to VALUE_OUT
+    FILE(READ "${SHADER}" contents)
+    STRING(REGEX REPLACE ".*#define[ \t]+(PERMUTATIONS[ \t]+[0-9]*).*" "\\1" permutations ${contents} )
+    STRING(REGEX REPLACE "(PERMUTATIONS).*" "\\1" permutation ${permutations})
+    if(permutation STREQUAL "PERMUTATIONS")
+        STRING(REGEX REPLACE "PERMUTATIONS[ \t]([0-9]*).*" "\\1" amount ${permutations} )
+        math(EXPR VALUE_OUT "${amount}" OUTPUT_FORMAT DECIMAL)
+
+        message(STATUS "Permutations ${amount}")
     endif()
+
     while(VALUE_OUT GREATER 0)
-
-
         # Count down the VALUE_OUT, there is probably far better way to do for loop, but...
         math(EXPR VALUE_OUT "${VALUE_OUT} - 1" OUTPUT_FORMAT DECIMAL)
 
         # Add filename_index.spv, from 1 to filename first number.
-        # For example 3shader.comp -> { 3shader.comp_0.spv, 3shader.comp_1.spv, 3shader.comp_2.spv }
-        # If there is no number then we just make shadername_1.spv
+        # For example if basic3d.vert has PEERMUTATIONS defined as 4, will create
+        ## { basic3d.vert_0.spv, basic3d.vert_1.spv, basic3d.vert_2.spv, basic3d.vert_3.spv }
+        # If there is no PERMUTATIONS defined in shader-file then we just make shadername_0.spv
         compile_shader("${VALUE_OUT}")
         list(APPEND SPIRV_BINARY_FILES ${SPIRV})
     endwhile()
@@ -99,7 +121,6 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" )
 #ADD_DEFINITIONS(-DDISCRETE_GPU=1)
 #ADD_DEFINITIONS(-DUSE_RENDERDOC_MARKERS=1)
 #ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
-
 
 
 include_directories("external/")
