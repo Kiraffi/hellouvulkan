@@ -74,8 +74,6 @@ public:
     LightingRenderTargets lightingRenderTargets;
     MeshRenderTargets meshRenderTargets;
 
-    PodVector<uint32_t> entityIndices;
-
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
@@ -130,10 +128,10 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR }));
+    scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
     
  
-    entityIndices.push_back(scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, 0.0f } }, .entityType = EntityType::LOW_POLY_CHAR }));
+    scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, 0.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
 
     sunCamera.pitch = toRadians(60.0f);
     sunCamera.yaw = toRadians(30.0f);
@@ -169,17 +167,15 @@ void ImguiTest::logicUpdate()
 
     if (isPressed(GLFW_KEY_KP_ADD))
     {
-        for (uint32_t entityIndex : entityIndices)
+        for (auto &entity : scene.getEntities())
         {
-            GameEntity& entity = scene.getEntity(entityIndex);
             ++entity.animationIndex;
         }
     }
     if (isPressed(GLFW_KEY_KP_SUBTRACT))
     {
-        for (uint32_t entityIndex : entityIndices)
+        for(auto &entity : scene.getEntities())
         {
-            GameEntity& entity = scene.getEntity(entityIndex);
             if(entity.animationIndex > 0)
                 --entity.animationIndex;
         }
@@ -225,9 +221,8 @@ void ImguiTest::renderUpdate()
     VulkanApp::renderUpdate();
     imgui.renderBegin();
 
-    for (uint32_t entityIndex : entityIndices)
+    for (auto &entity : scene.getEntities())
     {
-        GameEntity& entity = scene.getEntity(entityIndex);
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES ||
             entity.entityType == EntityType::FLOOR)
             continue;

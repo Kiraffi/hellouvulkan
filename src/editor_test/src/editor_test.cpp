@@ -82,8 +82,6 @@ public:
     MeshRenderTargets meshRenderTargets;
     LineRenderSystem lineRenderSystem;
 
-    PodVector<uint32_t> entityIndices;
-
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
@@ -195,17 +193,15 @@ void EditorTest::logicUpdate()
 
     if (isPressed(GLFW_KEY_KP_ADD))
     {
-        for (uint32_t entityIndex : entityIndices)
+        for (auto &entity : scene.getEntities())
         {
-            GameEntity& entity = scene.getEntity(entityIndex);
             ++entity.animationIndex;
         }
     }
     if (isPressed(GLFW_KEY_KP_SUBTRACT))
     {
-        for (uint32_t entityIndex : entityIndices)
+        for(auto &entity : scene.getEntities())
         {
-            GameEntity& entity = scene.getEntity(entityIndex);
             if(entity.animationIndex > 0)
                 --entity.animationIndex;
         }
