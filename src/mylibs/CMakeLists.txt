@@ -6,19 +6,53 @@ project ("hellouvulkan libs" VERSION 0.0.1)
 include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 #print_variables()
 
+add_library(MyImgui
+    "gui/transformview.cpp" 
+    "gui/componentviews.h" 
+    "gui/gameentityview.cpp" 
+    "gui/componentviews.cpp" 
+
+    "render/myimgui.cpp"
+)
+
+add_library(MyVulkan
+    "core/vulkan_app.cpp"
+
+    "myvulkan/myvma.cpp"
+    "myvulkan/myvulkan.cpp"
+    "myvulkan/vulkanresources.cpp"
+    "myvulkan/shader.cpp"
+
+    
+    "render/convertrendertarget.cpp"
+    "render/font_render.cpp"
+    "render/lightrendersystem.cpp"
+    "render/linerendersystem.cpp"
+    "render/meshrendersystem.cpp"
+    "render/tonemaprendersystem.cpp"
+
+    "render/lightingrendertargets.cpp"
+    "render/meshrendertargets.cpp"
+    "render/meshrendertargets.h"
+    "render/lightingrendertargets.h"
+
+)
+
+
 add_library(MyLibraries
 
     "container/bytebuffer.cpp"
     "container/mymemory.cpp"
 
+    "components/transform.cpp" 
+
     "core/camera.cpp"
+    "core/file.cpp" 
     "core/general.cpp"
     "core/timer.cpp"
     "core/json.cpp"
-    "core/vulkan_app.cpp"
+    "core/writejson.cpp" 
 
-    "gui/examplegui.h"
-    "gui/examplegui.cpp"
 
     "math/matrix.cpp"
     "math/ray.cpp"
@@ -32,35 +66,34 @@ add_library(MyLibraries
 
     "model/gltf.cpp"
 
-
-    "myvulkan/myvma.cpp"
-    "myvulkan/myvulkan.cpp"
     "myvulkan/uniformbuffermanager.cpp"
-    "myvulkan/vulkanresources.cpp"
-    "myvulkan/shader.cpp"
 
-    "render/convertrendertarget.cpp"
-    "render/font_render.cpp"
-    "render/lightrendersystem.cpp"
-    "render/linerendersystem.cpp"
-    "render/meshrendersystem.cpp"
-    "render/myimgui.cpp"
-    "render/tonemaprendersystem.cpp"
-
-    "render/lightingrendertargets.cpp"
-    "render/meshrendertargets.cpp"
-    "render/meshrendertargets.h"
-    "render/lightingrendertargets.h"
-
-
+    "scene/gameentity.cpp" 
     "scene/scene.cpp"
-
-    
- "core/uninittype.h" "scene/gameentity.cpp" "core/writejson.cpp" "core/writejson.h" "components/componentmacros.h" "components/transform_functions.h" "math/vector3_inline_functions.h" "math/quaternion_inline_functions.h" "math/matrix_inline_functions.h" "gui/transformview.cpp" "gui/componentviews.h" "gui/gameentityview.cpp" "gui/componentviews.cpp" "components/transform.cpp" "math/hitpoint.h" "core/file.h" "core/file.cpp" "core/assert.h" "core/log.h" "core/mytypes.h")
+)
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
     )
+
+
+
+
+target_link_libraries(MyLibraries PUBLIC
+)
+
+target_include_directories(MyImgui PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/"
+)
+
+
+target_link_libraries(MyImgui PUBLIC
+    Imgui
+)
+
+target_include_directories(MyVulkan PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/"
+)
 
 if (WIN32)
     set(WINMM_LIB winMM.Lib)
@@ -68,11 +101,9 @@ else()
     set(WINMM_LIB  "")
 endif()
 
-target_link_libraries(MyLibraries PUBLIC
+target_link_libraries(MyVulkan PUBLIC
     glfw
     Vulkan::Vulkan
     ${WINMM_LIB}
-    Imgui
     #meshoptimizer
 )
-

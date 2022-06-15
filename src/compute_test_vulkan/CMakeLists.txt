@@ -13,4 +13,6 @@ add_dependencies(compute_test_vulkan shaders)
 
 target_link_libraries(compute_test_vulkan PRIVATE
     MyLibraries
+    MyVulkan
+    MyImgui
     )
