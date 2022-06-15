@@ -16,22 +16,6 @@ include(${PROJECT_SOURCE_DIR}/cmake/my_cmake.cmake)
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
 
-#FILE(READ "${file}" contents)
-#FILE(READ "assets/shader/vulkan_new/basic3d_4.vert" contents)
-##foreach(line IN LISTS contents)
-#    STRING(REGEX REPLACE ".*#define[ \t]+(PERMUTATIONS[ \t]+[0-9]*).*" "\\1" permutations ${contents} )
-#    STRING(REGEX REPLACE "(PERMUTATIONS).*" "\\1" permutation ${permutations})
-#    #STRING(REGEX REPLACE ":" "\\\\;" line "${line}")
-#    message(STATUS "${permutations}")
-#    if(permutation STREQUAL "PERMUTATIONS")
-#        STRING(REGEX REPLACE "PERMUTATIONS[ \t]([0-9]*).*" "\\1" amount ${permutations} )
-#
-#        message(STATUS "Permutation amount ${amount}")
-##        break()
-#    endif()
-##endforeach()
-
-
 if (UNIX)
     #do something
 endif (UNIX)
