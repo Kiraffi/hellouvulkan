@@ -1,5 +1,6 @@
 #pragma once
 
+#include <container/stackstring.h>
 #include <render/meshrendersystem.h>
 #include <scene/gameentity.h>
 
@@ -39,8 +40,11 @@ public:
     bool readLevel(std::string_view levelName);
     bool writeLevel(std::string_view filename) const;
 
+    const SmallStackString &getSceneName() const { return sceneName; }
 private:
     SceneData sceneData;
+
+    SmallStackString sceneName = "Scene";
 };
 
 

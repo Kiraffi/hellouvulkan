@@ -41,28 +41,6 @@ struct GPUVertexData
     uint32_t color;
 };
 
-
-
-bool saveFontData(const std::string &filename, const PodVector<char> &data)
-{
-    //
-    if(std::filesystem::exists(filename))
-    {
-        std::filesystem::path p(filename);
-
-
-        std::ofstream f(p, std::ios::out | std::ios::binary);
-
-
-        f.write(data.data(), data.size());
-
-        printf("filesize: %u\n", uint32_t(data.size()));
-        return true;
-    }
-    return false;
-}
-
-
 class VulkanFontDraw : public VulkanApp
 {
 public:
@@ -297,7 +275,7 @@ void VulkanFontDraw::logicUpdate()
         }
 
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            saveFontData(fontFilename, characterData);
+            writeBytes(fontFilename, sliceFromPodVectorBytes(characterData));
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
             loadBytes(fontFilename, characterData);

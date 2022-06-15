@@ -16,7 +16,7 @@
 #endif
 */
 
-bool loadBytes(std::string_view fileName, PodVector<char> &dataOut)
+bool loadBytes(std::string_view filename, PodVector<char> &dataOut)
 {
     /*
 #ifdef _WIN32
@@ -25,9 +25,9 @@ bool loadBytes(std::string_view fileName, PodVector<char> &dataOut)
     //LOG("Buf: %s\n", buf);
 #endif
 */
-    if(fileExists(fileName))
+    if(fileExists(filename))
     {
-        std::filesystem::path p(fileName);
+        std::filesystem::path p(filename);
         uint32_t s = uint32_t(std::filesystem::file_size(p));
 
         dataOut.resize(s);
@@ -41,6 +41,28 @@ bool loadBytes(std::string_view fileName, PodVector<char> &dataOut)
         return true;
     }
     return false;
+}
+
+
+bool writeBytes(std::string_view filename, ArraySliceViewBytes bytes)
+{
+    //
+    //if(std::filesystem::exists(filename))
+    {
+        std::filesystem::path p(filename);
+
+
+        std::ofstream f(p, std::ios::out | std::ios::binary);
+
+        printf("Writing bytes: %u to :%s\n", uint32_t(bytes.size()), std::string(filename).c_str());
+        bool success = !(f.write((const char *)bytes.data(), bytes.size())).fail();
+        if(!success)
+        {
+            printf("failed to write file\n");
+        }
+        return success;
+    }
+    //return false;
 }
 
 

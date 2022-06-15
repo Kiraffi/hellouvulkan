@@ -194,9 +194,9 @@ bool Scene::readLevel(std::string_view levelName)
     {
         GameEntity ent;
         int index = 0;
-        if(!obj.getChild("position").parseVec3(ent.transform.pos))
+        if(!obj.getChild("pos").parseVec3(ent.transform.pos))
             return false;
-        if(!obj.getChild("rotation").parseQuat(ent.transform.rot))
+        if(!obj.getChild("rot").parseQuat(ent.transform.rot))
             return false;
         if(!obj.getChild("scale").parseVec3(ent.transform.scale))
             return false;
@@ -218,13 +218,14 @@ bool Scene::readLevel(std::string_view levelName)
 bool Scene::writeLevel(std::string_view filename) const
 {
     WriteJson writeJson(Scene::MagicNumber, Scene::VersionNumber);
-    writeJson.addString("levelName", "Testmap");
+    writeJson.addString("levelName", sceneName.getStr());
     writeJson.addArray("objects");
     for(const auto &entity : sceneData.entities)
         writeGameObject(entity, writeJson);
     writeJson.endArray();
     writeJson.finishWrite();
-    return writeJson.isValid();
+    return writeJson.isValid() && 
+        writeBytes(filename, ArraySliceViewBytes(writeJson.getString().data(), writeJson.getString().size()));
 }
 
 uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)

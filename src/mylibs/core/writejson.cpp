@@ -231,7 +231,7 @@ bool WriteJson::finishWrite()
         valid = false;
         return false;
     }
-    writtenJson += "}\n";
+    writtenJson += "}\n\0";
 
     printf("output:\n%s", writtenJson.c_str());
     return true;

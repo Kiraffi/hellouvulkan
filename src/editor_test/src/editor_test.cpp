@@ -12,6 +12,7 @@
 #include <core/writejson.h>
 
 #include <container/arraysliceview.h>
+#include <container/stackstring.h>
 
 #include <gui/componentviews.h>
 
@@ -73,6 +74,8 @@ public:
     virtual bool resized() override;
 
 public:
+    bool drawSaveDialog();
+
     Scene scene;
     MeshRenderSystem meshRenderSystem;
     LightRenderSystem lightRenderSystem;
@@ -94,6 +97,10 @@ public:
     bool rotateOn = false;
     bool mouseHover = false;
 
+    bool showSaveDialog = false;
+
+    SmallStackString levelName = "assets/levels/testmap2.json";
+
     Vec3 lineFrom;
     Vec3 lineTo;
 };
@@ -109,13 +116,48 @@ EditorTest::~EditorTest()
 {
 }
 
+bool EditorTest::drawSaveDialog()
+{
+    ImGui::OpenPopup("Save Dialog");
+
+    bool saved = false;
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if(ImGui::BeginPopupModal("Save Dialog", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("Save scene: \"%s\"", scene.getSceneName().getStr());
+       
+        char arr[30];
+        memcpy(arr, levelName.getStr(), levelName.length() + 1);
+        ImGui::InputText("Filename", arr, 30);
+        levelName = arr;
+
+        ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
+        if(ImGui::Button("Save", button_size))
+        {
+            showSaveDialog = false;
+            saved = true;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel", button_size))
+        {
+            showSaveDialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    return saved;
+}
+
 
 bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
     // TEMPORARY!
-    glfwSetWindowPos(window, 2000, 100);
+    //glfwSetWindowPos(window, 2000, 100);
 
 
 
@@ -143,7 +185,7 @@ bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, 
     if (!lineRenderSystem.init())
         return false;
 
-    if(!scene.readLevel("assets/levels/testmap.json"))
+    if(!scene.readLevel(levelName.getStr()))
         return false;
 
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
@@ -178,49 +220,73 @@ bool EditorTest::resized()
 void EditorTest::logicUpdate()
 {
     VulkanApp::logicUpdate();
-    static uint32_t counter = 0;
-    if(counter++ >= 100)
-    {
-        //printf("Matrix time: %f\n", float(getMatrixTime() / counter));
-        //printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
-        counter = 0;
-    }
     lineRenderSystem.clear();
+    meshRenderSystem.clear();
 
     MouseState mouseState = getMouseState();
 
-    checkCameraKeypresses(dt, camera);
+    if(isPressed(GLFW_KEY_S) && (isDown(GLFW_KEY_LEFT_CONTROL) || isDown(GLFW_KEY_RIGHT_CONTROL)))
+        showSaveDialog = true;
 
-    if (isPressed(GLFW_KEY_KP_ADD))
+    if(!showSaveDialog)
     {
-        for (auto &entity : scene.getEntities())
+        checkCameraKeypresses(dt, camera);
+
+        if(isPressed(GLFW_KEY_KP_ADD))
         {
-            ++entity.animationIndex;
+            for(auto &entity : scene.getEntities())
+            {
+                ++entity.animationIndex;
+            }
+        }
+        if(isPressed(GLFW_KEY_KP_SUBTRACT))
+        {
+            for(auto &entity : scene.getEntities())
+            {
+                if(entity.animationIndex > 0)
+                    --entity.animationIndex;
+            }
+        }
+
+
+        if(isPressed(GLFW_KEY_SPACE))
+            showNormalMap = !showNormalMap;
+
+        if(isPressed(GLFW_KEY_Z))
+            rotateOn = !rotateOn;
+
+        if(isDown(GLFW_KEY_UP))
+            sunCamera.pitch -= dt * 1.0f;
+        if(isDown(GLFW_KEY_DOWN))
+            sunCamera.pitch += dt * 1.0f;
+        if(isDown(GLFW_KEY_LEFT))
+            sunCamera.yaw += dt * 1.0f;
+        if(isDown(GLFW_KEY_RIGHT))
+            sunCamera.yaw -= dt * 1.0f;
+
+        if(mouseState.leftButtonDown && !mouseHover)
+            selectedEntityIndex = ~0u;
+
+        if(mouseState.leftButtonDown && !mouseHover &&
+            mouseState.x >= 0 && mouseState.y >= 0 &&
+            mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
+        {
+            Vec2 coord = Vec2(mouseState.x, mouseState.y);
+            Ray ray{ Uninit };
+            if(useSunCamera)
+                ray = sunCamera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
+            else
+                ray = camera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
+
+            HitPoint hitpoint{ Uninit };
+            selectedEntityIndex = scene.castRay(ray, hitpoint);
+            if(selectedEntityIndex != ~0u)
+            {
+                lineFrom = ray.pos;
+                lineTo = hitpoint.point;
+            }
         }
     }
-    if (isPressed(GLFW_KEY_KP_SUBTRACT))
-    {
-        for(auto &entity : scene.getEntities())
-        {
-            if(entity.animationIndex > 0)
-                --entity.animationIndex;
-        }
-    }
-
-    if (isPressed(GLFW_KEY_SPACE))
-        showNormalMap = !showNormalMap;
-
-    if (isPressed(GLFW_KEY_Z))
-        rotateOn = !rotateOn;
-
-    if (isDown(GLFW_KEY_UP))
-        sunCamera.pitch -= dt * 1.0f;
-    if (isDown(GLFW_KEY_DOWN))
-        sunCamera.pitch += dt * 1.0f;
-    if (isDown(GLFW_KEY_LEFT))
-        sunCamera.yaw += dt * 1.0f;
-    if (isDown(GLFW_KEY_RIGHT))
-        sunCamera.yaw -= dt * 1.0f;
 
     Vec3 sundir = getSunDirection(sunCamera);
     while (sunCamera.pitch >= 2.0f * PI) sunCamera.pitch -= 2.0f * PI;
@@ -228,7 +294,7 @@ void EditorTest::logicUpdate()
     while (sunCamera.yaw >= 2.0f * PI) sunCamera.yaw -= 2.0f * PI;
     while (sunCamera.yaw <= 0.0f) sunCamera.yaw += 2.0f * PI;
 
-    Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
+    Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 20.0f), fontSize);
     char tmpStr[1024];
     snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f, use sun camera: %s",
         showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount), useSunCamera ? "on" : "off");
@@ -239,31 +305,6 @@ void EditorTest::logicUpdate()
     snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f", sunCamera.position.x, sunCamera.position.y, sunCamera.position.z);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
-    meshRenderSystem.clear();
-
-    if(mouseState.leftButtonDown && !mouseHover)
-        selectedEntityIndex = ~0u;
-
-
-    if(mouseState.leftButtonDown && !mouseHover &&
-        mouseState.x >= 0 && mouseState.y >= 0 &&
-        mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
-    {
-        Vec2 coord = Vec2(mouseState.x, mouseState.y);
-        Ray ray{ Uninit };
-        if(useSunCamera)
-            ray = sunCamera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
-        else
-            ray = camera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
-
-        HitPoint hitpoint{ Uninit };
-        selectedEntityIndex = scene.castRay(ray, hitpoint);
-        if(selectedEntityIndex != ~0u)
-        {
-            lineFrom = ray.pos;
-            lineTo = hitpoint.point;
-        }
-    }
     lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
@@ -271,6 +312,32 @@ void EditorTest::renderUpdate()
 {
     VulkanApp::renderUpdate();
     imgui.renderBegin();
+    
+    if(ImGui::BeginMainMenuBar())
+    {
+        if(ImGui::BeginMenu("File"))
+        {
+            if(ImGui::MenuItem("Open", "Ctrl+O")) {}            
+            if(ImGui::MenuItem("Save", "Ctrl+S")) { showSaveDialog = true; }
+            if(ImGui::MenuItem("Save As..")) {}
+
+            ImGui::EndMenu();
+        }
+        if(ImGui::BeginMenu("Edit"))
+        {
+            if(ImGui::MenuItem("Undo", "CTRL+Z")) {}
+            if(ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+            ImGui::Separator();
+            if(ImGui::MenuItem("Cut", "CTRL+X")) {}
+            if(ImGui::MenuItem("Copy", "CTRL+C")) {}
+            if(ImGui::MenuItem("Paste", "CTRL+V")) {}
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+    if(showSaveDialog && drawSaveDialog())
+        scene.writeLevel(levelName.getStr());
 
     uint32_t grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
     uint32_t selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
@@ -414,7 +481,7 @@ void EditorTest::renderDraw()
 int main(int argCount, char **argv)
 {
     EditorTest app;
-    if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT,
+    if (app.init("Editor", SCREEN_WIDTH, SCREEN_HEIGHT,
         {
             .showInfoMessages = false,
             .useHDR = false,
