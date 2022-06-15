@@ -268,8 +268,6 @@ void EditorTest::logicUpdate()
             lineTo = hitpoint.point;
         }
     }
-    printVector3(lineFrom, "linefrom");
-    printVector3(lineTo, "lineTo");
     lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
@@ -323,7 +321,7 @@ void EditorTest::renderUpdate()
         lineRenderSystem.addLine(linePoints[4], linePoints[6], drawColor);
         lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
         lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
-        
+
         uint32_t redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
         uint32_t greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
         uint32_t blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;

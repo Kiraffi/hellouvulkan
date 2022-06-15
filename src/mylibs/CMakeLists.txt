@@ -6,52 +6,20 @@ project ("hellouvulkan libs" VERSION 0.0.1)
 include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 #print_variables()
 
-add_library(MyImgui
-    "gui/transformview.cpp" 
-    "gui/componentviews.h" 
-    "gui/gameentityview.cpp" 
-    "gui/componentviews.cpp" 
-
-    "render/myimgui.cpp"
-)
-
-add_library(MyVulkan
-    "core/vulkan_app.cpp"
-
-    "myvulkan/myvma.cpp"
-    "myvulkan/myvulkan.cpp"
-    "myvulkan/vulkanresources.cpp"
-    "myvulkan/shader.cpp"
-
-    
-    "render/convertrendertarget.cpp"
-    "render/font_render.cpp"
-    "render/lightrendersystem.cpp"
-    "render/linerendersystem.cpp"
-    "render/meshrendersystem.cpp"
-    "render/tonemaprendersystem.cpp"
-
-    "render/lightingrendertargets.cpp"
-    "render/meshrendertargets.cpp"
-    "render/meshrendertargets.h"
-    "render/lightingrendertargets.h"
-
-)
-
 
 add_library(MyLibraries
 
     "container/bytebuffer.cpp"
     "container/mymemory.cpp"
 
-    "components/transform.cpp" 
+    "components/transform.cpp"
 
     "core/camera.cpp"
-    "core/file.cpp" 
+    "core/file.cpp"
     "core/general.cpp"
     "core/timer.cpp"
     "core/json.cpp"
-    "core/writejson.cpp" 
+    "core/writejson.cpp"
 
 
     "math/matrix.cpp"
@@ -68,9 +36,43 @@ add_library(MyLibraries
 
     "myvulkan/uniformbuffermanager.cpp"
 
-    "scene/gameentity.cpp" 
+    "scene/gameentity.cpp"
     "scene/scene.cpp"
 )
+
+add_library(MyImgui
+    "gui/transformview.cpp"
+    "gui/componentviews.h"
+    "gui/gameentityview.cpp"
+    "gui/componentviews.cpp"
+
+    "render/myimgui.cpp"
+)
+
+add_library(MyVulkan
+    "core/vulkan_app.cpp"
+
+    "myvulkan/myvma.cpp"
+    "myvulkan/myvulkan.cpp"
+    "myvulkan/vulkanresources.cpp"
+    "myvulkan/shader.cpp"
+
+
+    "render/convertrendertarget.cpp"
+    "render/font_render.cpp"
+    "render/lightrendersystem.cpp"
+    "render/linerendersystem.cpp"
+    "render/meshrendersystem.cpp"
+    "render/tonemaprendersystem.cpp"
+
+    "render/lightingrendertargets.cpp"
+    "render/meshrendertargets.cpp"
+    "render/meshrendertargets.h"
+    "render/lightingrendertargets.h"
+
+)
+
+
 
 target_include_directories(MyLibraries PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/"
@@ -106,4 +108,5 @@ target_link_libraries(MyVulkan PUBLIC
     Vulkan::Vulkan
     ${WINMM_LIB}
     #meshoptimizer
+    PRIVATE MyLibraries
 )

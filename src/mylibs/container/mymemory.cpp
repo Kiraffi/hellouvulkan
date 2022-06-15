@@ -1,4 +1,13 @@
+#include "mymemory.h"
 #include <core/assert.h>
+
+#include <core/mytypes.h>
+#include <core/timer.h>
+
+// memmove, exit
+#include <string.h>
+// exit()
+#include <stdlib.h>
 
 #if _MSC_VER
     #include <intrin.h>
@@ -8,9 +17,6 @@
 #endif
 
 
-#include "mymemory.h"
-#include <core/mytypes.h>
-#include <core/timer.h>
 
 
 ///// THIS WILL NOT TO WORK WITH MULTIPLE THREADS!

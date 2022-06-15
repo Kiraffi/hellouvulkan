@@ -1,4 +1,3 @@
-
 #include "scene.h"
 
 #include <components/transform_functions.h>
@@ -13,8 +12,13 @@
 #include <math/ray.h>
 #include <math/vector3_inline_functions.h>
 
-static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
+#include <render/meshrendersystem.h>
 
+// FLT_MAX
+#include <float.h>
+
+
+static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
 static bool loadModelForScene(SceneData &sceneData, std::string_view filename, EntityType entityType)
 {
@@ -102,7 +106,7 @@ bool Scene::update(double deltaTime)
             continue;
         if (renderMeshIndex >= sceneData.models.size())
             continue;
-        
+
         const auto& model = sceneData.models[renderMeshIndex];
         if(model.vertices.size() == 0 && model.animationVertices.size() == 0)
             continue;
@@ -127,14 +131,14 @@ uint32_t Scene::addGameEntity(const GameEntity& entity)
         return result;
     const auto &model = sceneData.models[uint32_t(entity.entityType)];
     result = sceneData.entities.size();
-    
+
     sceneData.entities.push_back(entity);
     sceneData.entities.back().bounds = model.bounds;
     sceneData.entities.back().index = result;
     return result;
 }
 
-GameEntity& Scene::getEntity(uint32_t index)
+GameEntity &Scene::getEntity(uint32_t index) const
 {
     ASSERT(index < sceneData.entities.size());
     if (index >= sceneData.entities.size())
@@ -229,7 +233,7 @@ uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
 
     float closestDist = FLT_MAX;
     uint32_t index = 0;
-    
+
     for(const auto &entity : sceneData.entities)
     {
         /*

@@ -1,6 +1,7 @@
 #include "timer.h"
-#include <core/mytypes.h>
 
+#include <core/general.h>
+#include <core/mytypes.h>
 
 Timer::TimePoint Timer::getTime(ClockType clockType)
 {

@@ -6,6 +6,8 @@
 struct Ray;
 struct HitPoint;
 
+class MeshRenderSystem;
+
 struct SceneData
 {
     MeshRenderSystem& meshRenderSystem;
@@ -29,7 +31,7 @@ public:
     uint32_t castRay(const Ray &ray, HitPoint &hitpoint);
 
     uint32_t addGameEntity(const GameEntity& entity);
-    GameEntity& getEntity(uint32_t index);
+    GameEntity &getEntity(uint32_t index) const;
 
     const PodVector<GameEntity> &getEntities() const { return sceneData.entities; }
     PodVector<GameEntity> &getEntities() { return sceneData.entities; }

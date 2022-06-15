@@ -7,7 +7,7 @@
 bool drawEntity(GameEntity &entity)
 {
     ImGui::Begin("Entity");
-    ImGui::Text("Type: %u, index: %u", entity.entityType, entity.index);
+    ImGui::Text("Type: %u, index: %u", uint32_t(entity.entityType), entity.index);
     drawTransform(entity.transform);
     bool mouseHover = ImGui::IsWindowHovered(
         ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);// | ImGui::IsAnyItemHovered();

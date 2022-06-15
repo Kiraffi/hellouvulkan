@@ -27,13 +27,13 @@ float ffclampf(float a, float b, float value);
 static constexpr float PI = 3.14159265358979323846264338f;
 
 
-#if _MSC_VER 
+#if _MSC_VER
 #define RESTRICT __restrict
 #define FORCE_INLINE __forceinline
 #else
 #define RESTRICT __restrict
 //#define RESTRICT __restrict__
-#define FORCE_INLINE __attribute__((always_inline))
+#define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 
 
