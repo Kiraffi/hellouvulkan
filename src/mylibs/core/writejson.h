@@ -16,7 +16,7 @@ class WriteJson
 {
 public:
     WriteJson(uint32_t magicNumber, uint32_t versionNumber);
-    bool finishWrite(std::string_view filename);
+    bool finishWrite();
 
     bool addString(std::string_view name, std::string_view value, bool quoteValue = true);
     bool addInteger(std::string_view name, int64_t number);
@@ -32,9 +32,13 @@ public:
     bool writeVec3(std::string_view name, const Vector3 &v);
     bool writeQuat(std::string_view name, const Quaternion &q);
 
+    const std::string &getString() { return writtenJson; }
+
 private:
+    bool addNamedString(std::string_view str, bool addQuotes);
+    bool addIndentSpaces();
     std::string writtenJson;
     std::string blockTypes;
     uint32_t indentAmount = 0;
-
+    bool isValid = true;
 };
