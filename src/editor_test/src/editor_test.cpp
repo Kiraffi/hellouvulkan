@@ -238,6 +238,7 @@ bool EditorTest::drawMenubar()
 
             ImGui::EndMenu();
         }
+        /*
         if(ImGui::BeginMenu("Edit"))
         {
             if(ImGui::MenuItem("Undo", "CTRL+Z")) {}
@@ -249,6 +250,7 @@ bool EditorTest::drawMenubar()
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
+        */
     }
     return true;
 }
@@ -347,6 +349,7 @@ bool EditorTest::resized()
 
     windowWidth = uint32_t(editorWindowSize.x);
     windowHeight = uint32_t(editorWindowSize.y);
+
     if (!meshRenderTargets.resizeMeshTargets(windowWidth, windowHeight))
         return false;
     if (!lightingRenderTargets.resizeLightingTargets(windowWidth, windowHeight))
@@ -470,6 +473,9 @@ void EditorTest::logicUpdate()
 
 void EditorTest::renderUpdate()
 {
+    windowWidth = uint32_t(editorWindowSize.x);
+    windowHeight = uint32_t(editorWindowSize.y);
+
     mouseHover = false;
     VulkanApp::renderUpdate();
     imgui.renderBegin();
