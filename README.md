@@ -7,9 +7,10 @@ This is just my own toy project to test vulkan rendering and other random stuffs
   * If the mesh had animation or keyframes, it didn't seem to find the node index for animations. I simply deleted the animating the mesh position/rotation/scale in blender.
 * Clone with git clone url --recursive
 * Update with git submodule update --init --recursive
+*  --remote adds some branch tracking?
 
 ## Libraries used
-* Dear imgui for gui: https://github.com/ocornut/imgui
+* Dear imgui docking branch for gui: https://github.com/ocornut/imgui
 * Stb for image read/write: https://github.com/nothings/stb
 * GLFW for windowing and platform support: https://github.com/glfw/glfw
 * Meshoptimizer for optimising meshes: https://github.com/zeux/meshoptimizer
