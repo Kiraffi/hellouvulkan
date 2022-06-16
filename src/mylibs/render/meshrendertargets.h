@@ -6,6 +6,7 @@ struct MeshRenderTargets
 {
     ~MeshRenderTargets();
     bool resizeMeshTargets();
+    bool resizeMeshTargets(uint32_t width, uint32_t height);
     bool resizeShadowTarget(int width, int height);
 
     void prepareTargetsForMeshRendering();

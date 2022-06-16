@@ -78,7 +78,7 @@ bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer &targetBuffer)
 bool addToCopylist(const void *objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset);
 bool addImageComputeBarrier(VkImageMemoryBarrier barrier);
 bool addImageGraphicsBarrier(VkImageMemoryBarrier barrier);
-bool flushBarriers(VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+bool flushBarriers(VkPipelineStageFlagBits dstStageMask);// = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
 
 bool prepareToGraphicsSampleWrite(Image& image);

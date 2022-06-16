@@ -67,6 +67,8 @@ public:
 
     int windowWidth = 0;
     int windowHeight = 0;
+    int viewportWidth = 0;
+    int viewportHeight = 0;
     VSyncType vSync = VSyncType::FIFO_VSYNC;
     bool inited = false;
     bool needToResize = false;

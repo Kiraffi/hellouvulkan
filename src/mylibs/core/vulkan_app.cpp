@@ -162,6 +162,8 @@ VulkanApp::~VulkanApp()
 
 void VulkanApp::resizeWindow(int w, int h)
 {
+    viewportWidth = w;
+    viewportHeight = h;
     windowWidth = w;
     windowHeight = h;
     //printf("Window size: %i: %i\n", w, h);
@@ -239,8 +241,8 @@ void VulkanApp::renderUpdate()
 
     // bit ugly.......
     sunCamera.calculateOrtographicPosition(camera.position);
-
-    camera.updateCameraState(windowWidth, windowHeight);
+    if(windowWidth > 0 && windowHeight > 0)
+        camera.updateCameraState(windowWidth, windowHeight);
     sunCamera.updateCameraState(50.0f, 50.0f);
 
     if (useSunCamera)

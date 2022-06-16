@@ -14,7 +14,11 @@ bool MeshRenderTargets::resizeMeshTargets()
 {
     uint32_t width = vulk->swapchain.width;
     uint32_t height = vulk->swapchain.height;
+    return resizeMeshTargets(width, height);
+}
 
+bool MeshRenderTargets::resizeMeshTargets(uint32_t width, uint32_t height)
+{
     // create color and depth images
     if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,

@@ -1152,19 +1152,25 @@ bool resizeSwapchain()
     int width = 0;
     int height = 0;
     glfwGetFramebufferSize(vulk->vulkanApp->window, &width, &height);
+    bool wasInMinimized = false;
     while (width == 0 || height == 0)
     {
         glfwWaitEvents();
         glfwGetFramebufferSize(vulk->vulkanApp->window, &width, &height);
+        wasInMinimized = true;
     }
 
     uint32_t newWidth = uint32_t(width);
     uint32_t newHeight = uint32_t(height);
 
-    if (vulk->swapchain.width == newWidth && vulk->swapchain.height == newHeight)
-        return false;
-
     VK_CHECK(vkDeviceWaitIdle(vulk->device));
+
+    // There definitely is better way to handle editor window resize....
+    if(!wasInMinimized && vulk->swapchain.width == newWidth && vulk->swapchain.height == newHeight)
+    {
+        vulk->vulkanApp->resized();
+        return true;
+    }
 
     SwapChain oldSwapchain = vulk->swapchain;
     createSwapchain(vulk->initParams.vsync);

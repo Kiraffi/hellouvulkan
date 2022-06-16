@@ -383,7 +383,7 @@ void VulkanDrawStuff::renderUpdate()
 
     if(selectedEntityIndex != ~0u)
     {
-        mouseHover = drawEntity(scene.getEntity(selectedEntityIndex));
+        mouseHover = drawEntity("Selected entity", scene.getEntity(selectedEntityIndex));
     }
     else
     {

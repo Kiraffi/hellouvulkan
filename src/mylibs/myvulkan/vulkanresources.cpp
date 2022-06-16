@@ -211,6 +211,8 @@ bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, V
     const char* imageName, Image& outImage)
 {
     outImage.imageName = imageName;
+    if(width == outImage.width && height == outImage.height && format == outImage.format)
+        return true;
     VkImageAspectFlags aspect = getAspectMaskFromFormat(format);
 
     if (aspect == VK_IMAGE_ASPECT_COLOR_BIT)
