@@ -162,11 +162,12 @@ void EditorTest::drawDockspace()
         drawMenubar();
     }
     ImGui::End();
-    
-    ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar);
+
+    ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
+
+    ImGui::Begin("Viewport", nullptr);//, ImGuiWindowFlags_NoTitleBar);
     {
         Vec2 winSize = Vec2(ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
-
         winSize = maxVec(Vec2(4.0f, 4.0f), winSize);
         if(editorWindowSize.x != winSize.x || editorWindowSize.y != winSize.y)
         {
@@ -368,7 +369,7 @@ bool EditorTest::resized()
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
     readAlbedo = ImGui_ImplVulkan_AddTexture(vulk->globalTextureSampler, meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    
+
     imgui.updateRenderTarget(finalImage);
     return true;
 }
