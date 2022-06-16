@@ -133,6 +133,8 @@ EditorTest::~EditorTest()
 
 void EditorTest::drawDockspace()
 {
+    //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+    
     ImGuiWindowFlags window_flags = 0;
     window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
     window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
@@ -149,7 +151,7 @@ void EditorTest::drawDockspace()
 
     if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
         window_flags |= ImGuiWindowFlags_NoBackground;
-
+    
     ImGui::Begin("Editor window", nullptr, window_flags);
     {
         ImGui::PopStyleVar(3);
@@ -162,7 +164,7 @@ void EditorTest::drawDockspace()
         drawMenubar();
     }
     ImGui::End();
-
+    
     ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Viewport", nullptr);//, ImGuiWindowFlags_NoTitleBar);
@@ -227,7 +229,6 @@ bool EditorTest::drawSaveDialog()
 
 bool EditorTest::drawMenubar()
 {
-
     if(ImGui::BeginMainMenuBar())
     {
         if(ImGui::BeginMenu("File"))
@@ -249,8 +250,8 @@ bool EditorTest::drawMenubar()
             if(ImGui::MenuItem("Paste", "CTRL+V")) {}
             ImGui::EndMenu();
         }
-        ImGui::EndMainMenuBar();
         */
+        ImGui::EndMainMenuBar();
     }
     return true;
 }
