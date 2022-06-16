@@ -558,9 +558,12 @@ void EditorTest::renderUpdate()
 
     lineRenderSystem.prepareToRender();
 
-    if(selectedEntityIndex != ~0u)
     {
-        mouseHover = drawEntity("Selected entity", scene.getEntity(selectedEntityIndex));
+        ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Properties");
+        if(selectedEntityIndex != ~0u)
+            mouseHover = drawEntityContents(scene.getEntity(selectedEntityIndex));
+        ImGui::End();
     }
 }
 
