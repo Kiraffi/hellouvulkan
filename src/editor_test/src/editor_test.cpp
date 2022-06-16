@@ -134,7 +134,7 @@ EditorTest::~EditorTest()
 void EditorTest::drawDockspace()
 {
     //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-    
+
     ImGuiWindowFlags window_flags = 0;
     window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
     window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
@@ -151,7 +151,7 @@ void EditorTest::drawDockspace()
 
     if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
         window_flags |= ImGuiWindowFlags_NoBackground;
-    
+
     ImGui::Begin("Editor window", nullptr, window_flags);
     {
         ImGui::PopStyleVar(3);
@@ -164,7 +164,7 @@ void EditorTest::drawDockspace()
         drawMenubar();
     }
     ImGui::End();
-    
+
     ImGui::SetNextWindowSize(ImVec2(640, 480), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Viewport", nullptr);//, ImGuiWindowFlags_NoTitleBar);
@@ -359,7 +359,7 @@ bool EditorTest::resized()
 
     // create color and depth images
     if(!createRenderTargetImage(wholeWidth, wholeHeight, vulk->defaultColorFormat,
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
         "Final target image", finalImage))
     {
         printf("Failed to create %s\n", finalImage.imageName);
