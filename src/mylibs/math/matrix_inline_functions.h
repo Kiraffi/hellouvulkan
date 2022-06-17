@@ -2,10 +2,12 @@
 
 #include "matrix.h"
 
+#include <components/transform.h>
 #include <core/assert.h>
 #include <core/general.h>
 
 #include <math/quaternion.h>
+#include <math/vector3_inline_functions.h>
 
 #include <xmmintrin.h>
 #include <immintrin.h>
@@ -13,17 +15,29 @@
 static FORCE_INLINE Mat3x4 getMatrixFromQuaternion(const Quaternion &quat)
 {
     Mat3x4 result{ Uninit };
-    result._00 = 1.0f - 2.0f * quat.v.y * quat.v.y - 2.0f * quat.v.z * quat.v.z;
-    result._01 = 2.0f * quat.v.x * quat.v.y - 2.0f * quat.w * quat.v.z;
-    result._02 = 2.0f * quat.v.x * quat.v.z + 2.0f * quat.w * quat.v.y;
+    float xy2 = 2.0f * quat.v.x * quat.v.y;
+    float xz2 = 2.0f * quat.v.x * quat.v.z;
+    float yz2 = 2.0f * quat.v.y * quat.v.z;
 
-    result._10 = 2.0f * quat.v.x * quat.v.y + 2.0f * quat.w * quat.v.z;
-    result._11 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.z * quat.v.z;
-    result._12 = 2.0f * quat.v.y * quat.v.z - 2.0f * quat.w * quat.v.x;
+    float wx2 = 2.0f * quat.w * quat.v.x;
+    float wy2 = 2.0f * quat.w * quat.v.y;
+    float wz2 = 2.0f * quat.w * quat.v.z;
 
-    result._20 = 2.0f * quat.v.x * quat.v.z - 2.0f * quat.w * quat.v.y;
-    result._21 = 2.0f * quat.v.y * quat.v.z + 2.0f * quat.w * quat.v.x;
-    result._22 = 1.0f - 2.0f * quat.v.x * quat.v.x - 2.0f * quat.v.y * quat.v.y;
+    float xx2 = 2.0f * quat.v.x * quat.v.x;
+    float yy2 = 2.0f * quat.v.y * quat.v.y;
+    float zz2 = 2.0f * quat.v.z * quat.v.z;
+
+    result._00 = 1.0f - yy2 - zz2;
+    result._01 = xy2 - wz2;
+    result._02 = xz2 + wy2;
+
+    result._10 = xy2 + wz2;
+    result._11 = 1.0f - xx2 - zz2;
+    result._12 = yz2 - wx2;
+
+    result._20 = xz2 - wy2;
+    result._21 = yz2 + wx2;
+    result._22 = 1.0f - xx2 - yy2;
 
     result._03 = 0.0f;
     result._13 = 0.0f;
@@ -53,6 +67,78 @@ static FORCE_INLINE Mat3x4 getMatrixFromTranslation(const Vector3 &pos)
     return result;
 
 }
+
+
+static FORCE_INLINE Mat3x4 getMatrixFromTranslation(const Transform &trans)
+{
+    Mat3x4 result{ Uninit };
+    float xy2 = 2.0f * trans.rot.v.x * trans.rot.v.y;
+    float xz2 = 2.0f * trans.rot.v.x * trans.rot.v.z;
+    float yz2 = 2.0f * trans.rot.v.y * trans.rot.v.z;
+
+    float wx2 = 2.0f * trans.rot.w * trans.rot.v.x;
+    float wy2 = 2.0f * trans.rot.w * trans.rot.v.y;
+    float wz2 = 2.0f * trans.rot.w * trans.rot.v.z;
+
+    float xx2 = 2.0f * trans.rot.v.x * trans.rot.v.x;
+    float yy2 = 2.0f * trans.rot.v.y * trans.rot.v.y;
+    float zz2 = 2.0f * trans.rot.v.z * trans.rot.v.z;
+
+    result._00 = (1.0f - yy2 - zz2) * trans.scale.x;
+    result._01 = (xy2 - wz2) * trans.scale.x;
+    result._02 = (xz2 + wy2) * trans.scale.x;
+
+    result._10 = (xy2 + wz2) * trans.scale.y;
+    result._11 = (1.0f - xx2 - zz2) * trans.scale.y;
+    result._12 = (yz2 - wx2) * trans.scale.y;
+
+    result._20 = (xz2 - wy2) * trans.scale.z;
+    result._21 = (yz2 + wx2) * trans.scale.z;
+    result._22 = (1.0f - xx2 - yy2) * trans.scale.z;
+
+    result._03 = trans.pos.x;
+    result._13 = trans.pos.y;
+    result._23 = trans.pos.z;
+
+    return result;
+}
+
+static FORCE_INLINE Mat3x4 getInverseMatrixFromTranslation(const Transform &trans)
+{
+    Mat3x4 result{ Uninit };
+    float xy2 = 2.0f * trans.rot.v.x * trans.rot.v.y;
+    float xz2 = 2.0f * trans.rot.v.x * trans.rot.v.z;
+    float yz2 = 2.0f * trans.rot.v.y * trans.rot.v.z;
+
+    float wx2 = -2.0f * trans.rot.w * trans.rot.v.x;
+    float wy2 = -2.0f * trans.rot.w * trans.rot.v.y;
+    float wz2 = -2.0f * trans.rot.w * trans.rot.v.z;
+
+    float xx2 = 2.0f * trans.rot.v.x * trans.rot.v.x;
+    float yy2 = 2.0f * trans.rot.v.y * trans.rot.v.y;
+    float zz2 = 2.0f * trans.rot.v.z * trans.rot.v.z;
+
+    Vec3 onePerScale = 1.0f / trans.scale;
+    // TODO: Is scale xyz, xyz, xyz or xxx, yyy, zzz
+    result._00 = (1.0f - yy2 - zz2) * onePerScale.x;
+    result._01 = (xy2 - wz2) * onePerScale.y;
+    result._02 = (xz2 + wy2) * onePerScale.z;
+
+    result._10 = (xy2 + wz2) * onePerScale.x;
+    result._11 = (1.0f - xx2 - zz2) * onePerScale.y;
+    result._12 = (yz2 - wx2) * onePerScale.z;
+
+    result._20 = (xz2 - wy2) * onePerScale.x;
+    result._21 = (yz2 + wx2) * onePerScale.y;
+    result._22 = (1.0f - xx2 - yy2) * onePerScale.z;
+
+    result._03 = -((trans.pos.x * result._00) + (trans.pos.y * result._01) + (trans.pos.z * result._02));
+    result._13 = -((trans.pos.x * result._10) + (trans.pos.y * result._11) + (trans.pos.z * result._12));
+    result._23 = -((trans.pos.x * result._20) + (trans.pos.y * result._21) + (trans.pos.z * result._22));
+
+    return result;
+}
+
 
 static FORCE_INLINE Matrix transpose(const Matrix &m)
 {

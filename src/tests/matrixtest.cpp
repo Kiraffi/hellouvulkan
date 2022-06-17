@@ -57,6 +57,7 @@ static void testMatrixMultiply()
     ASSERT(mulM._31 == 16634);
     ASSERT(mulM._32 == 17888);
     ASSERT(mulM._33 == 18710);
+
 }
 
 static void testMatrixMultiply3x4()
