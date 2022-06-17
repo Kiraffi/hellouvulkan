@@ -322,20 +322,36 @@ bool createDescriptor(Pipeline &pipeline)
     if (pipeline.descriptorSetLayouts.size() == 0)
         return true;
 
+    //... So the poolsizes needs to count maximum amount of resource per resource type...
     PodVector<VkDescriptorPoolSize> poolSizes;
-    poolSizes.resize(pipeline.descriptorSetLayouts.size());
-
-    for (uint32_t i = 0; i < pipeline.descriptorSetLayouts.size(); ++i)
+    for(uint32_t j = 0; j < pipeline.descriptor.descriptorSets.size(); ++j)
     {
-        poolSizes[i].type = pipeline.descriptorSetLayouts[i].descriptorType;
-        poolSizes[i].descriptorCount = 1;
+        for(uint32_t i = 0; i < pipeline.descriptorSetLayouts.size(); ++i)
+        {
+            VkDescriptorPoolSize *found = nullptr;
+            for(auto &desc : poolSizes)
+            {
+                if(desc.type == pipeline.descriptorSetLayouts[i].descriptorType)
+                {
+                    found = &desc;
+                    break;
+                }
+            }
+            if(!found)
+            {
+                poolSizes.push_back(
+                    VkDescriptorPoolSize{ .type = pipeline.descriptorSetLayouts[i].descriptorType, .descriptorCount = 0 });
+                found = &poolSizes.back();
+            }
+            ++found->descriptorCount;
+        }
     }
-
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = uint32_t(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1; // NOTE ????
+    poolInfo.maxSets = pipeline.descriptor.descriptorSets.size();
+    ASSERT(poolInfo.maxSets);
 
     VK_CHECK(vkCreateDescriptorPool(vulk->device, &poolInfo, nullptr, &pipeline.descriptor.pool));
     if (!pipeline.descriptor.pool)
@@ -346,91 +362,111 @@ bool createDescriptor(Pipeline &pipeline)
     allocInfo.descriptorSetCount = 1u;
     allocInfo.pSetLayouts = &pipeline.descriptorSetLayout;
 
-    VkDescriptorSet descriptorSet = 0;
-    VK_CHECK(vkAllocateDescriptorSets(vulk->device, &allocInfo, &descriptorSet));
-    ASSERT(descriptorSet);
+    for(uint32_t i = 0; i < pipeline.descriptor.descriptorSets.size(); ++i)
+    {
+        VkDescriptorSet descriptorSet = 0;
+        VK_CHECK(vkAllocateDescriptorSets(vulk->device, &allocInfo, &descriptorSet));
+        ASSERT(descriptorSet);
 
-    pipeline.descriptor.descriptorSet = descriptorSet;
-
+        pipeline.descriptor.descriptorSets[i] = descriptorSet;
+    }
 
     return true;
 }
 
 bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
-    const PodVector<DescriptorInfo>& descriptorInfos, VkDescriptorSet descriptorSet)
+    const Vector<PodVector<DescriptorInfo>>& descriptorSetInfos, const PodVector<VkDescriptorSet> &descriptorSets)
 {
-    uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
-    if (writeDescriptorCount < 1u)
-        return false;
-
-    ASSERT(descriptors.size() == descriptorInfos.size());
-
-    PodVector<VkWriteDescriptorSet> writeDescriptorSets;
-    writeDescriptorSets.resize(writeDescriptorCount);
-
-    PodVector<VkDescriptorBufferInfo> bufferInfos;
-    bufferInfos.resize(writeDescriptorCount);
-
-    PodVector<VkDescriptorImageInfo> imageInfos;
-    imageInfos.resize(writeDescriptorCount);
-
-    uint32_t writeIndex = 0u;
-    uint32_t bufferCount = 0u;
-    uint32_t imageCount = 0u;
-    for (uint32_t i = 0; i < descriptorInfos.size(); ++i)
+    if(descriptorSetInfos.size() == 0 || descriptorSets.size() != descriptorSetInfos.size())
     {
-        if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::BUFFER)
-        {
-            const VkDescriptorBufferInfo& bufferInfo = descriptorInfos[i].bufferInfo;
-            ASSERT(bufferInfo.buffer);
-            ASSERT(bufferInfo.range > 0u);
-            bufferInfos[bufferCount] = bufferInfo;
-
-            VkWriteDescriptorSet descriptor { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            descriptor.dstSet = descriptorSet;
-            descriptor.dstArrayElement = 0;
-            descriptor.descriptorType = descriptors[i].descriptorType;
-            descriptor.dstBinding = descriptors[i].bindingIndex;
-            descriptor.pBufferInfo = &bufferInfos[bufferCount];
-            descriptor.descriptorCount = 1;
-
-            writeDescriptorSets[writeIndex] = descriptor;
-
-            ++bufferCount;
-            ++writeIndex;
-        }
-        else if (descriptorInfos[i].type == DescriptorInfo::DescriptorType::IMAGE)
-        {
-            const VkDescriptorImageInfo& imageInfo = descriptorInfos[i].imageInfo;
-            ASSERT(imageInfo.sampler || descriptors[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-            ASSERT(imageInfo.imageView);
-            ASSERT(imageInfo.imageLayout);
-
-            imageInfos[imageCount] = imageInfo;
-
-            VkWriteDescriptorSet descriptor{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            descriptor.dstSet = descriptorSet;
-            descriptor.dstArrayElement = 0;
-            descriptor.descriptorType = descriptors[i].descriptorType;
-            descriptor.dstBinding = descriptors[i].bindingIndex;
-            descriptor.pImageInfo = &imageInfos[imageCount];
-            descriptor.descriptorCount = 1;
-
-            writeDescriptorSets[writeIndex] = descriptor;
-
-            ++writeIndex;
-            ++imageCount;
-        }
-        else
-        {
-            ASSERT(true);
-            return false;
-        }
+        ASSERT(false && "Descriptorbinds failed");
+        return false;
     }
 
-    if (writeDescriptorSets.size() > 0)
+
+    for(uint32_t setIndex = 0; setIndex < descriptorSets.size(); ++setIndex)
     {
-        vkUpdateDescriptorSets(vulk->device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+        const auto &descriptorInfos = descriptorSetInfos[setIndex];
+        const auto &descriptorSet = descriptorSets[setIndex];
+        uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
+        if(writeDescriptorCount < 1u)
+        {
+            ASSERT(false && "Descriptorbinds failed");
+            return false;
+        }
+
+        ASSERT(descriptors.size() == descriptorInfos.size());
+        if(descriptors.size() != descriptorInfos.size())
+        {
+            return false;
+        }
+        PodVector<VkWriteDescriptorSet> writeDescriptorSets;
+        writeDescriptorSets.resize(writeDescriptorCount);
+
+        PodVector<VkDescriptorBufferInfo> bufferInfos;
+        bufferInfos.resize(writeDescriptorCount);
+
+        PodVector<VkDescriptorImageInfo> imageInfos;
+        imageInfos.resize(writeDescriptorCount);
+
+        uint32_t writeIndex = 0u;
+        uint32_t bufferCount = 0u;
+        uint32_t imageCount = 0u;
+        for(uint32_t i = 0; i < descriptorInfos.size(); ++i)
+        {
+            if(descriptorInfos[i].type == DescriptorInfo::DescriptorType::BUFFER)
+            {
+                const VkDescriptorBufferInfo &bufferInfo = descriptorInfos[i].bufferInfo;
+                ASSERT(bufferInfo.buffer);
+                ASSERT(bufferInfo.range > 0u);
+                bufferInfos[bufferCount] = bufferInfo;
+
+                VkWriteDescriptorSet descriptor{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+                descriptor.dstSet = descriptorSet;
+                descriptor.dstArrayElement = 0;
+                descriptor.descriptorType = descriptors[i].descriptorType;
+                descriptor.dstBinding = descriptors[i].bindingIndex;
+                descriptor.pBufferInfo = &bufferInfos[bufferCount];
+                descriptor.descriptorCount = 1;
+
+                writeDescriptorSets[writeIndex] = descriptor;
+
+                ++bufferCount;
+                ++writeIndex;
+            }
+            else if(descriptorInfos[i].type == DescriptorInfo::DescriptorType::IMAGE)
+            {
+                const VkDescriptorImageInfo &imageInfo = descriptorInfos[i].imageInfo;
+                ASSERT(imageInfo.sampler || descriptors[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+                ASSERT(imageInfo.imageView);
+                ASSERT(imageInfo.imageLayout);
+
+                imageInfos[imageCount] = imageInfo;
+
+                VkWriteDescriptorSet descriptor{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+                descriptor.dstSet = descriptorSet;
+                descriptor.dstArrayElement = 0;
+                descriptor.descriptorType = descriptors[i].descriptorType;
+                descriptor.dstBinding = descriptors[i].bindingIndex;
+                descriptor.pImageInfo = &imageInfos[imageCount];
+                descriptor.descriptorCount = 1;
+
+                writeDescriptorSets[writeIndex] = descriptor;
+
+                ++writeIndex;
+                ++imageCount;
+            }
+            else
+            {
+                ASSERT(true);
+                return false;
+            }
+        }
+
+        if(writeDescriptorSets.size() > 0)
+        {
+            vkUpdateDescriptorSets(vulk->device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+        }
     }
     return true;
 }

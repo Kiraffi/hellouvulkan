@@ -33,7 +33,7 @@ private:
         uint32_t colorEnd;
     };
 
-    Buffer vertexBuffer;
+    Buffer vertexBuffer[VulkanGlobal::FramesInFlight];
     Pipeline lineRenderPipeline;
 
     PodVector<Line> lines;

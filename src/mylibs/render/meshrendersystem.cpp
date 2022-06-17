@@ -29,10 +29,12 @@ MeshRenderSystem::~MeshRenderSystem()
     destroyBuffer(animationVertexBuffer);
     destroyBuffer(indexDataBuffer);
 
-    destroyBuffer(modelRenderMatricesBuffer);
-    destroyBuffer(modelRenderNormaMatricesBuffer);
-    destroyBuffer(modelBoneRenderMatricesBuffer);
-    destroyBuffer(modelRenderBoneStartIndexBuffer);
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    {
+        destroyBuffer(modelRenderMatricesBuffer[i]);
+        destroyBuffer(modelBoneRenderMatricesBuffer[i]);
+        destroyBuffer(modelRenderBoneStartIndexBuffer[i]);
+    }
 }
 
 
@@ -77,79 +79,83 @@ bool MeshRenderSystem::init()
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
 
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    {
+        modelRenderMatricesBuffer[i] = createBuffer(4u * 1024u * 1024u,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render matrices buffer");
 
-    modelRenderMatricesBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render matrices buffer");
-
-    modelRenderNormaMatricesBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render normal matrices buffer");
+        modelRenderBoneStartIndexBuffer[i] = createBuffer(2u * 1024u * 1024u,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render model bone start indices");
 
 
-    modelBoneRenderMatricesBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render bone matrices buffer");
+        modelBoneRenderMatricesBuffer[i] = createBuffer(16u * 1024u * 1024u,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render bone matrices buffer");
 
-    modelRenderBoneStartIndexBuffer = createBuffer(8u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render model bone start indices");
 
+    }
     
-
     modelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
     animatedModelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
     modelRenderBoneStartIndices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
     boneAnimatedModelRenderMatrices.reserve(65536);
     models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
 
+
+
     // pipelines.
     for(uint32_t i = 0; i < ARRAYSIZES(meshRenderGraphicsPipeline); ++i)
     {
-        Pipeline& pipeline = meshRenderGraphicsPipeline[i];
+        Pipeline &pipeline = meshRenderGraphicsPipeline[i];
         PodVector<RenderTarget> renderTargets;
         //bool animationRender = (i & 2) == 0;
         bool depthOnlyRender = (i & 1) != 0;
 
-        if (!depthOnlyRender)
+        if(!depthOnlyRender)
         {
             renderTargets = {
-                RenderTarget{.format = vulk->defaultColorFormat },
-                RenderTarget{.format = VK_FORMAT_R16G16B16A16_SNORM },
+                RenderTarget{ .format = vulk->defaultColorFormat },
+                RenderTarget{ .format = VK_FORMAT_R16G16B16A16_SNORM },
             };
         }
         std::string name = "Mesh system render - ";
         name += std::to_string(i);
 
-        if (!createGraphicsPipeline(
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
+        if(!createGraphicsPipeline(
             getShader(ShaderType::Basic3DVert, i), depthOnlyRender ? Shader{} : getShader(ShaderType::Basic3DFrag),
             renderTargets,
-            { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
+            { .depthTarget = RenderTarget{ .format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
             pipeline, name))
         {
             printf("Failed to create graphics pipeline\n");
         }
 
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
 
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk->renderFrameBufferHandle),
-
-                DescriptorInfo(modelRenderMatricesBuffer),
-                DescriptorInfo(modelBoneRenderMatricesBuffer),
-                DescriptorInfo(modelRenderNormaMatricesBuffer),
+                DescriptorInfo(modelRenderMatricesBuffer[i]),
+                DescriptorInfo(modelBoneRenderMatricesBuffer[i]),
 
                 DescriptorInfo(vertexBuffer),
                 DescriptorInfo(animationVertexBuffer),
-                DescriptorInfo(modelRenderBoneStartIndexBuffer),
+                DescriptorInfo(modelRenderBoneStartIndexBuffer[i]),
 
-            });
-        if (!depthOnlyRender)
-            pipeline.descriptorSetBinds.push_back(
-                DescriptorInfo(paletteImage.imageView, paletteImage.layout, vulk->globalTextureSampler));
+            };
+            if(!depthOnlyRender)
+                pipeline.descriptorSetBinds[i].push_back(
+                    DescriptorInfo(paletteImage.imageView, paletteImage.layout, vulk->globalTextureSampler));
+        }
+     
 
 
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -238,11 +244,11 @@ bool MeshRenderSystem::addModel(const GltfModel& model, EntityType entityType)
 
     beginSingleTimeCommands();
 
-    addToCopylist(sliceFromPodVectorBytes(model.indices), indexDataBuffer.buffer, indicesCount * sizeof(uint32_t));
+    addToCopylist(sliceFromPodVectorBytes(model.indices), indexDataBuffer, indicesCount * sizeof(uint32_t));
     if(isAnimated)
-        addToCopylist(sliceFromPodVectorBytes(animatedRenderModel), animationVertexBuffer.buffer, animatedVerticesCount * sizeof(AnimatedRenderModel));
+        addToCopylist(sliceFromPodVectorBytes(animatedRenderModel), animationVertexBuffer, animatedVerticesCount * sizeof(AnimatedRenderModel));
     else
-        addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer.buffer, verticesCount * sizeof(RenderModel));
+        addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer, verticesCount * sizeof(RenderModel));
     flushBarriers(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     endSingleTimeCommands();
@@ -273,20 +279,24 @@ void MeshRenderSystem::clear()
     boneAnimatedModelRenderMatrices.clear();
 }
 
-bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Mat3x4& renderMatrix, const PodVector<Mat3x4>& boneMatrices)
+bool MeshRenderSystem::addModelToRender(uint32_t modelIndex, const Mat3x4& renderMatrix, const Mat3x4 &renderNormalMatrix,
+    const PodVector<Mat3x4>& boneAndBoneNormalMatrices)
 {
     if (modelIndex >= models.size())
         return false;
 
-    if (boneMatrices.size() > 0u)
+    if (boneAndBoneNormalMatrices.size() > 0u)
     {
         animatedModelRenderMatrices[modelIndex].pushBack(renderMatrix);
+        animatedModelRenderMatrices[modelIndex].pushBack(renderNormalMatrix);
+
         modelRenderBoneStartIndices[modelIndex].pushBack(boneAnimatedModelRenderMatrices.size());
-        boneAnimatedModelRenderMatrices.pushBack(boneMatrices);
+        boneAnimatedModelRenderMatrices.pushBack(boneAndBoneNormalMatrices);
     }
     else
     {
         modelRenderMatrices[modelIndex].push_back(renderMatrix);
+        modelRenderMatrices[modelIndex].push_back(renderNormalMatrix);
     }
 
     return true;
@@ -315,14 +325,14 @@ bool MeshRenderSystem::prepareToRender()
             }
         }
         if(startIndices.size() > 0)
-            addToCopylist(sliceFromPodVectorBytes(startIndices), modelRenderBoneStartIndexBuffer);
+            addToCopylist(sliceFromPodVectorBytes(startIndices), modelRenderBoneStartIndexBuffer[vulk->frameIndex]);
 
         if(allModelRenderMatrices.size() > 0)
-            addToCopylist(sliceFromPodVectorBytes(allModelRenderMatrices), modelRenderMatricesBuffer);
+            addToCopylist(sliceFromPodVectorBytes(allModelRenderMatrices), modelRenderMatricesBuffer[vulk->frameIndex]);
     }
     {
         if (boneAnimatedModelRenderMatrices.size() > 0)
-            addToCopylist(sliceFromPodVectorBytes(boneAnimatedModelRenderMatrices), modelBoneRenderMatricesBuffer);
+            addToCopylist(sliceFromPodVectorBytes(boneAnimatedModelRenderMatrices), modelBoneRenderMatricesBuffer[vulk->frameIndex]);
     }
     return true;
 }
@@ -347,14 +357,14 @@ void MeshRenderSystem::render(bool isShadowOnly)
             debugName = "NonAnimated depth only render";
 
         beginDebugRegion(debugName, Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-        bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, meshRenderGraphicsPipeline[passIndex]);
+        bindGraphicsPipelineWithDecriptors(meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
         for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
         {
             const ModelData &modelData = models[modelIndex];
             if(modelData.vertices == 0)
                 continue;
             bool animationRender = (passIndex & 2) == 0;
-            uint32_t instances = animationRender ? animatedModelRenderMatrices[modelIndex].size() : modelRenderMatrices[modelIndex].size();
+            uint32_t instances = animationRender ? animatedModelRenderMatrices[modelIndex].size() / 2 : modelRenderMatrices[modelIndex].size() / 2;
             if (instances)
             {
                 

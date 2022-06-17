@@ -41,7 +41,10 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     // Create buffers
     {
-        letterDataBufferHandle = vulk->uniformBufferManager.reserveHandle();
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            letterDataBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
+        }
 
         letterIndexBuffer = createBuffer(1 * 1024 * 1024,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -120,6 +123,9 @@ bool FontRenderSystem::init(std::string_view fontFilename)
 
     // Create pipelines
     {
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+
         if(!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
             { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
@@ -127,15 +133,15 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         {
             printf("failed to create graphics pipeline\n");
         }
-
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
-            DescriptorInfo(vulk->renderFrameBufferHandle),
-            DescriptorInfo(letterDataBufferHandle),
-            DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
-        });
-
-        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo> {
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
+                DescriptorInfo(letterDataBufferHandle[i]),
+                DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
+            };
+        }
+        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -185,7 +191,7 @@ void FontRenderSystem::update()
     if (vertData.size() == 0)
         return;
 
-    addToCopylist(sliceFromPodVectorBytes( vertData ), letterDataBufferHandle);
+    addToCopylist(sliceFromPodVectorBytes( vertData ), letterDataBufferHandle[vulk->frameIndex]);
 }
 
 void FontRenderSystem::reset()
@@ -201,7 +207,7 @@ void FontRenderSystem::render()
     beginDebugRegion("Font rendering", Vec4(0.0f, 0.0f, 1.0f, 1.0f));
     beginRenderPass(pipeline, {});
 
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    bindGraphicsPipelineWithDecriptors(pipeline, vulk->frameIndex);
     vkCmdBindIndexBuffer(commandBuffer, letterIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 

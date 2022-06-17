@@ -40,7 +40,7 @@ public:
 private:
     PodVector<GPUVertexData> vertData;
 
-    UniformBufferHandle letterDataBufferHandle;
+    UniformBufferHandle letterDataBufferHandle[VulkanGlobal::FramesInFlight];
     Buffer letterIndexBuffer;
 
     Image textImage;

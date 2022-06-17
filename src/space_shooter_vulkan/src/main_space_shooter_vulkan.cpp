@@ -183,6 +183,9 @@ bool SpaceShooter::createPipelines()
 {
     {
         Pipeline& pipeline = graphicsPipeline;
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
         if(!createGraphicsPipeline(
             getShader(ShaderType::SpaceShip2DModelVert), getShader(ShaderType::SpaceShip2DModelFrag),
             { RenderTarget{.format = vulk->defaultColorFormat } }, {  }, pipeline, "Space shooter 2d rendering", false))
@@ -190,15 +193,15 @@ bool SpaceShooter::createPipelines()
             printf("failed to create pipeline\n");
             return false;
         }
-
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk->renderFrameBufferHandle),
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
                 DescriptorInfo(modelVerticesBuffer),
                 DescriptorInfo(instanceBuffer),
-            });
-
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+            };
+        }
+        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -572,7 +575,7 @@ void SpaceShooter::renderDraw()
         // draw calls here
         // Render
         {
-            bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+            bindGraphicsPipelineWithDecriptors(graphicsPipeline, vulk->frameIndex);
             vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBufferModels.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(vulk->commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
 

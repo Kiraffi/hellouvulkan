@@ -65,6 +65,7 @@ struct GltfModel
     PodVector<AnimationVertex> animationVertices;
     PodVector<uint32_t> indices;
     PodVector<Mat3x4> inverseMatrices;
+    PodVector<Mat3x4> inverseNormalMatrices;
 
     // These are indices to animationPosData, animationRotData and animationScaleData, and childrenJointIndices.
     Vector<PodVector<AnimationIndexData>> animationIndices;

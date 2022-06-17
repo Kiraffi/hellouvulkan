@@ -162,19 +162,25 @@ bool VulkanComputeTest::recreateDescriptor()
     {
         Pipeline &pipeline = computePipeline;
         destroyDescriptor(pipeline.descriptor);
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk->renderFrameBufferHandle),
+
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
                 //DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureSampler),
                 DescriptorInfo(meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
                 DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
-            });
+            };
+        }
         if (!createDescriptor(pipeline))
         {
             printf("Failed to create compute pipeline descriptor\n");
             return false;
         }
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -183,20 +189,24 @@ bool VulkanComputeTest::recreateDescriptor()
     {
         Pipeline &pipeline = graphicsFinalPipeline;
         destroyDescriptor(pipeline.descriptor);
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-        {
-            DescriptorInfo(vulk->renderFrameBufferHandle),
-            DescriptorInfo(quadHandle),
-            DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
-        });
 
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
+                DescriptorInfo(quadHandle),
+                DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
+            };
+        }
         if (!createDescriptor(pipeline))
         {
             printf("Failed to create graphics pipeline descriptor\n");
             return false;
         }
 
-        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -285,7 +295,7 @@ void VulkanComputeTest::renderDraw()
     {
         prepareToComputeImageRead(meshRenderTargets.albedoImage);
         prepareToComputeImageWrite(computeColorImage);
-        dispatchCompute(computePipeline, swapchain.width, swapchain.height, 1, 8, 8, 1);
+        dispatchCompute(computePipeline, vulk->frameIndex, swapchain.width, swapchain.height, 1, 8, 8, 1);
         writeStamp();
     }
 
@@ -300,7 +310,7 @@ void VulkanComputeTest::renderDraw()
         // draw calls here
         // Render
         {
-            bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsFinalPipeline);
+            bindGraphicsPipelineWithDecriptors(graphicsFinalPipeline, vulk->frameIndex);
             vkCmdBindIndexBuffer(vulk->commandBuffer, quadIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(vulk->commandBuffer, 6, 1, 0, 0, 0);
         }

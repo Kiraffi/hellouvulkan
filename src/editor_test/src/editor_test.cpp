@@ -481,14 +481,13 @@ void EditorTest::renderUpdate()
     VulkanApp::renderUpdate();
     imgui.renderBegin();
 
-
     drawDockspace();
     drawEntities();
     drawEntityAddTypes();
 
     if(showSaveDialog && drawSaveDialog())
         scene.writeLevel(levelName.getStr());
-
+        
     uint32_t grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
     uint32_t selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
 

@@ -25,7 +25,7 @@ public:
 private:
     Vec3 sunDir{ 0.0f, 1.0f, 0.0f };
 
-    UniformBufferHandle lightBufferHandle;
+    UniformBufferHandle lightBufferHandle[VulkanGlobal::FramesInFlight];
 
     Pipeline lightComputePipeline;
     VkSampler shadowTextureSampler = nullptr;

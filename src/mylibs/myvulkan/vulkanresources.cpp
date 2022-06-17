@@ -369,8 +369,12 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
     ASSERT(vulk->scratchBuffer.size >= size);
 
     memcpy((unsigned char*)vulk->scratchBuffer.data + offset, data, size);
-    offset += size;
 
+    size_t roundedDownOffset = offset & (~(size_t(255)));
+    size_t roundedUpSize = ((offset + size + 255) & (~(size_t(255)))) - roundedDownOffset;
+    vmaFlushAllocation(vulk->allocator, vulk->scratchBuffer.allocation, roundedDownOffset, roundedUpSize);
+
+    offset += size;
     return offset;
 }
 
@@ -481,7 +485,6 @@ VkBufferMemoryBarrier bufferBarrier(const Buffer& buffer, VkAccessFlags srcAcces
 bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
 {
     ASSERT(objectToCopy.isValid());
-
     if (!objectToCopy.isValid())
         return false;
 
@@ -491,12 +494,20 @@ bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer
 
 bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle)
 {
-    return addToCopylist(objectToCopy, handle.manager->buffer->buffer, handle.getOffset());
+    Buffer *targetBuffer = handle.manager->buffer;
+    if(targetBuffer)
+        return addToCopylist(objectToCopy, *targetBuffer, VkDeviceSize(handle.getOffset()));
+
+    return false;
 }
 
-bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer& targetBuffer)
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer& targetBuffer, VkDeviceSize targetOffset)
 {
-    return addToCopylist(objectToCopy, targetBuffer.buffer, 0u);
+    uint32_t objectSize = VkDeviceSize(objectToCopy.dataTypeSize) * objectToCopy.size();
+    ASSERT(targetOffset + objectSize <= targetBuffer.size);
+    if(targetOffset + objectSize <= targetBuffer.size)
+        return addToCopylist(objectToCopy, targetBuffer.buffer, targetOffset);
+    return false;
 }
 
 
@@ -505,8 +516,9 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     ASSERT(objectToCopy);
     ASSERT(objectSize);
     ASSERT(targetBuffer);
-    ASSERT(vulk->scratchBufferOffset + objectSize < vulk->scratchBuffer.size);
-    if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr)
+    ASSERT(vulk->scratchBufferOffset + objectSize < vulk->scratchBufferMaxOffset);
+    if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr ||
+        vulk->scratchBufferOffset + objectSize >= vulk->scratchBufferMaxOffset)
         return false;
 
     if (vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
@@ -568,6 +580,15 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
         return true;
    // vkFlushMappedMemoryRanges?????
     PodVector< VkBufferMemoryBarrier > bufferBarriers;
+    
+    // for flushing
+    VkDeviceSize size = vulk->scratchBufferOffset - vulk->scratchBufferLastFlush;
+    size = ((size + 255) / 256) * 256;
+
+    VK_CHECK(vmaFlushAllocation(vulk->allocator, vulk->scratchBuffer.allocation, vulk->scratchBufferLastFlush, size));
+    // set the scratchBufferLastFlush to be divisable by 256 and round it down
+    vulk->scratchBufferLastFlush = vulk->scratchBufferOffset & (~uint32_t(255));
+
     for (const auto& barrier : vulk->bufferMemoryBarriers)
     {
         if (barrier.buffer)
@@ -577,6 +598,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
                 barrier.copyRegion.size, barrier.copyRegion.dstOffset));
         }
     }
+
     const VkBufferMemoryBarrier* bufferBarrier = bufferBarriers.size() > 0 ? bufferBarriers.data() : nullptr;
     
     vkCmdPipelineBarrier(vulk->commandBuffer, vulk->currentStage, dstStageMask,
@@ -584,7 +606,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
         0, nullptr,
         vulk->bufferMemoryBarriers.size(), bufferBarrier,
         imageBarrierCount, imageBarrier);
-   
+
     vulk->bufferMemoryBarriers.clear();
     if(isGraphics)
         vulk->imageMemoryGraphicsBarriers.clear();

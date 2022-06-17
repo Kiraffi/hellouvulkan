@@ -22,7 +22,8 @@ public:
 
     void clear();
 
-    bool addModelToRender(uint32_t modelIndex, const Mat3x4 & renderMatrix, const PodVector<Mat3x4>& boneMatrices);
+    bool addModelToRender(uint32_t modelIndex, const Mat3x4 &renderMatrix, const Mat3x4 &renderNormalMatrix, 
+        const PodVector<Mat3x4>& boneAndBoneNormalMatrices);
 
     bool prepareToRender();
 
@@ -45,10 +46,9 @@ private:
     Buffer animationVertexBuffer;
     Buffer indexDataBuffer;
 
-    Buffer modelRenderMatricesBuffer;
-    Buffer modelBoneRenderMatricesBuffer;
-    Buffer modelRenderNormaMatricesBuffer;
-    Buffer modelRenderBoneStartIndexBuffer;
+    Buffer modelRenderMatricesBuffer[VulkanGlobal::FramesInFlight];
+    Buffer modelBoneRenderMatricesBuffer[VulkanGlobal::FramesInFlight];
+    Buffer modelRenderBoneStartIndexBuffer[VulkanGlobal::FramesInFlight];
 
     Image paletteImage;
 

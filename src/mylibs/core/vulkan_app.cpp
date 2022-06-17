@@ -258,7 +258,7 @@ void VulkanApp::renderUpdate()
     frameBufferData.sunMatrix = sunCamera.worldToViewMat;
     frameBufferData.camPos = Vector4(camera.position, 0.0f);
     frameBufferData.areaSize = getWindowSize();
-    addToCopylist(frameBufferData, vulk->renderFrameBufferHandle);
+    addToCopylist(frameBufferData, vulk->renderFrameBufferHandle[vulk->frameIndex]);
 
     fontSystem.update();
 }
@@ -285,7 +285,7 @@ void VulkanApp::run()
         #if _WIN32
             timeBeginPeriod(1);
         #endif
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5));
         #if _WIN32
             timeEndPeriod(1);
         #endif
@@ -477,8 +477,8 @@ static void updateStats(VulkanApp &app)
 
     if(currTime - cpuTimeStamp >= 1.0)
     {
-
-        cpuTimeStamp += 1.0f;
+        while(currTime - cpuTimeStamp >= 1.0f)
+            cpuTimeStamp += 1.0f;
 
         printf("Gpu: %4.3fms, cpu: %4.3fms.  GpuFps:%4.2f, CpuFps:%4.2f\n",
             float(gpuTime * 1000.0 / gpuframeCount), (float)(cpuTime * 1000.0f / cpuframeCount),

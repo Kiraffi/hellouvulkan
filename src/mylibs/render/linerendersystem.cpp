@@ -13,21 +13,23 @@
 LineRenderSystem::~LineRenderSystem()
 {
     destroyPipeline(lineRenderPipeline);
-
-    destroyBuffer(vertexBuffer);
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        destroyBuffer(vertexBuffer[i]);
 }
 
 
 bool LineRenderSystem::init()
 {
-    vertexBuffer = createBuffer(16u * 1024u * 1024u,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        vertexBuffer[i] = createBuffer(4u * 1024u * 1024u,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
 
     // pipelines.
     {
         Pipeline& pipeline = lineRenderPipeline;
-
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
         if (!createGraphicsPipeline(
             getShader(ShaderType::LineVert), getShader(ShaderType::ColoredQuadFrag),
             { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
@@ -37,16 +39,16 @@ bool LineRenderSystem::init()
             printf("Failed to create graphics pipeline\n");
         }
 
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
 
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk->renderFrameBufferHandle),
+                DescriptorInfo(vertexBuffer[i]),
 
-                DescriptorInfo(vertexBuffer),
-
-            });
-
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+            };
+        }
+        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -73,7 +75,7 @@ bool LineRenderSystem::prepareToRender()
     if(lines.size() == 0)
         return false;
 
-    addToCopylist(sliceFromPodVectorBytes(lines), vertexBuffer);
+    addToCopylist(sliceFromPodVectorBytes(lines), vertexBuffer[vulk->frameIndex]);
     return true;
 }
 
@@ -88,7 +90,7 @@ void LineRenderSystem::render(const Image &colorImage, const Image &depthImage)
         RenderImage{.image = &colorImage, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD }},
         {.image = &depthImage, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD });
 
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, lineRenderPipeline);
+    bindGraphicsPipelineWithDecriptors(lineRenderPipeline, vulk->frameIndex);
     vkCmdDraw(vulk->commandBuffer, lines.size() * 2, 1, 0, 0);
 
 

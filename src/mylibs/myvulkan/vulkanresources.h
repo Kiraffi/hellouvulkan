@@ -68,14 +68,16 @@ bool addToCopylist(const T& objectToCopy, VkBuffer targetBuffer, VkDeviceSize ta
 template <typename T>
 bool addToCopylist(const T& objectToCopy, UniformBufferHandle handle)
 {
-    return addToCopylist(&objectToCopy, VkDeviceSize(sizeof(T)), handle.manager->buffer->buffer, handle.getOffset());
+    if(handle.isValid())
+        return addToCopylist(&objectToCopy, VkDeviceSize(sizeof(T)), handle.manager->buffer->buffer, handle.getOffset());
+    return false;
 }
 
 bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle);
 bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset);
-bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer &targetBuffer);
-
+bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer &targetBuffer, VkDeviceSize targetOffset = 0u);
 bool addToCopylist(const void *objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset);
+
 bool addImageComputeBarrier(VkImageMemoryBarrier barrier);
 bool addImageGraphicsBarrier(VkImageMemoryBarrier barrier);
 bool flushBarriers(VkPipelineStageFlagBits dstStageMask);// = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);

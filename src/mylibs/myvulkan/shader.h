@@ -50,5 +50,5 @@ void destroyShader(Shader& shaderModule);
 
 bool createDescriptor(Pipeline &pipeline);
 bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
-    const PodVector<DescriptorInfo>& descriptorInfos, VkDescriptorSet descriptorSet);
+    const Vector<PodVector<DescriptorInfo>>& descriptorInfos, const PodVector<VkDescriptorSet> &descriptorSet);
 

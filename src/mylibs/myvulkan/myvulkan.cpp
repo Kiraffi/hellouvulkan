@@ -1010,16 +1010,18 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
 
 
     {
-        vulk->scratchBuffer = createBuffer(128u * 1024u * 1024u,
+        vulk->scratchBuffer = createBuffer(VulkanGlobal::VulkanMaxScratchBufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "Scratch buffer");
+            //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
         vulk->uniformBuffer = createBuffer(64u * 1024u * 1024u,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
 
         vulk->uniformBufferManager.init(vulk->uniformBuffer);
-        vulk->renderFrameBufferHandle = vulk->uniformBufferManager.reserveHandle();
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+            vulk->renderFrameBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
     }
 
     if(!loadShaders())
@@ -1345,12 +1347,12 @@ void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage
 }
 
 
-void dispatchCompute(const Pipeline &pipeline, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
+void dispatchCompute(const Pipeline &pipeline, uint32_t bindSetIndex, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
     uint32_t localXSize, uint32_t localYSize, uint32_t localZSize)
 {
     ASSERT(globalXSize && globalYSize && globalZSize && localXSize && localYSize && localZSize);
     flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-    bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    bindComputePipelineWithDecriptors(pipeline, bindSetIndex);
     vkCmdDispatch(vulk->commandBuffer,
         (globalXSize + localXSize - 1) / localXSize,
         (globalYSize + localYSize - 1) / localYSize,
@@ -1374,7 +1376,8 @@ bool startRender()
         vulk->acquireSemaphores[vulk->frameIndex], VK_NULL_HANDLE, &vulk->imageIndex));
 
     vulk->scratchBufferOffset = vulk->frameIndex * 32u * 1024u * 1024u;
-
+    vulk->scratchBufferLastFlush = vulk->scratchBufferOffset;
+    vulk->scratchBufferMaxOffset = (vulk->frameIndex + 1) * 32u * 1024u * 1024u;
     if (res == VK_ERROR_OUT_OF_DATE_KHR)
     {
         if (resizeSwapchain())
@@ -1680,6 +1683,7 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::s
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
+    outPipeline.descriptor.descriptorSets.resize(1);
 
     if (!createDescriptor(outPipeline))
     {
@@ -1719,7 +1723,7 @@ void destroyDescriptor(Descriptor& descriptor)
     {
         vkDestroyDescriptorPool(vulk->device, descriptor.pool, nullptr);
         descriptor.pool = 0;
-        descriptor.descriptorSet = 0;
+        descriptor.descriptorSets.clear();
     }
 }
 
@@ -1815,11 +1819,20 @@ void endDebugRegion()
 }
 
 
-void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const Pipeline &pipelineWithDescriptor)
+void bindGraphicsPipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index)
 {
+    VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     vkCmdBindPipeline(vulk->commandBuffer, bindPoint, pipelineWithDescriptor.pipeline);
     vkCmdBindDescriptorSets(vulk->commandBuffer, bindPoint, pipelineWithDescriptor.pipelineLayout,
-        0, 1, &pipelineWithDescriptor.descriptor.descriptorSet, 0, NULL);
+        0, 1, &pipelineWithDescriptor.descriptor.descriptorSets[index], 0, NULL);
+}
+
+void bindComputePipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index)
+{
+    VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+    vkCmdBindPipeline(vulk->commandBuffer, bindPoint, pipelineWithDescriptor.pipeline);
+    vkCmdBindDescriptorSets(vulk->commandBuffer, bindPoint, pipelineWithDescriptor.pipelineLayout,
+        0, 1, &pipelineWithDescriptor.descriptor.descriptorSets[index], 0, NULL);
 }
 
 

@@ -42,11 +42,6 @@ layout (binding = 3, MATRIX_ORDER) restrict readonly buffer AnimationBoneMatrice
     mat4x3 animationBoneMatrices[];
 };
 
-layout (binding = 4, MATRIX_ORDER) restrict readonly buffer AnimationDataNormals
-{
-    mat3x3 normalInverses[];
-};
-
 layout (std430, binding = 5) restrict readonly buffer vertex_data
 {
     VData vertexValues[];
@@ -99,10 +94,10 @@ void main()
             (animData.boneIndices >> 24 ) & 255 );
 
         uint boneStartIndex = boneStartIndices[instanceIndex];
-        mat4x3 boneMat = animationBoneMatrices[boneStartIndex + boneIndices.x] * weights.x;
-        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.y] * weights.y;
-        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.z] * weights.z;
-        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.w] * weights.w;
+        mat4x3 boneMat = animationBoneMatrices[boneStartIndex + boneIndices.x * 2] * weights.x;
+        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.y * 2] * weights.y;
+        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.z * 2] * weights.z;
+        boneMat += animationBoneMatrices[boneStartIndex + boneIndices.w * 2] * weights.w;
 
         mat4 boneMat4;
         boneMat4[0] = vec4(boneMat[0], 0.0f);
@@ -117,10 +112,10 @@ void main()
             vec4 nor = normalize(vec4(1.0f));
 
             uint boneNormalStartIndex = boneStartIndices[instanceIndex];
-            mat4x3 boneNormalMat4x3 = animationBoneMatrices[boneNormalStartIndex + boneIndices.x] * weights.x;
-            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.y] * weights.y;
-            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.z] * weights.z;
-            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.w] * weights.w;
+            mat4x3 boneNormalMat4x3 = animationBoneMatrices[boneNormalStartIndex + boneIndices.x * 2 + 1] * weights.x;
+            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.y * 2 + 1] * weights.y;
+            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.z * 2 + 1] * weights.z;
+            boneNormalMat4x3 += animationBoneMatrices[boneNormalStartIndex + boneIndices.w * 2 + 1] * weights.w;
 
             mat4 boneNormalMat4;
             boneNormalMat4[0] = vec4(boneNormalMat4x3[0], 0.0f);
@@ -134,16 +129,20 @@ void main()
         vec4 pos = vec4(data.pos.xyz, 1.0f);
         vec4 nor = vec4(dataNormal.xyz, 0.0f);
     #endif
-    mat4x3 entityMatrix4x3 = enityModelMatrices[instanceIndex];
+
+    mat4x3 entityMatrix4x3 = enityModelMatrices[instanceIndex * 2];
     mat4 entityMatrix;
     entityMatrix[0] = vec4(entityMatrix4x3[0], 0.0f);
     entityMatrix[1] = vec4(entityMatrix4x3[1], 0.0f);
     entityMatrix[2] = vec4(entityMatrix4x3[2], 0.0f);
     entityMatrix[3] = vec4(entityMatrix4x3[3], 1.0f);
+    
     #if DEPTH_ONLY
         mat4 finalMat = sunMatrix * entityMatrix;
     #else
         mat4 finalMat = mvp * entityMatrix;
+
+
     #endif
 
     gl_Position = finalMat * pos;
@@ -155,7 +154,14 @@ void main()
             float((data.color >> 16) & 255),
             float((data.color >> 24) & 255)) / 255.0f;
 
-        vec3 normalDir =  normalize(entityMatrix * vec4(normalize(nor.xyz), 0.0f)).xyz;
+        mat4x3 entityNormalMatrix4x3 = enityModelMatrices[instanceIndex * 2 + 1];
+        mat4 entityNormalMatrix;
+        entityNormalMatrix[0] = vec4(entityNormalMatrix4x3[0], 0.0f);
+        entityNormalMatrix[1] = vec4(entityNormalMatrix4x3[1], 0.0f);
+        entityNormalMatrix[2] = vec4(entityNormalMatrix4x3[2], 0.0f);
+        entityNormalMatrix[3] = vec4(entityNormalMatrix4x3[3], 1.0f);
+
+        vec3 normalDir =  normalize(entityNormalMatrix * vec4(normalize(nor.xyz), 0.0f)).xyz;
         normalDirOut = normalDir.xyz;
         attributesOut = (data.normalXYZAttributes.y >> 16);
         uvOut = data.uv;

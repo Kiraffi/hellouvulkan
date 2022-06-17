@@ -1,19 +1,26 @@
 
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-#include <core/mytypes.h>
 
 #include <container/podvector.h>
-#include "vulkaninitparameters.h"
-#include "uniformbuffermanager.h"
+#include <container/vector.h>
+#include <core/mytypes.h>
+#include <myvulkan/vulkaninitparameters.h>
+#include <myvulkan/uniformbuffermanager.h>
 
+#include <vulkan/vulkan_core.h>
 
 #ifdef NDEBUG
 #define VK_CHECK(call) do { [[maybe_unused]] VkResult callResult = call; } while(0)
 #else
-#define VK_CHECK(call) do { VkResult callResult = call; ASSERT(callResult == VkResult::VK_SUCCESS); } while(0)
+#define VK_CHECK(call) do { \
+    VkResult callResult = call; \
+    if(callResult != VkResult::VK_SUCCESS) \
+        printf("Result: %i\n", int32_t(callResult)); \
+    ASSERT(callResult == VkResult::VK_SUCCESS); \
+    } while(0)
 #endif
+
 
 
 struct VmaAllocation_T;
@@ -90,6 +97,9 @@ struct BufferBarrierInfo
 
 struct VulkanGlobal
 {
+    static constexpr uint32_t FramesInFlight = 2;
+    static constexpr uint32_t VulkanMaxScratchBufferFrameSize = 32u * 1024u * 1024u;
+    static constexpr uint32_t VulkanMaxScratchBufferSize = VulkanMaxScratchBufferFrameSize * FramesInFlight;
     VulkanInitializationParameters initParams;
     QueueFamilyIndices queueFamilyIndices;
 
@@ -108,10 +118,11 @@ struct VulkanGlobal
     Buffer scratchBuffer;
     Buffer uniformBuffer;
     uint32_t scratchBufferOffset = 0u;
+    uint32_t scratchBufferLastFlush = 0u;
+    uint32_t scratchBufferMaxOffset = VulkanMaxScratchBufferSize;
     UniformBufferManager uniformBufferManager;
-    UniformBufferHandle renderFrameBufferHandle;
+    UniformBufferHandle renderFrameBufferHandle[FramesInFlight];
 
-    static constexpr uint32_t FramesInFlight = 2;
     VkQueryPool queryPools[FramesInFlight] = {};
     uint32_t frameIndex = 0u;
     uint32_t queryPoolIndexCounts[FramesInFlight] = {};
@@ -167,7 +178,7 @@ struct DescriptorSetLayout
 
 struct Descriptor
 {
-    VkDescriptorSet descriptorSet = 0;
+    PodVector<VkDescriptorSet> descriptorSets;
     VkDescriptorPool pool = 0;
 };
 
@@ -238,7 +249,7 @@ struct Pipeline
 
     Descriptor descriptor;
     PodVector<DescriptorSetLayout> descriptorSetLayouts;
-    PodVector<DescriptorInfo> descriptorSetBinds;
+    Vector<PodVector<DescriptorInfo>> descriptorSetBinds;
 
     uint32_t framebufferWidth = 0u;
     uint32_t framebufferHeight = 0u;

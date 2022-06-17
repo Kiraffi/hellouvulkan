@@ -58,7 +58,7 @@ void endSingleTimeCommands();
 
 void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues);
 void beginRendering(const PodVector<RenderImage>& renderColorImages, RenderImage depthImage);
-void dispatchCompute(const Pipeline& pipeline, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
+void dispatchCompute(const Pipeline& pipeline, uint32_t bindSetIndex, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
     uint32_t localXSize, uint32_t localYSize, uint32_t localZSize);
 
 bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
@@ -77,6 +77,7 @@ void destroyPipeline(Pipeline& pipelineWithDescriptors);
 void destroyDescriptor(Descriptor &descriptor);
 
 
-void bindPipelineWithDecriptors(VkPipelineBindPoint bindPoint, const Pipeline &pipelineWithDescriptor);
+void bindComputePipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index);
+void bindGraphicsPipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index);
 
 void writeStamp();

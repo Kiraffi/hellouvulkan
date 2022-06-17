@@ -155,7 +155,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 
     for(int y = -10; y < 10; ++y)
     {
-        for(int x = -10; x < 10; ++x)
+        for(int x = -150; x < 150; ++x)
         {
             Vec3 pos(x, 0.0f, -50.0f + y);
             pos.x += 0.5f;
@@ -452,7 +452,7 @@ int main(int argCount, char **argv)
         {
             .showInfoMessages = false,
             .useHDR = false,
-            .useIntegratedGpu = true,
+            .useIntegratedGpu = false,
             .useValidationLayers = true,
             .useVulkanDebugMarkersRenderDoc = true,
             .vsync = VSyncType::IMMEDIATE_NO_VSYNC

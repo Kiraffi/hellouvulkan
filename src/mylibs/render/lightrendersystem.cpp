@@ -20,7 +20,8 @@ LightRenderSystem::~LightRenderSystem()
 
 bool LightRenderSystem::init()
 {
-    lightBufferHandle = vulk->uniformBufferManager.reserveHandle();
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        lightBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
 
     auto& pipeline = lightComputePipeline;
     if (!createComputePipeline(getShader(ShaderType::LightingShader), pipeline, "Light system compute"))
@@ -63,10 +64,14 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
     auto& pipeline = lightComputePipeline;
     destroyDescriptor(pipeline.descriptor);
 
-    pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-        {
-            DescriptorInfo(vulk->renderFrameBufferHandle),
-            DescriptorInfo(lightBufferHandle),
+    pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+    pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    {
+        pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+            DescriptorInfo(vulk->renderFrameBufferHandle[i]),
+            DescriptorInfo(lightBufferHandle[i]),
 
             //DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             //DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
@@ -78,13 +83,14 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
             DescriptorInfo(meshRenderTargets.shadowDepthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
 
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
-        });
+        };
+    }
     if (!createDescriptor(pipeline))
     {
         printf("Failed to create compute pipeline descriptor\n");
         return false;
     }
-    if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+    if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
     {
         printf("Failed to set descriptor binds!\n");
         return false;
@@ -95,19 +101,19 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
 
 void LightRenderSystem::update()
 {
-    if (lightBufferHandle.isValid())
+    if (lightBufferHandle[vulk->frameIndex].isValid())
     {
         LightBuffer buffer;
         buffer.sunDir = sunDir;
 
-        addToCopylist(buffer, lightBufferHandle);
+        addToCopylist(buffer, lightBufferHandle[vulk->frameIndex]);
     }
 }
 
 void LightRenderSystem::render(uint32_t width, uint32_t height)
 {
     beginDebugRegion("Lighting compute", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    dispatchCompute(lightComputePipeline, width, height, 1, 8, 8, 1);
+    dispatchCompute(lightComputePipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
     endDebugRegion();
     writeStamp();
 }

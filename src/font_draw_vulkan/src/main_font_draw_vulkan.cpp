@@ -58,7 +58,7 @@ public:
 public:
     Image renderColorImage;
 
-    Buffer quadBuffer;
+    Buffer quadBuffer[VulkanGlobal::FramesInFlight];
     Buffer indexDataBuffer;
 
     Pipeline graphicsPipeline;
@@ -84,8 +84,8 @@ VulkanFontDraw::~VulkanFontDraw()
     destroyPipeline(graphicsPipeline);
 
     destroyImage(renderColorImage);
-
-    destroyBuffer(quadBuffer);
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        destroyBuffer(quadBuffer[i]);
     destroyBuffer(indexDataBuffer);
 
 }
@@ -94,12 +94,12 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-
-    quadBuffer = createBuffer(QuadBufferSize,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Uniform buffer2");
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
-
+    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    {
+        quadBuffer[i] = createBuffer(QuadBufferSize,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
+    }
     indexDataBuffer = createBuffer(32 * 1024 * 1024,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
@@ -129,6 +129,8 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
     {
         Pipeline& pipeline = graphicsPipeline;
+        pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
         if (!createGraphicsPipeline(
             getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
@@ -138,14 +140,14 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
             return false;
         }
 
-
-        pipeline.descriptorSetBinds = PodVector<DescriptorInfo>(
-            {
-                DescriptorInfo(vulk->renderFrameBufferHandle),
-                DescriptorInfo(quadBuffer),
-            });
-
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSet))
+        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        {
+            pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
+                DescriptorInfo(vulk->renderFrameBufferHandle[i]),
+                DescriptorInfo(quadBuffer[i]),
+            };
+        }
+        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
@@ -350,7 +352,7 @@ void VulkanFontDraw::renderUpdate()
 {
     VulkanApp::renderUpdate();
 
-    addToCopylist(sliceFromPodVectorBytes(vertData), quadBuffer.buffer, 0);
+    addToCopylist(sliceFromPodVectorBytes(vertData), quadBuffer[vulk->frameIndex]);
 }
 
 void VulkanFontDraw::renderDraw()
@@ -365,7 +367,7 @@ void VulkanFontDraw::renderDraw()
         // draw calls here
         // Render
         {
-            bindPipelineWithDecriptors(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+            bindGraphicsPipelineWithDecriptors(graphicsPipeline, vulk->frameIndex);
             vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(vulk->commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
 

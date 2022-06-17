@@ -976,50 +976,61 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
             if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
                 return false;
-            /*
-            PodVector<Matrix> mat1;
-            PodVector<Matrix> mat2;
-            PodVector<Matrix> mat3;
-            mat1.resize(data.nodes.size());
-            mat2.resize(data.nodes.size());
-            mat3.resize(data.nodes.size());
 
-            auto fu = [&](auto &f, const Matrix &parent, const Matrix &invParent, uint32_t boneIndex)
+            
+            
+            
+            PodVector<Matrix> inverseMatrices;
+            uint32_t inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
+            inverseMatrices.resize(inverseMatricesCount);
+            outModel.inverseNormalMatrices.resize(inverseMatricesCount);
+            outModel.inverseMatrices.resize(inverseMatricesCount);
+
+            auto calculateInverseMatrices = 
+                [&](auto &f, const Mat3x4 &parent, const Mat3x4 &parentNormal, uint32_t nodeIndex)
             {
-                if(boneIndex >= data.nodes.size())
+                if(nodeIndex >= data.nodes.size())
                     return;
 
-                const auto &childNode = data.nodes[boneIndex];
+                const auto &childNode = data.nodes[nodeIndex];
                 const auto &pos = childNode.trans;
                 const auto &rot = childNode.rot;
                 const auto &scale = childNode.scale;
-                //printf("boneindex: %u - before\n", boneIndex);
-                if(!isIdentity(mat1[boneIndex]))
+
+                uint32_t boneIndex = 0u;
+                for(; boneIndex < skinNode.joints.size(); ++boneIndex)
+                {
+                    if(skinNode.joints[boneIndex] == nodeIndex)
+                        break;
+                }
+                if(boneIndex >= skinNode.joints.size())
                     return;
-                //printf("boneindex: %u - after\n", boneIndex);
+
+                if(!isIdentity(outModel.inverseNormalMatrices[boneIndex]))
+                    return;
+
                 Transform t{ .pos = pos, .rot = rot, .scale = scale };
-                Matrix m = getModelMatrix(t);
-                Matrix m2 = getModelMatrixInverse(t);
-                //Matrix newParent = m * parent;
-                Matrix newParent = parent * m;
-                Matrix newInverseParent = m2 * invParent;
-                mat1[boneIndex] = newParent;
-                mat2[boneIndex] = inverse(newParent);
-                mat3[boneIndex] = newInverseParent;
-                ASSERT(isIdentity(newParent * inverse(newParent)));
-                ASSERT(isIdentity(inverse(newParent) * newParent));
+                Mat3x4 m = getModelMatrixInverse(t);
+                Mat3x4 m2 = getModelNormalMatrix(t);
+                Mat3x4 m3 = getModelMatrix(t);
+
+                Mat3x4 newParent = m * parent;
+                Mat3x4 newParentNormal = parentNormal * m2;
+
+                outModel.inverseMatrices[boneIndex] = newParent;
+                outModel.inverseNormalMatrices[boneIndex] = newParentNormal;
 
                 for(uint32_t childNodeIndex : childNode.childNodeIndices)
                 {
-                    f(f, newParent, newInverseParent, childNodeIndex);
+                    f(f, newParent, newParentNormal, childNodeIndex);
                 }
             };
             for(uint32_t jointIndex : skinNode.joints)
-                fu(fu, Matrix(), Matrix(), jointIndex);
-             */
-            PodVector<Matrix> inverseMatrices;
-            inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
-            outModel.inverseMatrices.resize(data.accessors[skinNode.inverseMatricesIndex].count);
+                calculateInverseMatrices(calculateInverseMatrices, Mat3x4(), Mat3x4(), jointIndex);
+            
+
+
+
 
             if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
                 0, sliceFromPodVectorBytesMutable(inverseMatrices)))
@@ -1263,9 +1274,11 @@ struct EvaluateBoneParams
     const ArraySliceView< GltfModel::AnimRot > rots;
     const ArraySliceView< GltfModel::AnimScale > scales;
     const ArraySliceView< Mat3x4> inverseMatrices;
+    const ArraySliceView< Mat3x4> inverseNormalMatrices;
 };
 
-static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, float time, const Mat3x4 &parentMatrix, ArraySliceViewMutable<Mat3x4> outMatrices)
+static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, float time, 
+    const Mat3x4 &parentMatrix, const Mat3x4 &parentNormalMatrix, ArraySliceViewMutable<Mat3x4> outMatrices)
 {
     if(jointIndex >= params.animationData.size())
         return false;
@@ -1357,15 +1370,21 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
         scale.y = curr->value.y + (next->value.y - curr->value.y) * frac;
         scale.z = curr->value.z + (next->value.z - curr->value.z) * frac;
     }
+    Transform t{ pos, rot, scale };
 
-    Mat3x4 newParent = parentMatrix * getModelMatrix({ pos, rot, scale });
+    Mat3x4 posMat = getMatrixFromTranslation(t.pos);
+    Mat3x4 rotMat = getMatrixFromQuaternion(t.rot);
+    Mat3x4 scaleMat = getMatrixFromScale(t.scale);
 
-    outMatrices[jointIndex] =  newParent * params.inverseMatrices[jointIndex];
+    Mat3x4 newParent = parentMatrix * getModelMatrix(t);
+    Mat3x4 newParentNormal = parentNormalMatrix * getModelNormalMatrix(t);
+    outMatrices[jointIndex * 2] =  newParent * params.inverseMatrices[jointIndex];
+    outMatrices[jointIndex * 2 + 1] = newParentNormal * params.inverseMatrices[jointIndex];// params.inverseNormalMatrices[jointIndex];
     const ArraySliceView< uint32_t > childIndices(
         params.childIndices, animData.childStartIndex, animData.childIndexCount);
     for(uint32_t childIndex : childIndices)
     {
-        bool success = evaluateBone(params, childIndex, time, newParent, outMatrices);
+        bool success = evaluateBone(params, childIndex, time, newParent, newParentNormal, outMatrices);
         if(!success)
             return false;
     }
@@ -1393,15 +1412,16 @@ bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float ti
 
     if (model.inverseMatrices.size() > 255)
         return false;
-    outMatrices.uninitializedResize(model.inverseMatrices.getSize());
+    outMatrices.uninitializedResize(model.inverseMatrices.getSize() * 2);
     const EvaluateBoneParams params{
         .animationData = sliceFromPodVector(model.animationIndices[animationIndex]),
         .childIndices = sliceFromPodVector(model.childrenJointIndices),
         .posses = sliceFromPodVector(model.animationPosData),
         .rots = sliceFromPodVector(model.animationRotData),
         .scales = sliceFromPodVector(model.animationScaleData),
-        .inverseMatrices = sliceFromPodVector(model.inverseMatrices)
+        .inverseMatrices = sliceFromPodVector(model.inverseMatrices),
+        .inverseNormalMatrices = sliceFromPodVector(model.inverseNormalMatrices),
     };
 
-    return evaluateBone(params, 0, time, Mat3x4(), sliceFromPodVectorMutable(outMatrices));
+    return evaluateBone(params, 0, time, Mat3x4(), Mat3x4(), sliceFromPodVectorMutable(outMatrices));
 }

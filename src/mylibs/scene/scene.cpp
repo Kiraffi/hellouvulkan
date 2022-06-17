@@ -118,7 +118,8 @@ bool Scene::update(double deltaTime)
         }
 
         Mat3x4 renderMatrix = getModelMatrix(entity.transform);
-        sceneData.meshRenderSystem.addModelToRender(renderMeshIndex, renderMatrix, matrices);
+        Mat3x4 normalMatrix = getModelNormalMatrix(entity.transform);
+        sceneData.meshRenderSystem.addModelToRender(renderMeshIndex, renderMatrix, normalMatrix, matrices);
     }
     return true;
 }
