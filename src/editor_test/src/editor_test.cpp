@@ -41,12 +41,8 @@
 #include <render/tonemaprendersystem.h>
 #include <render/viewport.h>
 
-
-
 #include <scene/scene.h>
 
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_vulkan.h>
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 1024;
