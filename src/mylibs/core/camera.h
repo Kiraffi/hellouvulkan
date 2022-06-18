@@ -17,16 +17,16 @@ struct Camera
 {
     void updateCameraState(float width, float height);
 
-    Matrix getPerspectiveProjection();
-    Matrix getOrtographicProjection(float width, float height);
-    Matrix getCameraMatrix();
-    Matrix getCameraMatrix(const Vec3 &target);
+    Matrix getPerspectiveProjection() const;
+    Matrix getOrtographicProjection(float width, float height) const;
+    Matrix getCameraMatrix() const;
+    Matrix getCameraMatrix(const Vec3 &target) const;
 
-    Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize);
+    Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize) const;
     void calculateOrtographicPosition(const Vec3& targetPos);
 
-    Ray getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates);
-    Ray getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize);
+    Ray getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates) const;
+    Ray getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize) const;
     Matrix worldToViewMat;
     Matrix viewToWorldMat;
 

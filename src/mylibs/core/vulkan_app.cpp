@@ -179,27 +179,27 @@ void VulkanApp::setVsync(VSyncType vSyncType)
     vulk->needToResize = true;
 }
 
-bool VulkanApp::isPressed(int keyCode)
+bool VulkanApp::isPressed(int keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return keyDowns[ keyCode ].isDown && keyDowns[ keyCode ].pressCount > 0;
     return false;
 }
-bool VulkanApp::isReleased(int keyCode)
+bool VulkanApp::isReleased(int keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return !keyDowns[ keyCode ].isDown && keyDowns[ keyCode ].pressCount > 0;
     return false;
 }
 
-bool VulkanApp::isDown(int keyCode)
+bool VulkanApp::isDown(int keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return keyDowns[ keyCode ].isDown;
     return false;
 }
 
-bool VulkanApp::isUp(int keyCode)
+bool VulkanApp::isUp(int keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return !keyDowns[ keyCode ].isDown;
@@ -323,22 +323,29 @@ void VulkanApp::setTitle(const char *str)
     glfwSetWindowTitle(window, str);
 }
 
+const Camera &VulkanApp::getActiveCamera() const
+{
+    if(useSunCamera)
+        return sunCamera;
+    return camera;
+}
+
 Vec2 VulkanApp::getWindowSize() const
 {
     return Vec2(windowWidth, windowHeight);
 }
 
-double VulkanApp::getDeltaTime()
+double VulkanApp::getDeltaTime() const
 {
     return dt;
 }
 
-double VulkanApp::getTime()
+double VulkanApp::getTime() const
 {
     return glfwGetTime();
 }
 
-MouseState VulkanApp::getMouseState()
+MouseState VulkanApp::getMouseState() const
 {
     MouseState mouseState{};
 
@@ -474,7 +481,8 @@ static void updateStats(VulkanApp &app)
     double cpuTime = currTime - cpuTimeStamp;
     app.gpuFps = gpuframeCount / gpuTime;
     app.cpuFps = cpuframeCount / cpuTime;
-
+    app.cpudt = cpuTime / cpuframeCount * 1000.0f;
+    app.gpudt = gpuTime / gpuframeCount * 1000.0f;
     if(currTime - cpuTimeStamp >= 1.0)
     {
         while(currTime - cpuTimeStamp >= 1.0f)
@@ -500,8 +508,8 @@ static void printStats(VulkanApp &app)
     char str[100];
     float fps = app.dt > 0.0 ? float(1.0 / app.dt) : 0.0f;
 
-    sprintf(str, "%3.2fms, fps: %4.2f, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
-        float(app.dt * 1000.0), app.cpuFps, app.gpuFps, mouseState.x, mouseState.y,
+    sprintf(str, "cpu: %3.2fms, cpuFps: %4.2f, gpu: %3.2fms, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
+        app.cpudt, app.cpuFps, app.gpudt, app.gpuFps, mouseState.x, mouseState.y,
         mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown
     );
     app.setTitle(str);

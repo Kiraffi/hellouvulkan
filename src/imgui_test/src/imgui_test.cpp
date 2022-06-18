@@ -27,7 +27,7 @@
 #include <render/convertrendertarget.h>
 #include <render/lightrendersystem.h>
 #include <render/meshrendersystem.h>
-#include <render/myimgui.h>
+#include <render/myimguirenderer.h>
 #include <render/tonemaprendersystem.h>
 
 #include <render/lightingrendertargets.h>
@@ -77,7 +77,7 @@ public:
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
-    MyImgui imgui;
+    MyImguiRenderer imgui;
 
     float rotationAmount = 0.0f;
 

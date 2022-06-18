@@ -1,4 +1,4 @@
-#include "myimgui.h"
+#include "myimguirenderer.h"
 
 #include <core/vulkan_app.h>
 #include <myvulkan/myvulkan.h>
@@ -21,7 +21,7 @@ static void check_vk_result(VkResult err)
 }
 
 
-MyImgui::~MyImgui()
+MyImguiRenderer::~MyImguiRenderer()
 {
     //if(renderPass && descriptorPool && frameBuffer)
     {
@@ -41,7 +41,7 @@ MyImgui::~MyImgui()
     frameBuffer = VK_NULL_HANDLE;
 }
 
-bool MyImgui::init(GLFWwindow *window)
+bool MyImguiRenderer::init(GLFWwindow *window)
 {
 
     renderPass =
@@ -167,7 +167,7 @@ bool MyImgui::init(GLFWwindow *window)
 
 }
 
-bool MyImgui::updateRenderTarget(const Image &image)
+bool MyImguiRenderer::updateRenderTarget(const Image &renderTargetImage)
 {
     if (!renderPass)
         return false;
@@ -179,18 +179,46 @@ bool MyImgui::updateRenderTarget(const Image &image)
     createInfo.renderPass = renderPass;
     createInfo.attachmentCount = 1;
     createInfo.layers = 1;
-    createInfo.pAttachments = &image.imageView;
-    createInfo.width = image.width;
-    createInfo.height = image.height;
+    createInfo.pAttachments = &renderTargetImage.imageView;
+    createInfo.width = renderTargetImage.width;
+    createInfo.height = renderTargetImage.height;
 
     VK_CHECK(vkCreateFramebuffer(vulk->device, &createInfo, nullptr, &frameBuffer));
 
-    frameBufferWidth = image.width;
-    frameBufferHeight = image.height;
+    frameBufferWidth = renderTargetImage.width;
+    frameBufferHeight = renderTargetImage.height;
+
     return true;
 }
 
-void MyImgui::renderBegin()
+bool MyImguiRenderer::addTexture(const Image &image, VkDescriptorSet &currentId)
+{
+    if(currentId == 0)
+    {
+        currentId = ImGui_ImplVulkan_AddTexture(
+            vulk->globalTextureSampler, image.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+    else
+    {
+        // Update the Descriptor Set:
+        {
+            VkDescriptorImageInfo desc_image[1] = {};
+            desc_image[0].sampler = vulk->globalTextureSampler;
+            desc_image[0].imageView = image.imageView;
+            desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkWriteDescriptorSet write_desc[1] = {};
+            write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_desc[0].dstSet = currentId;
+            write_desc[0].descriptorCount = 1;
+            write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_desc[0].pImageInfo = desc_image;
+            vkUpdateDescriptorSets(vulk->device, 1, write_desc, 0, NULL);
+        }
+    }
+    return true;
+}
+
+void MyImguiRenderer::renderBegin()
 {
     ASSERT(renderPass && frameBuffer);
 
@@ -200,7 +228,7 @@ void MyImgui::renderBegin()
     ImGui::NewFrame();
 }
 
-void MyImgui::render()
+void MyImguiRenderer::render()
 {
     // Rendering
     ImGui::Render();

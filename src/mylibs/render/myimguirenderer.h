@@ -1,20 +1,22 @@
 #pragma once
 
+#include <myvulkan/vulkanresources.h>
+
 #include <vulkan/vulkan_core.h>
 
 class VulkanApp;
 struct GLFWwindow;
-struct Image;
 
-class MyImgui
+class MyImguiRenderer
 {
 public:
-    ~MyImgui();
-    bool init(GLFWwindow* window);
-    bool updateRenderTarget(const Image &image);
+    ~MyImguiRenderer();
+    bool init(GLFWwindow *window);
+    // Used with editor only....
+    bool updateRenderTarget(const Image &renderTargetImage);
     void renderBegin();
     void render();
-
+    static bool addTexture(const Image &image, VkDescriptorSet &currentId);
 private:
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;

@@ -1424,7 +1424,7 @@ void present(Image & imageToPresent)
         imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageBlitRegion.dstSubresource.layerCount = 1;
         imageBlitRegion.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk->swapchain.width, ( int32_t ) vulk->swapchain.height, 1 };
+        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( int32_t ) imageToPresent.width, ( int32_t )imageToPresent.height, 1 };
         imageBlitRegion.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
         imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk->swapchain.width, ( int32_t ) vulk->swapchain.height, 1 };
 
@@ -1432,10 +1432,10 @@ void present(Image & imageToPresent)
         vkCmdBlitImage(vulk->commandBuffer,
             imageToPresent.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             vulk->swapchain.images[ vulk->imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
-    }
+    
 
     // Prepare image for presenting.
-    {
+    
         VkImageMemoryBarrier presentBarrier =
             imageBarrier(vulk->swapchain.images[ vulk->imageIndex ],
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,

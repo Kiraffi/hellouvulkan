@@ -38,15 +38,19 @@ add_library(MyLibraries
 
     "scene/gameentity.cpp"
     "scene/scene.cpp"
-)
+ )
 
 add_library(MyImgui
     "gui/transformview.cpp"
     "gui/componentviews.h"
-    "gui/gameentityview.cpp"
+    
     "gui/componentviews.cpp"
 
-    "render/myimgui.cpp"
+    "render/myimguirenderer.cpp"
+    
+    
+    "gui/guiutil.cpp"
+    "gui/editorsystem.cpp"
 )
 
 add_library(MyVulkan
@@ -69,32 +73,17 @@ add_library(MyVulkan
     "render/meshrendertargets.cpp"
     "render/meshrendertargets.h"
     "render/lightingrendertargets.h"
-
 )
-
-
-
-target_include_directories(MyLibraries PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/"
-    )
-
 
 
 
 target_link_libraries(MyLibraries PUBLIC
 )
 
-target_include_directories(MyImgui PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/"
-)
 
 
 target_link_libraries(MyImgui PUBLIC
     Imgui
-)
-
-target_include_directories(MyVulkan PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/"
 )
 
 if (WIN32)

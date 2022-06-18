@@ -12,6 +12,9 @@ set(CMAKE_CXX_EXTENSIONS FALSE)
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 #set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g")
 
+# imgui stuff to support vulkan with x86
+ADD_DEFINITIONS(-DImTextureID=ImU64)
+
 include(${PROJECT_SOURCE_DIR}/cmake/my_cmake.cmake)
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)

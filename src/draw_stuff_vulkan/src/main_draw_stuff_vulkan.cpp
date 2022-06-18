@@ -34,7 +34,6 @@
 #include <render/lightrendersystem.h>
 #include <render/linerendersystem.h>
 #include <render/meshrendersystem.h>
-#include <render/myimgui.h>
 #include <render/tonemaprendersystem.h>
 
 #include <render/lightingrendertargets.h>
@@ -43,7 +42,6 @@
 
 #include <scene/scene.h>
 
-#include <imgui/imgui.h>
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH = 1024;
@@ -85,14 +83,11 @@ public:
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
-    MyImgui imgui;
-
     uint32_t selectedEntityIndex = ~0u;
     float rotationAmount = 0.0f;
 
     bool showNormalMap = false;
     bool rotateOn = false;
-    bool mouseHover = false;
 
     Vec3 lineFrom;
     Vec3 lineTo;
@@ -117,9 +112,6 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
-
-    if (!imgui.init(window))
-        return false;
 
     if (!convertFromS16.init(ShaderType::ConvertFromRGBAS16))
         return false;
@@ -198,7 +190,6 @@ bool VulkanDrawStuff::resized()
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
-    imgui.updateRenderTarget(meshRenderTargets.albedoImage);
     return true;
 }
 
@@ -270,14 +261,12 @@ void VulkanDrawStuff::logicUpdate()
 
     meshRenderSystem.clear();
 
-    if(mouseState.leftButtonDown && !mouseHover)
-        selectedEntityIndex = ~0u;
-
-
-    if(mouseState.leftButtonDown && !mouseHover &&
+    if(mouseState.leftButtonDown &&
         mouseState.x >= 0 && mouseState.y >= 0 &&
         mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
     {
+        selectedEntityIndex = ~0u;
+
         Vec2 coord = Vec2(mouseState.x, mouseState.y);
         Ray ray{ Uninit };
         if(useSunCamera)
@@ -300,7 +289,6 @@ void VulkanDrawStuff::logicUpdate()
 void VulkanDrawStuff::renderUpdate()
 {
     VulkanApp::renderUpdate();
-    imgui.renderBegin();
 
     uint32_t grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
     uint32_t selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
@@ -381,15 +369,6 @@ void VulkanDrawStuff::renderUpdate()
 
     lineRenderSystem.prepareToRender();
 
-    if(selectedEntityIndex != ~0u)
-    {
-        mouseHover = drawEntity("Selected entity", scene.getEntity(selectedEntityIndex));
-    }
-    else
-    {
-        mouseHover = false;
-    }
-
 }
 
 void VulkanDrawStuff::renderDraw()
@@ -439,8 +418,6 @@ void VulkanDrawStuff::renderDraw()
     {
         fontSystem.render();
     }
-
-    imgui.render();
 
     present(meshRenderTargets.albedoImage);
 }

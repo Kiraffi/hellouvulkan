@@ -28,7 +28,7 @@ void Camera::updateCameraState(float width, float height)
     viewToWorldMat = inverse(worldToViewMat);
 }
 
-Matrix Camera::getPerspectiveProjection()
+Matrix Camera::getPerspectiveProjection() const
 {
     float f = 1.0f / tanf(toRadians(fovY * 0.5f));
 
@@ -44,7 +44,7 @@ Matrix Camera::getPerspectiveProjection()
 
 
 
-Matrix Camera::getOrtographicProjection(float width, float height)
+Matrix Camera::getOrtographicProjection(float width, float height) const
 {
     float divider = zFar - zNear; //Near - zFar;
     float s1 = -1.0f / (divider);
@@ -71,7 +71,7 @@ void Camera::calculateOrtographicPosition(const Vec3 &targetPos)
     position = targetPos + forwardDir * 100.0f;
 }
 
-Matrix Camera::getCameraMatrix()
+Matrix Camera::getCameraMatrix() const
 {
     Vector3 rightDir;
     Vector3 upDir;
@@ -81,12 +81,12 @@ Matrix Camera::getCameraMatrix()
     return createMatrixFromLookAt(position, position - forwardDir, upDir);
 }
 
-Matrix Camera::getCameraMatrix(const Vector3 &target)
+Matrix Camera::getCameraMatrix(const Vector3 &target) const
 {
     return createMatrixFromLookAt(position, target, Vec3(0.0f, 1.0f, 0.0));
 }
 
-Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize)
+Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize) const
 {
     char tmpStr[1024];
 
@@ -111,7 +111,7 @@ Vec2 Camera::renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition
 }
 
 
-Ray Camera::getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates)
+Ray Camera::getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates) const
 {
     Ray result{ Uninit };
 
@@ -140,7 +140,7 @@ Ray Camera::getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates)
     return Ray(fromPos, rayDir);
 }
 
-Ray Camera::getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize)
+Ray Camera::getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize) const
 {
     // Calculate the click as ndc. Half pixel offset as rendering.
     Vec2 coord = (screenPixelCoordinates + 0.5f) / windowSize;

@@ -43,18 +43,20 @@ public:
     void setClearColor(float r, float g, float b, float a);
     void setTitle(const char *str);
 
+    const Camera &getActiveCamera() const;
+
     Vector2 getWindowSize() const;
 
     void checkCameraKeypresses(float dt, Camera& camera);
 
-    double getDeltaTime();
-    double getTime();
-    MouseState getMouseState();
+    double getDeltaTime() const;
+    double getTime() const;
+    MouseState getMouseState() const;
 
-    bool isPressed(int keyCode);
-    bool isReleased(int keyCode);
-    bool isDown(int keyCode);
-    bool isUp(int keyCode);
+    bool isPressed(int keyCode) const;
+    bool isReleased(int keyCode) const;
+    bool isDown(int keyCode) const;
+    bool isUp(int keyCode) const;
 
 public:
     GLFWwindow *window = nullptr;
@@ -75,6 +77,8 @@ public:
 
     float cpuFps = 0.0f;
     float gpuFps = 0.0f;
+    float cpudt = 0.0f;
+    float gpudt = 0.0f;
 
 protected:
     FontRenderSystem fontSystem;
