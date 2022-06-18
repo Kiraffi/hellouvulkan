@@ -36,9 +36,9 @@ MyImgui::~MyImgui()
     if(frameBuffer)
         vkDestroyFramebuffer(vulk->device, frameBuffer, nullptr);
 
-    renderPass = nullptr;
-    descriptorPool = nullptr;
-    frameBuffer = nullptr;
+    renderPass = VK_NULL_HANDLE;
+    descriptorPool = VK_NULL_HANDLE;
+    frameBuffer = VK_NULL_HANDLE;
 }
 
 bool MyImgui::init(GLFWwindow *window)
@@ -96,7 +96,7 @@ bool MyImgui::init(GLFWwindow *window)
     init_info.Device = vulk->device;
     init_info.QueueFamily = vulk->queueFamilyIndices.graphicsFamily;
     init_info.Queue = vulk->graphicsQueue;
-    init_info.PipelineCache = nullptr;
+    init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPool = descriptorPool;
     init_info.Subpass = 0;
     init_info.MinImageCount = vulk->swapchain.images.size();
@@ -173,7 +173,7 @@ bool MyImgui::updateRenderTarget(const Image &image)
         return false;
     if (frameBuffer)
         vkDestroyFramebuffer(vulk->device, frameBuffer, nullptr);
-    frameBuffer = nullptr;
+    frameBuffer = VK_NULL_HANDLE;
 
     VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
     createInfo.renderPass = renderPass;

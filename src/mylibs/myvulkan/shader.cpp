@@ -255,7 +255,7 @@ void destroyShader(Shader& shader)
 {
     if (shader.module)
         vkDestroyShaderModule(vulk->device, shader.module, nullptr);
-    shader.module = nullptr;
+    shader.module = VK_NULL_HANDLE;
 }
 
 

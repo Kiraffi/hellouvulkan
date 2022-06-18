@@ -82,7 +82,7 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
             DescriptorInfo(meshRenderTargets.depthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
             DescriptorInfo(meshRenderTargets.shadowDepthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, shadowTextureSampler),
 
-            DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+            DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
         };
     }
     if (!createDescriptor(pipeline))

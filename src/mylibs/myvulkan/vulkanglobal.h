@@ -66,8 +66,8 @@ struct Buffer
 struct Image
 {
     VmaAllocation_T* allocation = nullptr;
-    VkImage image = nullptr;
-    VkImageView imageView = nullptr;
+    VkImage image = VK_NULL_HANDLE;
+    VkImageView imageView = VK_NULL_HANDLE;
     const char* imageName = nullptr;
     VkAccessFlags accessMask = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -91,7 +91,7 @@ struct SwapChain
 
 struct BufferBarrierInfo
 {
-    VkBuffer buffer = nullptr;
+    VkBuffer buffer = VK_NULL_HANDLE;
     VkBufferCopy copyRegion{};
 };
 
@@ -103,16 +103,16 @@ struct VulkanGlobal
     VulkanInitializationParameters initParams;
     QueueFamilyIndices queueFamilyIndices;
 
-    VkDebugUtilsMessengerEXT debugCallBack = nullptr;
-    VkInstance instance = nullptr;
-    VkPhysicalDevice physicalDevice = nullptr;
-    VkDevice device = nullptr;
-    VkSurfaceKHR surface = nullptr;
+    VkDebugUtilsMessengerEXT debugCallBack = VK_NULL_HANDLE;
+    VkInstance instance = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 
-    VkQueue graphicsQueue = nullptr;
-    VkQueue presentQueue = nullptr;
-    VkQueue computeQueue = nullptr;
+    VkQueue graphicsQueue = VK_NULL_HANDLE;
+    VkQueue presentQueue = VK_NULL_HANDLE;
+    VkQueue computeQueue = VK_NULL_HANDLE;
 
 
     Buffer scratchBuffer;
@@ -131,16 +131,16 @@ struct VulkanGlobal
     VkSemaphore releaseSemaphores[FramesInFlight] = {};
 
     VkFence fences[FramesInFlight] = {};
-    VkCommandPool commandPool = nullptr;
+    VkCommandPool commandPool = VK_NULL_HANDLE;
 
     VkCommandBuffer commandBuffers[FramesInFlight] = {};
-    VkCommandBuffer commandBuffer = nullptr; // current commandbuffer
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE; // current commandbuffer
 
 
-    VmaAllocator_T *allocator = nullptr;
+    VmaAllocator_T *allocator = VK_NULL_HANDLE;
 
 
-    VkSampler globalTextureSampler = nullptr;
+    VkSampler globalTextureSampler = VK_NULL_HANDLE;
 
     VkFormat defaultColorFormat = VkFormat::VK_FORMAT_UNDEFINED;
     VkFormat presentColorFormat = VkFormat::VK_FORMAT_UNDEFINED;

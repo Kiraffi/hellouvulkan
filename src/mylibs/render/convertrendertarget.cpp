@@ -46,7 +46,7 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
             DescriptorInfo(vulk->renderFrameBufferHandle[i]),
 
             DescriptorInfo(srcImage.imageView, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
-            DescriptorInfo(toImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+            DescriptorInfo(toImage.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
         };
     }
     

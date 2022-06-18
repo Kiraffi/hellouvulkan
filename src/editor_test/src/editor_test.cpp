@@ -116,7 +116,7 @@ public:
     Vec2 editorWindowPosition;
     Image finalImage;
     bool focusOnViewport = false;
-    VkDescriptorSet readAlbedo = nullptr;
+    VkDescriptorSet readAlbedo = VK_NULL_HANDLE;
 };
 
 

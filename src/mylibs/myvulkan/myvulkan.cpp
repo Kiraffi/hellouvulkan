@@ -164,10 +164,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
 static VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
 {
 #if NDEBUG
-    return nullptr;
+    return VK_NULL_HANDLE;
 #else
     if (!vulk->initParams.useValidationLayers)
-        return nullptr;
+        return VK_NULL_HANDLE;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
     createInfo.messageSeverity =
@@ -1052,7 +1052,7 @@ void deinitVulkan()
     if (vulk->device)
     {
         destroySampler(vulk->globalTextureSampler);
-        vulk->globalTextureSampler = nullptr;
+        vulk->globalTextureSampler = VK_NULL_HANDLE;
         destroyBuffer(vulk->scratchBuffer);
         destroyBuffer(vulk->uniformBuffer);
 
@@ -1517,7 +1517,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
 {
     destroyPipeline(outPipeline);
 
-    bool hasFragShader = fragShader.module != nullptr;
+    bool hasFragShader = fragShader.module != VK_NULL_HANDLE;
 
     PodVector<Shader> shaders;
 
@@ -1614,7 +1614,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
         .pColorAttachmentFormats = colorFormats.data(),
         .depthAttachmentFormat = depthTest.depthTarget.format,
     };
-    VkRenderPass renderPass = nullptr;
+    VkRenderPass renderPass = VK_NULL_HANDLE;
     if (!useDynamic)
     {
         renderPass = createRenderPass(colorTargets, depthTest.depthTarget);
@@ -1640,7 +1640,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
         createInfo.pNext = &pipelineRenderingCreateInfo;
 
     VkPipeline pipeline = 0;
-    VK_CHECK(vkCreateGraphicsPipelines(vulk->device, nullptr, 1, &createInfo, nullptr, &pipeline));
+    VK_CHECK(vkCreateGraphicsPipelines(vulk->device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline));
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
@@ -1653,7 +1653,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     }
     setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
 
-    return pipeline != nullptr;
+    return pipeline != VK_NULL_HANDLE;
 }
 
 
@@ -1679,7 +1679,7 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::s
     createInfo.layout = outPipeline.pipelineLayout;
 
     VkPipeline pipeline = 0;
-    VK_CHECK(vkCreateComputePipelines(vulk->device, nullptr, 1, &createInfo, nullptr, &pipeline));
+    VK_CHECK(vkCreateComputePipelines(vulk->device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline));
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
@@ -1691,7 +1691,7 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::s
         return false;
     }
     setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
-    return pipeline != nullptr;
+    return pipeline != VK_NULL_HANDLE;
 }
 
 
@@ -1710,11 +1710,11 @@ void destroyPipeline(Pipeline &pipeline)
     if(pipeline.descriptorSetLayout)
         vkDestroyDescriptorSetLayout(vulk->device, pipeline.descriptorSetLayout, nullptr);
 
-    pipeline.pipeline = nullptr;
-    pipeline.pipelineLayout = nullptr;
-    pipeline.descriptorSetLayout = nullptr;
-    pipeline.renderPass = nullptr;
-    pipeline.framebuffer = nullptr;
+    pipeline.pipeline = VK_NULL_HANDLE;
+    pipeline.pipelineLayout = VK_NULL_HANDLE;
+    pipeline.descriptorSetLayout = VK_NULL_HANDLE;
+    pipeline.renderPass = VK_NULL_HANDLE;
+    pipeline.framebuffer = VK_NULL_HANDLE;
 }
 
 void destroyDescriptor(Descriptor& descriptor)

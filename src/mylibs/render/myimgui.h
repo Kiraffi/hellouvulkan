@@ -16,9 +16,9 @@ public:
     void render();
 
 private:
-    VkRenderPass renderPass = nullptr;
-    VkDescriptorPool descriptorPool = nullptr;
-    VkFramebuffer frameBuffer = nullptr;
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+    VkFramebuffer frameBuffer = VK_NULL_HANDLE;
 
     uint32_t frameBufferWidth = 0u;
     uint32_t frameBufferHeight = 0u;

@@ -156,7 +156,7 @@ bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDept
     pipeline.framebufferWidth = width;
     pipeline.framebufferHeight = height;
     ASSERT(framebuffer);
-    return framebuffer != nullptr;
+    return framebuffer != VK_NULL_HANDLE;
 }
 
 void destroyFramebuffer(VkFramebuffer framebuffer)
@@ -338,7 +338,7 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
 
 VkSampler createSampler(const VkSamplerCreateInfo& info)
 {
-    VkSampler sampler = nullptr;
+    VkSampler sampler = VK_NULL_HANDLE;
     VK_CHECK(vkCreateSampler(vulk->device, &info, nullptr, &sampler));
     return sampler;
 }
@@ -517,7 +517,7 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     ASSERT(objectSize);
     ASSERT(targetBuffer);
     ASSERT(vulk->scratchBufferOffset + objectSize < vulk->scratchBufferMaxOffset);
-    if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == nullptr ||
+    if (objectToCopy == nullptr || objectSize == 0 || targetBuffer == VK_NULL_HANDLE ||
         vulk->scratchBufferOffset + objectSize >= vulk->scratchBufferMaxOffset)
         return false;
 

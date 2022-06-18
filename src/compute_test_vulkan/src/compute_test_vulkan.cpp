@@ -171,8 +171,8 @@ bool VulkanComputeTest::recreateDescriptor()
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
                 //DescriptorInfo(renderColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureSampler),
-                DescriptorInfo(meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
-                DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
+                DescriptorInfo(meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
+                DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
             };
         }
         if (!createDescriptor(pipeline))

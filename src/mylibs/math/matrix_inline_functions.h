@@ -10,7 +10,7 @@
 #include <math/vector3_inline_functions.h>
 
 #include <xmmintrin.h>
-#include <immintrin.h>
+//#include <immintrin.h>
 
 static FORCE_INLINE Mat3x4 getMatrixFromQuaternion(const Quaternion &quat)
 {

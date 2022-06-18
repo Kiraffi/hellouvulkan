@@ -28,5 +28,5 @@ private:
     UniformBufferHandle lightBufferHandle[VulkanGlobal::FramesInFlight];
 
     Pipeline lightComputePipeline;
-    VkSampler shadowTextureSampler = nullptr;
+    VkSampler shadowTextureSampler = VK_NULL_HANDLE;
 };

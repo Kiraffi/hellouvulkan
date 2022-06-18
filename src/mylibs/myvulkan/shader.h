@@ -7,7 +7,7 @@
 
 struct Shader
 {
-    VkShaderModule module = nullptr;
+    VkShaderModule module = VK_NULL_HANDLE;
 
     VkShaderStageFlags stage;
     VkDescriptorType resourceTypes[64] = {};
