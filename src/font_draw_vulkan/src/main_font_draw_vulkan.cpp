@@ -1,8 +1,6 @@
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include <core/file.h>
+#include <core/glfw_keys.h>
 #include <core/general.h>
 #include <core/mytypes.h>
 #include <core/timer.h>
@@ -176,7 +174,7 @@ bool VulkanFontDraw::initRun()
 {
     const uint32_t charCount = 128 - 32;
 
-    if (!loadBytes(fontFilename, characterData))
+    if (!loadBytes(fontFilename.c_str(), characterData))
     {
         printf("Failed to load file: %s\n", fontFilename.c_str());
         return false;
@@ -291,10 +289,10 @@ void VulkanFontDraw::logicUpdate()
         }
 
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            writeBytes(fontFilename, sliceFromPodVectorBytes(characterData));
+            writeBytes(fontFilename.c_str(), sliceFromPodVectorBytes(characterData));
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
-            loadBytes(fontFilename, characterData);
+            loadBytes(fontFilename.c_str(), characterData);
 
         if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {

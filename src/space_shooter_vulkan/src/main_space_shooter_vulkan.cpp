@@ -1,10 +1,7 @@
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-//#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 #include <container/vector.h>
 
 #include <core/general.h>
+#include <core/glfw_keys.h>
 #include <core/mytypes.h>
 #include <core/timer.h>
 #include <core/vulkan_app.h>
@@ -126,7 +123,7 @@ public:
 
     PodVector< uint32_t > gpuModelIndices;
 
-    std::string_view text = "Space shooter!";
+    const char *text = "Space shooter!";
 
 
     double lastShot = 0.0;
@@ -382,7 +379,7 @@ bool SpaceShooter::initRun()
 
     // Create instances.
     {
-        double spawnTime = glfwGetTime();
+        double spawnTime = getTime();
         // Player instance.
         {
             float xPos = 200.0f;
@@ -410,7 +407,7 @@ void SpaceShooter::logicUpdate()
 {
     VulkanApp::logicUpdate();
 
-    currentTime = glfwGetTime();
+    currentTime = getTime();
 
     Timer updateDurTimer;
     static double dtSplit = 0.0;
@@ -459,7 +456,7 @@ void SpaceShooter::logicUpdate()
                 bulletEntities.emplace_back(Entity{
                     .posX = posX, .posY = posY, .posZ = 0.5f, .rotation = 0.0f,
                     .speedX = speedX, .speedY = speedY, .size = 4.0f, .entityModelIndex = 1 + AsteroidMaxTypes,
-                    .spawnTime = glfwGetTime(),
+                    .spawnTime = getTime(),
                     .color = getColor(0.0, 0.5, 1.0, 1.0f) });
 
                 lastShot = timeHere;

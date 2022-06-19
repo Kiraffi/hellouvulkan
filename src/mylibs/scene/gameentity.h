@@ -10,8 +10,6 @@
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
-#include <string_view>
-
 class WriteJson;
 class JsonBlock;
 
@@ -77,9 +75,9 @@ struct GameEntity
     uint32_t index = 0;
 };
 
-bool writeGameObject(std::string_view name, const GameEntity &entity, WriteJson &json);
+bool writeGameObject(const char *name, const GameEntity &entity, WriteJson &json);
 bool writeGameObject(const GameEntity &entity, WriteJson &json);
 bool loadGameObject(const JsonBlock &json, GameEntity &outEntity);
-bool findEntityType(std::string_view name, EntityType &outType);
+bool findEntityType(const char *name, EntityType &outType);
 const char *getStringFromEntityType(const EntityType &type);
 

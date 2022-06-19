@@ -4,11 +4,11 @@
 #include <core/json.h>
 #include <core/writejson.h>
 
-bool findEntityType(std::string_view name, EntityType &outType)
+bool findEntityType(const char *name, EntityType &outType)
 {
     for(const auto entityName : nameStrings)
     {
-        if(name == entityName.name)
+        if(strcmp(name, entityName.name) == 0)
         {
             outType = entityName.type;
             return true;
@@ -46,7 +46,7 @@ bool writeGameObject(const GameEntity &entity, WriteJson &json)
     return writeGameObjectContent(entity, json);
 }
 
-bool writeGameObject(std::string_view name, const GameEntity &entity, WriteJson &json)
+bool writeGameObject(const char *name, const GameEntity &entity, WriteJson &json)
 {
     json.addObject(name);
     return writeGameObjectContent(entity, json);
@@ -74,7 +74,7 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
     if(!json.getChild("modelType").parseString(objTypeName))
         return false;
 
-    if(!findEntityType(objTypeName, outEntity.entityType))
+    if(!findEntityType(std::string(objTypeName).c_str(), outEntity.entityType))
         return false;
 
     outEntity.name = std::string(name).c_str();

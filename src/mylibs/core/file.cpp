@@ -16,7 +16,7 @@
 #endif
 */
 
-bool loadBytes(std::string_view filename, PodVector<char> &dataOut)
+bool loadBytes(const char *filename, PodVector<char> &dataOut)
 {
     /*
 #ifdef _WIN32
@@ -44,7 +44,7 @@ bool loadBytes(std::string_view filename, PodVector<char> &dataOut)
 }
 
 
-bool writeBytes(std::string_view filename, ArraySliceViewBytes bytes)
+bool writeBytes(const char *filename, ArraySliceViewBytes bytes)
 {
     //
     //if(std::filesystem::exists(filename))
@@ -54,7 +54,7 @@ bool writeBytes(std::string_view filename, ArraySliceViewBytes bytes)
 
         std::ofstream f(p, std::ios::out | std::ios::binary);
 
-        printf("Writing bytes: %u to :%s\n", uint32_t(bytes.size()), std::string(filename).c_str());
+        printf("Writing bytes: %u to :%s\n", uint32_t(bytes.size()), filename);
         bool success = !(f.write((const char *)bytes.data(), bytes.size())).fail();
         if(!success)
         {
@@ -66,7 +66,7 @@ bool writeBytes(std::string_view filename, ArraySliceViewBytes bytes)
 }
 
 
-bool fileExists(std::string_view fileName)
+bool fileExists(const char *fileName)
 {
     return std::filesystem::exists(fileName);
 }

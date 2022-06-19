@@ -41,8 +41,8 @@ public:
     PodVector<GameEntity> &getEntities() { return sceneData.entities; }
     
 
-    bool readLevel(std::string_view levelName);
-    bool writeLevel(std::string_view filename) const;
+    bool readLevel(const char *levelName);
+    bool writeLevel(const char *filename) const;
 
     const SmallStackString &getSceneName() const { return sceneName; }
 

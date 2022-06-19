@@ -1,7 +1,7 @@
 #pragma once
 
-#include <chrono>
 #include <time.h>
+#include <stdint.h>
 
 #if __unix__
     #define USE_UNIX_CLOCK_COARSE 1
@@ -34,7 +34,7 @@ public:
         ClockThreadId = 3,
         ClockCoarseId = 6,
     };
-    using TimePoint = std::chrono::high_resolution_clock::time_point;
+    using TimePoint = uint64_t;//std::chrono::high_resolution_clock::time_point;
 #endif
 
     Timer();
@@ -59,6 +59,7 @@ private:
     bool running = true;
 
 };
+const size_t foo = sizeof(Timer::TimePoint);
 
 void printTime(const Timer& timer);
 void printNamedTimer(const Timer& timer, const char* name);

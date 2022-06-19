@@ -1,7 +1,3 @@
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include <core/file.h>
 #include <core/general.h>
 #include <core/timer.h>
@@ -30,12 +26,12 @@ void FontRenderSystem::deInit()
 
 
 
-bool FontRenderSystem::init(std::string_view fontFilename)
+bool FontRenderSystem::init(const char *fontFilename)
 {
     PodVector<char> data;
     if (!loadBytes(fontFilename, data))
     {
-        printf("Failed to load file: %s\n", fontFilename.data());
+        printf("Failed to load file: %s\n", fontFilename);
         return false;
     }
 
@@ -167,14 +163,19 @@ void FontRenderSystem::setRenderTarget(Image& image)
 
 
 
-void FontRenderSystem::addText(std::string_view text, Vector2 pos, Vec2 charSize, const Vector4& color)
+void FontRenderSystem::addText(const char *text, Vector2 pos, Vec2 charSize, const Vector4& color)
 {
-    ASSERT(vertData.size() + text.length() < MAX_LETTERS);
+    if(text == nullptr)
+        return;
     uint16_t charWidth = uint16_t(charSize.x);
     uint16_t charHeight = uint16_t(charSize.y);
     uint32_t col = getColor(color.x, color.y, color.z, color.w);
-    for(const char c : text)
+    
+    while(*text++)
     {
+        const char c = *text;
+        ASSERT(vertData.size() < MAX_LETTERS);
+
         GPUVertexData vdata;
         vdata.color = col;
         vdata.pixelSizeX = charWidth;

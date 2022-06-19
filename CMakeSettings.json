@@ -4,7 +4,7 @@
             "name": "x64-Debug-ninja",
             "generator": "Ninja",
             "configurationType": "Debug",
-            "inheritEnvironments": [ "msvc_x64_x64" ],
+            "inheritEnvironments": [ "msvc_x86_x64" ],
             "buildRoot": "${projectDir}\\out\\build\\${name}",
             "installRoot": "${projectDir}\\out\\install\\${name}",
             "cmakeCommandArgs": "",
@@ -27,7 +27,7 @@
             "name": "x64-Release-withdebinfo",
             "generator": "Ninja",
             "configurationType": "RelWithDebInfo",
-            "inheritEnvironments": [ "msvc_x64_x64" ],
+            "inheritEnvironments": [ "msvc_x86_x64" ],
             "buildRoot": "${projectDir}\\out\\build\\${name}",
             "installRoot": "${projectDir}\\out\\install\\${name}",
             "cmakeCommandArgs": "",
@@ -45,7 +45,7 @@
             "name": "x64-Release",
             "generator": "Ninja",
             "configurationType": "Release",
-            "inheritEnvironments": [ "msvc_x64_x64" ],
+            "inheritEnvironments": [ "msvc_x86_x64" ],
             "buildRoot": "${projectDir}\\out\\build\\${name}",
             "installRoot": "${projectDir}\\out\\install\\${name}",
             "cmakeCommandArgs": "",
@@ -124,6 +124,17 @@
             "buildCommandArgs": "-v",
             "ctestCommandArgs": "",
             "inheritEnvironments": [ "clang_cl_x86" ]
+        },
+        {
+            "name": "x86-ReleaseWithDebInfo_CL",
+            "generator": "Visual Studio 16 2019",
+            "configurationType": "RelWithDebInfo",
+            "buildRoot": "${projectDir}\\out\\build\\${name}",
+            "installRoot": "${projectDir}\\out\\install\\${name}",
+            "cmakeCommandArgs": "",
+            "buildCommandArgs": "-v:minimal",
+            "ctestCommandArgs": "",
+            "inheritEnvironments": [ "msvc_x86" ]
         }
     ]
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string_view>
-
 #include <container/podvector.h>
 
 #include <math/vector3.h>

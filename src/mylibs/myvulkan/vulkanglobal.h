@@ -28,8 +28,6 @@ struct VmaAllocator_T;
 
 class VulkanApp;
 
-//#include <vk_mem_alloc.h>
-
 struct QueueFamilyIndices
 {
     uint32_t graphicsFamily = ~0u;

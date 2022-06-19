@@ -3,14 +3,25 @@
 #include <core/general.h>
 #include <core/mytypes.h>
 
+
+// This include seems quite big for visual studio
+#include <chrono>
+
+static std::chrono::high_resolution_clock::time_point getTimepointFromChrono(uint64_t t)
+{
+    std::chrono::high_resolution_clock::time_point tp{ std::chrono::nanoseconds{ t } };
+    return tp;
+}
+
 Timer::TimePoint Timer::getTime(ClockType clockType)
 {
-    int timerType = int(clockType);
     #if USE_UNIX_CLOCK_COARSE
+        int timerType = int(clockType);
         TimePoint newTime;
         clock_gettime(timerType, &newTime);
     #else
-        TimePoint newTime = std::chrono::high_resolution_clock::now();
+        std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
+        TimePoint newTime = chTime.time_since_epoch().count();
     #endif
     return newTime;
 }
@@ -21,8 +32,7 @@ double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoin
         double dur = double(toTime.tv_sec - fromTime.tv_sec) +
             double(toTime.tv_nsec - fromTime.tv_nsec) * 1.0e-9;
     #else
-        double dur = std::chrono::duration_cast<std::chrono::nanoseconds>
-            (toTime - fromTime).count() * 1.0e-9;
+        double dur = (toTime - fromTime) * 1.0e-9;
     #endif
     return dur;
 }

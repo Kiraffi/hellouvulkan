@@ -20,7 +20,7 @@ bool ConvertRenderTarget::init(ShaderType shapeType)
 
         std::string name = "Convert pipeline - ";
         name += std::to_string(uint32_t(shapeType));
-        if (!createComputePipeline(getShader(shapeType), pipeline, name))
+        if (!createComputePipeline(getShader(shapeType), pipeline, name.c_str()))
         {
             printf("Failed to create compute pipeline!\n");
             return false;

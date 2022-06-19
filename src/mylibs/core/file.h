@@ -3,9 +3,7 @@
 #include <container/arraysliceview.h>
 #include <container/podvector.h>
 
-#include <string_view>
+bool loadBytes(const char *filename, PodVector<char> &dataOut);
+bool fileExists(const char *filename);
 
-bool loadBytes(std::string_view filename, PodVector<char> &dataOut);
-bool fileExists(std::string_view filename);
-
-bool writeBytes(std::string_view filename, ArraySliceViewBytes bytes);
+bool writeBytes(const char *filename, ArraySliceViewBytes bytes);

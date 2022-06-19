@@ -1,10 +1,9 @@
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 #include <components/transform_functions.h>
 
 #include <core/camera.h>
 #include <core/general.h>
+#include <core/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>

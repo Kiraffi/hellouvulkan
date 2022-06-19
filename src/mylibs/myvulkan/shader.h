@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
-#include <string_view>
 
 #include <myvulkan/vulkanglobal.h>
 
@@ -45,7 +44,7 @@ const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex = 0u);
 bool loadShaders();
 void deleteLoadedShaders();
 
-bool loadShader(std::string_view filename, Shader& outShader);
+bool loadShader(const char *filename, Shader& outShader);
 void destroyShader(Shader& shaderModule);
 
 bool createDescriptor(Pipeline &pipeline);

@@ -20,7 +20,7 @@
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
-static bool loadModelForScene(SceneData &sceneData, std::string_view filename, EntityType entityType)
+static bool loadModelForScene(SceneData &sceneData, const char *filename, EntityType entityType)
 {
     if(uint32_t(entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
         return false;
@@ -28,7 +28,7 @@ static bool loadModelForScene(SceneData &sceneData, std::string_view filename, E
 
     bool readSuccess = readGLTF(filename, gltfModel);
 
-    printf("%s gltf read success: %i\n", filename.data(), readSuccess);
+    printf("%s gltf read success: %i\n", filename, readSuccess);
     if (!readSuccess)
     {
         sceneData.models.removeIndex(sceneData.models.size() - 1);
@@ -169,7 +169,7 @@ Bounds Scene::getBounds(uint32_t entityIndex) const
 
 
 
-bool Scene::readLevel(std::string_view levelName)
+bool Scene::readLevel(const char *levelName)
 {
     PodVector<char> buffer;
 
@@ -181,7 +181,7 @@ bool Scene::readLevel(std::string_view levelName)
 
     if(!parseSuccess)
     {
-        printf("Failed to parse: %s\n", levelName.data());
+        printf("Failed to parse: %s\n", levelName);
         return false;
     }
     else
@@ -199,8 +199,8 @@ bool Scene::readLevel(std::string_view levelName)
     if(!json.getChild("versionNumber").parseUInt(versionNumber))
         return false;
 
-    std::string mapName;
-    if(!json.getChild("levelName").parseString(levelName))
+    std::string_view mapName;
+    if(!json.getChild("levelName").parseString(mapName))
         return false;
 
     if(json.getChild("objects").getChildCount() == 0)
@@ -221,7 +221,7 @@ bool Scene::readLevel(std::string_view levelName)
     return true;
 }
 
-bool Scene::writeLevel(std::string_view filename) const
+bool Scene::writeLevel(const char *filename) const
 {
     WriteJson writeJson(Scene::MagicNumber, Scene::VersionNumber);
     writeJson.addString("levelName", sceneName.getStr());

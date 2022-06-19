@@ -14,9 +14,6 @@
 
 #include <vulkan/vulkan_core.h>
 
-
-#include <vk_mem_alloc.h>
-
 #include <string_view>
 #include <set>
 #include <string.h>
@@ -999,7 +996,7 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
             }
             std::string s = "Main command buffer";
             s += std::to_string(i);
-            setObjectName((uint64_t)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s);
+            setObjectName((uint64_t)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s.c_str());
         }
     }
     vulk->commandBuffer = vulk->commandBuffers[0];
@@ -1512,7 +1509,7 @@ void present(Image & imageToPresent)
 
 bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader, 
     const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels, const DepthTest &depthTest,
-    Pipeline &outPipeline, std::string_view pipelineName, VkPrimitiveTopology topology)
+    Pipeline &outPipeline, const char *pipelineName, VkPrimitiveTopology topology)
 {
     //destroyPipeline(outPipeline);
 
@@ -1644,7 +1641,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
 }
 
 
-bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::string_view pipelineName)
+bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, const char *pipelineName)
 {
     //destroyPipeline(outPipeline);
 
@@ -1737,7 +1734,7 @@ void destroyDescriptor(Descriptor& descriptor)
 
 
 // From sasha wilems debugmarker
-void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, std::string_view name)
+void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name)
 {
     // Check for a valid function pointer
     if (pfnDebugMarkerSetObjectName)
@@ -1746,7 +1743,7 @@ void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, std::
         nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
         nameInfo.objectType = objectType;
         nameInfo.object = object;
-        nameInfo.pObjectName = name.data();
+        nameInfo.pObjectName = name;
         pfnDebugMarkerSetObjectName(vulk->device, &nameInfo);
     }
 }
@@ -1768,7 +1765,7 @@ void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64
 }
 
 // Start a new debug marker region
-void beginDebugRegion(std::string_view pMarkerName, Vec4 color)
+void beginDebugRegion(const char *pMarkerName, Vec4 color)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
     if (pfnCmdDebugMarkerBegin)
@@ -1776,13 +1773,13 @@ void beginDebugRegion(std::string_view pMarkerName, Vec4 color)
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
         memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-        markerInfo.pMarkerName = pMarkerName.data();
+        markerInfo.pMarkerName = pMarkerName;
         pfnCmdDebugMarkerBegin(vulk->commandBuffer, &markerInfo);
     }
 }
 
 // Insert a new debug marker into the command buffer
-void insertDebugRegion(std::string_view markerName, Vec4 color)
+void insertDebugRegion(const char *markerName, Vec4 color)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
     if (pfnCmdDebugMarkerInsert)
@@ -1790,7 +1787,7 @@ void insertDebugRegion(std::string_view markerName, Vec4 color)
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
         memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-        markerInfo.pMarkerName = markerName.data();
+        markerInfo.pMarkerName = markerName;
         pfnCmdDebugMarkerInsert(vulk->commandBuffer, &markerInfo);
     }
 }

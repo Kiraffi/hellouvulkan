@@ -478,7 +478,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
 
 
 
-bool readGLTF(std::string_view filename, GltfModel &outModel)
+bool readGLTF(const char *filename, GltfModel &outModel)
 {
     GltfData data;
 
@@ -492,7 +492,7 @@ bool readGLTF(std::string_view filename, GltfModel &outModel)
 
     if (!parseSuccess)
     {
-        printf("Failed to parse: %s\n", filename.data());
+        printf("Failed to parse: %s\n", filename);
         return false;
     }
     else

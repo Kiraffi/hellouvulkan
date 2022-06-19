@@ -158,7 +158,7 @@ bool MeshRenderSystem::init()
             getShader(ShaderType::Basic3DVert, i), depthOnlyRender ? Shader{} : getShader(ShaderType::Basic3DFrag),
             blends,
             { .depthTarget = RenderTarget{ .format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
-            pipeline, name))
+            pipeline, name.c_str()))
         {
             printf("Failed to create graphics pipeline\n");
         }
@@ -382,7 +382,7 @@ void MeshRenderSystem::render(bool isShadowOnly)
         else if (passIndex == 3)
             debugName = "NonAnimated depth only render";
 
-        beginDebugRegion(debugName, Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+        beginDebugRegion(debugName.c_str(), Vec4(1.0f, 1.0f, 0.0f, 1.0f));
         bindGraphicsPipelineWithDecriptors(meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
         for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
         {

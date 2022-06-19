@@ -1,7 +1,5 @@
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include <core/general.h>
+#include <core/glfw_keys.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
@@ -72,8 +70,8 @@ void VulkanFontRender::updateText(std::string_view str)
     tmpStr += ",h";
     tmpStr += std::to_string(int32_t(fontSize.y));
 
-    fontSystem.addText(tmpStr, Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-    fontSystem.addText(str, Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    fontSystem.addText(tmpStr.c_str(), Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    fontSystem.addText(std::string(str).c_str(), Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 bool VulkanFontRender::resized()

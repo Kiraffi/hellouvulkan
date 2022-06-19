@@ -3,6 +3,9 @@
 #include <initializer_list>
 #include "vectorbase.h"
 
+#include <type_traits>
+#include <new>
+
 #define CHECK_NO_POD_MACRO() \
     static constexpr bool layout = std::is_standard_layout<T>(); \
     /*static constexpr bool trivial = std::is_trivial<T>();*/ \

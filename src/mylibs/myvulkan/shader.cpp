@@ -197,7 +197,7 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_vi
     return true;
 }
 
-bool loadShader(std::string_view filename, ShaderType shaderType)
+bool loadShader(const char *filename, ShaderType shaderType)
 {
     if (uint32_t(shaderType) >= uint32_t(ShaderType::NumShaders))
         return false;
@@ -207,15 +207,15 @@ bool loadShader(std::string_view filename, ShaderType shaderType)
     while(true)
     {
         std::string newFilename = "assets/shader/vulkan_new/spvs/";
-        newFilename += filename;
+        newFilename.append(filename);
         newFilename += "_";
         newFilename += std::to_string(permutationIndex);
         newFilename += ".spv";
 
-        if (!fileExists(newFilename))
+        if (!fileExists(newFilename.c_str()))
             break;
 
-        if (!loadBytes(newFilename, buffer))
+        if (!loadBytes(newFilename.c_str(), buffer))
             return false;
 
         ASSERT(buffer.size() % 4 == 0);

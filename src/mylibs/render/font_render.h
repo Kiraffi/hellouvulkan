@@ -14,7 +14,7 @@ class FontRenderSystem
 public:
     FontRenderSystem() {}
     ~FontRenderSystem() {}
-    bool init(std::string_view fontFilename);
+    bool init(const char *fontFilename);
     void deInit();
     //void update(VkDevice device, VkCommandBuffer commandBuffer,
     //    VkRenderPass renderPass, Vector2 renderAreaSize, Buffer& scratchBuffer);
@@ -23,7 +23,7 @@ public:
     void reset();
     void render();
     void setRenderTarget(Image& image);
-    void addText(std::string_view text, Vector2 pos,
+    void addText(const char *text, Vector2 pos,
         Vector2 charSize = Vector2(8.0f, 12.0f), const Vector4 &color = Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
     struct GPUVertexData
