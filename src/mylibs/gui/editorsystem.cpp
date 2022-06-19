@@ -173,14 +173,6 @@ static bool drawEntities(ArraySliceView<GameEntity> gameEntitites, uint32_t &inO
 
 
 
-static bool drawEntity(const char *windowStr, GameEntity &entity)
-{
-    ImGui::Begin(windowStr);
-    bool hover = drawEntityContents(entity);
-    ImGui::End();
-    return hover;
-}
-
 static bool drawEntityContents(GameEntity &entity)
 {
     ImGui::PushID(&entity);
@@ -213,6 +205,14 @@ static bool drawEntityContents(GameEntity &entity)
     ImGui::PopID();
     bool hovered = isWindowHovered();
     return hovered;
+}
+
+static bool drawEntity(const char *windowStr, GameEntity &entity)
+{
+    ImGui::Begin(windowStr);
+    bool hover = drawEntityContents(entity);
+    ImGui::End();
+    return hover;
 }
 
 
@@ -371,7 +371,7 @@ bool EditorSystem::renderUpdateGui()
         focusOnViewport = false;
         selectedEntityIndex = scene.addGameEntity(entityToAdd);
     }
-    
+
     bool saved = false;
 
     if(showSaveDialog && !drawSaveDialog(levelName, saved))
