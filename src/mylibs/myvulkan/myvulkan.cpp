@@ -490,10 +490,9 @@ static bool createInstance()
         createInfo.pNext = nullptr;
     }
 
-    vulk->instance = nullptr;
     VK_CHECK(vkCreateInstance(&createInfo, nullptr, &vulk->instance));
 
-    return vulk->instance != nullptr;
+    return vulk->instance != VK_NULL_HANDLE;
 }
 
 
@@ -879,6 +878,7 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         printf("Empty window!\n");
         return false;
     }
+
     if(!createInstance())
     {
         printf("Failed to create vulkan instance!\n");
@@ -895,7 +895,6 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         return false;
     }
 
-
     if(!createPhysicalDevice(vulk->initParams.useIntegratedGpu ?
         VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))
     {
@@ -903,7 +902,6 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         return false;
     }
     ASSERT(vulk->physicalDevice);
-
 
     if (!createDeviceWithQueues())
     {
@@ -1432,10 +1430,10 @@ void present(Image & imageToPresent)
         vkCmdBlitImage(vulk->commandBuffer,
             imageToPresent.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             vulk->swapchain.images[ vulk->imageIndex ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlitRegion, VkFilter::VK_FILTER_NEAREST);
-    
+
 
     // Prepare image for presenting.
-    
+
         VkImageMemoryBarrier presentBarrier =
             imageBarrier(vulk->swapchain.images[ vulk->imageIndex ],
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
