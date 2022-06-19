@@ -20,7 +20,7 @@
 
 #include <string_view>
 #include <string.h>
-
+#include <math.h>
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
 
@@ -497,7 +497,7 @@ void SpaceShooter::logicUpdate()
 
                     double minSize = (ent.size + asteroidEnt.size) * 0.8f;
 
-                    if (std::abs(ent.posX - asteroidEnt.posX) < minSize && std::abs(ent.posY - asteroidEnt.posY) < minSize)
+                    if (ffabsf(ent.posX - asteroidEnt.posX) < minSize && ffabsf(ent.posY - asteroidEnt.posY) < minSize)
                     {
                         asteroidEntities[astInd - 1] = asteroidEntities.back();
                         asteroidEntities.resize(asteroidEntities.size() - 1);

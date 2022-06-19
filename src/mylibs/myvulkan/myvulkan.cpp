@@ -110,8 +110,8 @@ static const char * deviceExtensions[] =
 static const char* addCheckDeviceExtensions[] =
 {
     // if this extension is put into device extensions, it throws some validation errors,
-    // warning about it being incomplete?
-    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    // warning about it being incomplete? vulkan1_3
+    //VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 };
 
 static PodVector<const char*> getRequiredInstanceExtensions()
@@ -1507,7 +1507,7 @@ void present(Image & imageToPresent)
 
 
 
-bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader, 
+bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels, const DepthTest &depthTest,
     Pipeline &outPipeline, const char *pipelineName, VkPrimitiveTopology topology)
 {
@@ -1667,13 +1667,13 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, const 
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
-    
+
     if (!createDescriptor(outPipeline))
     {
         printf("Failed to create compute pipeline descriptor\n");
         return false;
     }
-    
+
     setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
     return pipeline != VK_NULL_HANDLE;
 }

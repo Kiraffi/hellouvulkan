@@ -4,6 +4,8 @@
 #include <core/json.h>
 #include <core/writejson.h>
 
+#include <string>
+
 bool findEntityType(const char *name, EntityType &outType)
 {
     for(const auto entityName : nameStrings)

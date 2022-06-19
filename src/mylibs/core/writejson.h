@@ -11,6 +11,7 @@
 #include <math/vector3.h>
 
 #include <string_view>
+#include <string>
 
 class WriteJson
 {

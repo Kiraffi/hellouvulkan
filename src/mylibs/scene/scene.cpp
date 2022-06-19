@@ -16,7 +16,7 @@
 
 // FLT_MAX
 #include <float.h>
-
+#include <string>
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
@@ -230,7 +230,7 @@ bool Scene::writeLevel(const char *filename) const
         writeGameObject(entity, writeJson);
     writeJson.endArray();
     writeJson.finishWrite();
-    return writeJson.isValid() && 
+    return writeJson.isValid() &&
         writeBytes(filename, ArraySliceViewBytes(writeJson.getString().data(), writeJson.getString().size()));
 }
 

@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include "vectorbase.h"
 
+#include <new>
 #include <type_traits>
 
 #define CHECK_POD_MACRO() \
@@ -17,7 +18,7 @@ class PodVector : public VectorBase
 {
 public:
     PodVector();
-    
+
     //PodVector(uint32_t size);
 
     PodVector(const T *b, const T* e);
@@ -155,10 +156,10 @@ void PodVector<T>::uninitializedResize(uint32_t newSize)
 
 template <typename T>
 T PodVector<T>::popBack()
-{ 
-    T t = back(); 
-    buffer.removeIndex(buffer.getSize() - 1); 
-    return t; 
+{
+    T t = back();
+    buffer.removeIndex(buffer.getSize() - 1);
+    return t;
 }
 
 
