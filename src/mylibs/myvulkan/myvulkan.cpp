@@ -1049,6 +1049,7 @@ void deinitVulkan()
         return;
     if (vulk->device)
     {
+        VK_CHECK(vkDeviceWaitIdle(vulk->device));
         destroySampler(vulk->globalTextureSampler);
         vulk->globalTextureSampler = VK_NULL_HANDLE;
         destroyBuffer(vulk->scratchBuffer);
@@ -1140,6 +1141,7 @@ VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const
     VkRenderPass renderPass = 0;
 
     VK_CHECK(vkCreateRenderPass(vulk->device, &createInfo, nullptr, &renderPass));
+
     ASSERT(renderPass);
     return renderPass;
 }
@@ -1509,11 +1511,12 @@ void present(Image & imageToPresent)
 
 
 
-bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
-    const PodVector<RenderTarget> &colorTargets, const DepthTest &depthTest, Pipeline &outPipeline,
-    std::string_view pipelineName, bool useDynamic, VkPrimitiveTopology topology)
+
+bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader, 
+    const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels, const DepthTest &depthTest,
+    Pipeline &outPipeline, std::string_view pipelineName, VkPrimitiveTopology topology)
 {
-    destroyPipeline(outPipeline);
+    //destroyPipeline(outPipeline);
 
     bool hasFragShader = fragShader.module != VK_NULL_HANDLE;
 
@@ -1580,19 +1583,10 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     depthInfo.depthWriteEnable = depthTest.writeDepth ? VK_TRUE : VK_FALSE;
     depthInfo.depthCompareOp = depthTest.depthCompareOp;
 
-    PodVector<VkPipelineColorBlendAttachmentState> colorAttachmentStates;
-    colorAttachmentStates.resize(colorTargets.size());
-    for (uint32_t i = 0; i < colorTargets.size(); ++i)
-    {
-        VkPipelineColorBlendAttachmentState colorAttachmentState{
-            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-        };
-        colorAttachmentStates[i] = colorAttachmentState;
-    }
     VkPipelineColorBlendStateCreateInfo blendInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .attachmentCount = colorAttachmentStates.size(),
-        .pAttachments = colorAttachmentStates.size() > 0 ? colorAttachmentStates.data() : nullptr,
+        .attachmentCount = blendChannels.size(),
+        .pAttachments = blendChannels.size() > 0 ? blendChannels.data() : nullptr,
     };
 
     VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1600,26 +1594,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     dynamicInfo.pDynamicStates = dynamicStates;
     dynamicInfo.dynamicStateCount = ARRAYSIZES(dynamicStates);
 
-    PodVector<VkFormat> colorFormats;
-    for (const auto& target : colorTargets)
-    {
-        colorFormats.push_back(target.format);
-    }
 
-    const VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
-        .colorAttachmentCount = colorFormats.size(),
-        .pColorAttachmentFormats = colorFormats.data(),
-        .depthAttachmentFormat = depthTest.depthTarget.format,
-    };
-    VkRenderPass renderPass = VK_NULL_HANDLE;
-    if (!useDynamic)
-    {
-        renderPass = createRenderPass(colorTargets, depthTest.depthTarget);
-        ASSERT(renderPass);
-        if (!renderPass)
-            return false;
-    }
     VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     createInfo.stageCount = stageInfos.size();
     createInfo.pStages = stageInfos.size() > 0 ? stageInfos.data() : nullptr;
@@ -1631,18 +1606,34 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     createInfo.pDepthStencilState = &depthInfo;
     createInfo.pColorBlendState = &blendInfo;
     createInfo.pDynamicState = &dynamicInfo;
-    createInfo.renderPass = renderPass; // VK_NULL_HANDLE;
+    createInfo.renderPass = outPipeline.renderPass; // VK_NULL_HANDLE;
     createInfo.layout = outPipeline.pipelineLayout;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
-    if(useDynamic)
-        createInfo.pNext = &pipelineRenderingCreateInfo;
+
+    /*
+        //Needed for dynamic rendering
+        PodVector<VkFormat> colorFormats;
+        for (const auto& target : colorTargets)
+        {
+            colorFormats.push_back(target.format);
+        }
+
+        const VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+            .colorAttachmentCount = colorFormats.size(),
+            .pColorAttachmentFormats = colorFormats.data(),
+            .depthAttachmentFormat = depthTest.depthTarget.format,
+        };
+
+        if(outPipeline.renderPass == VK_NULL_HANDLE)
+            createInfo.pNext = &pipelineRenderingCreateInfo;
+    */
 
     VkPipeline pipeline = 0;
     VK_CHECK(vkCreateGraphicsPipelines(vulk->device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline));
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
-    outPipeline.renderPass = renderPass;
 
     if (!createDescriptor(outPipeline))
     {
@@ -1657,7 +1648,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
 
 bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::string_view pipelineName)
 {
-    destroyPipeline(outPipeline);
+    //destroyPipeline(outPipeline);
 
     PodVector<Shader> shaders = { csShader };
     outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);

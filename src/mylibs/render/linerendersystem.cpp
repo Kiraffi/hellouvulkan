@@ -30,11 +30,23 @@ bool LineRenderSystem::init()
         Pipeline& pipeline = lineRenderPipeline;
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
+        pipeline.renderPass = createRenderPass(
+            { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, .storeOp = VK_ATTACHMENT_STORE_OP_STORE } },
+            { .format = vulk->depthFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, .storeOp = VK_ATTACHMENT_STORE_OP_STORE });
+        ASSERT(pipeline.renderPass);
+        if(!pipeline.renderPass)
+            return false;
+
+        VkPipelineColorBlendAttachmentState rgbaAtt{ .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+
         if (!createGraphicsPipeline(
             getShader(ShaderType::LineVert), getShader(ShaderType::ColoredQuadFrag),
-            { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
+            { rgbaAtt },
             { .depthTarget = RenderTarget{.format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
-            pipeline, "line render system", true, VK_PRIMITIVE_TOPOLOGY_LINE_LIST))
+            pipeline, "line render system", VK_PRIMITIVE_TOPOLOGY_LINE_LIST))
         {
             printf("Failed to create graphics pipeline\n");
         }
@@ -80,17 +92,26 @@ void LineRenderSystem::render(const Image &colorImage, const Image &depthImage)
         return;
 
     beginDebugRegion("Line rendering", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    beginRenderPass(lineRenderPipeline, {}); 
 
+    /*
     beginRendering({
         RenderImage{.image = &colorImage, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD }},
         {.image = &depthImage, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD });
-
+        */
     bindGraphicsPipelineWithDecriptors(lineRenderPipeline, vulk->frameIndex);
     vkCmdDraw(vulk->commandBuffer, lines.size() * 2, 1, 0, 0);
-
-
-    vkCmdEndRendering(vulk->commandBuffer);
+    
+    
+    //vkCmdEndRendering(vulk->commandBuffer);
+    vkCmdEndRenderPass(vulk->commandBuffer);
 
     endDebugRegion();
     writeStamp();
+}
+
+
+void LineRenderSystem::setRendertargets(const Image &colorImage, const Image &depthImage)
+{
+    ASSERT(createFramebuffer(lineRenderPipeline, { colorImage, depthImage }));
 }

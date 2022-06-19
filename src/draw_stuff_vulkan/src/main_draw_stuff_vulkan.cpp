@@ -184,11 +184,15 @@ bool VulkanDrawStuff::resized()
     if (!lightingRenderTargets.resizeLightingTargets())
         return false;
 
+    meshRenderSystem.setRenderTargets(meshRenderTargets);
+    lineRenderSystem.setRendertargets(meshRenderTargets.albedoImage, meshRenderTargets.depthImage);
     fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
     convertFromS16.updateSourceImages(meshRenderTargets);
 
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
+
+    
 
     return true;
 }

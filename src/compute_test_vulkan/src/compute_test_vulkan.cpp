@@ -127,8 +127,6 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
 
 bool VulkanComputeTest::createPipelines()
 {
-    if(!resized())
-        return false;
     {
         Pipeline &pipeline = computePipeline;
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
@@ -145,17 +143,27 @@ bool VulkanComputeTest::createPipelines()
         Pipeline &pipeline = graphicsFinalPipeline;
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
+        pipeline.renderPass = createRenderPass(
+            { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
+            {});
+        ASSERT(pipeline.renderPass);
+        if(!pipeline.renderPass)
+            return false;
+
+        VkPipelineColorBlendAttachmentState rgbaAtt{ .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+
         if (!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } },
-            {}, pipeline, "Graphics copy pipeline test", true))
+            { rgbaAtt }, {}, pipeline, "Graphics copy pipeline test"))
         {
             printf("Failed to create graphics pipeline\n");
             return false;
         }
     }
 
-    return recreateDescriptor(); // resized() && recreateDescriptor();
+    return resized();
 }
 
 bool VulkanComputeTest::recreateDescriptor()
@@ -207,7 +215,8 @@ bool VulkanComputeTest::resized()
     if (!meshRenderTargets.resizeMeshTargets(width, height))
         return false;
 
-
+    if(!meshRenderTargets.resizeShadowTarget(2048, 2048))
+        return false;
 
     if (!createRenderTargetImage(
         width, height, vulk->defaultColorFormat,
@@ -226,8 +235,10 @@ bool VulkanComputeTest::resized()
         return false;
     }
 
+    meshRenderSystem.setRenderTargets(meshRenderTargets);
+
     fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
-    //ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
+    ASSERT(createFramebuffer(graphicsFinalPipeline, { renderColorFinalImage }));
     recreateDescriptor();
 
     if (quadHandle.isValid())
@@ -273,9 +284,6 @@ void VulkanComputeTest::renderDraw()
     {
         meshRenderTargets.prepareTargetsForMeshRendering();
         meshRenderSystem.render(meshRenderTargets);
-
-        prepareToGraphicsSampleWrite(meshRenderTargets.albedoImage);
-        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
         fontSystem.render();
     }
 
@@ -291,8 +299,8 @@ void VulkanComputeTest::renderDraw()
         prepareToGraphicsSampleRead(computeColorImage);
         prepareToGraphicsSampleWrite(renderColorFinalImage);
         
-        //beginRenderPass(graphicsFinalPipeline, {});
-        beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
+        beginRenderPass(graphicsFinalPipeline, {});
+        //beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
         // draw calls here
@@ -302,8 +310,8 @@ void VulkanComputeTest::renderDraw()
             vkCmdBindIndexBuffer(vulk->commandBuffer, quadIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(vulk->commandBuffer, 6, 1, 0, 0, 0);
         }
-        //vkCmdEndRenderPass(vulk->commandBuffer);
-        vkCmdEndRendering(vulk->commandBuffer);
+        vkCmdEndRenderPass(vulk->commandBuffer);
+        //vkCmdEndRendering(vulk->commandBuffer);
         writeStamp();
     }
 

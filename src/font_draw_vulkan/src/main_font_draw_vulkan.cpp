@@ -70,6 +70,8 @@ public:
 
     PodVector<GPUVertexData> vertData;
     PodVector<char> characterData;
+
+    static constexpr VkClearValue colorClear = { .color{ 0.0f, 0.5f, 1.0f, 1.0f } };
 };
 
 
@@ -132,9 +134,21 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
+
+        pipeline.renderPass = createRenderPass(
+            { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR } },
+            {});
+        ASSERT(pipeline.renderPass);
+        if(!pipeline.renderPass)
+            return false;
+
+        VkPipelineColorBlendAttachmentState rgbaAtt{ .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+
         if (!createGraphicsPipeline(
             getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
-            { RenderTarget {.format = vulk->defaultColorFormat } }, {  }, pipeline, "Font draw render", false))
+            { { rgbaAtt } }, {}, pipeline, "Font draw render"))
         {
             printf("Failed to create pipeline\n");
             return false;
@@ -362,7 +376,7 @@ void VulkanFontDraw::renderDraw()
     // Drawingg
 
     {
-        static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
+ 
         beginRenderPass(graphicsPipeline, { colorClear });
         // draw calls here
         // Render

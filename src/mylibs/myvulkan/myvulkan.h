@@ -9,7 +9,7 @@
 #include <myvulkan/vulkanglobal.h>
 
 constexpr uint32_t QUERY_COUNT = 128u;
-static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_3;
+static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_1;
 
 class VulkanApp;
 struct Shader;
@@ -39,6 +39,8 @@ struct RenderImage
     VkClearValue clearValue{};
 };
 
+
+
 bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters);
 void deinitVulkan();
 VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat);
@@ -61,9 +63,9 @@ void beginRendering(const PodVector<RenderImage>& renderColorImages, RenderImage
 void dispatchCompute(const Pipeline& pipeline, uint32_t bindSetIndex, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
     uint32_t localXSize, uint32_t localYSize, uint32_t localZSize);
 
-bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
-    const PodVector<RenderTarget> &colorTargets, const DepthTest& depthTest, Pipeline &outPipeline,
-    std::string_view pipelineName, bool useDynamic = true,
+bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader, 
+    const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels, const DepthTest &depthTest,
+    Pipeline &outPipeline, std::string_view pipelineName,
     VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
 bool createComputePipeline(const Shader& csShader, Pipeline& outPipeline, std::string_view pipelineName);

@@ -147,6 +147,8 @@ bool ImguiTest::resized()
     if (!lightingRenderTargets.resizeLightingTargets())
         return false;
 
+    meshRenderSystem.setRenderTargets(meshRenderTargets);
+
     fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
     convertFromS16.updateSourceImages(meshRenderTargets);
 

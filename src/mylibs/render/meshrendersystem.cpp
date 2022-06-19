@@ -126,9 +126,37 @@ bool MeshRenderSystem::init()
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
+        if(!depthOnlyRender)
+        {
+            pipeline.renderPass = createRenderPass(
+                { 
+                    RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR },
+                    RenderTarget{ .format = VK_FORMAT_R16G16B16A16_SNORM, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR }
+                },
+                RenderTarget{ .format = vulk->depthFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR } );
+        }
+        else
+        {
+            pipeline.renderPass = createRenderPass( {},
+                RenderTarget{ .format = vulk->depthFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR });
+        }
+        ASSERT(pipeline.renderPass);
+        if(!pipeline.renderPass)
+            return false;
+
+        VkPipelineColorBlendAttachmentState rgbaAtt{ .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+
+        PodVector< VkPipelineColorBlendAttachmentState > blends;
+        if(!depthOnlyRender)
+        {
+            blends = { rgbaAtt, rgbaAtt };
+        }
+
         if(!createGraphicsPipeline(
             getShader(ShaderType::Basic3DVert, i), depthOnlyRender ? Shader{} : getShader(ShaderType::Basic3DFrag),
-            renderTargets,
+            blends,
             { .depthTarget = RenderTarget{ .format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
             pipeline, name))
         {
@@ -383,12 +411,17 @@ void MeshRenderSystem::render(const MeshRenderTargets& meshRenderTargets)
     static constexpr VkClearValue colorClear = { .color{0.0f, 0.5f, 1.0f, 1.0f} };
     static constexpr VkClearValue normlClear = { .color{0.0f, 0.0f, 0.0f, 0.0f} };
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
+    /*
     beginRendering({
         RenderImage{.image = &meshRenderTargets.albedoImage, .clearValue = colorClear },
         RenderImage{.image = &meshRenderTargets.normalMapImage, .clearValue = normlClear }, },
         {.image = &meshRenderTargets.depthImage, .clearValue = depthClear });
+     */
+    beginRenderPass(meshRenderGraphicsPipeline[0], { colorClear, normlClear, depthClear });
     render(false);
-    vkCmdEndRendering(vulk->commandBuffer);
+
+    //vkCmdEndRendering(vulk->commandBuffer);
+    vkCmdEndRenderPass(vulk->commandBuffer);
 
     endDebugRegion();
     writeStamp();
@@ -400,10 +433,29 @@ void MeshRenderSystem::renderShadows(const MeshRenderTargets& meshRenderTargets)
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
     beginDebugRegion("Mesh rendering depth only", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
-    beginRendering({}, { .image = &meshRenderTargets.shadowDepthImage, .clearValue = depthClear });
+    beginRenderPass(meshRenderGraphicsPipeline[1], { depthClear });
+
+
+//    beginRendering({}, { .image = &meshRenderTargets.shadowDepthImage, .clearValue = depthClear });
     render(true);
-    vkCmdEndRendering(vulk->commandBuffer);
+//    vkCmdEndRendering(vulk->commandBuffer);
+    vkCmdEndRenderPass(vulk->commandBuffer);
 
     endDebugRegion();
     writeStamp();
 }
+
+void MeshRenderSystem::setRenderTargets(const MeshRenderTargets &meshRenderTargets)
+{
+    PodVector<Image> renderTargetImages{ meshRenderTargets.albedoImage,
+        meshRenderTargets.normalMapImage, meshRenderTargets.depthImage };
+    PodVector<Image> renderShadowTargetImages{ meshRenderTargets.shadowDepthImage };
+
+    for(uint32_t passIndex = 0; passIndex < 4; ++passIndex)
+    {
+        bool isShadow = (passIndex & 1) == 1;
+        ASSERT(createFramebuffer(meshRenderGraphicsPipeline[passIndex],
+            isShadow ? renderShadowTargetImages : renderTargetImages));
+    }
+}
+

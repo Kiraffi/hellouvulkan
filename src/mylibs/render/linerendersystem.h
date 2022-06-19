@@ -23,7 +23,7 @@ public:
     bool prepareToRender();
 
     void render(const Image &colorImage, const Image &depthImage);
-
+    void setRendertargets(const Image &colorImage, const Image &depthImage);
 private:
     struct Line
     {

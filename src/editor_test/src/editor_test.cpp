@@ -113,7 +113,7 @@ bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
     // TEMPORARY!
-    glfwSetWindowPos(window, 2000, 100);
+    //glfwSetWindowPos(window, 2000, 100);
 
 
 
@@ -162,12 +162,16 @@ bool EditorTest::resized()
     if (!lightingRenderTargets.resizeLightingTargets(windowWidth, windowHeight))
         return false;
 
+    meshRenderSystem.setRenderTargets(meshRenderTargets);
+    lineRenderSystem.setRendertargets(meshRenderTargets.albedoImage, meshRenderTargets.depthImage);
+
     fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
     convertFromS16.updateSourceImages(meshRenderTargets);
 
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
+    
 
     editorSystem.resizeWindow(meshRenderTargets.albedoImage);
     return true;
@@ -279,10 +283,10 @@ void EditorTest::renderUpdate()
 
 void EditorTest::renderDraw()
 {
-    meshRenderTargets.prepareTargetsForMeshRendering();
-    meshRenderTargets.prepareTargetsForShadowRendering();
     // Drawingg
     {
+        meshRenderTargets.prepareTargetsForMeshRendering();
+        meshRenderTargets.prepareTargetsForShadowRendering();
         meshRenderSystem.render(meshRenderTargets);
         meshRenderSystem.renderShadows(meshRenderTargets);
     }
@@ -326,7 +330,6 @@ void EditorTest::renderDraw()
     }
     {
         prepareToGraphicsSampleRead(meshRenderTargets.albedoImage);
-        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
         editorSystem.renderDraw();
     }
     Image &finalImage = editorSystem.getRenderTargetImage();

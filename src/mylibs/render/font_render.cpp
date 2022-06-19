@@ -126,10 +126,20 @@ bool FontRenderSystem::init(std::string_view fontFilename)
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
+        pipeline.renderPass = createRenderPass(
+                { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } }, 
+                {});
+        ASSERT(pipeline.renderPass);
+        if(!pipeline.renderPass)
+            return false;
+
+        VkPipelineColorBlendAttachmentState rgbaAtt{ .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+
         if(!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
-            { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
-            {}, pipeline, "Font renderer", false))
+            { { rgbaAtt } }, {}, pipeline, "Font renderer"))
         {
             printf("failed to create graphics pipeline\n");
             return false;

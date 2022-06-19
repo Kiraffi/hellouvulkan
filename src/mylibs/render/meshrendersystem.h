@@ -29,6 +29,8 @@ public:
 
     void render(const MeshRenderTargets &meshRenderTargets);
     void renderShadows(const MeshRenderTargets &meshRenderTargets);
+
+    void setRenderTargets(const MeshRenderTargets &meshRenderTargets);
 private:
 
     void render(bool isShadowOnly);

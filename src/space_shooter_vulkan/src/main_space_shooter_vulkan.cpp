@@ -186,9 +186,21 @@ bool SpaceShooter::createPipelines()
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
+        pipeline.renderPass = createRenderPass(
+            { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR } },
+            {});
+        ASSERT(pipeline.renderPass);
+        if(!pipeline.renderPass)
+            return false;
+
+        VkPipelineColorBlendAttachmentState rgbaAtt{ .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        };
+
+
         if(!createGraphicsPipeline(
             getShader(ShaderType::SpaceShip2DModelVert), getShader(ShaderType::SpaceShip2DModelFrag),
-            { RenderTarget{.format = vulk->defaultColorFormat } }, {  }, pipeline, "Space shooter 2d rendering", false))
+            { rgbaAtt }, {  }, pipeline, "Space shooter 2d rendering"))
         {
             printf("failed to create pipeline\n");
             return false;
