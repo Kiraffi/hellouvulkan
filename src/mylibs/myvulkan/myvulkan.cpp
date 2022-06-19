@@ -412,6 +412,10 @@ static bool createSwapchain(VSyncType vsyncMode)
 
         vulk->colorSpace = surfaceFormat.colorSpace;
         vulk->presentColorFormat = surfaceFormat.format;
+
+        vulk->swapchain.width = extent.width;;
+        vulk->swapchain.height = extent.height;
+
     }
 
 
@@ -424,12 +428,6 @@ static bool createSwapchain(VSyncType vsyncMode)
     vulk->swapchain.images.resize(swapchainCount);
     VK_CHECK(vkGetSwapchainImagesKHR(vulk->device, vulk->swapchain.swapchain, &swapchainCount, vulk->swapchain.images.data()));
 
-    int32_t width = 0;
-    int32_t height = 0;
-
-    glfwGetWindowSize(vulk->vulkanApp->window, &width, &height);
-    vulk->swapchain.width = uint32_t(width);
-    vulk->swapchain.height = uint32_t(height);
     return true;
 }
 
