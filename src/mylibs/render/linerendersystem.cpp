@@ -43,16 +43,11 @@ bool LineRenderSystem::init()
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
-
                 DescriptorInfo(vertexBuffer[i]),
-
             };
         }
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-        {
-            printf("Failed to set descriptor binds!\n");
+        if (!updateBindDescriptorSet(pipeline))
             return false;
-        }
     }
 
     return true;

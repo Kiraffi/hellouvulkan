@@ -201,7 +201,7 @@ bool SpaceShooter::createPipelines()
                 DescriptorInfo(instanceBuffer),
             };
         }
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
+        if (!updateBindDescriptorSet(pipeline))
         {
             printf("Failed to set descriptor binds!\n");
             return false;

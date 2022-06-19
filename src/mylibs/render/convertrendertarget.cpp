@@ -15,6 +15,9 @@ bool ConvertRenderTarget::init(ShaderType shapeType)
     // pipelines.
     {
         auto& pipeline = computePipeline;
+
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
         std::string name = "Convert pipeline - ";
         name += std::to_string(uint32_t(shapeType));
         if (!createComputePipeline(getShader(shapeType), pipeline, name))
@@ -36,9 +39,7 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
     ASSERT(srcImage.width == toImage.width && srcImage.height == toImage.height);
 
     auto& pipeline = computePipeline;
-    destroyDescriptor(pipeline.descriptor);
     
-    pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
     for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
@@ -50,16 +51,9 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
         };
     }
     
-    if (!createDescriptor(pipeline))
-    {
-        printf("Failed to create compute pipeline descriptor\n");
+    if(!updateBindDescriptorSet(pipeline))
         return false;
-    }
-    if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-    {
-        printf("Failed to set descriptor binds!\n");
-        return false;
-    }
+
     return true;
 }
 

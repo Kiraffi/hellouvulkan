@@ -147,7 +147,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
                 DescriptorInfo(quadBuffer[i]),
             };
         }
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
+        if (!updateBindDescriptorSet(pipeline))
         {
             printf("Failed to set descriptor binds!\n");
             return false;

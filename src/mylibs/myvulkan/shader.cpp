@@ -374,12 +374,22 @@ bool createDescriptor(Pipeline &pipeline)
     return true;
 }
 
-bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
+bool updateBindDescriptorSet(const Pipeline &pipeline)
+{
+    bool success = updateBindDescriptorSet(
+        pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets);
+
+    return success;
+}
+    
+
+bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
     const Vector<PodVector<DescriptorInfo>>& descriptorSetInfos, const PodVector<VkDescriptorSet> &descriptorSets)
 {
     if(descriptorSetInfos.size() == 0 || descriptorSets.size() != descriptorSetInfos.size())
     {
         ASSERT(false && "Descriptorbinds failed");
+        printf("Failed to set descriptor binds!\n");
         return false;
     }
 
@@ -392,12 +402,14 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
         if(writeDescriptorCount < 1u)
         {
             ASSERT(false && "Descriptorbinds failed");
+            printf("Failed to set descriptor binds!\n");
             return false;
         }
 
         ASSERT(descriptors.size() == descriptorInfos.size());
         if(descriptors.size() != descriptorInfos.size())
         {
+            printf("Failed to set descriptor binds!\n");
             return false;
         }
         PodVector<VkWriteDescriptorSet> writeDescriptorSets;
@@ -459,6 +471,7 @@ bool setBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
             else
             {
                 ASSERT(true);
+                printf("Failed to set descriptor binds!\n");
                 return false;
             }
         }
