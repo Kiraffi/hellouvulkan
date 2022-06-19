@@ -24,6 +24,8 @@ bool LightRenderSystem::init()
         lightBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
 
     auto& pipeline = lightComputePipeline;
+    pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
     if (!createComputePipeline(getShader(ShaderType::LightingShader), pipeline, "Light system compute"))
     {
         printf("Failed to create compute pipeline!\n");
@@ -62,10 +64,8 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
         outputTex.width == meshRenderTargets.depthImage.width     && outputTex.height == meshRenderTargets.depthImage.height);
 
     auto& pipeline = lightComputePipeline;
-    destroyDescriptor(pipeline.descriptor);
 
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
-    pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
     for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
@@ -85,16 +85,9 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
         };
     }
-    if (!createDescriptor(pipeline))
-    {
-        printf("Failed to create compute pipeline descriptor\n");
+    if(!updateBindDescriptorSet(pipeline))
         return false;
-    }
-    if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-    {
-        printf("Failed to set descriptor binds!\n");
-        return false;
-    }
+
     return true;
 }
 

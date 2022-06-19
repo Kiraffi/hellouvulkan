@@ -155,11 +155,9 @@ bool MeshRenderSystem::init()
      
 
 
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-        {
-            printf("Failed to set descriptor binds!\n");
+        if (!updateBindDescriptorSet(pipeline))
             return false;
-        }
+
     }
 
     return true;

@@ -127,19 +127,24 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
 
 bool VulkanComputeTest::createPipelines()
 {
+    if(!resized())
+        return false;
     {
         Pipeline &pipeline = computePipeline;
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
         if(!createComputePipeline(getShader(ShaderType::ComputeTestComp), pipeline, "Compute copy pipeline test"))
         {
             printf("Failed to create compute pipeline!\n");
             return false;
         }
-
     }
 
     // Create copy-pipelines
     {
         Pipeline &pipeline = graphicsFinalPipeline;
+        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
         if (!createGraphicsPipeline(
             getShader(ShaderType::TexturedQuadVert), getShader(ShaderType::TexturedQuadFrag),
             { RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } },
@@ -148,10 +153,9 @@ bool VulkanComputeTest::createPipelines()
             printf("Failed to create graphics pipeline\n");
             return false;
         }
-
     }
 
-    return resized() && recreateDescriptor();
+    return recreateDescriptor(); // resized() && recreateDescriptor();
 }
 
 bool VulkanComputeTest::recreateDescriptor()
@@ -161,10 +165,7 @@ bool VulkanComputeTest::recreateDescriptor()
 
     {
         Pipeline &pipeline = computePipeline;
-        destroyDescriptor(pipeline.descriptor);
-
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
-        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
         for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
@@ -175,23 +176,14 @@ bool VulkanComputeTest::recreateDescriptor()
                 DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
             };
         }
-        if (!createDescriptor(pipeline))
-        {
-            printf("Failed to create compute pipeline descriptor\n");
+
+        if(!updateBindDescriptorSet(pipeline))
             return false;
-        }
-        if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-        {
-            printf("Failed to set descriptor binds!\n");
-            return false;
-        }
     }
     {
         Pipeline &pipeline = graphicsFinalPipeline;
-        destroyDescriptor(pipeline.descriptor);
-
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
-        pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
         for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
@@ -200,29 +192,22 @@ bool VulkanComputeTest::recreateDescriptor()
                 DescriptorInfo(computeColorImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
             };
         }
-        if (!createDescriptor(pipeline))
-        {
-            printf("Failed to create graphics pipeline descriptor\n");
-            return false;
-        }
 
-        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-        {
-            printf("Failed to set descriptor binds!\n");
+        if(!updateBindDescriptorSet(pipeline))
             return false;
-        }
-
     }
     return true;
 }
 
 bool VulkanComputeTest::resized()
 {
-    if (!meshRenderTargets.resizeMeshTargets())
-        return false;
-
     uint32_t width = vulk->swapchain.width;
     uint32_t height = vulk->swapchain.height;
+
+    if (!meshRenderTargets.resizeMeshTargets(width, height))
+        return false;
+
+
 
     if (!createRenderTargetImage(
         width, height, vulk->defaultColorFormat,
@@ -288,6 +273,9 @@ void VulkanComputeTest::renderDraw()
     {
         meshRenderTargets.prepareTargetsForMeshRendering();
         meshRenderSystem.render(meshRenderTargets);
+
+        prepareToGraphicsSampleWrite(meshRenderTargets.albedoImage);
+        flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
         fontSystem.render();
     }
 
@@ -302,7 +290,7 @@ void VulkanComputeTest::renderDraw()
     {
         prepareToGraphicsSampleRead(computeColorImage);
         prepareToGraphicsSampleWrite(renderColorFinalImage);
-
+        
         //beginRenderPass(graphicsFinalPipeline, {});
         beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));

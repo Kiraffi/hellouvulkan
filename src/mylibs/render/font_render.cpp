@@ -132,6 +132,7 @@ bool FontRenderSystem::init(std::string_view fontFilename)
             {}, pipeline, "Font renderer", false))
         {
             printf("failed to create graphics pipeline\n");
+            return false;
         }
         for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
@@ -141,11 +142,9 @@ bool FontRenderSystem::init(std::string_view fontFilename)
                 DescriptorInfo(textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, textureSampler),
             };
         }
-        if(!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-        {
-            printf("Failed to set descriptor binds!\n");
+        if(!updateBindDescriptorSet(pipeline))
             return false;
-        }
+
     }
 
     return true;

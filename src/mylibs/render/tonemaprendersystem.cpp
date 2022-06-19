@@ -13,6 +13,8 @@ TonemapRenderSystem::~TonemapRenderSystem()
 bool TonemapRenderSystem::init()
 {
     auto& pipeline = tonemapPipeline;
+    pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
+
     if (!createComputePipeline(getShader(ShaderType::TonemapShader), pipeline, "Tonemap system compute"))
     {
         printf("Failed to create compute pipeline!\n");
@@ -26,9 +28,7 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
     ASSERT(hdrTexIn.width == outputTex.width && hdrTexIn.height == outputTex.height);
 
     auto& pipeline = tonemapPipeline;
-    destroyDescriptor(pipeline.descriptor);
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
-    pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
     for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
         pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
@@ -42,16 +42,10 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
 
         };
     }
-    if (!createDescriptor(pipeline))
-    {
-        printf("Failed to create compute pipeline descriptor\n");
+
+    if (!updateBindDescriptorSet(pipeline))
         return false;
-    }
-    if (!setBindDescriptorSet(pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets))
-    {
-        printf("Failed to set descriptor binds!\n");
-        return false;
-    }
+
     return true;
 }
 

@@ -1681,13 +1681,13 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, std::s
     ASSERT(pipeline);
 
     outPipeline.pipeline = pipeline;
-    outPipeline.descriptor.descriptorSets.resize(1);
-
+    
     if (!createDescriptor(outPipeline))
     {
         printf("Failed to create compute pipeline descriptor\n");
         return false;
     }
+    
     setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
     return pipeline != VK_NULL_HANDLE;
 }
