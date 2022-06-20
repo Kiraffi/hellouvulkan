@@ -109,6 +109,7 @@ static const char * deviceExtensions[] =
 
 static const char* addCheckDeviceExtensions[] =
 {
+    "",
     // if this extension is put into device extensions, it throws some validation errors,
     // warning about it being incomplete? vulkan1_3
     //VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
@@ -568,8 +569,10 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
                 requiredExtensions.insert(str);
 
             for(const char *str : addCheckDeviceExtensions)
-                requiredExtensions.insert(str);
-
+            {
+                if(strcmp(str, "") != 0)
+                    requiredExtensions.insert(str);
+            }
             for (const auto& extension : availableExtensions)
             {
                 //printf("available extension: %s\n", extension.extensionName);
