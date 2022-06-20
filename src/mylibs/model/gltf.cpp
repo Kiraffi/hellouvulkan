@@ -1089,7 +1089,6 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                     uint32_t scaleSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
                         GltfAnimationNode::Channel::ChannelPath::SCALE);
 
-
                     // parse positions
                     {
                         PodVector<GltfModel::AnimPos> bonePosVector;
@@ -1186,10 +1185,10 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                 }
             }
 
-            float animStartTime = 1e10;
-            float animEndTime = -1e10;
             for (uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
             {
+                float animStartTime = 1e10;
+                float animEndTime = -1e10;
                 ASSERT(animationIndex < outModel.animationIndices.size());
 
                 if(animationIndex >= outModel.animationIndices.size())
