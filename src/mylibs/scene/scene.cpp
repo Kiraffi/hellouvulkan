@@ -59,8 +59,9 @@ bool Scene::init()
         return false;
     if (!loadModelForScene(sceneData, "assets/models/lowpoly6.gltf", EntityType::LOW_POLY_CHAR))
         return false;
-
     if(!loadModelForScene(sceneData, "assets/models/armature_test.gltf", EntityType::ARMATURE_TEST))
+        return false;
+    if(!loadModelForScene(sceneData, "assets/models/character4_22.gltf", EntityType::NEW_CHARACTER_TEST))
         return false;
 
 

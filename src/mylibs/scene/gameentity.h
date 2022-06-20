@@ -20,6 +20,7 @@ enum class EntityType : uint32_t
     CHARACTER,
     LOW_POLY_CHAR,
     ARMATURE_TEST,
+    NEW_CHARACTER_TEST,
 
     // non animated
     ARROW,
@@ -48,6 +49,7 @@ static constexpr EntityNameString nameStrings[]
     EntityNameString{ .type = EntityType::CHARACTER, .name = "Character" },
     EntityNameString{ .type = EntityType::LOW_POLY_CHAR, .name = "LowPolyChar" },
     EntityNameString{ .type = EntityType::ARMATURE_TEST, .name = "ArmatureTest" },
+    EntityNameString{ .type = EntityType::NEW_CHARACTER_TEST, .name = "NewCharacterTest" },
 
     EntityNameString{ .type = EntityType::ARROW, .name = "Arrow" },
     EntityNameString{ .type = EntityType::TEST_THING, .name = "TestThing" },
