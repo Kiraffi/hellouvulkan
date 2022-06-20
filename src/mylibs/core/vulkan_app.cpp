@@ -323,6 +323,11 @@ void VulkanApp::setTitle(const char *str)
     glfwSetWindowTitle(window, str);
 }
 
+void VulkanApp::setWindowPosition(uint32_t x, uint32_t y)
+{
+    glfwSetWindowPos(window, x, y);
+}
+
 const Camera &VulkanApp::getActiveCamera() const
 {
     if(useSunCamera)

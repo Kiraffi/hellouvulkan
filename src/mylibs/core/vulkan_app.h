@@ -42,7 +42,7 @@ public:
     void setVsync(VSyncType vSyncType);
     void setClearColor(float r, float g, float b, float a);
     void setTitle(const char *str);
-
+    void setWindowPosition(uint32_t x, uint32_t y);
     const Camera &getActiveCamera() const;
 
     Vector2 getWindowSize() const;
