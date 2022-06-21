@@ -513,7 +513,7 @@ static void printStats(VulkanApp &app)
     char str[100];
     float fps = app.dt > 0.0 ? float(1.0 / app.dt) : 0.0f;
 
-    sprintf(str, "cpu: %3.2fms, cpuFps: %4.2f, gpu: %3.2fms, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
+    snprintf(str, 100, "cpu: %3.2fms, cpuFps: %4.2f, gpu: %3.2fms, gpuFps: %5.2f, mx: %i, my: %i, ml: %i, mr: %i, mb: %i",
         app.cpudt, app.cpuFps, app.gpudt, app.gpuFps, mouseState.x, mouseState.y,
         mouseState.leftButtonDown, mouseState.rightButtonDown, mouseState.middleButtonDown
     );
