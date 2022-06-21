@@ -25,8 +25,11 @@ struct Camera
     Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize) const;
     void calculateOrtographicPosition(const Vec3& targetPos);
 
+    void lookAt(const Vec3 &targetPos);
+
     Ray getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates) const;
     Ray getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize) const;
+
     Matrix worldToViewMat;
     Matrix viewToWorldMat;
 
