@@ -20,6 +20,15 @@ public:
         }
         str[size] = '\0';
     }
+    StackString(const char *s, uint32_t len)
+    {
+        while(s && *s && size < MaxSize && size < len)
+        {
+            str[size++] = *s++;
+        }
+        str[size] = '\0';
+    }
+
     template<uint32_t U>
     StackString(const StackString<U> &s)
     {

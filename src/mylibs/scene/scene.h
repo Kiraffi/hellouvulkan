@@ -14,7 +14,7 @@ struct SceneData
 {
     MeshRenderSystem& meshRenderSystem;
 
-    Vector<GltfModel> models; // especially here... this should be more accessible, like bounds?
+    
     PodVector<GameEntity> entities;
     PodVector<uint32_t> freeEnityIndices;
 };

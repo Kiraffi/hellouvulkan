@@ -1,5 +1,6 @@
 #pragma once
 
+#include <container/stackstring.h>
 #include <container/podvector.h>
 #include <container/vector.h>
 #include <math/bounds.h>
@@ -76,6 +77,7 @@ struct GltfModel
 
     PodVector<float> animStartTimes;
     PodVector<float> animEndTimes;
+    PodVector<SmallStackString> animNames;
 };
 
 bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,

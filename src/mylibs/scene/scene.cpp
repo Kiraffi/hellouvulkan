@@ -13,6 +13,7 @@
 #include <math/vector3_inline_functions.h>
 
 #include <render/meshrendersystem.h>
+#include <resources/globalresources.h>
 
 // FLT_MAX
 #include <float.h>
@@ -20,74 +21,22 @@
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
-static bool loadModelForScene(SceneData &sceneData, const char *filename, EntityType entityType)
-{
-    if(uint32_t(entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
-        return false;
-    GltfModel& gltfModel = sceneData.models[uint32_t(entityType)];
-
-    bool readSuccess = readGLTF(filename, gltfModel);
-
-    printf("%s gltf read success: %i\n", filename, readSuccess);
-    if (!readSuccess)
-    {
-        sceneData.models.removeIndex(sceneData.models.size() - 1);
-        defragMemory();
-        return false;
-    }
-
-    if(!sceneData.meshRenderSystem.addModel(gltfModel, entityType))
-    {
-        defragMemory();
-        return false;
-    }
-    defragMemory();
-
-    return true;
-}
-
 
 bool Scene::init()
 {
     ScopedTimer timer("Scene init");
-    sceneData.models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES) + 1);
 
-    // load animated, can be loaded in any order nowadays, since animated vertices has separate buffer from non-animated ones
-    if (!loadModelForScene(sceneData, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
-        return false;
-    if (!loadModelForScene(sceneData, "assets/models/character8.gltf", EntityType::CHARACTER))
-        return false;
-    if (!loadModelForScene(sceneData, "assets/models/lowpoly6.gltf", EntityType::LOW_POLY_CHAR))
-        return false;
-    if(!loadModelForScene(sceneData, "assets/models/armature_test.gltf", EntityType::ARMATURE_TEST))
-        return false;
-    if(!loadModelForScene(sceneData, "assets/models/character4_22.gltf", EntityType::NEW_CHARACTER_TEST))
-        return false;
+    ASSERT(globalResources);
+    ASSERT(globalResources->models.size() != uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
 
-
-
-    // load nonanimated.
-    if (!loadModelForScene(sceneData, "assets/models/arrows.gltf", EntityType::ARROW))
-        return false;
-
-    if (!loadModelForScene(sceneData, "assets/models/test_gltf.gltf", EntityType::TEST_THING))
-        return false;
-
-    if (!loadModelForScene(sceneData, "assets/models/tree1.gltf", EntityType::TREE))
-        return false;
-
-    if (!loadModelForScene(sceneData, "assets/models/tree1_smooth.gltf", EntityType::TREE_SMOOTH))
-        return false;
-
-    if (!loadModelForScene(sceneData, "assets/models/blob.gltf", EntityType::BLOB))
-        return false;
-
-    if (!loadModelForScene(sceneData, "assets/models/blob_flat.gltf", EntityType::BLOB_FLAT))
-        return false;
-
-    if (!loadModelForScene(sceneData, "assets/models/floor.gltf", EntityType::FLOOR))
-        return false;
-
+    for(uint32_t i = 0; i < uint32_t(EntityType::NUM_OF_ENTITY_TYPES); ++i)
+    {
+        if(!sceneData.meshRenderSystem.addModel(globalResources->models[i], EntityType(i)))
+        {
+            defragMemory();
+            return false;
+        }
+    }
 
     return true;
 }
@@ -95,6 +44,8 @@ bool Scene::init()
 
 bool Scene::update(double deltaTime)
 {
+    ASSERT(globalResources);
+
     //ScopedTimer timer("anim update");
     // better pattern for memory when other array gets constantly resized, no need to recreate same temporary array.
     PodVector<Mat3x4> matrices;
@@ -105,10 +56,10 @@ bool Scene::update(double deltaTime)
         uint32_t renderMeshIndex = uint32_t(entity.entityType);
         if (entity.entityType >= EntityType::NUM_OF_ENTITY_TYPES)
             continue;
-        if (renderMeshIndex >= sceneData.models.size())
+        if (renderMeshIndex >= globalResources->models.size())
             continue;
 
-        const auto& model = sceneData.models[renderMeshIndex];
+        const auto& model = globalResources->models[renderMeshIndex];
         if(model.vertices.size() == 0 && model.animationVertices.size() == 0)
             continue;
         if (model.animationVertices.size() > 0)
@@ -164,7 +115,7 @@ Bounds Scene::getBounds(uint32_t entityIndex) const
     if(uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
         return result;
 
-    const auto &model = sceneData.models[uint32_t(entity.entityType)];
+    const auto &model = globalResources->models[uint32_t(entity.entityType)];
     return model.bounds;
 }
 
@@ -241,7 +192,7 @@ uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
 
     float closestDist = FLT_MAX;
     uint32_t index = 0;
-
+    const auto models = sliceFromVector(globalResources->models);
     for(const auto &entity : sceneData.entities)
     {
         /*
@@ -256,7 +207,7 @@ uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
             }
         }
         */
-        const auto &model = sceneData.models[uint32_t(entity.entityType)];
+        const auto &model = models[uint32_t(entity.entityType)];
 
         HitPoint hitpoint{ Uninit };
         if(rayOOBBBoundsIntersect(ray, model.bounds, entity.transform, hitpoint))

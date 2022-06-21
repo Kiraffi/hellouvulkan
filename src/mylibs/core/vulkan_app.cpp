@@ -22,6 +22,7 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <resources/globalresources.h>
 
 //#include <chrono>
 #include <thread>
@@ -95,6 +96,8 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters &initParameters)
 {
     initMemory();
+    if(!initGlobalResources())
+        return false;
 
     glfwSetErrorCallback(error_callback);
     int rc = glfwInit();
@@ -152,6 +155,7 @@ VulkanApp::~VulkanApp()
 {
     fontSystem.deInit();
     deinitVulkan();
+    deinitGlobalResources();
 
     if(window)
         glfwDestroyWindow(window);

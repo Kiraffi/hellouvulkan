@@ -588,7 +588,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
         {
             ASSERT(skinBlock.getChildCount() == 1);
             data.skins.resize(skinBlock.getChildCount());
-
+            outModel.animNames.resize(skinBlock.getChildCount());
             for (int i = 0; i < skinBlock.getChildCount(); ++i)
             {
                 GltfSkinNode& node = data.skins[i];
@@ -596,6 +596,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 
                 if (!child.getChild("name").parseString(node.name))
                     return false;
+                outModel.animNames[i] = SmallStackString(node.name.data(), node.name.size());
 
                 if (!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
                     return false;

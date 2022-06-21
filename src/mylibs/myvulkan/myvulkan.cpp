@@ -51,7 +51,7 @@ struct SwapChainSupportDetails
 // Intel?
 //const VkFormat defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-VulkanGlobal*vulk = nullptr;
+VulkanGlobal *vulk = nullptr;
 
 
 static PFN_vkDebugMarkerSetObjectTagEXT pfnDebugMarkerSetObjectTag = nullptr;

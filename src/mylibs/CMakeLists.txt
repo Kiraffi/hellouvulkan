@@ -39,7 +39,9 @@ add_library(MyLibraries
 
     "scene/gameentity.cpp"
     "scene/scene.cpp"
- )
+    
+    "model/animation.cpp" 
+    "resources/globalresources.cpp")
 
 add_library(MyImgui
     "gui/transformview.cpp"

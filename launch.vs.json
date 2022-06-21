@@ -52,11 +52,18 @@
       "currentDir": "${workspaceRoot}"
     },
     {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "editor_test.exe (src\\editor_test\\editor_test.exe)",
-      "name": "editor_test.exe (src\\editor_test\\editor_test.exe)",
-      "currentDir": "${workspaceRoot}"
+        "type": "default",
+        "project": "CMakeLists.txt",
+        "projectTarget": "editor_test.exe (src\\editor_test\\editor_test.exe)",
+        "name": "editor_test.exe (src\\editor_test\\editor_test.exe)",
+        "currentDir": "${workspaceRoot}"
+    },
+    {
+        "type": "default",
+        "project": "CMakeLists.txt",
+        "projectTarget": "game.exe (src\\game\\game.exe)",
+        "name": "game.exe (src\\game\\game.exe)",
+        "currentDir": "${workspaceRoot}"
     }
   ]
 }

@@ -18,3 +18,5 @@ add_subdirectory ("draw_stuff_vulkan")
 add_subdirectory ("compute_test_vulkan")
 add_subdirectory ("imgui_test")
 add_subdirectory ("editor_test")
+add_subdirectory ("game")
+
