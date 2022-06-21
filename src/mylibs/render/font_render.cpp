@@ -171,9 +171,9 @@ void FontRenderSystem::addText(const char *text, Vector2 pos, Vec2 charSize, con
     uint16_t charHeight = uint16_t(charSize.y);
     uint32_t col = getColor(color.x, color.y, color.z, color.w);
     
-    while(*text++)
+    while(*text)
     {
-        const char c = *text;
+        const char c = *text++;
         ASSERT(vertData.size() < MAX_LETTERS);
 
         GPUVertexData vdata;
