@@ -42,10 +42,13 @@ public:
     void resize(uint32_t newSize, const T &defaultValue);
     void uninitializedResize(uint32_t newSize);
 
+    uint32_t find(const T &value) const;
+
     T popBack();
 
     void clear() { doClear(); }
-
+    
+    
     T* begin() const { return (T*)(getBegin()); }
     T* data() const  { return (T*)(getBegin()); }
     T* end() const   { return (T*)(getEnd()  ); }
@@ -160,6 +163,20 @@ T PodVector<T>::popBack()
     T t = back();
     buffer.removeIndex(buffer.getSize() - 1);
     return t;
+}
+
+
+template <typename T>
+uint32_t PodVector<T>::find(const T &value) const
+{
+    uint32_t result = 0u;
+    for(const auto &v : *this)
+    {
+        if(value == v)
+            return result;
+        ++result;
+    }
+    return ~0u;
 }
 
 
