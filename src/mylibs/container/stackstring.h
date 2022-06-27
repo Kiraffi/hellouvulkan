@@ -53,6 +53,24 @@ public:
         str[size] = '\0';
     }
 
+    template<uint32_t U>
+    bool operator == (const StackString<U> &s) const
+    {
+        if(s.size != size)
+            return false;
+
+        return memcmp(s.str, str, size) == 0;
+    }
+
+    bool operator == (const char *s) const
+    {
+        if(!s)
+            return false;
+
+        return strncmp(s, str, size) == 0;
+    }
+
+
     // buff len must include space for 0 character terminator
     void copyToCharStr(char *outStr, uint32_t buffLenWithZeroTerminator)
     {
