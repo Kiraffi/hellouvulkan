@@ -4,6 +4,8 @@
 #include <core/json.h>
 #include <core/writejson.h>
 
+#include <resources/globalresources.h>
+
 #include <string>
 
 bool findEntityType(const char *name, EntityType &outType)
@@ -34,10 +36,20 @@ const char *getStringFromEntityType(const EntityType &type)
 
 static bool writeGameObjectContent(const GameEntity &entity, WriteJson &json)
 {
+    if(!globalResources)
+        return false;
+    if(uint32_t(entity.entityType) >= globalResources->models.size())
+        return false;
+    const auto &model = globalResources->models[uint32_t(entity.entityType)];
+
     json.addMagicNumberAndVersion(GameEntity::MagicNumber, GameEntity::VersionNumber);
     json.addString("name", entity.name.getStr());
     writeTransform(entity.transform, json);
     json.addString("modelType", getStringFromEntityType(entity.entityType));
+    if(entity.meshIndex < model.modelMeshes.size() && model.modelMeshes[entity.meshIndex].meshName.getSize() > 0)
+        json.addString("mesh", model.modelMeshes[entity.meshIndex].meshName.getStr());
+    if(entity.animationIndex < model.animNames.size())
+        json.addString("anim", model.animNames[entity.animationIndex].getStr());
     json.endObject();
     return json.isValid();
 }
@@ -78,6 +90,44 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
 
     if(!findEntityType(std::string(objTypeName).c_str(), outEntity.entityType))
         return false;
+
+    std::string_view meshName;
+    bool foundMesh = json.getChild("mesh").parseString(meshName);
+
+    std::string_view animName;
+    bool foundAnim = json.getChild("anim").parseString(animName);
+    
+
+    outEntity.meshIndex = 0u;
+    outEntity.animationIndex = 0u;
+    
+    if(uint32_t(outEntity.entityType) < globalResources->models.size())
+    {
+        const auto &model = globalResources->models[uint32_t(outEntity.entityType)];
+        if(foundMesh)
+        {
+            for(uint32_t meshIndex = 0u; meshIndex < model.modelMeshes.size(); ++meshIndex)
+            {
+                if(model.modelMeshes[meshIndex].meshName == meshName.data())
+                {
+                    outEntity.meshIndex = meshIndex;
+                    break;
+                }
+            }
+        }
+        if(foundAnim)
+        {
+            for(uint32_t animIndex = 0u; animIndex < model.animNames.size(); ++animIndex)
+            {
+                if(model.animNames[animIndex] == animName.data())
+                {
+                    outEntity.animationIndex = animIndex;
+                    break;
+                }
+            }
+        }
+
+    }
 
     outEntity.name = std::string(name).c_str();
     return true;

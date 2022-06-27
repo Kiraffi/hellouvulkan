@@ -14,8 +14,9 @@
 
 #include <render/linerendersystem.h>
 #include <render/viewport.h>
-#include <scene/scene.h>
+#include <resources/globalresources.h>
 
+#include <scene/scene.h>
 
 
 #include <imgui/imgui.h>
@@ -200,8 +201,46 @@ static bool drawEntityContents(GameEntity &entity)
         }
         ImGui::EndCombo();
     }
-    ImGui::InputInt("Animation index", (int *)&entity.animationIndex);
 
+    if(globalResources && uint32_t(entity.entityType) <= globalResources->models.size())
+    {
+        const auto &model = globalResources->models[uint32_t(entity.entityType)];
+        SmallStackString meshName = "";
+        if(entity.meshIndex < model.modelMeshes.size())
+            meshName = model.modelMeshes[entity.meshIndex].meshName;
+        if(ImGui::BeginCombo("Mesh", meshName.getStr(), 0))
+        {
+            for(uint32_t i = 0; i < model.modelMeshes.size(); ++i)
+            {
+                bool isSelected = i == entity.meshIndex;
+                if(ImGui::Selectable(model.modelMeshes[i].meshName.getStr()))
+                    entity.meshIndex = i;
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if(isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        SmallStackString animName = "";
+        if(entity.animationIndex < model.animNames.size())
+            animName = model.animNames[entity.meshIndex];
+        if(entity.animationIndex < model.animNames.size() && ImGui::BeginCombo("Animation", animName.getStr(), 0))
+        {
+            for(uint32_t i = 0; i < model.animNames.size(); ++i)
+            {
+                bool isSelected = i == entity.meshIndex;
+                if(ImGui::Selectable(model.animNames[i].getStr()))
+                    entity.animationIndex = i;
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if(isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+    }
     ImGui::PopID();
     bool hovered = isWindowHovered();
     return hovered;

@@ -73,6 +73,7 @@ struct GameEntity
 
     double animationTime = 0.0;
     uint32_t animationIndex = 0u;
+    uint32_t meshIndex = 0u;
     EntityType entityType = EntityType::NUM_OF_ENTITY_TYPES;
     uint32_t index = 0;
 };

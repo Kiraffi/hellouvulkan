@@ -193,11 +193,6 @@ bool MeshRenderSystem::init()
 
 bool MeshRenderSystem::addModel(const GltfModel& model, EntityType entityType)
 {
-    bool isAnimated = model.animationVertices.size() > 0;
-
-    uint32_t newVertices = model.vertices.size();
-    uint32_t newIndices = model.indices.size();
-
     // Could be packed better
     struct RenderModel
     {
@@ -218,79 +213,89 @@ bool MeshRenderSystem::addModel(const GltfModel& model, EntityType entityType)
         uint32_t padding;
     };
 
-    PodVector<RenderModel> renderModel;
-    PodVector<AnimatedRenderModel> animatedRenderModel;
-
-    if(isAnimated)
-        animatedRenderModel.resize(newVertices);
-    else
-        renderModel.resize(newVertices);
-
-    for (uint32_t i = 0; i < newVertices; ++i)
+    for(uint32_t j = 0; j < model.modelMeshes.size(); ++j)
     {
-        RenderModel& rendModel = isAnimated ? animatedRenderModel[i].model : renderModel[i];
+        const auto &mesh = model.modelMeshes[j];
+        bool isAnimated = mesh.animationVertices.size() > 0;
 
-        rendModel.position = model.vertices[i].pos;
-        Vec3 norm = (model.vertices[i].norm + Vec3(1.0f, 1.0f, 1.0f)) * 0.5f * 65535.0f;
-        rendModel.normal[0] = uint16_t(norm.x);
-        rendModel.normal[1] = uint16_t(norm.y);
-        rendModel.normal[2] = uint16_t(norm.z);
+        uint32_t newVertices = mesh.vertices.size();
+        uint32_t newIndices = mesh.indices.size();
 
-        if (i < model.vertexColors.size())
-        {
-            rendModel.color = getColor(model.vertexColors[i]);
-            rendModel.attributes |= 1;
-        }
 
-        if (i < model.vertexUvs.size())
-        {
-            rendModel.uv = model.vertexUvs[i];
-            rendModel.attributes |= 2;
-        }
+        PodVector<RenderModel> renderModel;
+        PodVector<AnimatedRenderModel> animatedRenderModel;
 
         if(isAnimated)
+            animatedRenderModel.resize(newVertices);
+        else
+            renderModel.resize(newVertices);
+
+        for(uint32_t i = 0; i < newVertices; ++i)
         {
-            AnimatedRenderModel &animatedModel = animatedRenderModel[i];
-            const auto &animationVertex = model.animationVertices[i];
-            Vec4 weights = (animationVertex.weights) * 65535.0f;
-            animatedModel.boneWeights[0] = uint16_t(weights.x);
-            animatedModel.boneWeights[1] = uint16_t(weights.y);
-            animatedModel.boneWeights[2] = uint16_t(weights.z);
-            animatedModel.boneWeights[3] = uint16_t(weights.w);
+            RenderModel &rendModel = isAnimated ? animatedRenderModel[i].model : renderModel[i];
 
-            //printf("[%u, %u, %u, %u]\n", animationVertex.boneIndices[0], animationVertex.boneIndices[1], animationVertex.boneIndices[2], animationVertex.boneIndices[3]);
-            
-            animatedModel.boneIndices =
-                (animationVertex.boneIndices[0] << 0) |
-                (animationVertex.boneIndices[1] << 8) |
-                (animationVertex.boneIndices[2] << 16) |
-                (animationVertex.boneIndices[3] << 24);
+            rendModel.position = mesh.vertices[i].pos;
+            Vec3 norm = (mesh.vertices[i].norm + Vec3(1.0f, 1.0f, 1.0f)) * 0.5f * 65535.0f;
+            rendModel.normal[0] = uint16_t(norm.x);
+            rendModel.normal[1] = uint16_t(norm.y);
+            rendModel.normal[2] = uint16_t(norm.z);
+
+            if(i < mesh.vertexColors.size())
+            {
+                rendModel.color = getColor(mesh.vertexColors[i]);
+                rendModel.attributes |= 1;
+            }
+
+            if(i < mesh.vertexUvs.size())
+            {
+                rendModel.uv = mesh.vertexUvs[i];
+                rendModel.attributes |= 2;
+            }
+
+            if(isAnimated)
+            {
+                AnimatedRenderModel &animatedModel = animatedRenderModel[i];
+                const auto &animationVertex = mesh.animationVertices[i];
+                Vec4 weights = (animationVertex.weights) * 65535.0f;
+                animatedModel.boneWeights[0] = uint16_t(weights.x);
+                animatedModel.boneWeights[1] = uint16_t(weights.y);
+                animatedModel.boneWeights[2] = uint16_t(weights.z);
+                animatedModel.boneWeights[3] = uint16_t(weights.w);
+
+                //printf("[%u, %u, %u, %u]\n", animationVertex.boneIndices[0], animationVertex.boneIndices[1], animationVertex.boneIndices[2], animationVertex.boneIndices[3]);
+
+                animatedModel.boneIndices =
+                    (animationVertex.boneIndices[0] << 0) |
+                    (animationVertex.boneIndices[1] << 8) |
+                    (animationVertex.boneIndices[2] << 16) |
+                    (animationVertex.boneIndices[3] << 24);
+            }
         }
+
+        beginSingleTimeCommands();
+
+        addToCopylist(sliceFromPodVectorBytes(mesh.indices), indexDataBuffer, indicesCount * sizeof(uint32_t));
+        if(isAnimated)
+            addToCopylist(sliceFromPodVectorBytes(animatedRenderModel), animationVertexBuffer, animatedVerticesCount * sizeof(AnimatedRenderModel));
+        else
+            addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer, verticesCount * sizeof(RenderModel));
+        flushBarriers(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+        endSingleTimeCommands();
+
+
+        models[uint32_t(entityType)] = ModelData{
+            .indiceStart = indicesCount, .indices = newIndices,
+            .vertexStart = isAnimated ? animatedVerticesCount : verticesCount, .vertices = newVertices,
+        };
+
+
+        if(isAnimated)
+            animatedVerticesCount += newVertices;
+        else
+            verticesCount += newVertices;
+        indicesCount += newIndices;
     }
-
-    beginSingleTimeCommands();
-
-    addToCopylist(sliceFromPodVectorBytes(model.indices), indexDataBuffer, indicesCount * sizeof(uint32_t));
-    if(isAnimated)
-        addToCopylist(sliceFromPodVectorBytes(animatedRenderModel), animationVertexBuffer, animatedVerticesCount * sizeof(AnimatedRenderModel));
-    else
-        addToCopylist(sliceFromPodVectorBytes(renderModel), vertexBuffer, verticesCount * sizeof(RenderModel));
-    flushBarriers(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-    endSingleTimeCommands();
-
-    
-    models[uint32_t(entityType)] = ModelData{
-        .indiceStart = indicesCount, .indices = newIndices,
-        .vertexStart = isAnimated ? animatedVerticesCount : verticesCount, .vertices = newVertices,
-    };
-
-
-    if(isAnimated)
-        animatedVerticesCount += newVertices;
-    else
-        verticesCount += newVertices;
-    indicesCount += newIndices;
     return true;
 }
 

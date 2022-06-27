@@ -59,29 +59,58 @@ bool Scene::update(double deltaTime)
         if (renderMeshIndex >= globalResources->models.size())
             continue;
 
-        const auto& model = globalResources->models[renderMeshIndex];
-        if(model.vertices.size() == 0 && model.animationVertices.size() == 0)
+        const auto &model = globalResources->models[renderMeshIndex];
+        if(entity.meshIndex >= model.modelMeshes.size())
             continue;
-        if (model.animationVertices.size() > 0)
+
+        const auto &mesh = model.modelMeshes[entity.meshIndex];
+
+        if(mesh.vertices.size() == 0 && mesh.animationVertices.size() == 0)
+            continue;
+        if(mesh.animationVertices.size() > 0)
         {
             entity.animationTime += deltaTime;
-            if (!evaluateAnimation(model, entity.animationIndex, entity.animationTime, matrices))
+            if(!evaluateAnimation(model, entity.animationIndex, entity.animationTime, matrices))
                 continue;
         }
 
         Mat3x4 renderMatrix = getModelMatrix(entity.transform);
         Mat3x4 normalMatrix = getModelNormalMatrix(entity.transform);
         sceneData.meshRenderSystem.addModelToRender(renderMeshIndex, renderMatrix, normalMatrix, matrices);
+
     }
     return true;
 }
 
 
-uint32_t Scene::addGameEntity(const GameEntity& entity)
+uint32_t Scene::addGameEntity(const GameEntity& entity, const SmallStackString &str)
 {
     uint32_t result = ~0u;
+    if(!globalResources)
+        return result;
+
     if (uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
         return result;
+    if(uint32_t(entity.entityType) >= globalResources->models.size())
+        return result;
+
+    const auto &model = globalResources->models[uint32_t(entity.entityType)];
+
+    uint32_t meshIndex = 0u;
+
+    if(str.getSize() > 0)
+    {
+        for(const auto &mesh : model.modelMeshes)
+        {
+            if(mesh.meshName == str)
+                break;
+
+            ++meshIndex;
+        }
+        if(meshIndex == model.modelMeshes.size())
+            return result;
+    }
+
     if(sceneData.freeEnityIndices.size() > 0)
     {
         result = sceneData.freeEnityIndices.popBack();
@@ -116,7 +145,9 @@ Bounds Scene::getBounds(uint32_t entityIndex) const
         return result;
 
     const auto &model = globalResources->models[uint32_t(entity.entityType)];
-    return model.bounds;
+    if(model.modelMeshes.size() > 0)
+        return model.modelMeshes[0].bounds;
+    return Bounds();
 }
 
 
@@ -210,7 +241,10 @@ uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
         const auto &model = models[uint32_t(entity.entityType)];
 
         HitPoint hitpoint{ Uninit };
-        if(rayOOBBBoundsIntersect(ray, model.bounds, entity.transform, hitpoint))
+        Bounds bounds;
+        if(model.modelMeshes.size() > 0)
+            bounds = model.modelMeshes[0].bounds;
+        if(rayOOBBBoundsIntersect(ray, bounds, entity.transform, hitpoint))
         {
             float dist = sqrLen(hitpoint.point - ray.pos);
             if(dist < closestDist)

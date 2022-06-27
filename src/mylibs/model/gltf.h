@@ -55,14 +55,21 @@ struct GltfModel
         uint32_t childIndexCount;
     };
 
-    // bounding boxes
-    Bounds bounds;
+    struct ModelMesh
+    {
+        // bounding boxes
+        Bounds bounds;
 
-    PodVector<Vertex> vertices;
-    PodVector<Vec4> vertexColors;
-    PodVector<Vec2> vertexUvs;
-    PodVector<AnimationVertex> animationVertices;
-    PodVector<uint32_t> indices;
+        PodVector<Vertex> vertices;
+        PodVector<Vec4> vertexColors;
+        PodVector<Vec2> vertexUvs;
+        PodVector<AnimationVertex> animationVertices;
+        PodVector<uint32_t> indices;
+        SmallStackString meshName;
+    };
+
+    Vector<ModelMesh> modelMeshes;
+
     PodVector<Mat3x4> inverseMatrices;
     PodVector<Mat3x4> inverseNormalMatrices;
 
