@@ -225,7 +225,7 @@ static bool drawEntityContents(GameEntity &entity)
 
         SmallStackString animName = "";
         if(entity.animationIndex < model.animNames.size())
-            animName = model.animNames[entity.meshIndex];
+            animName = model.animNames[entity.animationIndex];
         if(entity.animationIndex < model.animNames.size() && ImGui::BeginCombo("Animation", animName.getStr(), 0))
         {
             for(uint32_t i = 0; i < model.animNames.size(); ++i)
