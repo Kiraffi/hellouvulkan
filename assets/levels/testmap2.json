@@ -88,7 +88,7 @@
             "scale" : [ 1.000000, 1.000000, 1.000000 ],
             "modelType" : "LowPolyChar", 
             "mesh" : "Dude001", 
-            "anim" : "0TPose", 
+            "anim" : "Run", 
         },
         {
             "magicNumber" : 9084352,
@@ -99,7 +99,7 @@
             "scale" : [ 1.000000, 1.000000, 1.000000 ],
             "modelType" : "LowPolyChar", 
             "mesh" : "Dude001", 
-            "anim" : "0TPose", 
+            "anim" : "Idle", 
         },
         {
             "magicNumber" : 9084352,
@@ -316,6 +316,17 @@
             "modelType" : "NewCharacterTest", 
             "mesh" : "Cube", 
             "anim" : "Punch", 
+        },
+        {
+            "magicNumber" : 9084352,
+            "versionNumber" : 1,
+            "name" : "Name", 
+            "pos" : [ -0.079031, 0.100000, -20.722111 ],
+            "rot" : [ 0.000000, 0.000000, 0.000000, 1.000000 ],
+            "scale" : [ 1.000000, 1.000000, 1.000000 ],
+            "modelType" : "LowPolyChar", 
+            "mesh" : "Dude001", 
+            "anim" : "0TPose", 
         },
     ],
 }
