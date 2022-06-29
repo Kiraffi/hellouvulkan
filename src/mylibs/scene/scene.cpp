@@ -21,6 +21,24 @@
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 
+static uint32_t getAnimationIndexFromName(const char *animationName, ArraySliceView<GameEntity> entities, uint32_t entityIndex)
+{
+    uint32_t result = ~0u;
+    if(!globalResources)
+        return result;
+
+    if(entityIndex >= entities.size())
+        return result;
+
+    const auto &entity = entities[entityIndex];
+    if(uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
+        return result;
+
+    const auto &model = globalResources->models[(uint32_t)entity.entityType];
+    result = model.animNames.find(animationName);
+    return result;
+}
+
 
 bool Scene::init()
 {
@@ -50,6 +68,7 @@ bool Scene::update(double deltaTime)
     // better pattern for memory when other array gets constantly resized, no need to recreate same temporary array.
     PodVector<Mat3x4> matrices;
     matrices.reserve(256);
+    uint32_t entityIndex = 0u;
     for (auto& entity : sceneData.entities)
     {
         matrices.clear();
@@ -69,15 +88,25 @@ bool Scene::update(double deltaTime)
             continue;
         if(mesh.animationVertices.size() > 0)
         {
-            entity.animationTime += deltaTime;
-            if(!evaluateAnimation(model, entity.animationIndex, entity.animationTime, matrices))
-                continue;
+            auto &state = sceneData.animationStates[entityIndex];
+            if(state.activeIndices == 0)
+            {
+                entity.animationTime += deltaTime;
+                if(!evaluateAnimation(model, entity.animationIndex, entity.animationTime, matrices))
+                    continue;
+            }
+            else
+            {
+                updateAnimations(state, deltaTime);
+                if(!evaluateAnimations(state, matrices))
+                    continue;
+            }
         }
 
         Mat3x4 renderMatrix = getModelMatrix(entity.transform);
         Mat3x4 normalMatrix = getModelNormalMatrix(entity.transform);
         sceneData.meshRenderSystem.addModelToRender(renderMeshIndex, renderMatrix, normalMatrix, matrices);
-
+        ++entityIndex;
     }
     return true;
 }
@@ -120,8 +149,12 @@ uint32_t Scene::addGameEntity(const GameEntity& entity, const SmallStackString &
     {
         result = sceneData.entities.size();
         sceneData.entities.push_back(entity);
+        sceneData.animationStates.pushBack(AnimationState());
     }
     sceneData.entities[result].index = result;
+    sceneData.animationStates[result] = AnimationState();
+    sceneData.animationStates[result].entityType = entity.entityType;
+
     return result;
 }
 
@@ -132,6 +165,49 @@ GameEntity &Scene::getEntity(uint32_t index) const
         return ConstEntity;
 
     return sceneData.entities[index];
+}
+
+uint32_t Scene::addAnimation(uint32_t entityIndex, const char *animName, PlayMode playMode)
+{
+    uint32_t animationIndex = getAnimationIndexFromName(animName, sliceFromPodVector(sceneData.entities), entityIndex);
+    if(animationIndex != ~0u)
+    {
+        auto &animState = sceneData.animationStates[entityIndex];
+        return blendNewAnimation(animState, animationIndex, playMode, 1.0f);
+    }
+    return ~0u;
+}
+
+uint32_t Scene::replaceAnimation(uint32_t entityIndex, const char *animName, uint32_t playingAnimatinIndex)
+{
+    uint32_t animationIndex = getAnimationIndexFromName(animName, sliceFromPodVector(sceneData.entities), entityIndex);
+    if(animationIndex != ~0u)
+    {
+        auto &animState = sceneData.animationStates[entityIndex];
+        return ::replaceAnimation(animState, animationIndex, playingAnimatinIndex, 1.0f);
+    }
+    return ~0u;
+}
+
+
+// TODO need to actually separate some entity systems from scene...
+uint32_t Scene::addAnimation(uint32_t entityIndex, uint32_t animationIndex, PlayMode playMode)
+{
+    uint32_t result = ~0u;
+    if(entityIndex >= sceneData.entities.size())
+        return result;
+
+    const auto &entity = sceneData.entities[entityIndex];
+    if(uint32_t(entity.entityType) > uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
+        return result;
+
+    const auto &model = globalResources->models[(uint32_t)entity.entityType];
+    if(animationIndex >= model.animNames.size())
+        return result;
+
+    auto &animState = sceneData.animationStates[entityIndex];
+    return blendNewAnimation(animState, animationIndex, playMode, 1.0f);
+
 }
 
 Bounds Scene::getBounds(uint32_t entityIndex) const
@@ -190,6 +266,8 @@ bool Scene::readLevel(const char *levelName)
         return false;
 
     std::string_view objTypeName;
+
+    PodVector<AnimationState> newAnimationStates;
     PodVector<GameEntity> newEntities;
     for(auto const &obj : json.getChild("objects"))
     {
@@ -199,8 +277,11 @@ bool Scene::readLevel(const char *levelName)
 
         ent.index = newEntities.size();
         newEntities.push_back(ent);
+        newAnimationStates.push_back(AnimationState());
+        newAnimationStates[newAnimationStates.size() - 1].entityType = ent.entityType;
     }
     sceneData.entities = newEntities;
+    sceneData.animationStates = newAnimationStates;
     return true;
 }
 
@@ -242,8 +323,8 @@ uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
 
         HitPoint hitpoint{ Uninit };
         Bounds bounds;
-        if(model.modelMeshes.size() > 0)
-            bounds = model.modelMeshes[0].bounds;
+        if(entity.meshIndex < model.modelMeshes.size())
+            bounds = model.modelMeshes[entity.meshIndex].bounds;
         if(rayOOBBBoundsIntersect(ray, bounds, entity.transform, hitpoint))
         {
             float dist = sqrLen(hitpoint.point - ray.pos);

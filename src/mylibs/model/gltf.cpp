@@ -1277,6 +1277,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 struct EvaluateBoneParams
 {
     const ArraySliceView< GltfModel::AnimationIndexData > animationData;
+    //const ArraySliceView < float > times;
     const ArraySliceView< uint32_t > childIndices;
     const ArraySliceView< GltfModel::AnimPos > posses;
     const ArraySliceView< GltfModel::AnimRot > rots;
@@ -1285,18 +1286,14 @@ struct EvaluateBoneParams
     const ArraySliceView< Mat3x4> inverseNormalMatrices;
 };
 
-static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, float time, 
-    const Mat3x4 &parentMatrix, const Mat3x4 &parentNormalMatrix, ArraySliceViewMutable<Mat3x4> outMatrices)
+static bool interpolateBetweenPoses(const EvaluateBoneParams &params, uint32_t jointIndex, float weight, float time,
+    Transform &inOutTransform)
 {
     if(jointIndex >= params.animationData.size())
         return false;
     const auto &animData = params.animationData[jointIndex];
-    if(animData.posIndexCount == 0 || animData.rotIndexCount == 0 || animData.scaleIndexCount == 0)
-    {
-        outMatrices[jointIndex] = Mat3x4();
-        return false;
-    }
-    Vec3 pos{Uninit};
+
+    Vec3 pos{ Uninit };
     Quat rot{ Uninit };
     Vec3 scale{ Uninit };
 
@@ -1378,21 +1375,43 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
         scale.y = curr->value.y + (next->value.y - curr->value.y) * frac;
         scale.z = curr->value.z + (next->value.z - curr->value.z) * frac;
     }
-    Transform t{ pos, rot, scale };
 
-    Mat3x4 posMat = getMatrixFromTranslation(t.pos);
-    Mat3x4 rotMat = getMatrixFromQuaternion(t.rot);
-    Mat3x4 scaleMat = getMatrixFromScale(t.scale);
+    inOutTransform.pos = inOutTransform.pos + pos * weight;
+    inOutTransform.scale = inOutTransform.scale + scale * weight;
+    if(dot(inOutTransform.rot, rot) < 0)
+    {
+        rot.v = -rot.v;
+        rot.w = -rot.w;
+    }
+    inOutTransform.rot.v.x = inOutTransform.rot.v.x + rot.v.x * weight;
+    inOutTransform.rot.v.y = inOutTransform.rot.v.y + rot.v.y * weight;
+    inOutTransform.rot.v.z = inOutTransform.rot.v.z + rot.v.z * weight;
+    inOutTransform.rot.w = inOutTransform.rot.w + rot.w * weight;
+    return true;
+}
 
-    Mat3x4 newParent = parentMatrix * getModelMatrix(t);
-    Mat3x4 newParentNormal = parentNormalMatrix * getModelNormalMatrix(t);
+static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex,
+    const Mat3x4 &parentMatrix, const Mat3x4 &parentNormalMatrix, 
+    ArraySliceView<Transform> transforms, ArraySliceViewMutable<Mat3x4> outMatrices)
+{
+    if(jointIndex >= params.animationData.size())
+        return false;
+    const auto &animData = params.animationData[jointIndex];
+    if(animData.posIndexCount == 0 || animData.rotIndexCount == 0 || animData.scaleIndexCount == 0)
+    {
+        outMatrices[jointIndex] = Mat3x4();
+        return false;
+    }
+
+    Mat3x4 newParent = parentMatrix * getModelMatrix(transforms[jointIndex]);
+    Mat3x4 newParentNormal = parentNormalMatrix * getModelNormalMatrix(transforms[jointIndex]);
     outMatrices[jointIndex * 2] =  newParent * params.inverseMatrices[jointIndex];
     outMatrices[jointIndex * 2 + 1] = newParentNormal * params.inverseMatrices[jointIndex];// params.inverseNormalMatrices[jointIndex];
     const ArraySliceView< uint32_t > childIndices(
         params.childIndices, animData.childStartIndex, animData.childIndexCount);
     for(uint32_t childIndex : childIndices)
     {
-        bool success = evaluateBone(params, childIndex, time, newParent, newParentNormal, outMatrices);
+        bool success = evaluateBone(params, childIndex, newParent, newParentNormal, transforms, outMatrices);
         if(!success)
             return false;
     }
@@ -1402,34 +1421,126 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex, 
 bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
     PodVector<Mat3x4> &outMatrices)
 {
+    AnimationState state;
+    state.activeIndices = 1;
+    state.animationIndices[0] = animationIndex;
+    state.blendValues[0] = 1.0f;
+    state.time[0] = time;
+
+    return evaluateAnimation(model, state, outMatrices);
+}
+
+
+bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
+    PodVector<Mat3x4> &outMatrices)
+{
     if(model.animationIndices.size() == 0)
         return false;
 
-    animationIndex = animationIndex < model.animationIndices.size() ? animationIndex : model.animationIndices.size() - 1;
-
-    if(animationIndex >= model.animationIndices.size())
-        return false;
-
-    float animStartTime = model.animStartTimes[animationIndex];
-    float animEndTime = model.animEndTimes[animationIndex];
-
-    while (time < animStartTime)
-        time += animEndTime - animStartTime;
-    while (time > animEndTime)
-        time -= animEndTime - animStartTime;
-
-    if (model.inverseMatrices.size() > 255)
+    if(model.inverseMatrices.size() > 255)
         return false;
     outMatrices.uninitializedResize(model.inverseMatrices.getSize() * 2);
-    const EvaluateBoneParams params{
-        .animationData = sliceFromPodVector(model.animationIndices[animationIndex]),
-        .childIndices = sliceFromPodVector(model.childrenJointIndices),
-        .posses = sliceFromPodVector(model.animationPosData),
-        .rots = sliceFromPodVector(model.animationRotData),
-        .scales = sliceFromPodVector(model.animationScaleData),
-        .inverseMatrices = sliceFromPodVector(model.inverseMatrices),
-        .inverseNormalMatrices = sliceFromPodVector(model.inverseNormalMatrices),
-    };
+    
+    PodVector<Transform> transforms;
+    transforms.uninitializedResize(model.inverseMatrices.getSize());
+    auto mutableTransforms = sliceFromPodVectorMutable(transforms);
+    for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
+    {
+        auto &t = mutableTransforms[index];
+        memset(&t, 0, sizeof(Transform));
+    }
+    float totalWeight = 0.0f;
+    for(uint32_t i = 0; i < AnimationState::AMOUNT; ++i)
+    {
+        if(((animationState.activeIndices >> i) & 1) != 1)
+            continue;
+        
+        uint32_t animationIndex = animationState.animationIndices[i];
+        float time = animationState.time[i];
+        float weight = animationState.blendValues[i];
+        if(weight == 0.0f)
+            continue;
+        animationIndex = animationIndex < model.animationIndices.size() ? animationIndex : model.animationIndices.size() - 1;
 
-    return evaluateBone(params, 0, time, Mat3x4(), Mat3x4(), sliceFromPodVectorMutable(outMatrices));
+        if(animationIndex >= model.animationIndices.size())
+            return false;
+
+        const EvaluateBoneParams params{
+            .animationData = sliceFromPodVector(model.animationIndices[animationIndex]),
+            .childIndices = sliceFromPodVector(model.childrenJointIndices),
+            .posses = sliceFromPodVector(model.animationPosData),
+            .rots = sliceFromPodVector(model.animationRotData),
+            .scales = sliceFromPodVector(model.animationScaleData),
+            .inverseMatrices = sliceFromPodVector(model.inverseMatrices),
+            .inverseNormalMatrices = sliceFromPodVector(model.inverseNormalMatrices),
+        };
+
+        float animStartTime = model.animStartTimes[animationIndex];
+        float animEndTime = model.animEndTimes[animationIndex];
+        float duration = animEndTime - animStartTime;
+        while(time < animStartTime)
+            time += duration;
+        while(time > animEndTime)
+            time -= duration;
+        
+        totalWeight += weight;
+        
+        for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
+        {
+            auto &t = mutableTransforms[index];
+            if(!interpolateBetweenPoses(params, index, weight, time, t))
+                return false;
+        }
+    }
+
+    for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
+    {
+        auto &t = mutableTransforms[index];
+        if(totalWeight == 0.0f)
+            t = Transform();
+        else
+        {
+            t.pos = t.pos / totalWeight;
+            t.scale = t.scale / totalWeight;
+            t.rot.v.x = t.rot.v.x / totalWeight;
+            t.rot.v.y = t.rot.v.y / totalWeight;
+            t.rot.v.z = t.rot.v.z / totalWeight;
+            t.rot.w = t.rot.w / totalWeight;
+            t.rot = normalize(t.rot);
+            //printVector3(t.pos, "pos");
+            //printQuaternion(t.rot, "rot");
+            //printVector3(t.scale, "scale");
+        }
+    }
+
+
+    for(uint32_t i = 0; i < AnimationState::AMOUNT; ++i)
+    {
+        if(((animationState.activeIndices >> i) & 1) != 1)
+            continue;
+
+        uint32_t animationIndex = animationState.animationIndices[i];
+        float time = animationState.time[i];
+        float weight = animationState.blendValues[i];
+
+        animationIndex = animationIndex < model.animationIndices.size() ? animationIndex : model.animationIndices.size() - 1;
+
+        if(animationIndex >= model.animationIndices.size())
+            return false;
+
+        const EvaluateBoneParams params{
+            .animationData = sliceFromPodVector(model.animationIndices[animationIndex]),
+            .childIndices = sliceFromPodVector(model.childrenJointIndices),
+            .posses = sliceFromPodVector(model.animationPosData),
+            .rots = sliceFromPodVector(model.animationRotData),
+            .scales = sliceFromPodVector(model.animationScaleData),
+            .inverseMatrices = sliceFromPodVector(model.inverseMatrices),
+            .inverseNormalMatrices = sliceFromPodVector(model.inverseNormalMatrices),
+        };
+
+        if(!evaluateBone(params, 0, Mat3x4(), Mat3x4(),
+            sliceFromPodVector(transforms), sliceFromPodVectorMutable(outMatrices)))
+            return false;
+    }
+    return true;
 }

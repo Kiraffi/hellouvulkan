@@ -91,6 +91,9 @@ public:
 
 
     uint32_t characterEntityIndex = ~0u;
+    uint32_t characterEntityIndex2 = ~0u;
+
+    uint32_t moveAnimationIndex = ~0u;
     float angle = 0.0f;
 };
 
@@ -138,12 +141,23 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
 
     characterEntityIndex = scene.addGameEntity({ .transform = { .pos = { 0.0f, 0.0f, 0.0f } }, .entityType = EntityType::NEW_CHARACTER_TEST });
+    moveAnimationIndex = scene.addAnimation(characterEntityIndex, "Run", PlayMode::Loop);
 
+    characterEntityIndex2 = scene.addGameEntity({ .transform = { .pos = { 1.5f, 0.0f, 1.5f } }, .entityType = EntityType::NEW_CHARACTER_TEST });
+    scene.addAnimation(characterEntityIndex2, "Punch", PlayMode::Loop);
+
+    for(float x = -10.0f; x <= 10.0f; x += 5.0f)
+    {
+        scene.addGameEntity({ .transform = { .pos = { x, 0.0f, -10.0f } }, .entityType = EntityType::TREE_SMOOTH });
+        scene.addGameEntity({ .transform = { .pos = { x, 0.0f, 10.0f } }, .entityType = EntityType::TREE_SMOOTH });
+        scene.addGameEntity({ .transform = { .pos = { -10, 0.0f, x } }, .entityType = EntityType::TREE_SMOOTH });
+        scene.addGameEntity({ .transform = { .pos = { 10, 0.0f, x } }, .entityType = EntityType::TREE_SMOOTH });
+    }
 
     sunCamera.pitch = toRadians(330.0f);
     sunCamera.yaw = toRadians(30.0f);
 
-    camera.position = Vec3(0.0f, 40.0f, 50.0f);
+    camera.position = Vec3(0.0f, 20.0f, 25.0f);
     camera.fovY = 15.0f;
     return resized();
 }
@@ -180,7 +194,8 @@ void VulkanDrawStuff::logicUpdate()
 
     //checkCameraKeypresses(dt, camera);
     GameEntity &entity = scene.getEntity(characterEntityIndex);
-    
+    GameEntity &entity2 = scene.getEntity(characterEntityIndex2);
+
     float moveSpeed = dt * 5.0f;
     Vec3 dir;
     
@@ -224,7 +239,23 @@ void VulkanDrawStuff::logicUpdate()
     }
 
     if(isPressed(GLFW_KEY_SPACE))
-        animIndex = 0u;
+    {
+        scene.addAnimation(characterEntityIndex, "Punch", PlayMode::PlayOnce);
+    }
+    if(isPressed(GLFW_KEY_X))
+    {
+        if(moveAnimationIndex != ~0u)
+        {
+            scene.replaceAnimation(characterEntityIndex, "Run", moveAnimationIndex);
+        }
+    }
+    if(isPressed(GLFW_KEY_Z))
+    {
+        if(moveAnimationIndex != ~0u)
+        {
+            scene.replaceAnimation(characterEntityIndex, "walk", moveAnimationIndex);
+        }
+    }
 
     if(entity.animationIndex != animIndex)
     {
@@ -232,11 +263,16 @@ void VulkanDrawStuff::logicUpdate()
         entity.animationTime = 0.0;
     }
     
-
     entity.transform.pos = entity.transform.pos + dir * moveSpeed;
-    
-    entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), angle);
+    Quat newRot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), angle);
+    entity.transform.rot = newRot;
+
+    entity2.transform.pos = entity2.transform.pos + dir * moveSpeed;
+    entity2.transform.rot = newRot;
+    camera.position = camera.position + dir * moveSpeed;
     camera.lookAt(entity.transform.pos);
+
+    sunCamera.lookAt(entity.transform.pos);
     if (isPressed(GLFW_KEY_P))
         showNormalMap = !showNormalMap;
 

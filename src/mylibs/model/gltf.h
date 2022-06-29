@@ -8,6 +8,8 @@
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
+#include <model/animation.h>
+
 struct GltfModel
 {
     struct Vertex
@@ -89,6 +91,10 @@ struct GltfModel
 
 bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
     PodVector<Mat3x4> &outMatrices);
+
+bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
+    PodVector<Mat3x4> &outMatrices);
+
 
 
 bool readGLTF(const char *filename, GltfModel &outModel);

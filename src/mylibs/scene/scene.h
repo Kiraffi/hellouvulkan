@@ -4,6 +4,8 @@
 #include <render/meshrendersystem.h>
 #include <scene/gameentity.h>
 
+#include <model/animation.h>
+
 struct Ray;
 struct HitPoint;
 
@@ -14,7 +16,7 @@ struct SceneData
 {
     MeshRenderSystem& meshRenderSystem;
 
-    
+    PodVector<AnimationState> animationStates;
     PodVector<GameEntity> entities;
     PodVector<uint32_t> freeEnityIndices;
 };
@@ -40,6 +42,11 @@ public:
     const PodVector<GameEntity> &getEntities() const { return sceneData.entities; }
     PodVector<GameEntity> &getEntities() { return sceneData.entities; }
     
+    // TODO should think where this code should live.
+    uint32_t addAnimation(uint32_t entityIndex, const char *animName, PlayMode playMode);
+    uint32_t addAnimation(uint32_t entityIndex, uint32_t animationIndex, PlayMode playMode);
+    uint32_t replaceAnimation(uint32_t entityIndex, uint32_t animationIndex, uint32_t playingAnimatinIndex);
+    uint32_t replaceAnimation(uint32_t entityIndex, const char *animName, uint32_t playingAnimatinIndex);
 
     bool readLevel(const char *levelName);
     bool writeLevel(const char *filename) const;
