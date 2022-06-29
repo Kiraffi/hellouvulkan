@@ -12,6 +12,9 @@ set(CMAKE_CXX_EXTENSIONS FALSE)
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 #set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g /d1reportTime")
 
+# adding multiprocessor compilation, in case generating visual studio solution separately
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+
 # imgui stuff to support vulkan with x86
 ADD_DEFINITIONS(-DImTextureID=ImU64)
 
