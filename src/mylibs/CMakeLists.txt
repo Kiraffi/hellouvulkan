@@ -9,9 +9,38 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 
 add_library(MyLibraries
 
+    "container/bytebuffer.h"
+    "container/mymemory.h"
+
+    "components/transform.h"
+
+    "core/camera.h"
+    "core/file.h"
+    "core/general.h"
+    "core/timer.h"
+    "core/json.h"
+    "core/writejson.h"
+
+    "math/matrix.h"
+    "math/ray.h"
+    "math/quaternion.h"
+    "math/vector3.h"
+
+    "model/gltf.h"
+
+    "myvulkan/uniformbuffermanager.h"
+
+    "scene/gameentity.h"
+    "scene/scene.h"
+    
+    "model/animation.h" 
+    "resources/globalresources.h"
+
+
+
+
     "container/bytebuffer.cpp"
     "container/mymemory.cpp"
-    
 
     "components/transform.cpp"
 
@@ -22,16 +51,10 @@ add_library(MyLibraries
     "core/json.cpp"
     "core/writejson.cpp"
 
-
     "math/matrix.cpp"
     "math/ray.cpp"
     "math/quaternion.cpp"
     "math/vector3.cpp"
-
-    "math/matrix.h"
-    "math/ray.h"
-    "math/quaternion.h"
-    "math/vector3.h"
 
     "model/gltf.cpp"
 
@@ -39,31 +62,57 @@ add_library(MyLibraries
 
     "scene/gameentity.cpp"
     "scene/scene.cpp"
-    
+
     "model/animation.cpp" 
-    "resources/globalresources.cpp")
+    "resources/globalresources.cpp"
+)
 
 add_library(MyImgui
-    "gui/transformview.cpp"
     "gui/componentviews.h"
-    
+
+    "render/myimguirenderer.h"
+
+    "gui/guiutil.h"
+    "gui/editorsystem.h"
+
+
+
+    "gui/transformview.cpp"
     "gui/componentviews.cpp"
 
     "render/myimguirenderer.cpp"
-    
-    
+ 
     "gui/guiutil.cpp"
     "gui/editorsystem.cpp"
 )
 
 add_library(MyVulkan
+    "core/vulkan_app.h"
+
+    "myvulkan/myvulkan.h"
+    "myvulkan/vulkanresources.h"
+    "myvulkan/shader.h"
+
+    "render/convertrendertarget.h"
+    "render/font_render.h"
+    "render/lightrendersystem.h"
+    "render/linerendersystem.h"
+    "render/meshrendersystem.h"
+    "render/tonemaprendersystem.h"
+
+    "render/lightingrendertargets.h"
+    "render/meshrendertargets.h"
+
+
+
+
+
     "core/vulkan_app.cpp"
 
     "myvulkan/myvma.cpp"
     "myvulkan/myvulkan.cpp"
     "myvulkan/vulkanresources.cpp"
     "myvulkan/shader.cpp"
-
 
     "render/convertrendertarget.cpp"
     "render/font_render.cpp"
@@ -74,8 +123,6 @@ add_library(MyVulkan
 
     "render/lightingrendertargets.cpp"
     "render/meshrendertargets.cpp"
-    "render/meshrendertargets.h"
-    "render/lightingrendertargets.h"
 )
 
 
