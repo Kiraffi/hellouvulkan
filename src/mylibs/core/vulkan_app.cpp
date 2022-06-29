@@ -289,7 +289,7 @@ void VulkanApp::run()
         #if _WIN32
             timeBeginPeriod(1);
         #endif
-        //std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
         #if _WIN32
             timeEndPeriod(1);
         #endif
@@ -398,7 +398,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     {
         camera.yaw -= rotationSpeed;
     }
-    
+
     if (isDown(GLFW_KEY_O))
     {
         camera.roll += rotationSpeed;
@@ -407,7 +407,7 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
     {
         camera.roll -= rotationSpeed;
     }
-    
+
     camera.pitch = clamp(camera.pitch, -0.499f * PI, 0.4999f * PI);
     camera.yaw = ffmodf(camera.yaw, 2.0f * PI);
     camera.roll = ffmodf(camera.roll, 2.0f * PI);

@@ -105,9 +105,9 @@ bool initGlobalResources()
     if(!loadModelForScene(globalResources->models, "assets/models/floor.gltf", EntityType::FLOOR))
         return false;
 
-    return readAssets();
+    //return readAssets();
 
-    //return true;
+    return true;
 }
 
 void deinitGlobalResources()
