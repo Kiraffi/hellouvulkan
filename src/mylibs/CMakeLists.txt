@@ -96,9 +96,9 @@ else()
 endif()
 
 target_link_libraries(MyVulkan PUBLIC
-    glfw
+    #glfw
     Vulkan::Vulkan
     ${WINMM_LIB}
     #meshoptimizer
-    PRIVATE MyLibraries
+    #PRIVATE MyLibraries
 )

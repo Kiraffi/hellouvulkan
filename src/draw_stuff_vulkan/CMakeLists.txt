@@ -15,4 +15,5 @@ target_link_libraries(draw_stuff_vulkan PRIVATE
     MyLibraries
     MyVulkan
     MyImgui
+    glfw
     )

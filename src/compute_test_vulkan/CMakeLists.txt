@@ -15,4 +15,5 @@ target_link_libraries(compute_test_vulkan PRIVATE
     MyLibraries
     MyVulkan
     MyImgui
+    glfw
     )

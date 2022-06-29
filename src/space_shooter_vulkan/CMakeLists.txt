@@ -15,4 +15,5 @@ target_link_libraries(space_shooter_vulkan PRIVATE
     MyLibraries
     MyVulkan
     MyImgui
+    glfw
     )

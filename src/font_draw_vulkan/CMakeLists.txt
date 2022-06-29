@@ -15,4 +15,5 @@ target_link_libraries(font_draw_vulkan PRIVATE
     MyLibraries
     MyVulkan
     MyImgui
+    glfw
     )

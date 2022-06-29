@@ -15,4 +15,5 @@ target_link_libraries(game PRIVATE
     MyLibraries
     MyVulkan
     MyImgui
+    glfw
     )
