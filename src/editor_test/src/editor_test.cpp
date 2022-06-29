@@ -112,7 +112,7 @@ bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
     // TEMPORARY!
-    //glfwSetWindowPos(window, 2000, 100);
+    //setWindowPosition(2000, 100);
 
 
 
