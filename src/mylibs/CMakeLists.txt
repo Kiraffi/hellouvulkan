@@ -32,8 +32,8 @@ add_library(MyLibraries
 
     "scene/gameentity.h"
     "scene/scene.h"
-    
-    "model/animation.h" 
+
+    "model/animation.h"
     "resources/globalresources.h"
 
 
@@ -63,7 +63,7 @@ add_library(MyLibraries
     "scene/gameentity.cpp"
     "scene/scene.cpp"
 
-    "model/animation.cpp" 
+    "model/animation.cpp"
     "resources/globalresources.cpp"
 )
 
@@ -81,7 +81,7 @@ add_library(MyImgui
     "gui/componentviews.cpp"
 
     "render/myimguirenderer.cpp"
- 
+
     "gui/guiutil.cpp"
     "gui/editorsystem.cpp"
 )
@@ -147,5 +147,5 @@ target_link_libraries(MyVulkan PUBLIC
     Vulkan::Vulkan
     ${WINMM_LIB}
     #meshoptimizer
-    #PRIVATE MyLibraries
+    PRIVATE MyLibraries
 )
