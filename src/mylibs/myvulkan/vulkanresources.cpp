@@ -251,18 +251,19 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     createInfo.usage = usage;
 
     VmaAllocationCreateInfo allocInfo = {};
-    if (memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-        allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;// VMA_MEMORY_USAGE_AUTO;
-    else
-        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    if(memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
     VmaAllocation allocation;
-    VK_CHECK(vmaCreateBuffer(vulk->allocator, &createInfo, &allocInfo, &result.buffer, &allocation, nullptr));
+    VmaAllocationInfo vmaAllocInfo;
+    VK_CHECK(vmaCreateBuffer(vulk->allocator, &createInfo, &allocInfo, &result.buffer, &allocation, &vmaAllocInfo));
 
     void* data = nullptr;
     if (memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        VK_CHECK(vmaMapMemory(vulk->allocator, allocation, &data));
+        data = vmaAllocInfo.pMappedData;
+        //VK_CHECK(vmaMapMemory(vulk->allocator, allocation, &data));
 //        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
         //VK_CHECK(vkMapMemory(vulk->device, allocation->GetMemory(), 0, size, 0, &data));
 
