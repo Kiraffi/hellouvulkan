@@ -403,8 +403,8 @@ void destroyBuffer(Buffer& buffer)
 {
     if(!vulk)
         return;
-    if(buffer.data)
-        vmaUnmapMemory(vulk->allocator, buffer.allocation);
+    //if(buffer.data)
+    //    vmaUnmapMemory(vulk->allocator, buffer.allocation);
     vmaDestroyBuffer(vulk->allocator, buffer.buffer, buffer.allocation);
     buffer.buffer = 0;
     buffer.data = nullptr;
