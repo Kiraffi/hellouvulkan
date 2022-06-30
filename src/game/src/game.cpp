@@ -155,9 +155,9 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     }
 
     sunCamera.pitch = toRadians(330.0f);
-    sunCamera.yaw = toRadians(30.0f);
+    sunCamera.yaw = toRadians(60.0f);
 
-    camera.position = Vec3(0.0f, 20.0f, 25.0f);
+    camera.position = Vec3(0.0f, 20.0f, 30.0f);
     camera.fovY = 15.0f;
     return resized();
 }

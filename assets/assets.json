@@ -1,0 +1,116 @@
+{
+    "magicNumber":  9081328097,
+    "assets": [
+        {
+            "file": "assets/models/animatedthing.gltf",
+            "meshes": [
+                "Cube"
+            ]
+            "animations": [
+                {
+                    "name": "ArmatureAction",
+                    "Looping": "PlayOnce",
+                }
+            ]
+
+        },
+        {
+            "file": "assets/models/character8.gltf",
+            "meshes": [
+                "Cube"
+            ],
+            "animations": [
+                {
+                    "name": "TPose",
+                    "Looping": "Looping"
+                },
+                {
+                    "name": "TPose",
+                    "Looping": "Looping"
+                }
+
+            ]
+        },
+        {
+            "file": "assets/models/lowpoly6.gltf",
+            "meshes": [
+                "Dude001"
+            ]
+
+        },
+        {
+            "file": "assets/models/armature_test.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/character4_22.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/arrows.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/test_gltf.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+
+
+
+
+
+
+
+
+
+
+        {
+            "file": "assets/models/tree1.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/tree1_smooth.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/blob.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/blob_flat.gltf",
+            "meshes": [
+                "Cube"
+            ]
+
+        },
+        {
+            "file": "assets/models/floor.gltf",
+            "meshes": [
+                "Cube"
+            ]
+        },
+
+    ],
+
+}

@@ -1,0 +1,76 @@
+#version 450 core
+
+#include "common.h"
+/*
+// Could be packed better
+struct VData
+{
+    vec3 pos;
+    uint color;
+
+    vec2 uv;
+
+    // 16 bit usigned x, y, z then Attributes
+    // 1, use vertexcolor, 2, use uvs
+    uvec2 normalXYZAttributes;
+};
+
+
+// Could be packed better
+struct AnimatedVData
+{
+    VData data;
+    // packed to uint16_t x 4
+    uvec2 weights;
+    uint boneIndices;
+    uint tmp;
+};
+
+layout (std430, binding = 6) restrict readonly buffer animationVertexData
+{
+    AnimatedVData animationVertexValues[];
+};
+
+struct ModelDataAnimatedCompute //?
+{
+    uint vertices;
+    // 24 first bits for bonestart, 8 bits for count
+    uint boneStartCountIndex;
+    uint vertexStartIndex;
+    uint outVertexStartIndex;
+}:
+
+layout (std430, binding = 7) restrict readonly buffer boneStartIndexData
+{
+    uint boneStartIndices[];
+};
+
+*/
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    uint indexInThreadGroup = gl_LocalInvocationID.x;
+    uint groupThreadIndex = gl_WorkGroupID.x;
+    /*
+    uint modelIndex = ?;
+    uint instanceIndex = ?;
+
+    uint vertices = ?
+    uint vertex = 
+
+
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    if(pos.x < windowSize.x && pos.y < windowSize.y)
+    {
+        //vec2 samplePos = (vec2(pos.xy) + 0.5f) / vec2(windowSize.xy);
+        //vec4 imageSample = textureLod(textureToSample, samplePos, 0);
+        //vec4 imageSample = texture(textureToSample, samplePos);
+        //vec4 imageSample = texelFetch(textureToSample, pos.xy, 0);
+
+        // changed bgra to rgbaunorm8 image, and this works.
+        vec4 imageSample = imageLoad(loadTex, pos);
+        imageStore(storeTex, pos, imageSample);
+    }
+    */
+}
+
