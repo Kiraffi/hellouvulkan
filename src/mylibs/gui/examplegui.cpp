@@ -1,6 +1,6 @@
 #include "examplegui.h"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 void drawExampleGui()
 {

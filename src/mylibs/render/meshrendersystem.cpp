@@ -15,7 +15,7 @@
 
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 
 MeshRenderSystem::~MeshRenderSystem()
@@ -96,7 +96,7 @@ bool MeshRenderSystem::init()
 
 
     }
-    
+
     modelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
     animatedModelRenderMatrices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
     modelRenderBoneStartIndices.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES));
@@ -129,7 +129,7 @@ bool MeshRenderSystem::init()
         if(!depthOnlyRender)
         {
             pipeline.renderPass = createRenderPass(
-                { 
+                {
                     RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR },
                     RenderTarget{ .format = VK_FORMAT_R16G16B16A16_SNORM, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR }
                 },
@@ -180,7 +180,7 @@ bool MeshRenderSystem::init()
                 pipeline.descriptorSetBinds[i].push_back(
                     DescriptorInfo(paletteImage.imageView, paletteImage.layout, vulk->globalTextureSampler));
         }
-     
+
 
 
         if (!updateBindDescriptorSet(pipeline))
@@ -398,7 +398,7 @@ void MeshRenderSystem::render(bool isShadowOnly)
             uint32_t instances = animationRender ? animatedModelRenderMatrices[modelIndex].size() / 2 : modelRenderMatrices[modelIndex].size() / 2;
             if (instances)
             {
-                
+
                 vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(vulk->commandBuffer, modelData.indices, instances,
                     modelData.indiceStart, modelData.vertexStart, instanceStartIndex);

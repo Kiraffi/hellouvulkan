@@ -19,7 +19,7 @@
 #include <scene/scene.h>
 
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 
 static bool drawSaveDialog(SmallStackString &inOutName, bool &outSaved)

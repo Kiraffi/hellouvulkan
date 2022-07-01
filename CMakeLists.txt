@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
+#ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x86)
 
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 #set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g /d1reportTime")
@@ -113,11 +114,13 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" )
 #ADD_DEFINITIONS(-DUSE_GPU_DEBUG_VALIDATION=1)
 
 
-include_directories("external/")
-include_directories("external/imgui/")
 include_directories("external/glfw/include/")
+include_directories("external/imgui/")
+include_directories("external/miniaudio/")
+include_directories("external/stb/")
 include_directories("src/mylibs")
 include_directories("external/VulkanMemoryAllocator/include")
+
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
 add_library(Imgui
@@ -129,6 +132,10 @@ add_library(Imgui
     "external/imgui/imgui_widgets.cpp"
 )
 
+
+add_library(Miniaudio
+    "external/miniaudio/extras/miniaudio_split/miniaudio.c"
+)
 
 #add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")

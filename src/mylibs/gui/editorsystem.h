@@ -9,7 +9,7 @@
 
 
 // ImTextureID
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 class Scene;
 class LineRenderSystem;
@@ -23,7 +23,7 @@ class EditorSystem
 public:
     EditorSystem(Scene &scene, LineRenderSystem &lineRenderSystem, uint32_t windowWidth, uint32_t windowHeight)
         : scene(scene), lineRenderSystem(lineRenderSystem), editorWindowViewport{ { 0.0f, 0.0f }, { Vec2(windowWidth, windowHeight) } } {}
-    
+
     ~EditorSystem();
 
     bool init(GLFWwindow *window);

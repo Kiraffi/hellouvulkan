@@ -57,11 +57,11 @@ static Vec3 getSunDirection(const Camera &camera)
     return -sundir[2];
 }
 
-class VulkanDrawStuff : public VulkanApp
+class GameApp : public VulkanApp
 {
 public:
-    VulkanDrawStuff() : scene(meshRenderSystem) { }
-    virtual ~VulkanDrawStuff() override;
+    GameApp() : scene(meshRenderSystem) { }
+    virtual ~GameApp() override;
     virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters& params) override;
     virtual void logicUpdate() override;
@@ -104,13 +104,13 @@ public:
 //
 ////////////////////////
 
-VulkanDrawStuff::~VulkanDrawStuff()
+GameApp::~GameApp()
 {
 }
 
 
 
-bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+bool GameApp::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
@@ -163,7 +163,7 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
 }
 
 
-bool VulkanDrawStuff::resized()
+bool GameApp::resized()
 {
     if (!meshRenderTargets.resizeMeshTargets())
         return false;
@@ -178,14 +178,14 @@ bool VulkanDrawStuff::resized()
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
-    
+
 
     return true;
 }
 
 
 
-void VulkanDrawStuff::logicUpdate()
+void GameApp::logicUpdate()
 {
     VulkanApp::logicUpdate();
     lineRenderSystem.clear();
@@ -198,9 +198,9 @@ void VulkanDrawStuff::logicUpdate()
 
     float moveSpeed = dt * 5.0f;
     Vec3 dir;
-    
+
     uint32_t animIndex = 0u;
-    
+
     if(isDown(GLFW_KEY_W))
     {
         dir = dir + Vec3(0.0f, 0.0f, -1.0f);
@@ -262,7 +262,7 @@ void VulkanDrawStuff::logicUpdate()
         entity.animationIndex = animIndex;
         entity.animationTime = 0.0;
     }
-    
+
     entity.transform.pos = entity.transform.pos + dir * moveSpeed;
     Quat newRot = getQuaternionFromAxisAngle(Vec3(0.0f, 1.0f, 0.0f), angle);
     entity.transform.rot = newRot;
@@ -320,7 +320,7 @@ void VulkanDrawStuff::logicUpdate()
     lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
-void VulkanDrawStuff::renderUpdate()
+void GameApp::renderUpdate()
 {
     VulkanApp::renderUpdate();
 
@@ -336,7 +336,7 @@ void VulkanDrawStuff::renderUpdate()
 
 }
 
-void VulkanDrawStuff::renderDraw()
+void GameApp::renderDraw()
 {
     meshRenderTargets.prepareTargetsForMeshRendering();
     meshRenderTargets.prepareTargetsForShadowRendering();
@@ -389,7 +389,7 @@ void VulkanDrawStuff::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    VulkanDrawStuff app;
+    GameApp app;
     if (app.init("Game", SCREEN_WIDTH, SCREEN_HEIGHT,
         {
             .showInfoMessages = false,

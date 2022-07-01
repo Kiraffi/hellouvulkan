@@ -3,7 +3,7 @@
 #include <math/vector3.h>
 #include <math/quaternion.h>
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 void drawVec3(const char *name, Vector3 &v)
 {
