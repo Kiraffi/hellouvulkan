@@ -47,8 +47,10 @@
 //#include <miniaudio.h>
 #include <extras/miniaudio_split/miniaudio.h>
 
-#include <mutex>
+#include <atomic>
 #include <string.h>
+
+using AtomicType = uint64_t;
 
 static constexpr int SCREEN_WIDTH = 1024;
 static constexpr int SCREEN_HEIGHT = 768;
@@ -59,6 +61,8 @@ static constexpr int SHADOW_HEIGHT = 2048;
 static constexpr ma_format DEVICE_FORMAT = ma_format_f32;
 static constexpr int DEVICE_CHANNELS = 2;
 static constexpr int DEVICE_SAMPLE_RATE = 48000;
+
+static constexpr AtomicType NOTE_COUNT = 16;
 
 enum class NotePlayPhase
 {
@@ -85,118 +89,219 @@ struct Note
 
     double decStart;
     double releaseStart;
-
+    double endTime;
     NotePlayPhase phase;
 };
 
-Note notes[16] = {};
-std::mutex notesMutex;
+struct NoteFromMainToThread
+{ 
+    double attackAmplitude;
+    double sustainAmplitude;
+    double freq;
 
-double globalTime = 0.0;
-double previousGlobalTime = 0.0;
-double freq = 220.0;
-static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+    double attackDur;
+    double decDur;
+    double releaseDur;
+    AtomicType note;
+};
+
+struct NoteFromThreadToMain
+{ 
+    double endTime;
+};
+
+struct NoteThread
+{ 
+    double startTime = 0.0;
+    double releaseStart = 0.0;
+
+    double decStart = 0.0;
+    double endTime = 0.0;
+    NotePlayPhase phase = NotePlayPhase::Finished;
+};
+
+NoteFromMainToThread notesFromMain [NOTE_COUNT] = { };
+NoteThread notesThread [NOTE_COUNT] = { };
+NoteFromThreadToMain notesFromThread [NOTE_COUNT] = { };
+
+std::atomic<AtomicType> notesRunning(0);
+std::atomic<AtomicType> notesReleased(0);
+
+static double getFreq(double index)
 {
-    #if 0
-    ma_waveform* pSineWave;
+    return 220.0 * pow(2, index / 12.0);
+}
 
-    ASSERT(pDevice->playback.channels == DEVICE_CHANNELS);
+static void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown, double time)
+{
+    AtomicType channelAtom = AtomicType(1) << channel;
+    bool runn = (running & channelAtom) != 0;
+    bool rel = (released & channelAtom) != 0;
+    if(runn && !rel)
+    {
+        NoteFromMainToThread &note = notesFromMain[channel];
 
-    pSineWave = (ma_waveform*)pDevice->pUserData;
-    ASSERT(pSineWave != NULL);
+        AtomicType atomKey = AtomicType(1) << note.note;
+        bool down = (keysDown & atomKey) != 0;
 
-    ma_waveform_read_pcm_frames(pSineWave, pOutput, frameCount, NULL);
+        // remove from handled keys
+        keysDown &= ~(atomKey);
 
-    (void)pInput;   /* Unused. */
-    #else
+        if(!down)
+        {
+            std::atomic_fetch_or(&notesReleased, channelAtom);
+        }
+    }
+}
 
-    Note myNotes[16];
-    notesMutex.lock();
-    memcpy(myNotes, notes, sizeof(Note) * 16);
-    notesMutex.unlock();
+static void addNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown, double time)
+{
+    AtomicType channelAtom = AtomicType(1) << channel;
+    bool runn = (running & channelAtom) != 0;
+    if(keysDown == 0 || runn)
+        return;
+
+    AtomicType bitScanForward = 0;
+
+    while((keysDown & (AtomicType(1) << bitScanForward)) == 0)
+        bitScanForward++;
+    if(bitScanForward >= NOTE_COUNT)
+        return;
+
+    // remove from handled keys
+    keysDown &= ~(AtomicType(1) << bitScanForward);
+    NoteFromMainToThread &note = notesFromMain[channel];
+
+    if(time >= notesFromThread[channel].endTime)
+    {
+        note.freq = getFreq(double(bitScanForward));
+        note.note = bitScanForward;
+        std::atomic_fetch_or(&notesRunning, channelAtom);
+        return;
+    }
+}
+
+
+static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    static uint64_t threadFrameCounter = 0;
+    double offset = *( double * )pDevice->pUserData;
+    AtomicType threadNotesRunning = notesRunning.load();
+    AtomicType threadNotesReleased = notesReleased.load();
+
+    AtomicType newThreadsFinished = 0u;
 
     double dur = 1.0 / DEVICE_SAMPLE_RATE;
-    static double lastPos = 0.0;
-    double startPos = lastPos;
+
+    for(AtomicType j = 0; j < NOTE_COUNT; ++j)
+    {
+        NoteThread &noteThread = notesThread [j];
+        NoteFromMainToThread &noteMain = notesFromMain [j];
+        bool running = ( ( threadNotesRunning >> j ) & 1 ) == 1;
+        bool released = ( ( threadNotesReleased >> j ) & 1 ) == 1;
+
+        if(running && released && noteThread.releaseStart < noteThread.startTime)
+            noteThread.releaseStart = threadFrameCounter * dur;
+
+        if(noteThread.phase == NotePlayPhase::Finished && running)
+        {
+            noteThread.startTime = threadFrameCounter * dur;
+            if(noteMain.attackDur > 0.0)
+                noteThread.phase = NotePlayPhase::Attack;
+            else
+                noteThread.phase = NotePlayPhase::Sustain;
+        }
+
+    }
 
     float *f32Out = (float *)pOutput;
     for(uint32_t i = 0; i < frameCount; ++i)
     {
         double value = 0.0;
-        for(uint32_t j = 0; j < 16; ++j)
+        double time = dur * threadFrameCounter;
+        for(AtomicType j = 0; j < NOTE_COUNT; ++j)
         {
-            Note &note = myNotes[j];
+            if(( ( threadNotesRunning >> j ) & 1 ) == 0)
+                continue;
+            NoteFromMainToThread &noteMain = notesFromMain[j];
+            NoteThread &noteThread = notesThread [j];
+            NoteFromThreadToMain &noteToMain = notesFromThread [j];
+
             double tmpValue = 0.0;
             double amplitude = 0.0;
-            switch(note.phase)
+            switch(noteThread.phase)
             {
                 case NotePlayPhase::Attack:
-                    amplitude = note.attackAmplitude * fmin(1.0, (note.lastSamplingTime - note.startTime) / note.attackDur);
+                    if(noteMain.attackDur > 0.0)
+                        amplitude = noteMain.attackAmplitude *
+                            ffclampd(0.0, 1.0, (time - noteThread.startTime) / noteMain.attackDur);
                     break;
                 case NotePlayPhase::Decay:
-                    amplitude = note.attackAmplitude -
-                        (fmin(1.0, fmax(0.0, ((note.lastSamplingTime - note.decStart) / note.decDur))) *
-                            (note.attackAmplitude - note.sustainAmplitude));
+                    if(noteMain.decDur > 0.0)
+                        amplitude = noteMain.attackAmplitude -
+                            ffclampd(0.0, 1.0, (time - noteThread.decStart) / noteMain.decDur) *
+                                (noteMain.attackAmplitude - noteMain.sustainAmplitude);
                     break;
                 case NotePlayPhase::Release:
-                    amplitude = fmax(0.0, (1.0f - (note.lastSamplingTime - note.releaseStart) / note.releaseDur)) * note.sustainAmplitude;
+                    if(noteMain.releaseDur > 0.0)
+                        amplitude = noteMain.sustainAmplitude * (1.0 - ffclampd(0.0, 1.0,
+                            (time - noteThread.releaseStart) / noteMain.releaseDur));
                     break;
                 case NotePlayPhase::Sustain:
-                    amplitude = note.sustainAmplitude;
+                    amplitude = noteMain.sustainAmplitude;
                     break;
                 case NotePlayPhase::Finished:
-                    amplitude = 0.0;
-                    break;
                 case NotePlayPhase::Amount:
                     continue;
             }
-            tmpValue = sin(note.freq * (note.lastSamplingTime - note.startTime) * 2.0 * Pi) * amplitude;
+            if(time >= noteThread.startTime)
+                tmpValue = sin(noteMain.freq * (time - noteThread.startTime) * 2.0 * Pi) * amplitude;
             value += tmpValue;
 
-            note.lastSamplingTime += dur;
-            switch(note.phase)
+            switch(noteThread.phase)
             {
                 // NOTE: The fall through is on purpose, so if there is no decrease time or something.
                 case NotePlayPhase::Attack:
-                    if((note.lastSamplingTime - note.startTime) < note.attackDur)
+                    if((time - noteThread.startTime) < noteMain.attackDur)
                         break;
-                    note.phase = NotePlayPhase::Decay;
-                    note.decStart = note.startTime + note.attackDur;
+                    noteThread.phase = NotePlayPhase::Decay;
+                    noteThread.decStart = time;
                 case NotePlayPhase::Decay:
-                    if((note.lastSamplingTime - note.decStart) < note.decDur)
+                    if((time - noteThread.decStart) < noteMain.decDur)
                         break;
-                    note.phase = NotePlayPhase::Sustain;
+                    noteThread.phase = NotePlayPhase::Sustain;
 
                 case NotePlayPhase::Sustain:
-                    if(note.releaseStart < note.startTime)
+                    if(noteThread.releaseStart < noteThread.startTime)
                         break;
-                    note.phase = NotePlayPhase::Release;
-
+                    noteThread.phase = NotePlayPhase::Release;
+                    noteThread.releaseStart = time;
                 case NotePlayPhase::Release:
-                    if((note.lastSamplingTime - note.releaseStart) >= note.releaseDur)
-                        note.phase = NotePlayPhase::Finished;
-                    break;
-
+                    if((time - noteThread.releaseStart ) < noteMain.releaseDur)
+                        break;
+                    noteThread.phase = NotePlayPhase::Finished;
+                    noteToMain.endTime = time + offset;
+                    newThreadsFinished |= AtomicType(1) << j;
+                    threadNotesRunning &= ~( AtomicType(1) << j );
                 case NotePlayPhase::Finished:
                 case NotePlayPhase::Amount:
                     break;
             }
         }
+        value = ffclampd(-1.0, 1.0, value);
         for(uint32_t j = 0; j < DEVICE_CHANNELS; ++j)
             f32Out[i * DEVICE_CHANNELS + j] = value;
-        startPos += dur * freq;
 
+        ++threadFrameCounter;
     }
-    notesMutex.lock();
-    memcpy(notes, myNotes, sizeof(Note) * 16);
-    notesMutex.unlock();
 
-
+    if(newThreadsFinished)
+    {
+        newThreadsFinished = ~newThreadsFinished;
+        std::atomic_fetch_and(&notesRunning, newThreadsFinished);
+        std::atomic_fetch_and(&notesReleased, newThreadsFinished);
+    }
     //printf("start: %f, end: %f, samplecount: %u\n", float(lastPos), float(startPos), frameCount);
-    startPos  = fmod(startPos, 1.0);
-    lastPos = startPos;
-
-    #endif
 }
 
 static Vec3 getSunDirection(const Camera &camera)
@@ -240,7 +345,7 @@ public:
     ma_device soundDevice;
     ma_waveform_config sineWaveConfig;
 
-
+    double startTime;
 };
 
 
@@ -259,17 +364,22 @@ SoundTest::~SoundTest()
 
 bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
-    for(uint32_t i = 0; i < 16; ++i)
+    for(AtomicType i = 0; i < NOTE_COUNT; ++i)
     {
-        notes[i].phase = NotePlayPhase::Finished;
-        notes[i].freq = 220.0 * pow(2, double(i)/12.0);
-        notes[i].attackAmplitude = 0.15;
-        notes[i].sustainAmplitude = 0.10;
+        notesThread[i].phase = NotePlayPhase::Finished;
+        notesThread[i].releaseStart = 0.0;
+        notesThread[i].startTime = 0.0;
 
-        notes[i].releaseStart = 0.0;
-        notes[i].attackDur = 0.3;
-        notes[i].decDur = 0.05;
-        notes[i].releaseDur = 0.1;
+        notesFromThread[i].endTime = 0.0;
+
+        notesFromMain[i].freq = getFreq(double(i));
+        notesFromMain[i].note = i;
+        notesFromMain[i].attackAmplitude = 0.15;
+        notesFromMain[i].sustainAmplitude = 0.10;
+
+        notesFromMain[i].attackDur = 0.2;
+        notesFromMain[i].decDur = 0.05;
+        notesFromMain[i].releaseDur = 0.2;
     }
 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
@@ -299,19 +409,21 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
         return false;
 
     {
-        sineWaveConfig = ma_waveform_config_init(DEVICE_FORMAT, DEVICE_CHANNELS, DEVICE_SAMPLE_RATE, ma_waveform_type_sine, 0.2, 220);
-        ma_waveform_init(&sineWaveConfig, &sineWave);
+        //sineWaveConfig = ma_waveform_config_init(DEVICE_FORMAT, DEVICE_CHANNELS, DEVICE_SAMPLE_RATE, ma_waveform_type_sine, 0.2, 220);
+        //ma_waveform_init(&sineWaveConfig, &sineWave);
 
+        startTime = getTime();
         deviceConfig = ma_device_config_init(ma_device_type_playback);
-        deviceConfig.playback.format   = DEVICE_FORMAT;
-        deviceConfig.playback.channels = DEVICE_CHANNELS;
-        deviceConfig.sampleRate        = DEVICE_SAMPLE_RATE;
-        deviceConfig.dataCallback      = data_callback;
-        deviceConfig.pUserData         = &sineWave;
+        deviceConfig.playback.format    = DEVICE_FORMAT;
+        deviceConfig.playback.channels  = DEVICE_CHANNELS;
+        deviceConfig.sampleRate         = DEVICE_SAMPLE_RATE;
+        deviceConfig.dataCallback       = soundCallback;
+        deviceConfig.pUserData          = &startTime;
+        deviceConfig.periodSizeInFrames = 256;
 
         if (ma_device_init(NULL, &deviceConfig, &soundDevice) != MA_SUCCESS) {
             printf("Failed to open playback device.\n");
-            return -4;
+            return false;
         }
 
         printf("Device Name: %s\n", soundDevice.playback.name);
@@ -319,7 +431,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
         if (ma_device_start(&soundDevice) != MA_SUCCESS) {
             printf("Failed to start playback device.\n");
             ma_device_uninit(&soundDevice);
-            return -5;
+            return false;
         }
     }
 
@@ -339,7 +451,6 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
     camera.position = Vec3(0.0f, 20.0f, 30.0f);
     camera.fovY = 15.0f;
-    previousGlobalTime = getTime();
     return resized();
 }
 
@@ -362,54 +473,47 @@ bool SoundTest::resized()
     return true;
 }
 
-void checkStatus(Note &note, bool down, double time)
-{
-    if(!down && note.phase == NotePlayPhase::Finished)
-        return;
-
-    if(!down && uint32_t(note.phase) < uint32_t(NotePlayPhase::Release))
-    {
-        note.releaseStart = time;
-    }
-    if(down && note.phase == NotePlayPhase::Finished)
-    {
-        note.startTime = time;
-        note.lastSamplingTime = time;
-        if(note.attackDur > 0.0)
-            note.phase = NotePlayPhase::Attack;
-        else
-            note.phase = NotePlayPhase::Sustain;
-    }
-}
-
 void SoundTest::logicUpdate()
 {
     VulkanApp::logicUpdate();
     lineRenderSystem.clear();
-    globalTime = getTime();
     MouseState mouseState = getMouseState();
 
     //checkCameraKeypresses(dt, camera);
     // maybe mutex guard is better
     double currTime = getTime();
-    notesMutex.lock();
-    checkStatus(notes[0],  isDown(GLFW_KEY_Q), currTime);
-    checkStatus(notes[1],  isDown(GLFW_KEY_2), currTime);
-    checkStatus(notes[2],  isDown(GLFW_KEY_W), currTime);
-    checkStatus(notes[3],  isDown(GLFW_KEY_E), currTime);
-    checkStatus(notes[4],  isDown(GLFW_KEY_4), currTime);
-    checkStatus(notes[5],  isDown(GLFW_KEY_R), currTime);
-    checkStatus(notes[6],  isDown(GLFW_KEY_5), currTime);
-    checkStatus(notes[7],  isDown(GLFW_KEY_T), currTime);
-    checkStatus(notes[8],  isDown(GLFW_KEY_Y), currTime);
-    checkStatus(notes[9],  isDown(GLFW_KEY_7), currTime);
-    checkStatus(notes[10], isDown(GLFW_KEY_U), currTime);
-    checkStatus(notes[11], isDown(GLFW_KEY_8), currTime);
-    checkStatus(notes[12], isDown(GLFW_KEY_I), currTime);
-    checkStatus(notes[13], isDown(GLFW_KEY_9), currTime);
-    checkStatus(notes[14], isDown(GLFW_KEY_O), currTime);
-    checkStatus(notes[15], isDown(GLFW_KEY_P), currTime);
-    notesMutex.unlock();
+    AtomicType runnings = notesRunning.load();
+    AtomicType releases = notesReleased.load();
+
+    AtomicType keys [NOTE_COUNT] = {
+        GLFW_KEY_Q,
+        GLFW_KEY_2,
+        GLFW_KEY_W,
+        GLFW_KEY_E,
+        GLFW_KEY_4,
+        GLFW_KEY_R,
+        GLFW_KEY_5,
+        GLFW_KEY_T,
+        GLFW_KEY_Y,
+        GLFW_KEY_7,
+        GLFW_KEY_U,
+        GLFW_KEY_8,
+        GLFW_KEY_I,
+        GLFW_KEY_9,
+        GLFW_KEY_O,
+        GLFW_KEY_P,
+    };
+    AtomicType keysDown = 0;
+    for(AtomicType index = 0; index < sizeof(keys) / sizeof(keys [0]); ++index)
+        if(isDown(keys[index]))
+            keysDown |= AtomicType(1) << index;
+
+    for(AtomicType index = 0; index < sizeof(keys) / sizeof(keys[0]); ++index)
+        checkNotes(index,  runnings, releases, keysDown, currTime);
+
+    for(AtomicType index = 0; index < sizeof(keys) / sizeof(keys[0]); ++index)
+        addNotes(index, runnings, releases, keysDown, currTime);
+
 
     camera.lookAt(Vec3(0, 0, 0));
     sunCamera.lookAt(Vec3(0, 0, 0));
