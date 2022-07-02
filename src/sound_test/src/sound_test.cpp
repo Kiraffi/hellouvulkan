@@ -145,6 +145,8 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
                     amplitude = note.sustainAmplitude;
                     break;
                 case NotePlayPhase::Finished:
+                    amplitude = 0.0;
+                    break;
                 case NotePlayPhase::Amount:
                     continue;
             }
