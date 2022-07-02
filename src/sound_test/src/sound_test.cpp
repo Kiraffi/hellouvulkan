@@ -238,9 +238,13 @@ static void addNotes(AtomicType channel, AtomicType running, AtomicType released
     }
 }
 
-
+//#include <chrono>
+//std::chrono::high_resolution_clock::time_point tp;
 static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
+    //std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
+    //printf("time: %f, frames: %u\n", (chTime - tp).count() / 100000.0f, frameCount);
+    //tp = chTime;
     static uint64_t threadFrameCounter = 0;
     double offset = *( double * )pDevice->pUserData;
     AtomicType threadNotesRunning = notesRunning.load();
@@ -475,7 +479,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
         deviceConfig.sampleRate         = DEVICE_SAMPLE_RATE;
         deviceConfig.dataCallback       = soundCallback;
         deviceConfig.pUserData          = &startTime;
-        deviceConfig.periodSizeInFrames = 512;
+        deviceConfig.performanceProfile = ma_performance_profile_low_latency;
 
         if (ma_device_init(NULL, &deviceConfig, &soundDevice) != MA_SUCCESS) {
             printf("Failed to open playback device.\n");
