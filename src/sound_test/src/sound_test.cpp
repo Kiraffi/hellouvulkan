@@ -62,7 +62,89 @@ static constexpr ma_format DEVICE_FORMAT = ma_format_f32;
 static constexpr int DEVICE_CHANNELS = 2;
 static constexpr int DEVICE_SAMPLE_RATE = 48000;
 
-static constexpr AtomicType NOTE_COUNT = 16;
+static constexpr AtomicType NOTE_COUNT = 32;
+
+static double getFreq(double index)
+{
+    return 220.0 * pow(2, index / 12.0);
+}
+
+static AtomicType Keys [NOTE_COUNT] = {
+
+    GLFW_KEY_Z,
+    GLFW_KEY_S,
+    GLFW_KEY_X,
+    GLFW_KEY_C,
+    GLFW_KEY_F,
+    GLFW_KEY_V,
+    GLFW_KEY_G,
+    GLFW_KEY_B,
+    GLFW_KEY_N,
+    GLFW_KEY_J,
+    GLFW_KEY_M,
+    GLFW_KEY_K,
+    GLFW_KEY_COMMA,
+    GLFW_KEY_L,
+    GLFW_KEY_PERIOD,
+    GLFW_KEY_SLASH,
+
+
+
+    GLFW_KEY_Q,
+    GLFW_KEY_2,
+    GLFW_KEY_W,
+    GLFW_KEY_E,
+    GLFW_KEY_4,
+    GLFW_KEY_R,
+    GLFW_KEY_5,
+    GLFW_KEY_T,
+    GLFW_KEY_Y,
+    GLFW_KEY_7,
+    GLFW_KEY_U,
+    GLFW_KEY_8,
+    GLFW_KEY_I,
+    GLFW_KEY_9,
+    GLFW_KEY_O,
+    GLFW_KEY_P,
+};
+
+static double Freqs [NOTE_COUNT] = {
+    getFreq(0),
+    getFreq(1),
+    getFreq(2),
+    getFreq(3),
+    getFreq(4),
+    getFreq(5),
+    getFreq(6),
+    getFreq(7),
+    getFreq(8),
+    getFreq(9),
+    getFreq(10),
+    getFreq(11),
+    getFreq(12),
+    getFreq(13),
+    getFreq(14),
+    getFreq(15),
+
+
+    getFreq(12),
+    getFreq(13),
+    getFreq(14),
+    getFreq(15),
+    getFreq(16),
+    getFreq(17),
+    getFreq(18),
+    getFreq(19),
+    getFreq(20),
+    getFreq(21),
+    getFreq(22),
+    getFreq(23),
+    getFreq(24),
+    getFreq(25),
+    getFreq(26),
+    getFreq(27),
+};
+
 
 enum class NotePlayPhase
 {
@@ -74,27 +156,8 @@ enum class NotePlayPhase
     Amount,
 };
 
-struct Note
-{
-    double attackAmplitude;
-    double sustainAmplitude;
-    double freq;
-
-    double startTime;
-    double lastSamplingTime;
-
-    double attackDur;
-    double decDur;
-    double releaseDur;
-
-    double decStart;
-    double releaseStart;
-    double endTime;
-    NotePlayPhase phase;
-};
-
 struct NoteFromMainToThread
-{ 
+{
     double attackAmplitude;
     double sustainAmplitude;
     double freq;
@@ -106,17 +169,16 @@ struct NoteFromMainToThread
 };
 
 struct NoteFromThreadToMain
-{ 
+{
     double endTime;
 };
 
 struct NoteThread
-{ 
+{
     double startTime = 0.0;
     double releaseStart = 0.0;
 
     double decStart = 0.0;
-    double endTime = 0.0;
     NotePlayPhase phase = NotePlayPhase::Finished;
 };
 
@@ -127,10 +189,6 @@ NoteFromThreadToMain notesFromThread [NOTE_COUNT] = { };
 std::atomic<AtomicType> notesRunning(0);
 std::atomic<AtomicType> notesReleased(0);
 
-static double getFreq(double index)
-{
-    return 220.0 * pow(2, index / 12.0);
-}
 
 static void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown, double time)
 {
@@ -174,7 +232,6 @@ static void addNotes(AtomicType channel, AtomicType running, AtomicType released
 
     if(time >= notesFromThread[channel].endTime)
     {
-        note.freq = getFreq(double(bitScanForward));
         note.note = bitScanForward;
         std::atomic_fetch_or(&notesRunning, channelAtom);
         return;
@@ -255,7 +312,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     continue;
             }
             if(time >= noteThread.startTime)
-                tmpValue = sin(noteMain.freq * (time - noteThread.startTime) * 2.0 * Pi) * amplitude;
+                tmpValue = sin(Freqs[noteMain.note] * (time - noteThread.startTime) * 2.0 * Pi) * amplitude;
             value += tmpValue;
 
             switch(noteThread.phase)
@@ -372,7 +429,6 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
         notesFromThread[i].endTime = 0.0;
 
-        notesFromMain[i].freq = getFreq(double(i));
         notesFromMain[i].note = i;
         notesFromMain[i].attackAmplitude = 0.15;
         notesFromMain[i].sustainAmplitude = 0.10;
@@ -419,7 +475,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
         deviceConfig.sampleRate         = DEVICE_SAMPLE_RATE;
         deviceConfig.dataCallback       = soundCallback;
         deviceConfig.pUserData          = &startTime;
-        deviceConfig.periodSizeInFrames = 256;
+        deviceConfig.periodSizeInFrames = 512;
 
         if (ma_device_init(NULL, &deviceConfig, &soundDevice) != MA_SUCCESS) {
             printf("Failed to open playback device.\n");
@@ -485,40 +541,22 @@ void SoundTest::logicUpdate()
     AtomicType runnings = notesRunning.load();
     AtomicType releases = notesReleased.load();
 
-    AtomicType keys [NOTE_COUNT] = {
-        GLFW_KEY_Q,
-        GLFW_KEY_2,
-        GLFW_KEY_W,
-        GLFW_KEY_E,
-        GLFW_KEY_4,
-        GLFW_KEY_R,
-        GLFW_KEY_5,
-        GLFW_KEY_T,
-        GLFW_KEY_Y,
-        GLFW_KEY_7,
-        GLFW_KEY_U,
-        GLFW_KEY_8,
-        GLFW_KEY_I,
-        GLFW_KEY_9,
-        GLFW_KEY_O,
-        GLFW_KEY_P,
-    };
     AtomicType keysDown = 0;
-    for(AtomicType index = 0; index < sizeof(keys) / sizeof(keys [0]); ++index)
-        if(isDown(keys[index]))
+    for(AtomicType index = 0; index < NOTE_COUNT; ++index)
+        if(isDown(Keys[index]))
             keysDown |= AtomicType(1) << index;
 
-    for(AtomicType index = 0; index < sizeof(keys) / sizeof(keys[0]); ++index)
+    for(AtomicType index = 0; index < NOTE_COUNT; ++index)
         checkNotes(index,  runnings, releases, keysDown, currTime);
 
-    for(AtomicType index = 0; index < sizeof(keys) / sizeof(keys[0]); ++index)
+    for(AtomicType index = 0; index < NOTE_COUNT; ++index)
         addNotes(index, runnings, releases, keysDown, currTime);
 
 
     camera.lookAt(Vec3(0, 0, 0));
     sunCamera.lookAt(Vec3(0, 0, 0));
 
-    if (isPressed(GLFW_KEY_P))
+    if (isPressed(GLFW_KEY_LEFT_BRACKET))
         showNormalMap = !showNormalMap;
 
     Vec3 sundir = getSunDirection(sunCamera);
