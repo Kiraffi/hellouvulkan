@@ -316,7 +316,7 @@ void VulkanApp::logicUpdate()
     glfwPollEvents();
 
 
-    if (isPressed(GLFW_KEY_RIGHT_BRACKET))
+    if (isPressed(GLFW_KEY_RIGHT_BRACKETo))
     {
         useSunCamera = !useSunCamera;
     }
