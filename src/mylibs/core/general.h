@@ -24,6 +24,20 @@ float ffminf(float a, float b);
 float ffmaxf(float a, float b);
 float ffclampf(float a, float b, float value);
 
+
+float ftand(double a);
+float fsind(double a);
+float fcosd(double a);
+float facosd(double a);
+float fasind(double a);
+float ffabsd(double a);
+float fsqrtd(double a);
+float ffmodd(double a, double b);
+float ffmind(double a, double b);
+float ffmaxd(double a, double b);
+float ffclampd(double a, double b, double value);
+
+
 static constexpr float PI = 3.14159265358979323846264338f;
 
 

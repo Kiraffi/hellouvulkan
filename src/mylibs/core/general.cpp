@@ -18,6 +18,18 @@ float ffminf(float a, float b) { return (a < b) ? a : b; }
 float ffmaxf(float a, float b) { return (a > b) ? a : b; }
 float ffclampf(float a, float b, float value) { return ffmaxf(a, ffminf(b, value)); }
 
+float fsqrtd(double a) { return sqrt(a); }
+float ftand(double a) { return tan(a); }
+float fsind(double a) { return sin(a); }
+float fcosd(double a) { return cos(a); }
+float fasind(double a) { return asin(a); }
+float facosd(double a) { return acos(a); }
+float ffabsd(double a) { uint64_t b = *( ( uint64_t * )( &a ) ); b &= 0x7fff'ffff'ffff'ffff; return *( ( double * )( &b ) ); }
+float ffmodd(double a, double b) { return fmod(a, b); }
+float ffmind(double a, double b) { return ( a < b ) ? a : b; }
+float ffmaxd(double a, double b) { return ( a > b ) ? a : b; }
+float ffclampd(double a, double b, double value) { return ffmaxd(a, ffmind(b, value)); }
+
 // color values r,g,h,a between [0..1]
 uint32_t getColor(float r, float g, float b, float a)
 {
