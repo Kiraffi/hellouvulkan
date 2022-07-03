@@ -12,6 +12,7 @@
 #include <container/arraysliceview.h>
 
 #include <gui/componentviews.h>
+#include <gui/editorsystem.h>
 
 #include <math/general_math.h>
 #include <math/hitpoint.h>
@@ -160,12 +161,12 @@ struct NoteFromMainToThread
 {
     double attackAmplitude;
     double sustainAmplitude;
-    double freq;
 
     double attackDur;
     double decDur;
     double releaseDur;
     AtomicType note;
+    int instrument;
 };
 
 struct NoteFromThreadToMain
@@ -212,7 +213,8 @@ static void checkNotes(AtomicType channel, AtomicType running, AtomicType releas
     }
 }
 
-static void addNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown, double time)
+static void addNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown,
+    double time, const NoteFromMainToThread &currentNote)
 {
     AtomicType channelAtom = AtomicType(1) << channel;
     bool runn = (running & channelAtom) != 0;
@@ -232,10 +234,38 @@ static void addNotes(AtomicType channel, AtomicType running, AtomicType released
 
     if(time >= notesFromThread[channel].endTime)
     {
+        note = currentNote;
         note.note = bitScanForward;
         std::atomic_fetch_or(&notesRunning, channelAtom);
         return;
     }
+}
+
+double evaluateSound(double time, double freq, int instrument)
+{
+    double fqSampPoint = freq * time;
+    double samp = fqSampPoint * 2.0 * Pi;
+    switch(instrument)
+    {
+        case 0:
+            return sin(samp);
+        break;
+        case 1:
+            return (sin(samp) > 0 ? 0.5 : -0.5);
+        break;
+        case 2:
+            return (ffmodd(fqSampPoint, 1.0) - 0.5);
+        break;
+        case 3:
+            return sin(samp) + (ffmodd(freq * ( 0.5 + time), 1.0) - 0.5);
+        break;
+        default:
+
+        break;
+
+    }
+    return double(rand()) / double(RAND_MAX);
+
 }
 
 //#include <chrono>
@@ -316,8 +346,31 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     continue;
             }
             if(time >= noteThread.startTime)
-                tmpValue = sin(Freqs[noteMain.note] * (time - noteThread.startTime) * 2.0 * Pi) * amplitude;
-            value += tmpValue;
+            {
+                double timePoint = time - noteThread.startTime;
+                double freq = Freqs[noteMain.note];
+
+                tmpValue = evaluateSound(timePoint, freq * 0.1 * 2.0, 1);
+                tmpValue = evaluateSound(timePoint, freq * tmpValue * 2.0, noteMain.instrument);
+                //horn
+
+               /*
+               nice sound
+                tmpValue = evaluateSound(timePoint, freq * 0.5, 0);
+                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument)  * tmpValue;
+                */
+
+/*                tmpValue = evaluateSound(timePoint, freq * 0.01, 0);
+                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument)  * tmpValue;
+*/
+/*
+                tmpValue = evaluateSound(timePoint, 30, 0);
+                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument)  * tmpValue;
+*/
+                //tmpValue = evaluateSound(timePoint, freq * tmpValue, 1);
+                //tmpValue *= evaluateSound(timePoint + 0.0, 220.0, 2);
+            }
+            value += tmpValue * amplitude;
 
             switch(noteThread.phase)
             {
@@ -333,12 +386,12 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     noteThread.phase = NotePlayPhase::Sustain;
 
                 case NotePlayPhase::Sustain:
-                    if(noteThread.releaseStart < noteThread.startTime)
+                    if(noteThread.releaseStart < noteThread.startTime && noteMain.sustainAmplitude > 1.0e-5)
                         break;
                     noteThread.phase = NotePlayPhase::Release;
                     noteThread.releaseStart = time;
                 case NotePlayPhase::Release:
-                    if((time - noteThread.releaseStart ) < noteMain.releaseDur)
+                    if((time - noteThread.releaseStart ) < noteMain.releaseDur && noteMain.sustainAmplitude > 1.0e-5)
                         break;
                     noteThread.phase = NotePlayPhase::Finished;
                     noteToMain.endTime = time + offset;
@@ -376,7 +429,9 @@ static Vec3 getSunDirection(const Camera &camera)
 class SoundTest : public VulkanApp
 {
 public:
-    SoundTest() : scene(meshRenderSystem) { }
+
+    SoundTest() : scene(meshRenderSystem), editorSystem(scene, lineRenderSystem, SCREEN_WIDTH, SCREEN_HEIGHT) { }
+
     virtual ~SoundTest() override;
     virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters& params) override;
@@ -386,6 +441,8 @@ public:
     virtual bool resized() override;
 
 public:
+    EditorSystem editorSystem;
+
     Scene scene;
     MeshRenderSystem meshRenderSystem;
     LightRenderSystem lightRenderSystem;
@@ -407,6 +464,8 @@ public:
     ma_waveform_config sineWaveConfig;
 
     double startTime;
+
+    NoteFromMainToThread currentNote;
 };
 
 
@@ -425,6 +484,15 @@ SoundTest::~SoundTest()
 
 bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
+    currentNote.note = 0;
+    currentNote.instrument = 0;
+    currentNote.attackAmplitude = 0.15;
+    currentNote.sustainAmplitude = 0.10;
+
+    currentNote.attackDur = 0.2;
+    currentNote.decDur = 0.05;
+    currentNote.releaseDur = 0.2;
+
     for(AtomicType i = 0; i < NOTE_COUNT; ++i)
     {
         notesThread[i].phase = NotePlayPhase::Finished;
@@ -466,6 +534,9 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
         return false;
 
     if (!lineRenderSystem.init())
+        return false;
+
+    if(!editorSystem.init(window))
         return false;
 
     {
@@ -530,6 +601,8 @@ bool SoundTest::resized()
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
+    editorSystem.resizeWindow(meshRenderTargets.albedoImage);
+
     return true;
 }
 
@@ -539,8 +612,21 @@ void SoundTest::logicUpdate()
     lineRenderSystem.clear();
     MouseState mouseState = getMouseState();
 
+    editorSystem.logicUpdate(*this);
+
+    if(!editorSystem.guiHasFocus())
+    {
+
+    }
     //checkCameraKeypresses(dt, camera);
-    // maybe mutex guard is better
+
+    if(isPressed(GLFW_KEY_KP_ADD))
+        ++currentNote.instrument;
+    if(isPressed(GLFW_KEY_KP_SUBTRACT))
+        --currentNote.instrument;
+    //if(currentNote.instrument < 0) chosenInstrument = 0;
+    //if(chosenInstrument > 4) chosenInstrument = 4;
+
     double currTime = getTime();
     AtomicType runnings = notesRunning.load();
     AtomicType releases = notesReleased.load();
@@ -554,7 +640,7 @@ void SoundTest::logicUpdate()
         checkNotes(index,  runnings, releases, keysDown, currTime);
 
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
-        addNotes(index, runnings, releases, keysDown, currTime);
+        addNotes(index, runnings, releases, keysDown, currTime, currentNote);
 
 
     camera.lookAt(Vec3(0, 0, 0));
@@ -571,8 +657,8 @@ void SoundTest::logicUpdate()
 
     Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
-    snprintf(tmpStr, 1024, "Show normal mode: %s, use sun camera: %s",
-        showNormalMap ? "on" : "off", useSunCamera ? "on" : "off");
+    snprintf(tmpStr, 1024, "Show normal mode: %s, use sun camera: %s, instrument: %i",
+        showNormalMap ? "on" : "off", useSunCamera ? "on" : "off", currentNote.instrument);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
         toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
@@ -583,11 +669,44 @@ void SoundTest::logicUpdate()
     meshRenderSystem.clear();
 }
 
+static void drawSoundGui(NoteFromMainToThread &currentNote)
+{
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Sound");
+    float ad = currentNote.attackDur;
+    float dd = currentNote.decDur;
+    float rd = currentNote.releaseDur;
+
+    float aa = currentNote.attackAmplitude;
+    float sa = currentNote.sustainAmplitude;
+    ImGui::DragFloat("Attack dur", &ad, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat("Decrease dur", &dd, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat("Release dur", &rd, 0.01f, 0.0f, 10.0f);
+
+    ImGui::DragFloat("Attack amplitude", &aa, 0.01f, 0.0f, 1.5f);
+    ImGui::DragFloat("Sustain amplitude", &sa, 0.01f, 0.0f, 1.5f);
+
+    ImGui::End();
+
+    currentNote.attackDur = ad;
+    currentNote.decDur = dd;
+    currentNote.releaseDur = rd;
+
+
+    currentNote.attackAmplitude = aa;
+    currentNote.sustainAmplitude = sa;
+    return;
+}
+
 void SoundTest::renderUpdate()
 {
     VulkanApp::renderUpdate();
 
     scene.update(dt);
+
+    editorSystem.renderUpdateGui();
+    drawSoundGui(currentNote);
+
     meshRenderSystem.prepareToRender();
 
     Vec3 sundir = getSunDirection(sunCamera);
@@ -646,8 +765,12 @@ void SoundTest::renderDraw()
     {
         fontSystem.render();
     }
-
-    present(meshRenderTargets.albedoImage);
+    {
+        prepareToGraphicsSampleRead(meshRenderTargets.albedoImage);
+        editorSystem.renderDraw();
+    }
+    Image &finalImage = editorSystem.getRenderTargetImage();
+    present(finalImage);
 }
 
 int main(int argCount, char **argv)
