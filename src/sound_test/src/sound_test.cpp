@@ -454,7 +454,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
     currentNote.note = 0;
     currentNote.instrument = 0;
     currentNote.duration = 0.5;
-    for(uint i = 0; i < SAMPLE_POINTS; ++i)
+    for(uint32_t i = 0; i < SAMPLE_POINTS; ++i)
     {
         currentNote.amplitudes[i] = 0.125 * 0.25;
         if(i < 4)
@@ -648,6 +648,24 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sound");
     ImGui::DragFloat("Attack dur", &currentNote.duration, 0.01f, 0.0f, 10.0f);
+
+    ImGui::PushID("set1");
+    for(int i = 0; i < SAMPLE_POINTS; i++)
+    {
+        if(i > 0) ImGui::SameLine();
+        ImGui::PushID(i);
+        //ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4) ImColor::HSV(i / 7.0f, 0.5f, 0.5f));
+        //ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4) ImColor::HSV(i / 7.0f, 0.6f, 0.5f));
+        //ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4) ImColor::HSV(i / 7.0f, 0.7f, 0.5f));
+        //ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4) ImColor::HSV(i / 7.0f, 0.9f, 0.9f));
+        ImGui::VSliderFloat("##v", ImVec2(18, 160), &currentNote.tuning[i], -16.0f, 16.0f, "");
+        if(ImGui::IsItemActive() || ImGui::IsItemHovered())
+            ImGui::SetTooltip("%.3f", currentNote.tuning[i]);
+        //ImGui::PopStyleColor(4);
+        ImGui::PopID();
+    }
+    ImGui::PopID();
+
 /*
     ImGui::DragFloat("Attack dur", &currentNote.attackDur, 0.01f, 0.0f, 10.0f);
     ImGui::DragFloat("Decrease dur", &currentNote.decDur, 0.01f, 0.0f, 10.0f);
