@@ -65,6 +65,8 @@ static constexpr int DEVICE_SAMPLE_RATE = 48000;
 
 static constexpr AtomicType NOTE_COUNT = 32;
 
+static constexpr int SAMPLE_POINTS = 16;
+
 static double getFreq(double index)
 {
     return 220.0 * pow(2, index / 12.0);
@@ -159,14 +161,11 @@ enum class NotePlayPhase
 
 struct NoteFromMainToThread
 {
-    double attackAmplitude;
-    double sustainAmplitude;
-
-    double attackDur;
-    double decDur;
-    double releaseDur;
     AtomicType note;
+    float amplitudes[SAMPLE_POINTS];
+    float tuning[SAMPLE_POINTS];
     int instrument;
+    float duration;
 };
 
 struct NoteFromThreadToMain
@@ -297,10 +296,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
         if(noteThread.phase == NotePlayPhase::Finished && running)
         {
             noteThread.startTime = threadFrameCounter * dur;
-            if(noteMain.attackDur > 0.0)
-                noteThread.phase = NotePlayPhase::Attack;
-            else
-                noteThread.phase = NotePlayPhase::Sustain;
+            noteThread.phase = NotePlayPhase::Release;
         }
 
     }
@@ -320,38 +316,23 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
 
             double tmpValue = 0.0;
             double amplitude = 0.0;
-            switch(noteThread.phase)
-            {
-                case NotePlayPhase::Attack:
-                    if(noteMain.attackDur > 0.0)
-                        amplitude = noteMain.attackAmplitude *
-                            ffclampd(0.0, 1.0, (time - noteThread.startTime) / noteMain.attackDur);
-                    break;
-                case NotePlayPhase::Decay:
-                    if(noteMain.decDur > 0.0)
-                        amplitude = noteMain.attackAmplitude -
-                            ffclampd(0.0, 1.0, (time - noteThread.decStart) / noteMain.decDur) *
-                                (noteMain.attackAmplitude - noteMain.sustainAmplitude);
-                    break;
-                case NotePlayPhase::Release:
-                    if(noteMain.releaseDur > 0.0)
-                        amplitude = noteMain.sustainAmplitude * (1.0 - ffclampd(0.0, 1.0,
-                            (time - noteThread.releaseStart) / noteMain.releaseDur));
-                    break;
-                case NotePlayPhase::Sustain:
-                    amplitude = noteMain.sustainAmplitude;
-                    break;
-                case NotePlayPhase::Finished:
-                case NotePlayPhase::Amount:
-                    continue;
-            }
-            if(time >= noteThread.startTime)
+            if(time >= noteThread.startTime && noteThread.phase != NotePlayPhase::Finished)
             {
                 double timePoint = time - noteThread.startTime;
+                double value = timePoint / noteMain.duration;
+                value *= double(SAMPLE_POINTS);
+                int iValue = value < (SAMPLE_POINTS - 1) ? value : (SAMPLE_POINTS - 1);
+                int iValue2 = value < (SAMPLE_POINTS - 1) ? value + 1 : (SAMPLE_POINTS - 1);
+                float lerping = ffmodf(value, 1.0f);
+                value = noteMain.tuning[iValue] * (1.0f - lerping) + noteMain.tuning[iValue2] * lerping;
                 double freq = Freqs[noteMain.note];
 
-                tmpValue = evaluateSound(timePoint, freq * 0.1 * 2.0, 1);
-                tmpValue = evaluateSound(timePoint, freq * tmpValue * 2.0, noteMain.instrument);
+                amplitude = noteMain.amplitudes[iValue] * (1.0f - lerping) + noteMain.amplitudes[iValue2] * lerping;
+                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument);
+                tmpValue = evaluateSound(timePoint, value, 0)  * tmpValue;
+
+/*                tmpValue = evaluateSound(timePoint, freq * tmpValue * 2.0, noteMain.instrument);
+*/
                 //horn
 
                /*
@@ -375,23 +356,8 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
             switch(noteThread.phase)
             {
                 // NOTE: The fall through is on purpose, so if there is no decrease time or something.
-                case NotePlayPhase::Attack:
-                    if((time - noteThread.startTime) < noteMain.attackDur)
-                        break;
-                    noteThread.phase = NotePlayPhase::Decay;
-                    noteThread.decStart = time;
-                case NotePlayPhase::Decay:
-                    if((time - noteThread.decStart) < noteMain.decDur)
-                        break;
-                    noteThread.phase = NotePlayPhase::Sustain;
-
-                case NotePlayPhase::Sustain:
-                    if(noteThread.releaseStart < noteThread.startTime && noteMain.sustainAmplitude > 1.0e-5)
-                        break;
-                    noteThread.phase = NotePlayPhase::Release;
-                    noteThread.releaseStart = time;
                 case NotePlayPhase::Release:
-                    if((time - noteThread.releaseStart ) < noteMain.releaseDur && noteMain.sustainAmplitude > 1.0e-5)
+                    if(/*noteThread.releaseStart > noteThread.startTime || */time < noteThread.startTime + noteMain.duration )
                         break;
                     noteThread.phase = NotePlayPhase::Finished;
                     noteToMain.endTime = time + offset;
@@ -399,6 +365,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     threadNotesRunning &= ~( AtomicType(1) << j );
                 case NotePlayPhase::Finished:
                 case NotePlayPhase::Amount:
+                default:
                     break;
             }
         }
@@ -486,13 +453,17 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 {
     currentNote.note = 0;
     currentNote.instrument = 0;
-    currentNote.attackAmplitude = 0.15;
-    currentNote.sustainAmplitude = 0.10;
-
-    currentNote.attackDur = 0.2;
-    currentNote.decDur = 0.05;
-    currentNote.releaseDur = 0.2;
-
+    currentNote.duration = 0.5;
+    for(uint i = 0; i < SAMPLE_POINTS; ++i)
+    {
+        currentNote.amplitudes[i] = 0.125 * 0.25;
+        if(i < 4)
+            currentNote.amplitudes[i] *= i * 4 / double(SAMPLE_POINTS);
+        if(i > 12)
+            currentNote.amplitudes[i] *= (15 - i) * 4 / double(SAMPLE_POINTS);
+        currentNote.tuning[i] = evaluateSound(double(i) / (SAMPLE_POINTS - 1), 100.0, 0);
+        currentNote.tuning[i] = double(i) / (SAMPLE_POINTS - 1);
+    }
     for(AtomicType i = 0; i < NOTE_COUNT; ++i)
     {
         notesThread[i].phase = NotePlayPhase::Finished;
@@ -501,13 +472,16 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
         notesFromThread[i].endTime = 0.0;
 
+        /*
         notesFromMain[i].note = i;
+
         notesFromMain[i].attackAmplitude = 0.15;
         notesFromMain[i].sustainAmplitude = 0.10;
 
         notesFromMain[i].attackDur = 0.2;
         notesFromMain[i].decDur = 0.05;
         notesFromMain[i].releaseDur = 0.2;
+        */
     }
 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
@@ -673,28 +647,16 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
 {
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sound");
-    float ad = currentNote.attackDur;
-    float dd = currentNote.decDur;
-    float rd = currentNote.releaseDur;
+    ImGui::DragFloat("Attack dur", &currentNote.duration, 0.01f, 0.0f, 10.0f);
+/*
+    ImGui::DragFloat("Attack dur", &currentNote.attackDur, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat("Decrease dur", &currentNote.decDur, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat("Release dur", &currentNote.releaseDur, 0.01f, 0.0f, 10.0f);
 
-    float aa = currentNote.attackAmplitude;
-    float sa = currentNote.sustainAmplitude;
-    ImGui::DragFloat("Attack dur", &ad, 0.01f, 0.0f, 10.0f);
-    ImGui::DragFloat("Decrease dur", &dd, 0.01f, 0.0f, 10.0f);
-    ImGui::DragFloat("Release dur", &rd, 0.01f, 0.0f, 10.0f);
-
-    ImGui::DragFloat("Attack amplitude", &aa, 0.01f, 0.0f, 1.5f);
-    ImGui::DragFloat("Sustain amplitude", &sa, 0.01f, 0.0f, 1.5f);
-
+    ImGui::DragFloat("Attack amplitude", &currentNote.attackAmplitude, 0.01f, 0.0f, 1.5f);
+    ImGui::DragFloat("Sustain amplitude", &currentNote.sustainAmplitude, 0.01f, 0.0f, 1.5f);
+*/
     ImGui::End();
-
-    currentNote.attackDur = ad;
-    currentNote.decDur = dd;
-    currentNote.releaseDur = rd;
-
-
-    currentNote.attackAmplitude = aa;
-    currentNote.sustainAmplitude = sa;
     return;
 }
 
