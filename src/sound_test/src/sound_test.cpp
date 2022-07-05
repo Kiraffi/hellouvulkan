@@ -163,34 +163,35 @@ struct NoteFromMainToThread
 {
     AtomicType note;
     float amplitudes[SAMPLE_POINTS];
-    float tuning[SAMPLE_POINTS];
-    int instrument;
-    float duration;
-};
+    int tuning[SAMPLE_POINTS];
+    int oscType;
+    int oscLFOType;
+    float oscLFOHz;
 
-struct NoteFromThreadToMain
-{
-    double endTime;
+    float attackAmplitude;
+    float sustainAmplitude;
+
+    float attackDuration;
+    float decayDuration;
+    float releaseDuration;
 };
 
 struct NoteThread
 {
     double startTime = 0.0;
-    double releaseStart = 0.0;
-
-    double decStart = 0.0;
+    float runningTime = 0.0;
+    float releaseStart = 1.0e30f;
     NotePlayPhase phase = NotePlayPhase::Finished;
 };
 
 NoteFromMainToThread notesFromMain [NOTE_COUNT] = { };
 NoteThread notesThread [NOTE_COUNT] = { };
-NoteFromThreadToMain notesFromThread [NOTE_COUNT] = { };
 
 std::atomic<AtomicType> notesRunning(0);
 std::atomic<AtomicType> notesReleased(0);
 
 
-static void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown, double time)
+static void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysUp, double time)
 {
     AtomicType channelAtom = AtomicType(1) << channel;
     bool runn = (running & channelAtom) != 0;
@@ -200,12 +201,12 @@ static void checkNotes(AtomicType channel, AtomicType running, AtomicType releas
         NoteFromMainToThread &note = notesFromMain[channel];
 
         AtomicType atomKey = AtomicType(1) << note.note;
-        bool down = (keysDown & atomKey) != 0;
+        bool keyReleased = (keysUp & atomKey) != 0;
 
         // remove from handled keys
-        keysDown &= ~(atomKey);
+        keysUp &= ~(atomKey);
 
-        if(!down)
+        if(keyReleased)
         {
             std::atomic_fetch_or(&notesReleased, channelAtom);
         }
@@ -231,39 +232,35 @@ static void addNotes(AtomicType channel, AtomicType running, AtomicType released
     keysDown &= ~(AtomicType(1) << bitScanForward);
     NoteFromMainToThread &note = notesFromMain[channel];
 
-    if(time >= notesFromThread[channel].endTime)
-    {
-        note = currentNote;
-        note.note = bitScanForward;
-        std::atomic_fetch_or(&notesRunning, channelAtom);
-        return;
-    }
+    note = currentNote;
+    note.note = bitScanForward;
+    std::atomic_fetch_or(&notesRunning, channelAtom);
+    return;
 }
 
 double evaluateSound(double time, double freq, int instrument)
 {
     double fqSampPoint = freq * time;
     double samp = fqSampPoint * 2.0 * Pi;
+    double t = ffmodd(fqSampPoint, 1.0);
     switch(instrument)
     {
         case 0:
             return sin(samp);
         break;
         case 1:
-            return (sin(samp) > 0 ? 0.5 : -0.5);
-        break;
+            return t < 0.5 ? 0.5 : -0.5;
         case 2:
-            return (ffmodd(fqSampPoint, 1.0) - 0.5);
-        break;
+            return t - 0.5;
         case 3:
-            return sin(samp) + (ffmodd(freq * ( 0.5 + time), 1.0) - 0.5);
-        break;
+            t += 0.25;
+            return t < 0.5 ? -0.5 + 2.0 * t : 0.5 - 2.0 * (t - 0.5);
         default:
 
         break;
 
     }
-    return double(rand()) / double(RAND_MAX);
+    return double(rand()) / double(RAND_MAX) * 2.0 - 1.0;
 
 }
 
@@ -282,96 +279,153 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
     AtomicType newThreadsFinished = 0u;
 
     double dur = 1.0 / DEVICE_SAMPLE_RATE;
+    double time = dur * threadFrameCounter;
 
     for(AtomicType j = 0; j < NOTE_COUNT; ++j)
     {
         NoteThread &noteThread = notesThread [j];
         NoteFromMainToThread &noteMain = notesFromMain [j];
         bool running = ( ( threadNotesRunning >> j ) & 1 ) == 1;
-        bool released = ( ( threadNotesReleased >> j ) & 1 ) == 1;
-
-        if(running && released && noteThread.releaseStart < noteThread.startTime)
-            noteThread.releaseStart = threadFrameCounter * dur;
 
         if(noteThread.phase == NotePlayPhase::Finished && running)
         {
-            noteThread.startTime = threadFrameCounter * dur;
-            noteThread.phase = NotePlayPhase::Release;
+            noteThread.startTime = time;
+            noteThread.runningTime = 0.0f;
+            noteThread.phase = NotePlayPhase::Attack;
+            noteThread.releaseStart = 1.0e30f;
         }
-
     }
 
     float *f32Out = (float *)pOutput;
     for(uint32_t i = 0; i < frameCount; ++i)
     {
-        double value = 0.0;
-        double time = dur * threadFrameCounter;
+        double frameValue = 0.0;
+        time = dur * threadFrameCounter;
         for(AtomicType j = 0; j < NOTE_COUNT; ++j)
         {
             if(( ( threadNotesRunning >> j ) & 1 ) == 0)
                 continue;
             NoteFromMainToThread &noteMain = notesFromMain[j];
             NoteThread &noteThread = notesThread [j];
-            NoteFromThreadToMain &noteToMain = notesFromThread [j];
+            bool released = ( ( threadNotesReleased >> j ) & 1 ) == 1;
 
             double tmpValue = 0.0;
             double amplitude = 0.0;
-            if(time >= noteThread.startTime && noteThread.phase != NotePlayPhase::Finished)
+
+            switch(noteThread.phase)
+            {
+                // NOTE: The fall through is on purpose, so if there is no decrease time or something.
+
+                case NotePlayPhase::Attack:
+                {
+                    float attackTimePos = noteThread.runningTime;
+                    if(attackTimePos < noteMain.attackDuration)
+                    {
+                        float attackPos = attackTimePos / noteMain.attackDuration;
+                        amplitude = attackPos * noteMain.attackAmplitude;
+                        break;
+                    }
+                    noteThread.phase = NotePlayPhase::Decay;
+                }
+                case NotePlayPhase::Decay:
+                {
+                    float decayTimePos = noteThread.runningTime - noteMain.attackDuration;
+                    if(decayTimePos < noteMain.decayDuration)
+                    {
+                        float decayPos = decayTimePos / noteMain.decayDuration;
+                        amplitude = decayPos * noteMain.sustainAmplitude + (1.0f - decayPos) * noteMain.attackAmplitude;
+                        break;
+                    }
+                    noteThread.phase = NotePlayPhase::Sustain;
+                }
+                case NotePlayPhase::Sustain:
+                {
+                    if(!released && noteMain.sustainAmplitude > 0.0f)
+                    {
+                        amplitude = noteMain.sustainAmplitude;
+                        break;
+                    }
+                    noteThread.phase = NotePlayPhase::Release;
+                    noteThread.releaseStart = ffminf(noteThread.runningTime, noteThread.releaseStart);
+
+                }
+                case NotePlayPhase::Release:
+                {
+                    float releaseTimePos = noteThread.runningTime - noteThread.releaseStart;
+                    if(releaseTimePos < noteMain.releaseDuration && noteMain.sustainAmplitude > 0.0f)
+                    {
+                        float releasePos = releaseTimePos / noteMain.releaseDuration;
+                        amplitude = (1.0f - releasePos) * noteMain.sustainAmplitude;
+                        break;
+                    }
+                    noteThread.phase = NotePlayPhase::Finished;
+                    newThreadsFinished |= AtomicType(1) << j;
+                    threadNotesRunning &= ~( AtomicType(1) << j );
+                }
+                default:
+                    break;
+            }
+
+            if(noteThread.phase != NotePlayPhase::Finished)
             {
                 double timePoint = time - noteThread.startTime;
-                double value = timePoint / noteMain.duration;
+                float duration = ffmaxd(0.005, noteMain.attackDuration + noteMain.decayDuration);
+                double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
+                double freq = Freqs[noteMain.note];
                 value *= double(SAMPLE_POINTS);
-                int iValue = value < (SAMPLE_POINTS - 1) ? value : (SAMPLE_POINTS - 1);
-                int iValue2 = value < (SAMPLE_POINTS - 1) ? value + 1 : (SAMPLE_POINTS - 1);
+                int iValue = value;
+                while(iValue >= SAMPLE_POINTS)
+                    iValue -= SAMPLE_POINTS;
+                int iValue2 = iValue + 1;
+                if(iValue2 >= SAMPLE_POINTS)
+                    iValue2 -= SAMPLE_POINTS;
                 float lerping = ffmodf(value, 1.0f);
                 value = noteMain.tuning[iValue] * (1.0f - lerping) + noteMain.tuning[iValue2] * lerping;
-                double freq = Freqs[noteMain.note];
+                value = pow(2.0, value / 12.0);
+                //amplitude *= noteMain.amplitudes[iValue] * (1.0f - lerping) + noteMain.amplitudes[iValue2] * lerping;
+                //tmpValue = value / 24.0;
+                tmpValue = evaluateSound(timePoint, freq * value, noteMain.oscType);
+                //tmpValue *= evaluateSound(timePoint, noteMain.oscLFOHz, noteMain.oscLFOType);
+                //amplitude *= value;
+                //tmpValue *= value;
+                //tmpValue = evaluateSound(timePoint, value, 2)  * tmpValue;
 
-                amplitude = noteMain.amplitudes[iValue] * (1.0f - lerping) + noteMain.amplitudes[iValue2] * lerping;
-                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument);
-                tmpValue = evaluateSound(timePoint, value, 0)  * tmpValue;
-
-/*                tmpValue = evaluateSound(timePoint, freq * tmpValue * 2.0, noteMain.instrument);
+/*                tmpValue = evaluateSound(timePoint, freq * tmpValue * 2.0, noteMain.oscType);
 */
                 //horn
 
                /*
                nice sound
                 tmpValue = evaluateSound(timePoint, freq * 0.5, 0);
-                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument)  * tmpValue;
+                tmpValue = evaluateSound(timePoint, freq, noteMain.oscType)  * tmpValue;
                 */
 
 /*                tmpValue = evaluateSound(timePoint, freq * 0.01, 0);
-                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument)  * tmpValue;
+                tmpValue = evaluateSound(timePoint, freq, noteMain.oscType)  * tmpValue;
 */
 /*
                 tmpValue = evaluateSound(timePoint, 30, 0);
-                tmpValue = evaluateSound(timePoint, freq, noteMain.instrument)  * tmpValue;
+                tmpValue = evaluateSound(timePoint, freq, noteMain.oscType)  * tmpValue;
 */
                 //tmpValue = evaluateSound(timePoint, freq * tmpValue, 1);
                 //tmpValue *= evaluateSound(timePoint + 0.0, 220.0, 2);
             }
-            value += tmpValue * amplitude;
+            frameValue += tmpValue * amplitude;
 
             switch(noteThread.phase)
             {
-                // NOTE: The fall through is on purpose, so if there is no decrease time or something.
+                case NotePlayPhase::Attack:
+                case NotePlayPhase::Decay:
                 case NotePlayPhase::Release:
-                    if(/*noteThread.releaseStart > noteThread.startTime || */time < noteThread.startTime + noteMain.duration )
-                        break;
-                    noteThread.phase = NotePlayPhase::Finished;
-                    noteToMain.endTime = time + offset;
-                    newThreadsFinished |= AtomicType(1) << j;
-                    threadNotesRunning &= ~( AtomicType(1) << j );
-                case NotePlayPhase::Finished:
-                case NotePlayPhase::Amount:
+                    noteThread.runningTime += dur;
+                    break;
                 default:
                     break;
             }
         }
-        value = ffclampd(-1.0, 1.0, value);
+        frameValue = ffclampd(-1.0, 1.0, frameValue);
         for(uint32_t j = 0; j < DEVICE_CHANNELS; ++j)
-            f32Out[i * DEVICE_CHANNELS + j] = value;
+            f32Out[i * DEVICE_CHANNELS + j] = frameValue;
 
         ++threadFrameCounter;
     }
@@ -452,8 +506,17 @@ SoundTest::~SoundTest()
 bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
     currentNote.note = 0;
-    currentNote.instrument = 0;
-    currentNote.duration = 0.5;
+    currentNote.oscType = 0;
+    currentNote.oscLFOType = 0;
+    currentNote.oscLFOHz = 100.0;
+
+    currentNote.attackAmplitude = 0.2f;
+    currentNote.sustainAmplitude = 0.15f;
+
+    currentNote.attackDuration = 0.15f;
+    currentNote.decayDuration = 0.05f;
+    currentNote.releaseDuration = 0.2f;
+
     for(uint32_t i = 0; i < SAMPLE_POINTS; ++i)
     {
         currentNote.amplitudes[i] = 0.125 * 0.25;
@@ -463,14 +526,14 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
             currentNote.amplitudes[i] *= (15 - i) * 4 / double(SAMPLE_POINTS);
         currentNote.tuning[i] = evaluateSound(double(i) / (SAMPLE_POINTS - 1), 100.0, 0);
         currentNote.tuning[i] = double(i) / (SAMPLE_POINTS - 1);
+        currentNote.tuning[i] = 0;
     }
     for(AtomicType i = 0; i < NOTE_COUNT; ++i)
     {
         notesThread[i].phase = NotePlayPhase::Finished;
-        notesThread[i].releaseStart = 0.0;
+        notesThread[i].releaseStart = 1.0e30f;
         notesThread[i].startTime = 0.0;
 
-        notesFromThread[i].endTime = 0.0;
 
         /*
         notesFromMain[i].note = i;
@@ -595,10 +658,10 @@ void SoundTest::logicUpdate()
     //checkCameraKeypresses(dt, camera);
 
     if(isPressed(GLFW_KEY_KP_ADD))
-        ++currentNote.instrument;
+        ++currentNote.oscType;
     if(isPressed(GLFW_KEY_KP_SUBTRACT))
-        --currentNote.instrument;
-    //if(currentNote.instrument < 0) chosenInstrument = 0;
+        --currentNote.oscType;
+    //if(currentNote.oscType < 0) chosenInstrument = 0;
     //if(chosenInstrument > 4) chosenInstrument = 4;
 
     double currTime = getTime();
@@ -606,12 +669,17 @@ void SoundTest::logicUpdate()
     AtomicType releases = notesReleased.load();
 
     AtomicType keysDown = 0;
+    AtomicType keysUp = 0;
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
-        if(isDown(Keys[index]))
+    {
+        if(isPressed(Keys[index]))
             keysDown |= AtomicType(1) << index;
 
+        if(isReleased(Keys[index]))
+            keysUp |= AtomicType(1) << index;
+    }
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
-        checkNotes(index,  runnings, releases, keysDown, currTime);
+        checkNotes(index,  runnings, releases, keysUp, currTime);
 
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
         addNotes(index, runnings, releases, keysDown, currTime, currentNote);
@@ -632,7 +700,7 @@ void SoundTest::logicUpdate()
     Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
     snprintf(tmpStr, 1024, "Show normal mode: %s, use sun camera: %s, instrument: %i",
-        showNormalMap ? "on" : "off", useSunCamera ? "on" : "off", currentNote.instrument);
+        showNormalMap ? "on" : "off", useSunCamera ? "on" : "off", currentNote.oscType);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
         toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
@@ -647,7 +715,16 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
 {
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sound");
-    ImGui::DragFloat("Attack dur", &currentNote.duration, 0.01f, 0.0f, 10.0f);
+    ImGui::DragInt("Osc type", &currentNote.oscType, 1, 0, 4);
+    ImGui::DragInt("Osc LFO type", &currentNote.oscLFOType, 1, 0, 4);
+    ImGui::DragFloat("Osc LFO Hz", &currentNote.oscLFOHz, 1, 0.1, 10000);
+
+    ImGui::DragFloat("Attack dur", &currentNote.attackDuration, 0.01f, 0.005f, 10.0f);
+    ImGui::DragFloat("Decay dur", &currentNote.decayDuration, 0.01f, 0.005f, 4.0f);
+    ImGui::DragFloat("Release dur", &currentNote.releaseDuration, 0.01f, 0.005f, 10.0f);
+
+    ImGui::DragFloat("Attack amplitude", &currentNote.attackAmplitude, 0.01f, 0.0f, 2.0f);
+    ImGui::DragFloat("Sustain amplitude", &currentNote.sustainAmplitude, 0.01f, 0.0f, 2.0f);
 
     ImGui::PushID("set1");
     for(int i = 0; i < SAMPLE_POINTS; i++)
@@ -658,10 +735,23 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
         //ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4) ImColor::HSV(i / 7.0f, 0.6f, 0.5f));
         //ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4) ImColor::HSV(i / 7.0f, 0.7f, 0.5f));
         //ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4) ImColor::HSV(i / 7.0f, 0.9f, 0.9f));
-        ImGui::VSliderFloat("##v", ImVec2(18, 160), &currentNote.tuning[i], -16.0f, 16.0f, "");
+        ImGui::VSliderInt("##v", ImVec2(18, 160), &currentNote.tuning[i], -24, 24, "");
         if(ImGui::IsItemActive() || ImGui::IsItemHovered())
-            ImGui::SetTooltip("%.3f", currentNote.tuning[i]);
+            ImGui::SetTooltip("%i", currentNote.tuning[i]);
         //ImGui::PopStyleColor(4);
+        ImGui::PopID();
+    }
+    ImGui::PopID();
+
+
+    ImGui::PushID("set2");
+    for(int i = 0; i < SAMPLE_POINTS; i++)
+    {
+        ImGui::PushID(i);
+        char btText[16];
+        snprintf(btText, 15, "%i: %i", i, currentNote.tuning[i]);
+
+        ImGui::Button(btText);
         ImGui::PopID();
     }
     ImGui::PopID();
