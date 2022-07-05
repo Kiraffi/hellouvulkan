@@ -361,6 +361,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     {
                         float attackPos = attackTimePos / noteMain.attackDuration;
                         amplitude = attackPos * noteMain.attackAmplitude;
+
                         break;
                     }
                     noteThread.phase = NotePlayPhase::Decay;
@@ -393,7 +394,8 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     if(releaseTimePos < noteMain.releaseDuration && noteMain.sustainAmplitude > 0.0f)
                     {
                         float releasePos = releaseTimePos / noteMain.releaseDuration;
-                        amplitude = (1.0f - releasePos) * noteMain.sustainAmplitude;
+                        amplitude = exp(-8.0 * releasePos / noteMain.releaseDuration) * noteMain.sustainAmplitude;
+                        //amplitude = (1.0f - releasePos) * noteMain.sustainAmplitude;
                         break;
                     }
                     noteThread.phase = NotePlayPhase::Finished;
