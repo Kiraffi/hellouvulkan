@@ -243,11 +243,49 @@ double evaluateSound(double time, double freq, int instrument)
     double fqSampPoint = freq * time;
     double samp = fqSampPoint * 2.0 * Pi;
     double t = ffmodd(fqSampPoint, 1.0);
+
+    auto f = [samp](float m) { return sin(m) ;};
+    //auto f = [samp, t](float m) { return t < 0.5 ? 0.5 : -0.5; };
+
     switch(instrument)
     {
+        case -3:
+        {
+            // 5 / 7 was nice with 2.0
+            double pix = f(samp * 1.0) * 0.5 + f(samp * 7.0 / 13.0) * 0.3 + f(samp * 2.0) * 0.2;
+            pix *= exp(-0.0004 * samp);
+            pix += pix * pix * pix * pix * pix;
+            pix *= 1.0 + 16.0 * time * exp(-6.0 * time);
+            return pix;
+        }
+        case -2:
+        {
+            double pix = f(samp * 1.0) * 0.5 + f(samp * 1.25) * 0.3 + f(samp * 1.5) * 0.2;
+            pix *= exp(-0.0004 * samp);
+            pix += pix * pix * pix * pix * pix;
+            pix *= 1.0 + 16.0 * time * exp(-6.0 * time);
+            return pix;
+        }
+
+        case -1:
+        {
+            //pix *= pix * pix;
+            double pix = f(samp) * 0.6;
+            pix += f(samp * 2.0) * 0.4;
+
+            pix *= exp(-0.0005 * samp);
+            double pix3 = pix * pix * pix;
+            pix += pix3 + pix3 * pix * pix;
+            pix *= 0.25 + 1.0 * time * exp(-2.0 * time);
+            return pix;
+            //return pix + sin(Pi * 2.0 / 3.0 + samp);
+
+        }
         case 0:
-            return sin(samp);
-        break;
+        {
+            double pix = f(samp * 1.0);
+            return pix;
+        }
         case 1:
             return t < 0.5 ? 0.5 : -0.5;
         case 2:
@@ -370,18 +408,16 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
             {
                 double timePoint = time - noteThread.startTime;
                 float duration = ffmaxd(0.005, noteMain.attackDuration + noteMain.decayDuration);
-                double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
                 double freq = Freqs[noteMain.note];
+                double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
                 value *= double(SAMPLE_POINTS);
-                int iValue = value;
-                while(iValue >= SAMPLE_POINTS)
-                    iValue -= SAMPLE_POINTS;
-                int iValue2 = iValue + 1;
-                if(iValue2 >= SAMPLE_POINTS)
-                    iValue2 -= SAMPLE_POINTS;
-                float lerping = ffmodf(value, 1.0f);
+                int iValue = int(value) % SAMPLE_POINTS;
+                int iValue2 = (iValue + 1) % SAMPLE_POINTS;
+                float lerping = value - iValue;
                 value = noteMain.tuning[iValue] * (1.0f - lerping) + noteMain.tuning[iValue2] * lerping;
+
                 value = pow(2.0, value / 12.0);
+                //printf("Value: %f\n", value);
                 //amplitude *= noteMain.amplitudes[iValue] * (1.0f - lerping) + noteMain.amplitudes[iValue2] * lerping;
                 //tmpValue = value / 24.0;
                 tmpValue = evaluateSound(timePoint, freq * value, noteMain.oscType);
