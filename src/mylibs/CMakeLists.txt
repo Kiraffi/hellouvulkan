@@ -65,7 +65,7 @@ add_library(MyLibraries
 
     "model/animation.cpp"
     "resources/globalresources.cpp"
-)
+ "container/stringview.h" "container/stringview.cpp")
 
 add_library(MyImgui
     "gui/componentviews.h"

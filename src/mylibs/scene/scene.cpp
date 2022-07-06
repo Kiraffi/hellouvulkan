@@ -258,14 +258,14 @@ bool Scene::readLevel(const char *levelName)
     if(!json.getChild("versionNumber").parseUInt(versionNumber))
         return false;
 
-    std::string_view mapName;
+    StringView mapName;
     if(!json.getChild("levelName").parseString(mapName))
         return false;
 
     if(json.getChild("objects").getChildCount() == 0)
         return false;
 
-    std::string_view objTypeName;
+    StringView objTypeName;
 
     PodVector<AnimationState> newAnimationStates;
     PodVector<GameEntity> newEntities;

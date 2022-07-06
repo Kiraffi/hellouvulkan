@@ -10,7 +10,7 @@ WriteJson::WriteJson(uint32_t magicNumber, uint32_t versionNumber) : indentAmoun
     addMagicNumberAndVersion(magicNumber, versionNumber);
 }
 
-bool WriteJson::addString(std::string_view name, std::string_view value, bool addQuotes)
+bool WriteJson::addString(StringView name, StringView value, bool addQuotes)
 {
     if(!valid)
         return false;
@@ -28,9 +28,9 @@ bool WriteJson::addString(std::string_view name, std::string_view value, bool ad
     return valid;
 }
 
-bool WriteJson::addInteger(std::string_view name, int64_t number) { return addString(name, std::to_string(number), false); }
-bool WriteJson::addNumber(std::string_view name, double number) { return addString(name, std::to_string(number), false); }
-bool WriteJson::addBool(std::string_view name, bool b) { return addString(name, b ? "true" : "false", false); }
+bool WriteJson::addInteger(StringView name, int64_t number) { return addString(name, std::to_string(number).c_str(), false); }
+bool WriteJson::addNumber(StringView name, double number) { return addString(name, std::to_string(number).c_str(), false); }
+bool WriteJson::addBool(StringView name, bool b) { return addString(name, b ? "true" : "false", false); }
 
 bool WriteJson::addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber)
 {
@@ -47,7 +47,7 @@ bool WriteJson::addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionN
     return valid;
 }
 
-bool WriteJson::addArray(std::string_view name)
+bool WriteJson::addArray(StringView name)
 {
     if(!valid)
         return false;
@@ -89,7 +89,7 @@ bool WriteJson::endArray()
     return valid;
 }
 
-bool WriteJson::addObject(std::string_view name)
+bool WriteJson::addObject(StringView name)
 {
     if(!valid)
         return false;
@@ -167,7 +167,7 @@ bool WriteJson::endObject()
     return valid;
 }
 
-bool WriteJson::writeVec3(std::string_view name, const Vector3 &v)
+bool WriteJson::writeVec3(StringView name, const Vector3 &v)
 {
     if(!valid)
         return false;
@@ -189,7 +189,7 @@ bool WriteJson::writeVec3(std::string_view name, const Vector3 &v)
     writtenJson += " ],\n";
     return true;
 }
-bool WriteJson::writeQuat(std::string_view name, const Quaternion &q)
+bool WriteJson::writeQuat(StringView name, const Quaternion &q)
 {
     if(!valid)
         return false;
@@ -238,7 +238,7 @@ bool WriteJson::finishWrite()
 }
 
 
-bool WriteJson::addNamedString(std::string_view name, bool quoteValue)
+bool WriteJson::addNamedString(StringView name, bool quoteValue)
 {
     if(name.size() == 0)
         return false;
@@ -246,7 +246,7 @@ bool WriteJson::addNamedString(std::string_view name, bool quoteValue)
     if(quoteValue)
         writtenJson += "\"";
 
-    writtenJson += std::string(name);
+    writtenJson += std::string(name.ptr, name.length);
 
     if(quoteValue)
         writtenJson += "\"";

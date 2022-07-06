@@ -3,6 +3,7 @@
 #include <spirv_cross/spirv.h>
 
 #include <container/podvector.h>
+#include <container/stringview.h>
 #include <container/vector.h>
 #include <core/file.h>
 #include <core/general.h>
@@ -22,7 +23,7 @@ struct GlobalShaders
 static GlobalShaders globalShaders;
 
 // spir-v specs, 1.6 https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.pdf
-static bool parseShaderCode(const VkShaderModuleCreateInfo &info, std::string_view filename, Shader& inOutShader)
+static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView filename, Shader& inOutShader)
 {
     ASSERT(info.pCode);
     ASSERT(info.codeSize > 0);

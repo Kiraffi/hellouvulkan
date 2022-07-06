@@ -4,12 +4,12 @@
 
 #include <container/arraysliceview.h>
 #include <container/podvector.h>
+#include <container/stringview.h>
 #include <container/vector.h>
 
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
-#include <string_view>
 
 class JsonBlock
 {
@@ -35,7 +35,7 @@ public:
     bool isDouble() const { return jType == (VALID_TYPE | DOUBLE_TYPE); }
     bool isBool() const { return jType == (VALID_TYPE | BOOL_TYPE); }
 
-    bool parseString(std::string_view &outString) const;
+    bool parseString(StringView &outString) const;
     bool parseDouble(double &outDouble) const;
     bool parseFloat(float &outFloat) const;
     bool parseInt(int64_t &outInt) const;
@@ -55,11 +55,11 @@ public:
     bool equals(uint32_t value) const;
 
 
-    bool hasChild(std::string_view childName) const;
+    bool hasChild(StringView childName) const;
 
     int getChildCount() const { return ( int )children.size(); }
     const JsonBlock &getChild(int index) const;
-    const JsonBlock &getChild(std::string_view childName) const;
+    const JsonBlock &getChild(StringView childName) const;
 
     const JsonBlock *const begin() const;
     const JsonBlock *const end() const;
@@ -67,12 +67,12 @@ public:
     bool print() const;
 
     Vector< JsonBlock > children;
-    std::string_view blockName;
+    StringView blockName;
 
     bool named = false;
 
     bool valueBool = false;
-    std::string_view valueStr;
+    StringView valueStr;
     double valueDbl = -1.0;
     int64_t valueInt = -1;
 

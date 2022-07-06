@@ -7,7 +7,7 @@
 // memmove, exit
 #include <string.h>
 // exit()
-#include <stdlib.h>
+//#include <stdlib.h>
 
 // What to initialize originally the memory, probably not really useful, since
 // it would have to initialize that during freeing.
@@ -172,7 +172,7 @@ Memory allocateMemoryBytes(uint32_t size)
     {
         printf("All memory used: %u\n", allMemory.memoryUsed + size);
         ASSERT(MaxMemorySize - allMemory.memoryUsed >= size);
-        exit(1);
+        //exit(1);
     }
     uint32_t index = ~0u;
     if(allMemory.freedAllocationCount > 0)
@@ -184,19 +184,19 @@ Memory allocateMemoryBytes(uint32_t size)
     {
         printf("Too many allocations: %u\n", allMemory.allocationCount);
         ASSERT(allMemory.allocationCount < MaxAllocations);
-        exit(1);
+        //exit(1);
     }
     if(index >= MaxAllocations)
     {
         printf("Too many allocations, index was out of allocationcount: %u\n", index);
         ASSERT(index < MaxAllocations);
-        exit(1);
+        //exit(1);
     }
     if(allMemory.usedAllocationIndices[allMemory.allocationCount] != ~0u)
     {
         printf("For some reason this index is already in use: %u\n", allMemory.allocationCount);
         ASSERT(allMemory.usedAllocationIndices[allMemory.allocationCount] == ~0u);
-        exit(1);
+        //exit(1);
     }
     MemoryArea &alloc = allMemory.memoryAreas[index];
     alloc.startLocation = allMemory.memoryUsed;
@@ -297,7 +297,7 @@ Memory resizeMemory(Memory memory, uint32_t size)
     if(size >= MaxMemorySize)
     {
         printf("Trying to allocate too much memory!");
-        exit(1);
+        //exit(1);
     }
 
     if(!isValidMemory(memory))
@@ -318,7 +318,8 @@ Memory resizeMemory(Memory memory, uint32_t size)
         if(allMemory.memoryUsed > MaxMemorySize)
         {
             printf("Trying to allocate too much memory!");
-            exit(1);
+            ASSERT(false);
+            //exit(1);
         }
         oldArea.size = size;
     }
@@ -328,7 +329,8 @@ Memory resizeMemory(Memory memory, uint32_t size)
         if(!isValidMemory(newMemory))
         {
             printf("Trying to allocate too much memory!");
-            exit(1);
+            ASSERT(false);
+            //exit(1);
         }
         uint32_t newHandle = getHandleIndex(newMemory);
         MemoryArea &newArea = allMemory.memoryAreas[newHandle];

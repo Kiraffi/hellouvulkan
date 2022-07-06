@@ -4,13 +4,13 @@
 
 #include <container/arraysliceview.h>
 #include <container/podvector.h>
+#include <container/stringview.h>
 #include <container/vector.h>
 #include <core/json.h>
 
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
-#include <string_view>
 #include <string>
 
 class WriteJson
@@ -21,28 +21,28 @@ public:
     WriteJson(uint32_t magicNumber, uint32_t versionNumber);
     bool finishWrite();
 
-    bool addString(std::string_view name, std::string_view value, bool quoteValue = true);
-    bool addInteger(std::string_view name, int64_t number);
-    bool addNumber(std::string_view name, double number);
-    bool addBool(std::string_view name, bool b);
+    bool addString(StringView name, StringView value, bool quoteValue = true);
+    bool addInteger(StringView name, int64_t number);
+    bool addNumber(StringView name, double number);
+    bool addBool(StringView name, bool b);
 
     bool addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber);
 
-    bool addArray(std::string_view name);
+    bool addArray(StringView name);
     bool endArray();
 
-    bool addObject(std::string_view name);
+    bool addObject(StringView name);
     bool addObject();
     bool addObject(uint32_t magicNumber, uint32_t versionNumber);
     bool endObject();
 
-    bool writeVec3(std::string_view name, const Vector3 &v);
-    bool writeQuat(std::string_view name, const Quaternion &q);
+    bool writeVec3(StringView name, const Vector3 &v);
+    bool writeQuat(StringView name, const Quaternion &q);
 
     const std::string &getString() const { return writtenJson; }
     bool isValid() const { return valid; }
 private:
-    bool addNamedString(std::string_view str, bool addQuotes);
+    bool addNamedString(StringView str, bool addQuotes);
     bool addIndentSpaces();
     std::string writtenJson;
     std::string blockTypes;

@@ -70,11 +70,11 @@ bool writeGameObject(const char *name, const GameEntity &entity, WriteJson &json
 bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
 {
     int index = 0;
-    std::string_view objTypeName;
+    StringView objTypeName;
 
     if(!json.getChild("magicNumber").equals(GameEntity::MagicNumber))
         return false;
-    std::string_view name;
+    StringView name;
     if(!json.getChild("name").parseString(name))
         return false;
 
@@ -88,13 +88,13 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
     if(!json.getChild("modelType").parseString(objTypeName))
         return false;
 
-    if(!findEntityType(std::string(objTypeName).c_str(), outEntity.entityType))
+    if(!findEntityType(std::string(objTypeName.ptr, objTypeName.length).c_str(), outEntity.entityType))
         return false;
 
-    std::string_view meshName;
+    StringView meshName;
     bool foundMesh = json.getChild("mesh").parseString(meshName);
 
-    std::string_view animName;
+    StringView animName;
     bool foundAnim = json.getChild("anim").parseString(animName);
     
 
@@ -129,6 +129,6 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
 
     }
 
-    outEntity.name = std::string(name).c_str();
+    outEntity.name = std::string(name.ptr, name.length).c_str();
     return true;
 }

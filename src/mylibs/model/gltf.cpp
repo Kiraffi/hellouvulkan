@@ -65,7 +65,7 @@ enum class GltfBufferComponentType
 
 struct GltfSceneNode
 {
-    std::string_view name;
+    StringView name;
     Quat rot;
     Vec3 trans;
     Vec3 scale{1.0f, 1.0f, 1.0f};
@@ -76,7 +76,7 @@ struct GltfSceneNode
 
 struct GltfMeshNode
 {
-    std::string_view name;
+    StringView name;
     uint32_t positionIndex = ~0u;
     uint32_t normalIndex = ~0u;
     uint32_t uvIndex = ~0u;
@@ -89,7 +89,7 @@ struct GltfMeshNode
 
 struct GltfSkinNode
 {
-    std::string_view name;
+    StringView name;
     PodVector<uint32_t> joints;
     uint32_t inverseMatricesIndex = ~0u;
 };
@@ -123,7 +123,7 @@ struct GltfAnimationNode
     };
     PodVector<Channel> channels;
     PodVector<Sampler> samplers;
-    std::string_view name;
+    StringView name;
 };
 
 struct GltfBufferView
@@ -683,7 +683,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                         return false;
                     if(!channelBlock.getChild("target").getChild("node").parseUInt(channel.nodeIndex))
                         return false;
-                    std::string_view pathStr;
+                    StringView pathStr;
                     if(!channelBlock.getChild("target").getChild("path").parseString(pathStr))
                         return false;
                     if(pathStr == "translation")
@@ -709,7 +709,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                     if(!samplerBlock.getChild("output").parseUInt(sampler.outputIndex))
                         return false;
 
-                    std::string_view interpolationStr;
+                    StringView interpolationStr;
                     if(!samplerBlock.getChild("interpolation").parseString(interpolationStr))
                         return false;
                     if(interpolationStr == "LINEAR")
@@ -763,7 +763,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                 return false;
 
             uint32_t componentType = ~0u;
-            std::string_view s;
+            StringView s;
             if(!accessorBlock.getChild("bufferView").parseUInt(accessor.bufferViewIndex)
                 || !accessorBlock.getChild("componentType").parseUInt(componentType)
                 || !accessorBlock.getChild("count").parseUInt(accessor.count)
@@ -1299,8 +1299,8 @@ static bool interpolateBetweenPoses(const EvaluateBoneParams &params, uint32_t j
 
     auto getInterpolationValue = [](float prevTime, float nextTime, float currTime)
     {
-        currTime = std::max(prevTime, currTime);
-        currTime = std::min(nextTime, currTime);
+        currTime = ffmaxf(prevTime, currTime);
+        currTime = ffminf(nextTime, currTime);
         float duration = (nextTime - prevTime);
 
         float frac = duration > 0.0f ? (currTime - prevTime) / duration : 1.0f;

@@ -5,6 +5,7 @@
 #include "myvulkan.h"
 
 #include <container/podvector.h>
+#include <container/stringview.h>
 #include <core/general.h>
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
@@ -14,7 +15,6 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <string_view>
 #include <set>
 #include <string.h>
 #include <string>
@@ -564,7 +564,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             availableExtensions.resize(extensionCount);
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
-            std::set<std::string_view> requiredExtensions;
+            std::set<std::string> requiredExtensions;
             for (const char *str : deviceExtensions)
                 requiredExtensions.insert(str);
 

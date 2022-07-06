@@ -522,6 +522,7 @@ public:
     ma_device soundDevice;
     ma_waveform_config sineWaveConfig;
 
+    bool soundDeviceInit = false;
     double startTime;
 
     NoteFromMainToThread currentNote;
@@ -536,7 +537,8 @@ public:
 
 SoundTest::~SoundTest()
 {
-    ma_device_uninit(&soundDevice);
+    if(soundDeviceInit)
+        ma_device_uninit(&soundDevice);
 }
 
 
@@ -631,6 +633,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
             printf("Failed to open playback device.\n");
             return false;
         }
+        soundDeviceInit = true;
 
         printf("Device Name: %s\n", soundDevice.playback.name);
 

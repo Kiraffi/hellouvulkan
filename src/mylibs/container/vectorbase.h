@@ -5,9 +5,6 @@
 #include <core/assert.h>
 #include <core/mytypes.h>
 
-//#include <memory>
-#include <string.h>
-
 class VectorBase
 {
 public:

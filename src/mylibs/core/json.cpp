@@ -28,7 +28,7 @@ static bool printBlock(const JsonBlock &bl, int spaces = 0)
 
     if(!bl.blockName.empty())
     {
-        std::string s(bl.blockName);
+        std::string s(bl.blockName.ptr, bl.blockName.length);
         printf("%s: ", s.c_str());
     }
 
@@ -88,7 +88,7 @@ static bool printBlock(const JsonBlock &bl, int spaces = 0)
     }
     else if(bl.isString())
     {
-        std::string_view s;
+        StringView s;
         if(!bl.parseString(s))
         {
             printf("FAILED PARSE STRING\n");
@@ -166,7 +166,7 @@ bool parseBetweenMarkers(const ArraySliceView<char> &buffer, JSONMarker &marker,
     return false;
 }
 
-static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, std::string_view &outStr)
+static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, StringView &outStr)
 {
     int &index = marker.currentIndex;
 
@@ -178,7 +178,7 @@ static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, 
     if(l < 0 || index >= marker.endIndex || buffer [index] != '"')
         return false;
 
-    outStr = std::string_view(&buffer[startIndex], l);
+    outStr = StringView(&buffer[startIndex], l);
 
     ++index;
     if(index + 1 < marker.endIndex && buffer[index] == ',')
@@ -477,7 +477,7 @@ bool JsonBlock::parseJson(const ArraySliceView<char> &data)
     return parseObject(data, marker, *this);
 }
 
-bool JsonBlock::parseString(std::string_view &outString) const
+bool JsonBlock::parseString(StringView &outString) const
 {
     if(!isString())
         return false;
@@ -580,7 +580,7 @@ bool JsonBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
     if(!isString())
         return false;
 
-    int strLen = valueStr.length();
+    int strLen = valueStr.length;
 
     if(strLen < 37)
         return false;
@@ -684,7 +684,7 @@ bool JsonBlock::equals(uint32_t value) const
     return p == value;
 }
 
-bool JsonBlock::hasChild(std::string_view childName) const
+bool JsonBlock::hasChild(StringView childName) const
 {
     for(const JsonBlock &child : children)
     {
@@ -705,7 +705,7 @@ const JsonBlock &JsonBlock::getChild(int index) const
     return children [index];
 }
 
-const JsonBlock &JsonBlock::getChild(std::string_view childName) const
+const JsonBlock &JsonBlock::getChild(StringView childName) const
 {
     for(const JsonBlock &child : children)
     {

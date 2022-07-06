@@ -16,8 +16,6 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <filesystem>
-#include <fstream>
 #include <string>
 #include <string.h>
 

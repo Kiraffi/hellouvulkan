@@ -1,9 +1,9 @@
 #pragma once
 
-#include <initializer_list>
 #include "vectorbase.h"
 
-#include <new>
+#include <initializer_list>
+#include <string.h>
 #include <type_traits>
 
 #define CHECK_POD_MACRO() \
@@ -101,7 +101,7 @@ PodVector<T>::PodVector(PodVector &&other) noexcept : VectorBase(sizeof(T))
     CHECK_POD_MACRO();
     buffer.reset();
     buffer = other.buffer;
-    new (&other.buffer) ByteBuffer(sizeof(T));
+    other.buffer = ByteBuffer(sizeof(T));
 }
 
 template <typename T>

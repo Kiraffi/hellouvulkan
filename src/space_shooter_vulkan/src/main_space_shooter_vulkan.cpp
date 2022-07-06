@@ -3,6 +3,7 @@
 #include <core/general.h>
 #include <core/glfw_keys.h>
 #include <core/mytypes.h>
+#include <container/stringview.h>
 #include <core/timer.h>
 #include <core/vulkan_app.h>
 
@@ -18,7 +19,6 @@
 
 #include <render/font_render.h>
 
-#include <string_view>
 #include <string.h>
 #include <math.h>
 static constexpr int SCREEN_WIDTH = 800;
@@ -513,7 +513,7 @@ void SpaceShooter::logicUpdate()
 
         dtSplit -= dddt;
     }
-    const float slowDown = std::max(0.0, 1.0 - 10.0 * dt);
+    const float slowDown = ffmaxf(0.0, 1.0 - 10.0 * dt);
     playerEntity.speedX *= slowDown;
     playerEntity.speedY *= slowDown;
 
