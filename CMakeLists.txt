@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS FALSE)
 
 # adding multiprocessor compilation, in case generating visual studio solution separately
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+#add_compile_options($<$<CXX_COMPILER_ID:MSVC>-ftime-ftrace)
 
 # imgui stuff to support vulkan with x86
 ADD_DEFINITIONS(-DImTextureID=ImU64)

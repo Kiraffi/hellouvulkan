@@ -9,13 +9,24 @@
 // exit()
 #include <stdlib.h>
 
+// What to initialize originally the memory, probably not really useful, since
+// it would have to initialize that during freeing.
+#define USE_DEBUGVALUE 0
+static constexpr uint8_t DebugValue = 0xabu;
+
+#define USE_PRINTING 0
+#define PRINT_ALLOCATION_ADDRESS 0
+
+
+
+#if PRINT_ALLOCATION_ADDRESS
 #if _MSC_VER
     #include <intrin.h>
     #define returnAddress _AddressOfReturnAddress()
 #else
     #define returnAddress __builtin_frame_address(0)
 #endif
-
+#endif
 
 
 
@@ -26,14 +37,6 @@ static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u;
 
 static constexpr uint32_t MinimumMemoryChunkSize = 256u;
 static constexpr uint32_t MemoryAlignment = 4096u;
-
-// What to initialize originally the memory, probably not really useful, since
-// it would have to initialize that during freeing.
-#define USE_DEBUGVALUE 0
-static constexpr uint8_t DebugValue = 0xabu;
-
-#define USE_PRINTING 0
-#define PRINT_ALLOCATION_ADDRESS 0
 
 struct MemoryArea
 {
