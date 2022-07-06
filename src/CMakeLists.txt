@@ -21,3 +21,7 @@ add_subdirectory ("editor_test")
 add_subdirectory ("game")
 add_subdirectory ("sound_test")
 
+if (UNIX)
+    add_subdirectory ("sound_test_pulse")
+else()
+endif()

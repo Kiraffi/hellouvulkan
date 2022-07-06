@@ -803,6 +803,12 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
     ImGui::DragFloat("Sustain amplitude", &currentNote.sustainAmplitude, 0.01f, 0.0f, 1.5f);
 */
     ImGui::End();
+
+
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Sound");
+    ImGui::End();
+
     return;
 }
 
