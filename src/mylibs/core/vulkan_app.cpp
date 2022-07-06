@@ -289,7 +289,7 @@ void VulkanApp::run()
         #if _WIN32
             timeBeginPeriod(1);
         #endif
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
         #if _WIN32
             timeEndPeriod(1);
         #endif

@@ -71,7 +71,15 @@
       "projectTarget": "sound_test.exe (src\\sound_test\\sound_test.exe)",
       "name": "sound_test.exe (src\\sound_test\\sound_test.exe)",
       "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "sound_test_dsound.exe (src\\sound_test_dsound\\sound_test_dsound.exe)",
+      "name": "sound_test_dsound.exe (src\\sound_test_dsound\\sound_test_dsound.exe)",
+      "currentDir": "${workspaceRoot}"
     }
+
 
   ]
 }
