@@ -36,6 +36,7 @@ static constexpr uint32_t MaxAllocations = 65536u;
 static constexpr uint32_t MaxMemorySize = 64u * 1024u * 1024u;
 static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u;
 
+// Also alignment!!!
 static constexpr uint32_t MinimumMemoryChunkSize = 256u;
 static constexpr uint32_t MemoryAlignment = 4096u;
 
@@ -204,6 +205,7 @@ Memory allocateMemoryBytes(uint32_t size)
         //exit(1);
     }
     MemoryArea &alloc = allMemory->memoryAreas[index];
+    ASSERT((allMemory->memoryUsed % MinimumMemoryChunkSize) == 0);
     alloc.startLocation = allMemory->memoryUsed;
     alloc.size = size;
 
@@ -297,6 +299,7 @@ Memory resizeMemory(Memory memory, uint32_t size)
     #if USE_PRINTING
         printf("Reallocating!\n");
     #endif
+    size = (size + MinimumMemoryChunkSize - 1u) & (~(MinimumMemoryChunkSize - 1u));
 
     ASSERT(size < MaxMemorySize);
     if(size >= MaxMemorySize)
