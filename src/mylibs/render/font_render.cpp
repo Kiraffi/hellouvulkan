@@ -28,7 +28,7 @@ void FontRenderSystem::deInit()
 
 bool FontRenderSystem::init(const char *fontFilename)
 {
-    PodVector<char> data;
+    String data;
     if (!loadBytes(fontFilename, data))
     {
         printf("Failed to load file: %s\n", fontFilename);

@@ -2,14 +2,15 @@
 
 #include "mytypes.h"
 
-#include <container/arraysliceview.h>
-#include <container/podvector.h>
+#include <container/string.h>
 #include <container/stringview.h>
 #include <container/vector.h>
 
 #include <math/quaternion.h>
 #include <math/vector3.h>
 
+template<typename T>
+class PodVector;
 
 class JsonBlock
 {
@@ -25,7 +26,7 @@ public:
         BOOL_TYPE = 1 << 6
     };
 
-    bool parseJson(const ArraySliceView<char> &data);
+    bool parseJson(const StringView &data);
 
     bool isValid() const { return ( jType & VALID_TYPE ) == VALID_TYPE; }
     bool isArray() const { return jType == (VALID_TYPE | ARRAY_TYPE); }

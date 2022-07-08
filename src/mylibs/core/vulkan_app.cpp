@@ -26,7 +26,6 @@
 
 //#include <chrono>
 #include <thread>
-#include <string.h>
 
 
 static double timer_frequency = 0.0;

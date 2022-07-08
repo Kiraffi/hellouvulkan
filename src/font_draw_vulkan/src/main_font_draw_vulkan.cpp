@@ -17,8 +17,6 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <string.h>
-
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
@@ -65,7 +63,7 @@ public:
     int32_t chosenLetter = 'a';
 
     PodVector<GPUVertexData> vertData;
-    PodVector<char> characterData;
+    String characterData;
 
     static constexpr VkClearValue colorClear = { .color{ 0.0f, 0.5f, 1.0f, 1.0f } };
 };
@@ -287,7 +285,7 @@ void VulkanFontDraw::logicUpdate()
         }
 
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            writeBytes(fontFilename.getStr(), sliceFromPodVectorBytes(characterData));
+            writeBytes(fontFilename.getStr(), StringView(characterData));
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
             loadBytes(fontFilename.getStr(), characterData);

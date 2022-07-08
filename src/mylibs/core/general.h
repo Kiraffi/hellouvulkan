@@ -2,11 +2,33 @@
 
 #include <core/mytypes.h>
 
-struct Vector4;
+#if _MSC_VER
+#define RESTRICT __restrict
+#define FORCE_INLINE __forceinline
+#else
+#define RESTRICT __restrict
+//#define RESTRICT __restrict__
+#define FORCE_INLINE __attribute__((always_inline)) inline
+#endif
+
 
 void myPrint(const char *ptr, ...);
 
 extern "C" int printf(const char *__restrict __format, ...);
+//extern "C" int snprintf(char *const buffer, size_t bufferCount, const char *__restrict const format, ...);
+extern "C" __declspec(dllexport) int snprintf(char *buffer, size_t bufferCount, const char *format, ...);
+
+//extern "C" int snprintf(const char *__restrict __format, ...);
+
+extern "C" void *memcpy(void *destination, const void *source, size_t num);
+extern "C" void *memmove(void *destination, const void *source, size_t num);
+
+extern "C" void *memset(void *destination, int value, size_t num);
+extern "C" int memcmp(const void *const ptr1, const void *const ptr2, size_t num );
+extern "C" int memcmp(const void *ptr1, const void *ptr2, size_t num);
+extern "C" int strcmp(const char *str1, const char *str2);
+//extern "C" __declspec(dllexport) int strncmp(const char *str1, const char *str2, size_t num);
+
 //extern "C" void *memcpy(void *__restrict dest, const void *__restrict src, int64_t n);
 //void *memcpy(void * dest, const void * src, int64_t n);
 //extern "C" int memcmp( const void *ptr1, const void *ptr2, long num );
@@ -41,15 +63,6 @@ float ffclampd(double a, double b, double value);
 static constexpr float PI = 3.14159265358979323846264338f;
 
 
-#if _MSC_VER
-#define RESTRICT __restrict
-#define FORCE_INLINE __forceinline
-#else
-#define RESTRICT __restrict
-//#define RESTRICT __restrict__
-#define FORCE_INLINE __attribute__((always_inline)) inline
-#endif
-
 
 
 
@@ -61,5 +74,7 @@ static constexpr float PI = 3.14159265358979323846264338f;
 
 
 // color values r,g,h,a between [0..1]
+
+struct Vector4;
 uint32_t getColor(float r, float g, float b, float a);
 uint32_t getColor(const Vector4 &col);

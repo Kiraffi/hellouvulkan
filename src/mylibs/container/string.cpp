@@ -1,12 +1,8 @@
 #include "string.h"
 
 #include <core/assert.h>
+#include <core/general.h>
 #include <core/mytypes.h>
-
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
 
 static void stringPushbackChar(ByteBuffer &buffer, char c)
 {
@@ -110,11 +106,22 @@ String &String::append(const char *s, uint32_t charas)
     return *this;
 }
 
+String &String::append(char c)
+{
+    buffer.removeIndex(getSize());
+    stringPushbackChar(buffer, c);
+    stringPushbackChar(buffer, '\0');
+    return *this;
+}
 
 String &String::append(int64_t i)
 {
     char c[32] = {};
+#if WIN32
+    snprintf(c, 32, "%lli", i);
+#else
     snprintf(c, 32, "%li", i);
+#endif
     append(c);
     return *this;
 }
@@ -122,7 +129,11 @@ String &String::append(int64_t i)
 String &String::append(uint64_t u)
 {
     char c[32] = {};
+#if WIN32
+    snprintf(c, 32, "%llu", u);
+#else
     snprintf(c, 32, "%lu", u);
+#endif
     append(c);
     return *this;
 }
@@ -183,3 +194,8 @@ void String::clear()
     stringPushbackChar(buffer, '\0');
 }
 
+void String::resize(uint32_t amount)
+{
+    buffer.resize(amount + 1);
+    buffer.getBegin()[amount] = '\0';
+}

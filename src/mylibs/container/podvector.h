@@ -2,8 +2,9 @@
 
 #include "vectorbase.h"
 
+#include <core/general.h>
+
 #include <initializer_list>
-#include <string.h>
 #include <type_traits>
 
 #define CHECK_POD_MACRO() \

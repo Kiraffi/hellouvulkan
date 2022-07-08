@@ -229,13 +229,13 @@ Bounds Scene::getBounds(uint32_t entityIndex) const
 
 bool Scene::readLevel(const char *levelName)
 {
-    PodVector<char> buffer;
+    String buffer;
 
     if(!loadBytes(levelName, buffer))
         return false;
 
     JsonBlock json;
-    bool parseSuccess = json.parseJson(ArraySliceView(buffer.data(), buffer.size()));
+    bool parseSuccess = json.parseJson(StringView(buffer.data(), buffer.size()));
 
     if(!parseSuccess)
     {
@@ -294,7 +294,7 @@ bool Scene::writeLevel(const char *filename) const
     writeJson.endArray();
     writeJson.finishWrite();
     return writeJson.isValid() &&
-        writeBytes(filename, ArraySliceViewBytes(writeJson.getString().data(), writeJson.getString().size()));
+        writeBytes(filename, writeJson.getString());
 }
 
 uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)

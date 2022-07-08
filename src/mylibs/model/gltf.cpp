@@ -482,13 +482,13 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 {
     GltfData data;
 
-    PodVector<char> buffer;
+    String buffer;
 
     if(!loadBytes(filename, buffer))
         return false;
 
     JsonBlock bl;
-    bool parseSuccess = bl.parseJson(ArraySliceView(buffer.data(), buffer.size()));
+    bool parseSuccess = bl.parseJson(StringView(buffer.data(), buffer.size()));
 
     if (!parseSuccess)
     {

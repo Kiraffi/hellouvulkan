@@ -1,9 +1,8 @@
 #include "convertrendertarget.h"
 
+#include <container/string.h>
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
-
-#include <string>
 
 ConvertRenderTarget::~ConvertRenderTarget()
 {
@@ -18,9 +17,9 @@ bool ConvertRenderTarget::init(ShaderType shapeType)
 
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
-        std::string name = "Convert pipeline - ";
-        name += std::to_string(uint32_t(shapeType));
-        if (!createComputePipeline(getShader(shapeType), pipeline, name.c_str()))
+        String name = "Convert pipeline - ";
+        name.append(uint32_t(shapeType));
+        if (!createComputePipeline(getShader(shapeType), pipeline, name.getStr()))
         {
             printf("Failed to create compute pipeline!\n");
             return false;

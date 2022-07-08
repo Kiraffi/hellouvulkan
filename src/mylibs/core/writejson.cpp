@@ -1,5 +1,7 @@
 #include "writejson.h"
 
+#include <core/general.h>
+
 #include <ctype.h>
 #include <string.h>
 

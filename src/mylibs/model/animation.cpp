@@ -1,5 +1,6 @@
 #include "animation.h"
  
+#include <container/podvector.h>
 #include <model/gltf.h>
 #include <resources/globalresources.h>
 

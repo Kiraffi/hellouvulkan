@@ -19,6 +19,7 @@ public:
     String &append(const String &s);
     String &append(const char *s);
     String &append(const char *s, uint32_t charas);
+    String &append(char c);
     String &append(int64_t i);
     String &append(uint64_t u);
     String &append(int32_t i);
@@ -40,6 +41,9 @@ public:
     void clear();
     void erase(uint32_t index) { buffer.removeIndex(index); }
     bool empty() const { return buffer.getSize() == 0; }
+
+    void reserve(uint32_t amount) { buffer.reserve(amount); }
+    void resize(uint32_t amount);
     const char *getStr() const { return (const char *)buffer.getBegin(); }
     uint32_t getSize() const { return buffer.getSize() - 1; }
     uint32_t length() const { return buffer.getSize() - 1; }

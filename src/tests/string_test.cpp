@@ -1,7 +1,7 @@
 #include <container/string.h>
 #include <core/assert.h>
+#include <core/general.h>
 
-#include <stdio.h>
 #include <string.h>
 
 static void testStringValidness(const String &s, const char *str)

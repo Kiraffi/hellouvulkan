@@ -13,7 +13,7 @@
 #endif
 */
 
-bool loadBytes(const char *filename, PodVector<char> &dataOut)
+bool loadBytes(const char *filename, String &dataOut)
 {
     /*
 #ifdef _WIN32
@@ -41,7 +41,7 @@ bool loadBytes(const char *filename, PodVector<char> &dataOut)
 }
 
 
-bool writeBytes(const char *filename, ArraySliceViewBytes bytes)
+bool writeBytes(const char *filename, StringView bytes)
 {
     //
     //if(std::filesystem::exists(filename))

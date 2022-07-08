@@ -2,11 +2,8 @@
 
 #include "mytypes.h"
 
-#include <container/podvector.h>
 #include <container/string.h>
 #include <container/stringview.h>
-#include <container/vector.h>
-#include <core/json.h>
 
 #include <math/quaternion.h>
 #include <math/vector3.h>

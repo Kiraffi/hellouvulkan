@@ -4,7 +4,15 @@
 #include <math/vector3.h>
 
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
 
+/*
+int snprintf(char *const buffer, size_t bufferCount, const char *__restrict const format, ...)
+{
+    snprintf(buffer, bufferCount, format, ...);
+}
+*/
 
 float fsqrtf(float a) { return sqrtf(a); }
 float ftanf(float a) { return tanf(a); }

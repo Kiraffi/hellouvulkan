@@ -1,9 +1,9 @@
 #include "json.h"
 
+#include <container/podvector.h>
 #include <container/string.h>
 
 #include <ctype.h>
-#include <string.h>
 
 const JsonBlock JsonBlock::emptyBlock = { };
 
@@ -18,8 +18,8 @@ struct JSONMarker
     int currentIndex = 0;
 };
 
-static bool parseObject(const ArraySliceView <char> &buffer, JSONMarker &marker, JsonBlock &inOutBlock);
-static bool parseValue(const ArraySliceView <char> &buffer, JSONMarker &marker, JsonBlock &inOutBlock);
+static bool parseObject(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock);
+static bool parseValue(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock);
 
 static bool printBlock(const JsonBlock &bl, int spaces = 0)
 {
@@ -107,7 +107,7 @@ static bool printBlock(const JsonBlock &bl, int spaces = 0)
 }
 
 
-static bool skipWord(const ArraySliceView<char> &buffer, JSONMarker &marker)
+static bool skipWord(const StringView &buffer, JSONMarker &marker)
 {
     int &index = marker.currentIndex;
     int sz = marker.endIndex;
@@ -118,7 +118,7 @@ static bool skipWord(const ArraySliceView<char> &buffer, JSONMarker &marker)
 }
 
 
-static bool skipWhiteSpace(const ArraySliceView<char> &buffer, JSONMarker &marker)
+static bool skipWhiteSpace(const StringView &buffer, JSONMarker &marker)
 {
     int &index = marker.currentIndex;
     int sz = marker.endIndex;
@@ -127,7 +127,7 @@ static bool skipWhiteSpace(const ArraySliceView<char> &buffer, JSONMarker &marke
 
     return index < sz;
 }
-bool parseBetweenMarkers(const ArraySliceView<char> &buffer, JSONMarker &marker, char beginChar, char endChar, bool ignoreBackSlashedChar = true)
+bool parseBetweenMarkers(const StringView &buffer, JSONMarker &marker, char beginChar, char endChar, bool ignoreBackSlashedChar = true)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -167,7 +167,7 @@ bool parseBetweenMarkers(const ArraySliceView<char> &buffer, JSONMarker &marker,
     return false;
 }
 
-static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, StringView &outStr)
+static bool parseString(const StringView &buffer, JSONMarker &marker, StringView &outStr)
 {
     int &index = marker.currentIndex;
 
@@ -187,7 +187,7 @@ static bool parseString(const ArraySliceView<char> &buffer, JSONMarker &marker, 
     return true;
 }
 
-static int parseInt(const ArraySliceView<char> &buffer, JSONMarker &marker, int64_t &outResult, bool countFrontZeroes = false)
+static int parseInt(const StringView &buffer, JSONMarker &marker, int64_t &outResult, bool countFrontZeroes = false)
 {
     int numCount = 0;
     int &index = marker.currentIndex;
@@ -245,7 +245,7 @@ bool isNum(char c)
     return(( c >= '0' && c <= '9' ));
 }
 
-bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
+bool getNumber(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -313,7 +313,7 @@ bool getNumber(const ArraySliceView<char> &buffer, JSONMarker &marker, JsonBlock
     return true;
 }
 
-bool tryParseBoolean(const ArraySliceView<char> &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
+bool tryParseBoolean(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -340,7 +340,7 @@ bool tryParseBoolean(const ArraySliceView<char> &buffer, JSONMarker &marker, Jso
     return true;
 }
 
-static bool parseValue(const ArraySliceView<char> &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
+static bool parseValue(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -418,7 +418,7 @@ static bool parseValue(const ArraySliceView<char> &buffer, JSONMarker &marker, J
 }
 
 
-static bool parseObject(const ArraySliceView<char> &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
+static bool parseObject(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
@@ -464,7 +464,7 @@ static bool parseObject(const ArraySliceView<char> &buffer, JSONMarker &marker, 
 
 
 
-bool JsonBlock::parseJson(const ArraySliceView<char> &data)
+bool JsonBlock::parseJson(const StringView &data)
 {
     if(data.size() <= 2)
         return false;

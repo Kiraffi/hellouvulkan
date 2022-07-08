@@ -40,13 +40,13 @@ static bool loadModelForScene(Vector<GltfModel> &models, const char *filename, E
 
 bool readAssets()
 {
-    PodVector<char> buffer;
+    String buffer;
     const char *assetStr = "assets/assets.json";
     if(!loadBytes(assetStr, buffer))
         return false;
 
     JsonBlock json;
-    bool parseSuccess = json.parseJson(ArraySliceView(buffer.data(), buffer.size()));
+    bool parseSuccess = json.parseJson(StringView(buffer.data(), buffer.size()));
 
     if(!parseSuccess)
     {

@@ -2,10 +2,7 @@
 
 #include <core/assert.h>
 #include <core/mytypes.h>
-
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <core/general.h>
 
 template<uint32_t N>
 class StackString
@@ -67,7 +64,12 @@ public:
         if(!s)
             return false;
 
-        return strncmp(s, str, size) == 0;
+        for(uint32_t i = 0; i < size; ++i)
+        {
+            if(s[i] != str[i])
+                return false;
+        }
+        return true;
     }
 
 

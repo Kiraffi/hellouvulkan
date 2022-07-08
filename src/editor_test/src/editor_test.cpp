@@ -10,7 +10,6 @@
 #include <core/vulkan_app.h>
 #include <core/writejson.h>
 
-#include <container/arraysliceview.h>
 #include <container/stackstring.h>
 
 #include <gui/editorsystem.h>
@@ -41,8 +40,6 @@
 #include <render/viewport.h>
 
 #include <scene/scene.h>
-
-#include <string.h>
 
 static constexpr int SCREEN_WIDTH = 1024;
 static constexpr int SCREEN_HEIGHT = 768;

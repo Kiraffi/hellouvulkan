@@ -7,8 +7,6 @@
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
 
-#include <container/arraysliceview.h>
-
 #include <math/general_math.h>
 #include <math/matrix.h>
 #include <math/plane.h>

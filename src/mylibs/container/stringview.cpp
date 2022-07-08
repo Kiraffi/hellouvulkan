@@ -1,9 +1,9 @@
 #include "stringview.h"
 
+#include <container/string.h>
+
 #include <core/assert.h>
 #include <core/mytypes.h>
-
-#include <string.h>
 
 StringView::StringView(const char *s)
 {
@@ -12,9 +12,12 @@ StringView::StringView(const char *s)
         length = 0;
         ptr = nullptr;
     }
-    ptr = s;
-    while(*s++ != '\0') 
-        ++length;
+    else
+    {
+        ptr = s;
+        while(*s++ != '\0')
+            ++length;
+    }
 }
 
 StringView::StringView(const char *s, uint32_t len)
@@ -28,6 +31,16 @@ StringView::StringView(const char *s, uint32_t len)
     while(*s++ != '\0' && length < len)
         ++length;
 }
+
+StringView::StringView(const String &s)
+{
+    const char *b = s.begin();
+    ptr = b;
+
+    while(*b++ != '\0' && length < s.getSize())
+        ++length;
+}
+
 
 const char &StringView::operator[] (uint32_t index) const
 {

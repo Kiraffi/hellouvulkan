@@ -29,7 +29,6 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-
 #include <render/convertrendertarget.h>
 #include <render/lightrendersystem.h>
 #include <render/linerendersystem.h>

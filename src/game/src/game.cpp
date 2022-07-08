@@ -9,8 +9,6 @@
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
 
-#include <container/arraysliceview.h>
-
 #include <gui/componentviews.h>
 
 #include <math/general_math.h>
@@ -40,8 +38,6 @@
 
 
 #include <scene/scene.h>
-
-#include <string.h>
 
 static constexpr int SCREEN_WIDTH = 1024;
 static constexpr int SCREEN_HEIGHT = 768;

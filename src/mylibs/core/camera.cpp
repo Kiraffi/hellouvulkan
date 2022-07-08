@@ -1,6 +1,8 @@
 
 #include "camera.h"
 
+#include <core/general.h>
+
 #include <math/general_math.h>
 #include <math/matrix.h>
 #include <math/matrix_inline_functions.h>
@@ -10,7 +12,6 @@
 #include <render/font_render.h>
 
 #include <math.h>
-#include <stdio.h>
 
 void Camera::updateCameraState(float width, float height)
 {

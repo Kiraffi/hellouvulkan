@@ -1,8 +1,10 @@
 #pragma once
 
 #include <resources/animationresource.h>
-#include <container/podvector.h>
 #include <scene/gameentity.h>
+
+template<typename T>
+class PodVector;
 
 struct AnimationState
 {

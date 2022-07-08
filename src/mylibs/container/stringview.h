@@ -1,12 +1,15 @@
 #pragma once
 #include <stdint.h>
 
+class String;
+
 class StringView
 {
 public:
     StringView() : ptr(nullptr), length(0) {}
     StringView(const char *s);
     StringView(const char *s, uint32_t len);
+    StringView(const String &s);
     
     const char *const begin() const { return ptr; }
     const char *const end() const { return ptr + length; }
