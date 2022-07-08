@@ -17,7 +17,7 @@ struct Foos
 };
 void testMemory(bool forceDefrag)
 {
-    ByteBuffer buff(8);
+    ByteBuffer buff(8, BufferType::UNKNOWN);
     buff.reserve(40);
     PodVector<Foos> foos{ Foos{1000, 1000}, Foos{1002, 1200}} ;
 

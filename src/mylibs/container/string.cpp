@@ -9,13 +9,13 @@ static void stringPushbackChar(ByteBuffer &buffer, char c)
     buffer.insertIndex(buffer.getSize(), (uint8_t *)(&c));
 }
 
-String::String() : buffer(1)
+String::String() : buffer(1, BufferType::STRING)
 {
     buffer.clear();
     stringPushbackChar(buffer, '\0');
 }
 
-String::String(const char *s) : buffer(1)
+String::String(const char *s) : buffer(1, BufferType::STRING)
 {
     while (s && *s)
     {
@@ -24,7 +24,7 @@ String::String(const char *s) : buffer(1)
     stringPushbackChar(buffer, '\0');
 }
 
-String::String(const char *s, uint32_t len) : buffer(1)
+String::String(const char *s, uint32_t len) : buffer(1, BufferType::STRING)
 {
     uint32_t l = 0;
     while (s && *s && l < len)
@@ -35,7 +35,7 @@ String::String(const char *s, uint32_t len) : buffer(1)
     stringPushbackChar(buffer, '\0');
 }
 
-String::String(const String &s) : buffer(1)
+String::String(const String &s) : buffer(1, BufferType::STRING)
 {
     *this = s;
 }

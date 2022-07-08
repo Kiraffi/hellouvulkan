@@ -8,7 +8,7 @@
 class VectorBase
 {
 public:
-    VectorBase(uint32_t size) : buffer(size) {}
+    VectorBase(uint32_t size, BufferType bufferType) : buffer(size, bufferType) {}
     virtual ~VectorBase() { buffer.~ByteBuffer(); }
 
     void reserve(uint32_t newSize) { buffer.reserve(newSize); }

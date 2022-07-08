@@ -61,14 +61,14 @@ Vector<T>::~Vector()
 
 
 template <typename T>
-Vector<T>::Vector() : VectorBase(sizeof(T))
+Vector<T>::Vector() : VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
 }
 
 /*
 template <typename T>
-Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T))
+Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
     resize(size);
@@ -77,7 +77,7 @@ Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T))
 */
 
 template <typename T>
-Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T))
+Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
     if(b >= e)
@@ -94,7 +94,7 @@ Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T))
 }
 
 template <typename T>
-Vector<T>::Vector(const Vector<T> &vec) : VectorBase(sizeof(T))
+Vector<T>::Vector(const Vector<T> &vec) : VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
     // operator=-function
@@ -102,17 +102,18 @@ Vector<T>::Vector(const Vector<T> &vec) : VectorBase(sizeof(T))
 }
 
 template <typename T>
-Vector<T>::Vector(Vector &&other) noexcept : VectorBase(sizeof(T))
+Vector<T>::Vector(Vector &&other) noexcept : VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
     clear();
     buffer.reset();
     buffer = other.buffer;
-    new (&other.buffer) ByteBuffer(sizeof(T));
+    new (&other.buffer) ByteBuffer(sizeof(T), BufferType::VECTOR);
 }
 
 template <typename T>
-Vector<T>::Vector(const std::initializer_list<T> &initializerList) : VectorBase(sizeof(T))
+Vector<T>::Vector(const std::initializer_list<T> &initializerList) :
+    VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
     uint32_t size = initializerList.size();
@@ -148,7 +149,7 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
         new(ptr)T(value);
         ptr++;
     }
-    
+
     return *this;
 }
 
@@ -193,7 +194,7 @@ void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
             ++ptr;
             ++currSize;
         }
-    } 
+    }
 }
 
 

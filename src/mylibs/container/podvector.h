@@ -61,14 +61,14 @@ public:
 
 
 template <typename T>
-PodVector<T>::PodVector() : VectorBase(sizeof(T))
+PodVector<T>::PodVector() : VectorBase(sizeof(T), BufferType::PODVECTOR)
 {
     CHECK_POD_MACRO();
 }
 
 /*
 template <typename T>
-PodVector<T>::PodVector(uint32_t size) : VectorBase(sizeof(T))
+PodVector<T>::PodVector(uint32_t size) : VectorBase(sizeof(T), BufferType::PODVECTOR)
 {
     CHECK_POD_MACRO();
     const T t{};
@@ -77,7 +77,7 @@ PodVector<T>::PodVector(uint32_t size) : VectorBase(sizeof(T))
 */
 
 template <typename T>
-PodVector<T>::PodVector(const T *b, const T* e) : VectorBase(sizeof(T))
+PodVector<T>::PodVector(const T *b, const T* e) : VectorBase(sizeof(T), BufferType::PODVECTOR)
 {
     CHECK_POD_MACRO();
     ASSERT(b < e);
@@ -89,7 +89,7 @@ PodVector<T>::PodVector(const T *b, const T* e) : VectorBase(sizeof(T))
 }
 
 template <typename T>
-PodVector<T>::PodVector(const PodVector<T> &vec) : VectorBase(sizeof(T))
+PodVector<T>::PodVector(const PodVector<T> &vec) : VectorBase(sizeof(T), BufferType::PODVECTOR)
 {
     CHECK_POD_MACRO();
     // operator=-function
@@ -97,16 +97,17 @@ PodVector<T>::PodVector(const PodVector<T> &vec) : VectorBase(sizeof(T))
 }
 
 template <typename T>
-PodVector<T>::PodVector(PodVector &&other) noexcept : VectorBase(sizeof(T))
+PodVector<T>::PodVector(PodVector &&other) noexcept : VectorBase(sizeof(T), BufferType::PODVECTOR)
 {
     CHECK_POD_MACRO();
     buffer.reset();
     buffer = other.buffer;
-    other.buffer = ByteBuffer(sizeof(T));
+    other.buffer = ByteBuffer(sizeof(T), BufferType::PODVECTOR);
 }
 
 template <typename T>
-PodVector<T>::PodVector(const std::initializer_list<T> &initializerList) : VectorBase(sizeof(T))
+PodVector<T>::PodVector(const std::initializer_list<T> &initializerList) :
+    VectorBase(sizeof(T), BufferType::PODVECTOR)
 {
     CHECK_POD_MACRO();
     uint32_t size = initializerList.size();

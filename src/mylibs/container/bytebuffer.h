@@ -2,19 +2,28 @@
 
 #include "mymemory.h"
 
+enum BufferType : uint16_t
+{
+    PODVECTOR,
+    VECTOR,
+    STRING,
+    UNKNOWN
+};
+
 struct ByteBufferData
 {
     uint32_t size = 0;
     uint32_t capasity = 0;
-    uint32_t dataTypeSize = 0;
     Memory memory {};
+    uint16_t dataTypeSize = 0;
+    BufferType dataBufferType = BufferType::UNKNOWN;
 };
 
 class ByteBuffer
 {
 public:
 
-    ByteBuffer(uint32_t dataTypeSize);
+    ByteBuffer(uint32_t dataTypeSize, BufferType bufferType);
     ~ByteBuffer();
     // just sets size to 0
     void clear();
@@ -36,6 +45,7 @@ public:
     uint32_t getSize() const { return bufferData.size; }
     uint32_t getCapasity() const { return bufferData.capasity; }
     uint32_t getDataSize() const { return bufferData.dataTypeSize; }
+
 private:
     ByteBufferData bufferData {};
 };

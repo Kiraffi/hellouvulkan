@@ -35,7 +35,7 @@ struct MemoryAutoRelease
 
 
 
-
+/*
 // Some templated versions for memory per struct type
 template<class T>
 struct MemoryType
@@ -58,3 +58,4 @@ MemoryType<T> allocateMemory(uint32_t count)
     uint32_t size = sizeof(T);
     return allocateMemoryBytes(size * count);
 }
+*/

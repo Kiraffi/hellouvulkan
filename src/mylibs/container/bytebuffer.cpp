@@ -5,15 +5,17 @@
 #include <core/mytypes.h>
 #include <core/timer.h>
 
-ByteBuffer::ByteBuffer(uint32_t dataTypeSize)
+ByteBuffer::ByteBuffer(uint32_t dataTypeSize, BufferType bufferType)
     : bufferData {
          .size = 0,
          .capasity = 0,
-         .dataTypeSize = dataTypeSize,
-         .memory = Memory{}
+         .memory = Memory{},
+         .dataTypeSize = uint16_t(dataTypeSize),
+         .dataBufferType = bufferType,
     }
 {
     ASSERT(dataTypeSize);
+    ASSERT(dataTypeSize < 65536u);
     //printf("ds: %u, ", dataTypeSize);
 }
 
