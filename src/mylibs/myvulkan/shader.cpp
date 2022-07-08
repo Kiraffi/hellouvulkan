@@ -203,7 +203,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
     if (uint32_t(shaderType) >= uint32_t(ShaderType::NumShaders))
         return false;
     uint32_t permutationIndex = 0;
-    String buffer;
+    PodVector<uint8_t> buffer;
 
     while(true)
     {
@@ -216,7 +216,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
         if (!fileExists(newFilename.getStr()))
             break;
 
-        if (!loadBytes(newFilename.getStr(), buffer))
+        if (!loadBytes(newFilename.getStr(), buffer.getBuffer()))
             return false;
 
         ASSERT(buffer.size() % 4 == 0);

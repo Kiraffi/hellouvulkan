@@ -49,6 +49,8 @@ public:
     uint32_t length() const { return buffer.getSize() - 1; }
     uint32_t size() const { return buffer.getSize() - 1; }
 
+    ByteBuffer &getBuffer() { return buffer; }
+    const ByteBuffer &getBuffer() const { return buffer; }
 
 private:
     ByteBuffer buffer;

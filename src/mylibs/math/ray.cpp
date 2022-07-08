@@ -15,7 +15,7 @@ bool raySphereIntersect(const Ray &ray, const Sphere &sphere, HitPoint &outHitpo
     float eSq = sqrLen(e);
     float a = dot(e, ray.dir);
     float bSq = eSq - (a * a);
-    float f = sqrt(fabsf((rSq)-bSq));
+    float f = Supa::sqrtf(Supa::absf((rSq)-bSq));
 
     // Assume normal intersection!
     float t = a - f;

@@ -35,7 +35,6 @@ struct alignas(16) Matrix
     {}
     Matrix(const Mat3x4 &mat);
 
-
     float &operator[](uint32_t index) { return (&_00)[index]; }
     float operator[](uint32_t index) const { return (&_00)[index]; }
 

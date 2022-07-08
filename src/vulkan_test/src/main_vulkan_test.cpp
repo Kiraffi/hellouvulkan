@@ -10,12 +10,13 @@
 #include <unordered_set>
 
 
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-//#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
 
 #include <core/vulkan_app.h>
+#include <core/general.h>
 
 #include <core/timer.h>
 #include <core/transform.h>
@@ -713,7 +714,7 @@ void VulkanTest::run()
         //uniformValues.transforms[i] = modelMatrix;
 
         Matrix modelMatrix = transpose(getModelMatrix(transform));
-        memcpy(&uniformValues.transforms[i * 12], (float*)(&modelMatrix), sizeof(float) * 12);
+        Supa::memcpy(&uniformValues.transforms[i * 12], (float*)(&modelMatrix), sizeof(float) * 12);
 
         float newangle = rand() / float(RAND_MAX) * pii * 2.0f;
 
@@ -830,9 +831,9 @@ void VulkanTest::run()
             float divider = std::max(1.0e-9f, std::min(1.0f, f));
             float cosAngle = dot(Vec3(0.0f, 0.0f, 1.0f), normalize(Vec3(1.0f / divider, 1.0f, 1.0f)));
             uniformValues.cameraPerspectionAdding.x = cosAngle;
-            uniformValues.cameraPerspectionAdding.y = std::acos(cosAngle);
+            uniformValues.cameraPerspectionAdding.y = Supa::acos(cosAngle);
             uniformValues.someValues[0] = drawCount;
-            //printf("Cos angle: %f\n", glm::degrees(glm::acos(cosAngle)));
+            //printf("Cos angle: %f\n", glm::degrees(Supa::acos(cosAngle)));
             for(u32 i = 0; i < drawCount; ++i)
             {
                 Transform &transform = meshTransforms[i];
@@ -840,21 +841,21 @@ void VulkanTest::run()
                 transform.pos = transform.pos + (dirs[i] * deltaTime * 10.0f);
 
                 Matrix modelMatrix = transpose(getModelMatrix(transform));
-                memcpy(&uniformValues.transforms[i * 12], (float*)(&modelMatrix), sizeof(float) * 12);
+                Supa::memcpy(&uniformValues.transforms[i * 12], (float*)(&modelMatrix), sizeof(float) * 12);
 
                 if(transform.pos.x > 20.0f|| transform.pos.x < -20.0f)
                 {
-                    transform.pos.x = clamp(transform.pos.x, -20.0f, 20.0f);
+                    transform.pos.x = Supa::clampf(transform.pos.x, -20.0f, 20.0f);
                     dirs[i].x = -dirs[i].x;
                 }
                 if(transform.pos.y > 20.0f|| transform.pos.y < -20.0f)
                 {
-                    transform.pos.y = clamp(transform.pos.y, -20.0f, 20.0f);
+                    transform.pos.y = Supa::clampf(transform.pos.y, -20.0f, 20.0f);
                     dirs[i].y = -dirs[i].y;
                 }
                 if(transform.pos.z > 80.0f|| transform.pos.z < 10.0f)
                 {
-                    transform.pos.z = clamp(transform.pos.z, 10.0f, 80.0f);
+                    transform.pos.z = Supa::clampf(transform.pos.z, 10.0f, 80.0f);
                     dirs[i].z = -dirs[i].z;
                 }
             }
@@ -863,7 +864,7 @@ void VulkanTest::run()
             // Copy to uniform buffer
             {
                 // use scratch buffer to unifrom buffer transfer
-                memcpy(scratchBuffer.data, &uniformValues, sizeof(UniformValues));
+                Supa::memcpy(scratchBuffer.data, &uniformValues, sizeof(UniformValues));
 
                 VkBufferCopy region = { 0, 0, VkDeviceSize(sizeof(UniformValues)) };
                 vkCmdCopyBuffer(commandBuffer, scratchBuffer.buffer, buffers[UNIFORM_BUFFER].buffer, 1, &region);
@@ -876,7 +877,7 @@ void VulkanTest::run()
                 /*
                     void *data = nullptr;
                     VK_CHECK(vkMapMemory(device, buffers[UNIFORM_BUFFER].deviceMemory, 0, sizeof(UniformValues), 0, &data));
-                    memcpy(buffers[UNIFORM_BUFFER].data, &uniformValues, sizeof(UniformValues));
+                    Supa::memcpy(buffers[UNIFORM_BUFFER].data, &uniformValues, sizeof(UniformValues));
                     vkUnmapMemory(device, buffers[UNIFORM_BUFFER].deviceMemory);
                     VkBufferMemoryBarrier bar[]
                     {

@@ -216,7 +216,7 @@ static FORCE_INLINE float sqrLen(const Vector2 &a)
 
 static FORCE_INLINE float len(const Vector2 &a)
 {
-    return fsqrtf(a.x * a.x + a.y * a.y);
+    return Supa::sqrtf(a.x * a.x + a.y * a.y);
 }
 
 static FORCE_INLINE Vector2 lerp(const Vector2 &a, const Vector2 &b, float t)
@@ -236,7 +236,7 @@ static FORCE_INLINE Vector2 normalize(const Vector2 &a)
         return Vector2();
     }
     float l = sqrLen(a);
-    l = fsqrtf(l);
+    l = Supa::sqrtf(l);
     float perLen = 1.0f / l;
     return Vector2(a.x * perLen, a.y * perLen);
 }
@@ -395,7 +395,7 @@ static FORCE_INLINE float sqrLen(const Vector3 &a)
 
 static FORCE_INLINE float len(const Vector3 &a)
 {
-    return fsqrtf(a.x * a.x + a.y * a.y + a.z * a.z);
+    return Supa::sqrtf(a.x * a.x + a.y * a.y + a.z * a.z);
 }
 
 static FORCE_INLINE Vector3 lerp(const Vector3 &a, const Vector3 &b, float t)
@@ -415,7 +415,7 @@ static FORCE_INLINE Vector3 normalize(const Vector3 &a)
         return Vector3();
     }
     float l = sqrLen(a);
-    l = fsqrtf(l);
+    l = Supa::sqrtf(l);
     float perLen = 1.0f / l;
     return Vector3(a.x * perLen, a.y * perLen, a.z * perLen);
 }
@@ -613,7 +613,7 @@ static FORCE_INLINE float sqrLen(const Vector4 &a)
 
 static FORCE_INLINE float len(const Vector4 &a)
 {
-    return fsqrtf(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
+    return Supa::sqrtf(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
 }
 
 static FORCE_INLINE Vector4 lerp(const Vector4 &a, const Vector4 &b, float t)
@@ -634,7 +634,7 @@ static FORCE_INLINE Vector4 normalize(const Vector4 &a)
         return Vector4();
     }
     float l = sqrLen(a);
-    l = fsqrtf(l);
+    l = Supa::sqrtf(l);
     float perLen = 1.0f / l;
     return Vector4(a.x * perLen, a.y * perLen, a.z * perLen, a.w * perLen);
 }

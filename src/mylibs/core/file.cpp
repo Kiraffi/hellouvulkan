@@ -1,22 +1,22 @@
 #include "file.h"
 
-#include <core/general.h>
-#include <core/mytypes.h>
-
 #include <filesystem>
 #include <fstream>
 
-/* 
+#include <core/general.h>
+#include <core/mytypes.h>
+
+/*
 // for GetCurrentDirectory
-#ifdef _WIN32
+#ifdef WIN32
 #include <Windows.h>
 #endif
 */
 
-bool loadBytes(const char *filename, String &dataOut)
+bool loadBytes(const char *filename, ByteBuffer &dataOut)
 {
     /*
-#ifdef _WIN32
+#ifdef WIN32
     char buf[1024] = {};
     GetCurrentDirectory(1024, buf);
     //LOG("Buf: %s\n", buf);
@@ -32,7 +32,7 @@ bool loadBytes(const char *filename, String &dataOut)
         std::ifstream f(p, std::ios::in | std::ios::binary);
 
 
-        f.read(dataOut.data(), s);
+        f.read((char *)dataOut.getBegin(), s);
 
         //printf("filesize: %u\n", s);
         return true;
@@ -41,7 +41,7 @@ bool loadBytes(const char *filename, String &dataOut)
 }
 
 
-bool writeBytes(const char *filename, StringView bytes)
+bool writeBytes(const char *filename, const ByteBuffer &data)
 {
     //
     //if(std::filesystem::exists(filename))
@@ -51,8 +51,8 @@ bool writeBytes(const char *filename, StringView bytes)
 
         std::ofstream f(p, std::ios::out | std::ios::binary);
 
-        printf("Writing bytes: %u to :%s\n", uint32_t(bytes.size()), filename);
-        bool success = !(f.write((const char *)bytes.data(), bytes.size())).fail();
+        printf("Writing bytes: %u to :%s\n", data.getSize(), filename);
+        bool success = !(f.write((const char *)data.getBegin(), data.getSize())).fail();
         if(!success)
         {
             printf("failed to write file\n");

@@ -86,9 +86,9 @@ void Camera::lookAt(const Vec3 &targetPos)
 {
     Vec3 cameraDir = normalize(targetPos - position);
     roll = 0.0f;
-    
-    pitch = fasinf(cameraDir.y);
-    yaw = atan2f(-cameraDir.x, -cameraDir.z);
+
+    pitch = Supa::asinf(cameraDir.y);
+    yaw = Supa::atan2f(-cameraDir.x, -cameraDir.z);
 }
 
 Matrix Camera::getCameraMatrix(const Vector3 &target) const

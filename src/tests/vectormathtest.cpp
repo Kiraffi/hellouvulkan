@@ -174,7 +174,7 @@ void testVec3()
 
     {
         const Vec3 res = normalize(Vec3(1.0f, -2.0f, 2.0f));
-        ASSERT(fabs(res.x - 1.0f / 3.0f) < VecEpsilon && fabs(res.y + 2.0f / 3.0f) < VecEpsilon && fabs(res.z - 2.0f / 3.0f) < VecEpsilon);
+        ASSERT(Supa::absf(res.x - 1.0f / 3.0f) < VecEpsilon && Supa::absf(res.y + 2.0f / 3.0f) < VecEpsilon && Supa::absf(res.z - 2.0f / 3.0f) < VecEpsilon);
     }
 }
 
@@ -260,10 +260,10 @@ void testVec4()
     {
         const Vec4 res = normalize(Vec4(1.0f, -2.0f, 2.0f, -4.0f));
         ASSERT(
-            fabs(res.x - 1.0f / 5.0f) < VecEpsilon &&
-            fabs(res.y + 2.0f / 5.0f) < VecEpsilon &&
-            fabs(res.z - 2.0f / 5.0f) < VecEpsilon &&
-            fabs(res.w + 4.0f / 5.0f) < VecEpsilon);
+            Supa::absf(res.x - 1.0f / 5.0f) < VecEpsilon &&
+            Supa::absf(res.y + 2.0f / 5.0f) < VecEpsilon &&
+            Supa::absf(res.z - 2.0f / 5.0f) < VecEpsilon &&
+            Supa::absf(res.w + 4.0f / 5.0f) < VecEpsilon);
     }
 }
 

@@ -241,9 +241,9 @@ double evaluateSound(double time, double freq, int instrument)
 {
     double fqSampPoint = freq * time;
     double samp = fqSampPoint * 2.0 * Pi;
-    double t = ffmodd(fqSampPoint, 1.0);
+    double t = Supa::modd(fqSampPoint, 1.0);
 
-    auto f = [samp](float m) { return sin(m) ;};
+    auto f = [samp](float m) { return Supa::sind(m) ;};
     //auto f = [samp, t](float m) { return t < 0.5 ? 0.5 : -0.5; };
 
     switch(instrument)
@@ -384,7 +384,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                         break;
                     }
                     noteThread.phase = NotePlayPhase::Release;
-                    noteThread.releaseStart = ffminf(noteThread.runningTime, noteThread.releaseStart);
+                    noteThread.releaseStart = Supa::minf(noteThread.runningTime, noteThread.releaseStart);
 
                 }
                 case NotePlayPhase::Release:
@@ -408,7 +408,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
             if(noteThread.phase != NotePlayPhase::Finished)
             {
                 double timePoint = time - noteThread.startTime;
-                float duration = ffmaxd(0.005, noteMain.attackDuration + noteMain.decayDuration);
+                float duration = Supa::maxd(0.005, noteMain.attackDuration + noteMain.decayDuration);
                 double freq = Freqs[noteMain.note];
                 double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
                 value *= double(SAMPLE_POINTS);
@@ -460,7 +460,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                     break;
             }
         }
-        frameValue = ffclampd(-1.0, 1.0, frameValue);
+        frameValue = Supa::clampd(-1.0, 1.0, frameValue);
         for(uint32_t j = 0; j < DEVICE_CHANNELS; ++j)
             f32Out[i * DEVICE_CHANNELS + j] = frameValue;
 

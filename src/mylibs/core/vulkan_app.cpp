@@ -1,6 +1,6 @@
 #include "vulkan_app.h"
 
-#if _WIN32
+#if WIN32
     #include <Windows.h> // begintimeperiod
 #endif
 
@@ -8,23 +8,16 @@
 #include <GLFW/glfw3.h>
 
 #include <core/camera.h>
-#include <core/general.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
 
-#include <container/mymemory.h>
-
-#include <math/general_math.h>
-#include <math/matrix_inline_functions.h>
 #include <math/quaternion_inline_functions.h>
+#include <math/vector3_inline_functions.h>
 
 #include <myvulkan/myvulkan.h>
-#include <myvulkan/vulkanresources.h>
 
 #include <resources/globalresources.h>
 
-//#include <chrono>
 #include <thread>
 
 
@@ -285,11 +278,11 @@ void VulkanApp::run()
         }
         defragMemory();
 
-        #if _WIN32
+        #if WIN32
             timeBeginPeriod(1);
         #endif
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        #if _WIN32
+        #if WIN32
             timeEndPeriod(1);
         #endif
         // needed cos of resize?
@@ -407,9 +400,9 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
         camera.roll -= rotationSpeed;
     }
 
-    camera.pitch = clamp(camera.pitch, -0.499f * PI, 0.4999f * PI);
-    camera.yaw = ffmodf(camera.yaw, 2.0f * PI);
-    camera.roll = ffmodf(camera.roll, 2.0f * PI);
+    camera.pitch = Supa::clampf(camera.pitch, -0.499f * PI, 0.4999f * PI);
+    camera.yaw = Supa::modf(camera.yaw, 2.0f * PI);
+    camera.roll = Supa::modf(camera.roll, 2.0f * PI);
 
     Vec3 rightDir;
     Vec3 upDir;

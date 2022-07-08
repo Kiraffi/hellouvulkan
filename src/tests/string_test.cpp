@@ -2,19 +2,17 @@
 #include <core/assert.h>
 #include <core/general.h>
 
-#include <string.h>
-
 static void testStringValidness(const String &s, const char *str)
 {
-    uint32_t len = strlen(str);
+    uint32_t len = Supa::strlen(str);
     ASSERT(s.length() == len);
     ASSERT(s.getStr() != nullptr);
-    ASSERT(memcmp(s.getStr(), str, len + 1) == 0);
+    ASSERT(Supa::memcmp(s.getStr(), str, len + 1) == 0);
 }
 
 static void testStringValidnessFloat(const String &s, const char *str)
 {
-    uint32_t len = strlen(str);
+    uint32_t len = Supa::strlen(str);
     uint32_t len2 = s.length();
     ASSERT(len <= len2);
     uint32_t i = 0;

@@ -400,18 +400,18 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
 
                 if(accessor.componentType == GltfBufferComponentType::FLOAT_32)
                 {
-                    memcpy(writeValue, ptr, componentTypeBitCount);
+                    Supa::memcpy(writeValue, ptr, componentTypeBitCount);
                 }
                 else if(accessor.componentType == GltfBufferComponentType::UINT_16 && accessor.normalized)
                 {
                     uint16_t tmp = 0;
-                    memcpy(&tmp, ptr, componentTypeBitCount);
+                    Supa::memcpy(&tmp, ptr, componentTypeBitCount);
                     *writeValue = ( float )tmp / 65535.0f;
                 }
                 else if(accessor.componentType == GltfBufferComponentType::UINT_8 && accessor.normalized)
                 {
                     uint8_t tmp = 0;
-                    memcpy(&tmp, ptr, componentTypeBitCount);
+                    Supa::memcpy(&tmp, ptr, componentTypeBitCount);
                     *writeValue = ( float )tmp / 255.0f;
                 }
 
@@ -443,12 +443,12 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
 
                 if(componentTypeBitCount == 4)
                 {
-                    memcpy(writeValue, ptr, componentTypeBitCount);
+                    Supa::memcpy(writeValue, ptr, componentTypeBitCount);
                 }
                 else if(componentTypeBitCount == 2)
                 {
                     uint16_t tmp = 0;
-                    memcpy(&tmp, ptr, componentTypeBitCount);
+                    Supa::memcpy(&tmp, ptr, componentTypeBitCount);
                     *writeValue = tmp;
                 }
                 else if(componentTypeBitCount == 1)
@@ -482,9 +482,9 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 {
     GltfData data;
 
-    String buffer;
+    PodVector<char> buffer;
 
-    if(!loadBytes(filename, buffer))
+    if(!loadBytes(filename, buffer.getBuffer()))
         return false;
 
     JsonBlock bl;
@@ -1047,7 +1047,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
             //printf("\n\n");
             for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
             {
-                inverseMatrices[i] = transpose(inverseMatrices[i]);
+                inverseMatrices[i]= transpose(inverseMatrices[i]);;
                 outModel.inverseMatrices[i] = inverseMatrices[i];
                 /*
                 uint32_t nodeJointIndex = skinNode.joints[i];
@@ -1207,20 +1207,20 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                 {
                     for(uint32_t ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
                     {
-                        animStartTime = ffminf(animStartTime, outModel.animationPosData[ind].timeStamp);
-                        animEndTime = ffmaxf(animEndTime, outModel.animationPosData[ind].timeStamp);
+                        animStartTime = Supa::minf(animStartTime, outModel.animationPosData[ind].timeStamp);
+                        animEndTime = Supa::maxf(animEndTime, outModel.animationPosData[ind].timeStamp);
                     }
 
                     for(uint32_t ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
                     {
-                        animStartTime = ffminf(animStartTime, outModel.animationRotData[ind].timeStamp);
-                        animEndTime = ffmaxf(animEndTime, outModel.animationRotData[ind].timeStamp);
+                        animStartTime = Supa::minf(animStartTime, outModel.animationRotData[ind].timeStamp);
+                        animEndTime = Supa::maxf(animEndTime, outModel.animationRotData[ind].timeStamp);
                     }
 
                     for(uint32_t ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
                     {
-                        animStartTime = ffminf(animStartTime, outModel.animationScaleData[ind].timeStamp);
-                        animEndTime = ffmaxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
+                        animStartTime = Supa::minf(animStartTime, outModel.animationScaleData[ind].timeStamp);
+                        animEndTime = Supa::maxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
                     }
                 }
                 outModel.animStartTimes[animationIndex] = animStartTime;
@@ -1299,8 +1299,8 @@ static bool interpolateBetweenPoses(const EvaluateBoneParams &params, uint32_t j
 
     auto getInterpolationValue = [](float prevTime, float nextTime, float currTime)
     {
-        currTime = ffmaxf(prevTime, currTime);
-        currTime = ffminf(nextTime, currTime);
+        currTime = Supa::maxf(prevTime, currTime);
+        currTime = Supa::minf(nextTime, currTime);
         float duration = (nextTime - prevTime);
 
         float frac = duration > 0.0f ? (currTime - prevTime) / duration : 1.0f;
@@ -1447,7 +1447,7 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
     for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
     {
         auto &t = mutableTransforms[index];
-        memset(&t, 0, sizeof(Transform));
+        Supa::memset(&t, 0, sizeof(Transform));
     }
     float totalWeight = 0.0f;
     for(uint32_t i = 0; i < AnimationState::AMOUNT; ++i)

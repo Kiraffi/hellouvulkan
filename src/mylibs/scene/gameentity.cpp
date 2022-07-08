@@ -12,7 +12,7 @@ bool findEntityType(const char *name, EntityType &outType)
 {
     for(const auto entityName : nameStrings)
     {
-        if(strcmp(name, entityName.name) == 0)
+        if(Supa::strcmp(name, entityName.name) == 0)
         {
             outType = entityName.type;
             return true;

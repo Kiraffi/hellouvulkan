@@ -36,7 +36,7 @@ static FORCE_INLINE Quaternion normalize(const Quaternion &q)
         return Quaternion();
     }
     float sqrLength = q.v.x * q.v.x + q.v.y * q.v.y + q.v.z * q.v.z + q.w * q.w;
-    float length = 1.0f / fsqrtf(sqrLength);
+    float length = 1.0f / Supa::sqrtf(sqrLength);
     Quaternion result{ Uninit };
     result.v.x = q.v.x * length;
     result.v.y = q.v.y * length;
@@ -78,12 +78,12 @@ static FORCE_INLINE void getAxis(const Quaternion &quat, Vector3 &right, Vector3
 
 static FORCE_INLINE Quaternion getQuaternionFromAxisAngle(const Vector3 &v, float angle)
 {
-    float s = fsinf(angle * 0.5f);
+    float s = Supa::sinf(angle * 0.5f);
 
     Quaternion result;
     result.v = normalize(v) * s;
 
-    result.w = fcosf(angle * 0.5f);
+    result.w = Supa::cosf(angle * 0.5f);
     return result;
 }
 
@@ -97,14 +97,14 @@ static FORCE_INLINE Quaternion getQuaternionFromNormalizedVectors(const Vector3 
     else if(d <= -1.0f + 1e-5f)
     {
         // Generate a rotation axis to do 180 degree rotation
-        if(ffabsf(from.x) < 0.707f)
+        if(Supa::absf(from.x) < 0.707f)
             return getQuaternionFromAxisAngle(normalize(cross(Vector3(1.0f, 0.0f, 0.0f), from)), PI);
         else
             return getQuaternionFromAxisAngle(normalize(cross(Vector3(0.0f, 1.0f, 0.0f), from)), PI);
     }
     else
     {
-        float s = fsqrtf((1.0f + d) * 2.0f);
+        float s = Supa::sqrtf((1.0f + d) * 2.0f);
         result.v = cross(from, toVector);
         result.w = 0.5f * s;
         return normalize(result);
@@ -163,14 +163,14 @@ static FORCE_INLINE Quaternion slerp(Quaternion const &q1, Quaternion const &q2,
         return normalize(result);
     }
 
-    float theta0 = acosf(dotAngle);
+    float theta0 = Supa::acosf(dotAngle);
     float theta = theta0 * t;
 
-    float sinTheta = sinf(theta);
-    float sinTheta0 = sinf(theta0);
+    float sinTheta = Supa::sinf(theta);
+    float sinTheta0 = Supa::sinf(theta0);
 
     float s2 = sinTheta / sinTheta0;
-    float s1 = cosf(theta) - dotAngle * s2;
+    float s1 = Supa::cosf(theta) - dotAngle * s2;
 
     Quaternion result;
     result = q1 * s1;

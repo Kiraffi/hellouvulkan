@@ -19,6 +19,9 @@ public:
     uint32_t getDataSize() const { return buffer.getDataSize(); }
     bool empty() const { return size() == 0u; }
 
+    ByteBuffer &getBuffer() { return buffer; }
+    const ByteBuffer &getBuffer() const { return buffer; }
+
 protected:
     void doClear() { buffer.clear(); }
     uint8_t* getBegin() const { return buffer.getBegin(); }

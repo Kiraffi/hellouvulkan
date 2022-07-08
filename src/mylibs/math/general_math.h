@@ -10,12 +10,3 @@ static inline float toDegrees(float angle)
 {
     return float(180.0f / Pi * angle);
 }
-
-
-template<class T>
-static inline T clamp(T v, T a, T b)
-{
-    v = v < b ? v : b;
-    v = v > a ? v : a;
-    return v;
-}

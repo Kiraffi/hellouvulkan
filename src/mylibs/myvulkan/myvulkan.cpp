@@ -8,7 +8,6 @@
 #include <container/string.h>
 #include <container/stringview.h>
 
-#include <core/general.h>
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
 
@@ -1779,7 +1778,7 @@ void beginDebugRegion(const char *pMarkerName, Vec4 color)
     {
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-        memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+        Supa::memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
         markerInfo.pMarkerName = pMarkerName;
         pfnCmdDebugMarkerBegin(vulk->commandBuffer, &markerInfo);
     }
@@ -1793,7 +1792,7 @@ void insertDebugRegion(const char *markerName, Vec4 color)
     {
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-        memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+        Supa::memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
         markerInfo.pMarkerName = markerName;
         pfnCmdDebugMarkerInsert(vulk->commandBuffer, &markerInfo);
     }

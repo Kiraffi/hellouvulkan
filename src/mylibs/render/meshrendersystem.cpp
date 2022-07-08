@@ -12,7 +12,6 @@
 
 #include <scene/scene.h>
 
-
 #include <stb_image.h>
 
 

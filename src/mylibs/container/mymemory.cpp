@@ -68,15 +68,16 @@ struct AllMemory
                 printf("Allocation pointer: %p\n", memoryAreas[i].ptrOfAddress);
             }
             #endif //PRINT_ALLOCATION_ADDRESS
+            ASSERT(false);
         }
-        if(memory)
-            delete[] memory;
-        memory = nullptr;
+        if(memoryAll)
+            delete[] memoryAll;
+        memoryAll = nullptr;
         memoryAligned = nullptr;
         allMemory = nullptr;
     }
 
-    uint8_t *memory = nullptr;
+    uint8_t *memoryAll = nullptr;
     uint8_t *memoryAligned = nullptr;
 
     MemoryArea memoryAreas[MaxAllocations] = {};
@@ -112,9 +113,9 @@ static void initMemoryReal()
     if(allMemory)
         return;
     allMemory = new AllMemory();
-    allMemory->memory = new uint8_t[AllocatedSize];
+    allMemory->memoryAll = new uint8_t[AllocatedSize];
     uint8_t *newAlignedData =
-        (uint8_t *)((((uintptr_t)allMemory->memory) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
+        (uint8_t *)((((uintptr_t)allMemory->memoryAll) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
 
     allMemory->memoryAligned = newAlignedData;
     allMemory->inited = true;
@@ -147,6 +148,7 @@ void initMemory()
 {
     if(allMemory)
         printf("Allocations at init memory: %u\n", allMemory->allocationCount);
+    ASSERT(allMemory == nullptr);
     initMemoryReal();
 }
 
@@ -342,7 +344,7 @@ Memory resizeMemory(Memory memory, uint32_t size)
         }
         uint32_t newHandle = getHandleIndex(newMemory);
         MemoryArea &newArea = allMemory->memoryAreas[newHandle];
-        memmove(allMemory->memoryAligned + newArea.startLocation,
+        Supa::memmove(allMemory->memoryAligned + newArea.startLocation,
             allMemory->memoryAligned + oldArea.startLocation, oldArea.size);
 
         deAllocateMemory(memory);
@@ -371,7 +373,7 @@ void defragMemory()
         ASSERT(memoryCount <= area.startLocation);
         if(memoryCount < area.startLocation)
         {
-            memmove(allMemory->memoryAligned + memoryCount, allMemory->memoryAligned + area.startLocation, area.size);
+            Supa::memmove(allMemory->memoryAligned + memoryCount, allMemory->memoryAligned + area.startLocation, area.size);
             area.startLocation = memoryCount;
         }
         memoryCount += area.size;
@@ -390,7 +392,7 @@ void defragMemory()
 
 bool isValidMemory(Memory memory)
 {
-    if (allMemory->memory == nullptr || allMemory->memoryAligned == nullptr)
+    if (allMemory->memoryAll == nullptr || allMemory->memoryAligned == nullptr)
         return false;
     uint32_t handleIndex = getHandleIndex(memory);
     uint32_t iteration = getHandleIteration(memory);

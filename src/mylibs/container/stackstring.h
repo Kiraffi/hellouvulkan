@@ -56,7 +56,7 @@ public:
         if(s.size != size)
             return false;
 
-        return memcmp(s.str, str, size) == 0;
+        return Supa::memcmp(s.str, str, size) == 0;
     }
 
     bool operator == (const char *s) const
@@ -79,7 +79,7 @@ public:
         uint32_t charCount = size < buffLenWithZeroTerminator - 1 ? size : buffLenWithZeroTerminator - 1;
         if(charCount > 0)
         {
-            memcpy(outStr, str, charCount);
+            Supa::memcpy(outStr, str, charCount);
             outStr[charCount] = '\0';
         }
     }

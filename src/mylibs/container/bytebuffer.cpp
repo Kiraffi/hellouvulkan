@@ -40,7 +40,7 @@ void ByteBuffer::copyFrom(const ByteBuffer &other)
 {
     bufferData.dataTypeSize = other.bufferData.dataTypeSize;
     reserve(other.bufferData.capasity);
-    memmove(getBegin(), other.getBegin(), other.bufferData.size * other.bufferData.dataTypeSize);
+    Supa::memmove(getBegin(), other.getBegin(), other.bufferData.size * other.bufferData.dataTypeSize);
 
     bufferData.size = other.bufferData.size;
 }
@@ -48,7 +48,7 @@ void ByteBuffer::copyFrom(const ByteBuffer &other)
 void ByteBuffer::copyFromArray(uint8_t *arr, uint32_t count)
 {
     reserve(count * bufferData.size);
-    memmove(getBegin(), arr, count * bufferData.dataTypeSize);
+    Supa::memmove(getBegin(), arr, count * bufferData.dataTypeSize);
 
     bufferData.size = count;
 }
@@ -65,7 +65,7 @@ void ByteBuffer::reserve(uint32_t indices)
 
 void ByteBuffer::resize(uint32_t dstIndiceCount)
 {
-    
+
     if(bufferData.capasity < dstIndiceCount)
     {
         if(bufferData.capasity * 2 > dstIndiceCount)
@@ -83,7 +83,7 @@ void ByteBuffer::resize(uint32_t newSize, uint8_t *defaultValue)
     uint8_t *ptr = getBegin() + oldSize * bufferData.dataTypeSize;
     while(oldSize < newSize)
     {
-        memmove(ptr, defaultValue, bufferData.dataTypeSize);
+        Supa::memmove(ptr, defaultValue, bufferData.dataTypeSize);
         ptr += bufferData.dataTypeSize;
         ++oldSize;
     }
@@ -104,7 +104,7 @@ void ByteBuffer::insertIndex(uint32_t index)
     if(index < bufferData.size)
     {
         uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
-        memmove(startPtr + bufferData.dataTypeSize, startPtr,
+        Supa::memmove(startPtr + bufferData.dataTypeSize, startPtr,
             bufferData.dataTypeSize * (bufferData.size - index));
     }
     bufferData.size += 1;
@@ -115,7 +115,7 @@ void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
     //bytebufferTimer.continueTimer();
     insertIndex(index);
     uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
-    memmove(startPtr, obj, bufferData.dataTypeSize);
+    Supa::memmove(startPtr, obj, bufferData.dataTypeSize);
     //bytebufferTimer.pauseTimer();
 }
 
@@ -128,7 +128,7 @@ void ByteBuffer::removeIndex(uint32_t index)
     if (index < bufferData.size - 1)
     {
         uint8_t *myBegin = getMemoryBegin(bufferData.memory);
-        memmove(getBegin() + index * bufferData.dataTypeSize,
+        Supa::memmove(getBegin() + index * bufferData.dataTypeSize,
             getBegin() + (index + 1) * bufferData.dataTypeSize,
             bufferData.dataTypeSize * (bufferData.size - (index + 1))
         );
@@ -142,8 +142,8 @@ uint8_t *ByteBuffer::getDataIndex(uint32_t index) const
     ASSERT(index < bufferData.size);
     if (index >= bufferData.size)
         return nullptr;
-
-    return getBegin() + index * bufferData.dataTypeSize;
+    uint8_t *beg = getBegin();
+    return beg + index * bufferData.dataTypeSize;
 }
 
 uint8_t *ByteBuffer::getBegin() const

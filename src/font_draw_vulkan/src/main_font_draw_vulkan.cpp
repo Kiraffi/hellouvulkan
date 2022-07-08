@@ -17,6 +17,8 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
+#include <string>
+
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
@@ -57,13 +59,13 @@ public:
 
     Pipeline graphicsPipeline;
 
-    String fontFilename;
+    std::string fontFilename;
 
     char buffData[12] = {};
     int32_t chosenLetter = 'a';
 
     PodVector<GPUVertexData> vertData;
-    String characterData;
+    PodVector<char> characterData;
 
     static constexpr VkClearValue colorClear = { .color{ 0.0f, 0.5f, 1.0f, 1.0f } };
 };
@@ -169,13 +171,11 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 bool VulkanFontDraw::initRun()
 {
     const uint32_t charCount = 128 - 32;
-
-    if (!loadBytes(fontFilename.getStr(), characterData))
+    if (!loadBytes(fontFilename.c_str(), characterData.getBuffer()))
     {
-        printf("Failed to load file: %s\n", fontFilename.getStr());
+        printf("Failed to load file: %s\n", fontFilename.c_str());
         return false;
     }
-
 
     vertData.resize(12 * 8 * (charCount + 1) + 1);
 
@@ -285,10 +285,10 @@ void VulkanFontDraw::logicUpdate()
         }
 
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            writeBytes(fontFilename.getStr(), StringView(characterData));
+            writeBytes(fontFilename.c_str(), characterData.getBuffer());
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
-            loadBytes(fontFilename.getStr(), characterData);
+            loadBytes(fontFilename.c_str(), characterData.getBuffer());
 
         if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {
@@ -396,7 +396,7 @@ void VulkanFontDraw::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    String filename;
+    std::string filename;
     if (argCount < 2)
     {
         filename = "assets/font/new_font.dat";

@@ -68,5 +68,5 @@ bool StringView::operator==(StringView other) const
         return false;
     if(ptr == other.ptr)
         return true;
-    return memcmp(ptr, other.ptr, length) == 0;
+    return Supa::memcmp(ptr, other.ptr, length) == 0;
 }

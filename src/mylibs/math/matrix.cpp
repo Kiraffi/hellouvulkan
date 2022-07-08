@@ -7,7 +7,6 @@
 
 #include <math.h>
 
-
 Matrix::Matrix(const Mat3x4 &mat)
     : _00(mat._00), _01(mat._01), _02(mat._02), _03(mat._03)
     , _10(mat._10), _11(mat._11), _12(mat._12), _13(mat._13)
@@ -15,7 +14,7 @@ Matrix::Matrix(const Mat3x4 &mat)
     , _30(0.0f), _31(0.0f), _32(0.0f), _33(1.0f)
 {}
 
-Mat3x4::Mat3x4(const Matrix &mat) 
+Mat3x4::Mat3x4(const Matrix &mat)
     : _00(mat._00), _01(mat._01), _02(mat._02), _03(mat._03)
     , _10(mat._10), _11(mat._11), _12(mat._12), _13(mat._13)
     , _20(mat._20), _21(mat._21), _22(mat._22), _23(mat._23)
@@ -51,9 +50,9 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
 {
     Matrix result;
 
-    ASSERT(ffabsf(width) >= 1.0f);
-    ASSERT(ffabsf(height) >= 1.0f);
-    ASSERT(ffabsf(farPlane - nearPlane) > 0.00001f);
+    ASSERT(Supa::absf(width) >= 1.0f);
+    ASSERT(Supa::absf(height) >= 1.0f);
+    ASSERT(Supa::absf(farPlane - nearPlane) > 0.00001f);
 
     float fRange = 1.0f / (farPlane - nearPlane);
 
@@ -68,12 +67,12 @@ Matrix createOrthoMatrix(float width, float height, float nearPlane, float farPl
 Matrix createPerspectiveMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
     Matrix result;
-    ASSERT(ffabsf(fov) > 0.00001f);
-    ASSERT(ffabsf(aspectRatio) > 0.001f);
-    ASSERT(ffabsf(farPlane - nearPlane) > 0.00001f);
-    ASSERT(ffabsf(nearPlane) > 0.0f);
+    ASSERT(Supa::absf(fov) > 0.00001f);
+    ASSERT(Supa::absf(aspectRatio) > 0.001f);
+    ASSERT(Supa::absf(farPlane - nearPlane) > 0.00001f);
+    ASSERT(Supa::absf(nearPlane) > 0.0f);
 
-    float yScale = 1.0f / ftanf(toRadians(fov * 0.5f));
+    float yScale = 1.0f / Supa::tanf(toRadians(fov * 0.5f));
     float xScale = yScale / aspectRatio;
     float fRange = farPlane / (farPlane - nearPlane);
 
@@ -122,7 +121,7 @@ bool operator==(const Matrix &a, const Matrix &b)
 
     for(uint32_t i = 0; i < 16; ++i)
     {
-        float f = fabsf(a[i] - b[i]);
+        float f = Supa::absf(a[i] - b[i]);
         if(f > EPS_DIFF)
             return false;
     }
@@ -246,7 +245,7 @@ bool isIdentity(const Matrix &m)
         if(i == (i / 4) + (i / 4) * 4)
             f = f - 1.0f;
 
-        if(fabsf(f) > EPS_DIFF)
+        if(Supa::absf(f) > EPS_DIFF)
             return false;
     }
     return true;

@@ -8,7 +8,7 @@
 
 #include <vk_mem_alloc.h>
 
-#include <algorithm>
+//#include <algorithm>
 #include <vector>
 
 static std::vector<Image*> globalImages;
@@ -369,7 +369,7 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
 
     ASSERT(vulk->scratchBuffer.size >= size);
 
-    memcpy((unsigned char*)vulk->scratchBuffer.data + offset, data, size);
+    Supa::memcpy((unsigned char*)vulk->scratchBuffer.data + offset, data, size);
 
     size_t roundedDownOffset = offset & (~(size_t(255)));
     size_t roundedUpSize = ((offset + size + 255) & (~(size_t(255)))) - roundedDownOffset;
@@ -527,8 +527,8 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     if (vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
         beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
 
-    memcpy(((uint8_t*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
-   
+    Supa::memcpy(((uint8_t*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
+
     VkBufferCopy region = { vulk->scratchBufferOffset, targetOffset, objectSize };
 
     vulk->bufferMemoryBarriers.pushBack({ targetBuffer, region });
@@ -565,7 +565,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
 {
     bool isGraphics = dstStageMask == VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     bool isCompute = dstStageMask == VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    
+
     const VkImageMemoryBarrier* imageBarrier = nullptr;
     uint32_t imageBarrierCount = 0u;
     if (isGraphics)
@@ -583,7 +583,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
         return true;
    // vkFlushMappedMemoryRanges?????
     PodVector< VkBufferMemoryBarrier > bufferBarriers;
-    
+
     // for flushing
     VkDeviceSize size = vulk->scratchBufferOffset - vulk->scratchBufferLastFlush;
     size = ((size + 255) / 256) * 256;
@@ -603,7 +603,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
     }
 
     const VkBufferMemoryBarrier* bufferBarrier = bufferBarriers.size() > 0 ? bufferBarriers.data() : nullptr;
-    
+
     vkCmdPipelineBarrier(vulk->commandBuffer, vulk->currentStage, dstStageMask,
         VK_DEPENDENCY_BY_REGION_BIT,
         0, nullptr,

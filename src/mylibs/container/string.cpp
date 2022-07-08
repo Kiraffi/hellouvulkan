@@ -56,7 +56,7 @@ bool String::operator == (const String &s) const
     if(s.getSize() != getSize())
         return false;
 
-    return memcmp(buffer.getBegin(), s.buffer.getBegin(), getSize()) == 0;
+    return Supa::memcmp(buffer.getBegin(), s.buffer.getBegin(), getSize()) == 0;
 }
 
 bool String::operator == (const char *s) const
@@ -64,7 +64,7 @@ bool String::operator == (const char *s) const
     if(!s)
         return false;
 
-    return memcmp(buffer.getBegin(), s, getSize()) == 0;
+    return Supa::memcmp(buffer.getBegin(), s, getSize()) == 0;
 }
 
 

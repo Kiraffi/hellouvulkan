@@ -246,8 +246,8 @@ static uint32_t getPackedPosition(float x, float y)
 static uint32_t getPackedSizeRot(float sz, float rotInRad)
 {
     uint32_t result = uint32_t(( sz / 64.0f ) * 1023.0f);
-    float sinv = fsinf(rotInRad);
-    float cosv = fcosf(rotInRad);
+    float sinv = Supa::sinf(rotInRad);
+    float cosv = Supa::cosf(rotInRad);
     result += uint32_t(( sinv * 0.5f + 0.5f ) * 1023.0f) << 10u;
     result += uint32_t(( cosv * 0.5f + 0.5f ) * 1023.0f) << 20u;
 
@@ -291,7 +291,7 @@ static Entity spawnAsteroidEntity(double spawnTime)
     float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
     float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
 
-    uint32_t modelIndex = ( std::abs(rand()) % AsteroidMaxTypes ) + 1u;
+    uint32_t modelIndex = (abs(rand()) % AsteroidMaxTypes ) + 1u;
 
     return Entity{
         .posX = xPos, .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
@@ -334,8 +334,8 @@ bool SpaceShooter::initRun()
             for (uint32_t i = 0; i < AsteroidCorners; ++i)
             {
                 float angle = -float(i) * float(2.0f * PI) / float(AsteroidCorners);
-                float x = fcosf(angle);
-                float y = fsinf(angle);
+                float x = Supa::cosf(angle);
+                float y = Supa::sinf(angle);
                 float r = 0.5f + 0.5f * (float(rand()) / float(RAND_MAX));
 
                 vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
@@ -357,8 +357,8 @@ bool SpaceShooter::initRun()
             for (uint32_t i = 0; i < BulletCorners; ++i)
             {
                 float angle = -float(i) * float(2.0f * PI) / float(BulletCorners);
-                float x = fcosf(angle);
-                float y = fsinf(angle);
+                float x = Supa::cosf(angle);
+                float y = Supa::sinf(angle);
                 float r = 1.0f;
 
                 vertices.emplace_back(GpuModelVertex{ .posX = x * r, .posY = y * r });
@@ -415,8 +415,8 @@ void SpaceShooter::logicUpdate()
     // Update position, definitely not accurate physics, if dt is big this doesn't work properly, trying to split it into several updates.
     while (dtSplit > 0.005f)
     {
-        double dddt = ffminf(dtSplit, 0.005f);
-        float origSpeed = 1.0f * fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+        double dddt = Supa::minf(dtSplit, 0.005f);
+        float origSpeed = 1.0f * Supa::sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
 
         double timeHere = currentTime + dddt;
 
@@ -432,11 +432,11 @@ void SpaceShooter::logicUpdate()
             rotSpeed = rotSpeed * 2.0f - (1.0f - rotSpeed) * 0.005f;
             playerEntity.rotation -= rotSpeed * dddt;
         }
-        playerEntity.rotation = ffmodf(playerEntity.rotation, PI * 2.0);
+        playerEntity.rotation = Supa::modf(playerEntity.rotation, PI * 2.0);
         if (isDown(GLFW_KEY_UP) || isDown(GLFW_KEY_W))
         {
-            playerEntity.speedX += fcosf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
-            playerEntity.speedY += fsinf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
+            playerEntity.speedX += Supa::cosf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
+            playerEntity.speedY += Supa::sinf(playerEntity.rotation + float(PI) * 0.5f) * 5000.0f * dddt;
         }
 
 
@@ -444,8 +444,8 @@ void SpaceShooter::logicUpdate()
         {
             if (bulletEntities.size() < (1 << 15))
             {
-                float rotX = fcosf(playerEntity.rotation + float(PI) * 0.5f);
-                float rotY = fsinf(playerEntity.rotation + float(PI) * 0.5f);
+                float rotX = Supa::cosf(playerEntity.rotation + float(PI) * 0.5f);
+                float rotY = Supa::sinf(playerEntity.rotation + float(PI) * 0.5f);
 
                 float speedX = rotX * 1000.0f;
                 float speedY = rotY * 1000.0f;
@@ -464,9 +464,9 @@ void SpaceShooter::logicUpdate()
         }
 
         {
-            float origSpeed = fsqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
+            float origSpeed = Supa::sqrtf(playerEntity.speedX * playerEntity.speedX + playerEntity.speedY * playerEntity.speedY);
             float dec = dddt * 0.001f * origSpeed;
-            float speed = ffmaxf(origSpeed - dec, 0.0f);
+            float speed = Supa::maxf(origSpeed - dec, 0.0f);
 
 
             playerEntity.posX += playerEntity.speedX * dddt;
@@ -497,7 +497,7 @@ void SpaceShooter::logicUpdate()
 
                     double minSize = (ent.size + asteroidEnt.size) * 0.8f;
 
-                    if (ffabsf(ent.posX - asteroidEnt.posX) < minSize && ffabsf(ent.posY - asteroidEnt.posY) < minSize)
+                    if (Supa::absf(ent.posX - asteroidEnt.posX) < minSize && Supa::absf(ent.posY - asteroidEnt.posY) < minSize)
                     {
                         asteroidEntities[astInd - 1] = asteroidEntities.back();
                         asteroidEntities.resize(asteroidEntities.size() - 1);
@@ -513,7 +513,7 @@ void SpaceShooter::logicUpdate()
 
         dtSplit -= dddt;
     }
-    const float slowDown = ffmaxf(0.0, 1.0 - 10.0 * dt);
+    const float slowDown = Supa::maxf(0.0, 1.0 - 10.0 * dt);
     playerEntity.speedX *= slowDown;
     playerEntity.speedY *= slowDown;
 

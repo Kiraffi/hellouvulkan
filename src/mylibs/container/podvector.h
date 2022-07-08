@@ -2,7 +2,7 @@
 
 #include "vectorbase.h"
 
-#include <core/general.h>
+#include <core/supa.h>
 
 #include <initializer_list>
 #include <type_traits>
@@ -85,7 +85,7 @@ PodVector<T>::PodVector(const T *b, const T* e) : VectorBase(sizeof(T))
     ASSERT(reserveSize > 0);
 
     this->buffer.resize(reserveSize);
-    memcpy(this->buffer.getDataIndex(0), b, reserveSize * sizeof(T));
+    Supa::memcpy(this->buffer.getDataIndex(0), b, reserveSize * sizeof(T));
 }
 
 template <typename T>
@@ -114,7 +114,7 @@ PodVector<T>::PodVector(const std::initializer_list<T> &initializerList) : Vecto
 
     uint32_t counter = 0;
     uint8_t* ptr = this->buffer.getDataIndex(0);
-    memcpy(ptr, &*initializerList.begin(), size * sizeof(T));
+    Supa::memcpy(ptr, &*initializerList.begin(), size * sizeof(T));
 }
 
 
@@ -135,6 +135,7 @@ template <typename T>
 T & PodVector<T>::operator[] (uint32_t index) const
 {
     uint8_t *ptr = this->buffer.getDataIndex(index);
+    ASSERT(ptr); // 0x7ffff38a432a ""
     return (T &)(*ptr);
 }
 
@@ -197,7 +198,7 @@ void PodVector<T>::pushBack(const PodVector<T> &vec)
         return;
     uint32_t oldSize = size();
     this->buffer.resize(size() + vec.size());
-    memcpy(this->buffer.getDataIndex(oldSize), vec.data(), vec.size() * sizeof(T));
+    Supa::memcpy(this->buffer.getDataIndex(oldSize), vec.data(), vec.size() * sizeof(T));
 }
 
 template <typename T>

@@ -318,13 +318,13 @@ bool tryParseBoolean(const StringView &buffer, JSONMarker &marker, JsonBlock &in
     int &index = marker.currentIndex;
     int endIndex = marker.endIndex;
 
-    if(index + 4 < endIndex && memcmp((const void *)(&(buffer [index])), "true", 4) == 0)
+    if(index + 4 < endIndex && Supa::memcmp((const void *)(&(buffer [index])), "true", 4) == 0)
     {
         inOutBlock.valueBool = true;
         inOutBlock.jType |= JsonBlock::BOOL_TYPE | JsonBlock::VALID_TYPE;
         index += 4;
     }
-    else if(index + 5 < endIndex && memcmp(&buffer [index], "false", 5) == 0)
+    else if(index + 5 < endIndex && Supa::memcmp(&buffer [index], "false", 5) == 0)
     {
         inOutBlock.valueBool = false;
         inOutBlock.jType |= JsonBlock::BOOL_TYPE | JsonBlock::VALID_TYPE;
@@ -586,7 +586,7 @@ bool JsonBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
     if(strLen < 37)
         return false;
 
-    if(memcmp(&valueStr[0], "data:application/octet-stream;base64,", 37) != 0)
+    if(Supa::memcmp(&valueStr[0], "data:application/octet-stream;base64,", 37) != 0)
         return false;
 
     outBuffer.reserve(strLen - 37);

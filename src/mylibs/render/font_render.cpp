@@ -28,8 +28,8 @@ void FontRenderSystem::deInit()
 
 bool FontRenderSystem::init(const char *fontFilename)
 {
-    String data;
-    if (!loadBytes(fontFilename, data))
+    PodVector<uint8_t> data;
+    if (!loadBytes(fontFilename, data.getBuffer()))
     {
         printf("Failed to load file: %s\n", fontFilename);
         return false;
@@ -123,7 +123,7 @@ bool FontRenderSystem::init(const char *fontFilename)
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
         pipeline.renderPass = createRenderPass(
-                { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } }, 
+                { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
                 {});
         ASSERT(pipeline.renderPass);
         if(!pipeline.renderPass)
@@ -170,7 +170,7 @@ void FontRenderSystem::addText(const char *text, Vector2 pos, Vec2 charSize, con
     uint16_t charWidth = uint16_t(charSize.x);
     uint16_t charHeight = uint16_t(charSize.y);
     uint32_t col = getColor(color.x, color.y, color.z, color.w);
-    
+
     while(*text)
     {
         const char c = *text++;

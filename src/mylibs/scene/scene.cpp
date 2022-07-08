@@ -229,9 +229,9 @@ Bounds Scene::getBounds(uint32_t entityIndex) const
 
 bool Scene::readLevel(const char *levelName)
 {
-    String buffer;
+    PodVector<char> buffer;
 
-    if(!loadBytes(levelName, buffer))
+    if(!loadBytes(levelName, buffer.getBuffer()))
         return false;
 
     JsonBlock json;
@@ -294,7 +294,7 @@ bool Scene::writeLevel(const char *filename) const
     writeJson.endArray();
     writeJson.finishWrite();
     return writeJson.isValid() &&
-        writeBytes(filename, writeJson.getString());
+        writeBytes(filename, writeJson.getString().getBuffer());
 }
 
 uint32_t Scene::castRay(const Ray &ray, HitPoint &outHitpoint)
