@@ -5,19 +5,23 @@
 #include "myvulkan.h"
 
 #include <container/podvector.h>
+#include <container/string.h>
 #include <container/stringview.h>
+
 #include <core/general.h>
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
+
 #include <math/vector3.h>
+
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <vulkan/vulkan_core.h>
 
 #include <set>
-#include <string.h>
 #include <string>
+#include <string.h>
 
 static constexpr uint32_t FormatFlagBits =
     VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
@@ -997,9 +1001,9 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
                 printf("Failed to create vulkan command buffer!\n");
                 return false;
             }
-            std::string s = "Main command buffer";
-            s += std::to_string(i);
-            setObjectName((uint64_t)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s.c_str());
+            String s = "Main command buffer";
+            s.append(i);
+            setObjectName((uint64_t)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s.getStr());
         }
     }
     vulk->commandBuffer = vulk->commandBuffers[0];

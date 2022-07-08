@@ -1,8 +1,10 @@
 #include "meshrendersystem.h"
 
+#include <container/arraysliceview.h>
+#include <container/string.h>
+
 #include <core/general.h>
 #include <core/timer.h>
-#include <container/arraysliceview.h>
 
 #include <math/vector3_inline_functions.h>
 #include <myvulkan/myvulkan.h>
@@ -11,10 +13,6 @@
 #include <scene/scene.h>
 
 
-#include <string>
-
-
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 
@@ -120,8 +118,8 @@ bool MeshRenderSystem::init()
                 RenderTarget{ .format = VK_FORMAT_R16G16B16A16_SNORM },
             };
         }
-        std::string name = "Mesh system render - ";
-        name += std::to_string(i);
+        String name = "Mesh system render - ";
+        name.append(i);
 
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
@@ -158,7 +156,7 @@ bool MeshRenderSystem::init()
             getShader(ShaderType::Basic3DVert, i), depthOnlyRender ? Shader{} : getShader(ShaderType::Basic3DFrag),
             blends,
             { .depthTarget = RenderTarget{ .format = vulk->depthFormat }, .useDepthTest = true, .writeDepth = true },
-            pipeline, name.c_str()))
+            pipeline, name.getStr()))
         {
             printf("Failed to create graphics pipeline\n");
         }
@@ -377,7 +375,7 @@ void MeshRenderSystem::render(bool isShadowOnly)
 
     for (; passIndex < 4; passIndex += 2)
     {
-        std::string debugName;
+        String debugName;
         if (passIndex == 0)
             debugName = "Animated normal render";
         else if (passIndex == 1)
@@ -387,7 +385,7 @@ void MeshRenderSystem::render(bool isShadowOnly)
         else if (passIndex == 3)
             debugName = "NonAnimated depth only render";
 
-        beginDebugRegion(debugName.c_str(), Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+        beginDebugRegion(debugName.getStr(), Vec4(1.0f, 1.0f, 0.0f, 1.0f));
         bindGraphicsPipelineWithDecriptors(meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
         for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
         {

@@ -1,4 +1,7 @@
+
+#include <container/string.h>
 #include <container/stringview.h>
+
 #include <core/general.h>
 #include <core/glfw_keys.h>
 #include <core/timer.h>
@@ -14,11 +17,8 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <string>
-
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
-
 
 class VulkanFontRender : public VulkanApp
 {
@@ -64,13 +64,13 @@ bool VulkanFontRender::init(const char* windowStr, int screenWidth, int screenHe
 
 void VulkanFontRender::updateText(StringView str)
 {
-    std::string tmpStr = "w";
-    tmpStr += std::to_string(int32_t(fontSize.x));
-    tmpStr += ",h";
-    tmpStr += std::to_string(int32_t(fontSize.y));
+    String tmpStr = "w";
+    tmpStr.append(int32_t(fontSize.x));
+    tmpStr.append(",h");
+    tmpStr.append(int32_t(fontSize.y));
 
-    fontSystem.addText(tmpStr.c_str(), Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-    fontSystem.addText(std::string(str.ptr, str.length).c_str(), Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    fontSystem.addText(tmpStr.getStr(), Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    fontSystem.addText(String(str.ptr, str.length).getStr(), Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 bool VulkanFontRender::resized()
@@ -90,13 +90,13 @@ bool VulkanFontRender::resized()
 void VulkanFontRender::logicUpdate()
 {
     VulkanApp::logicUpdate();
-    static std::string txt = "Test";
+    static String txt = "Test";
 
     {
         bool textNeedsUpdate = false;
         for (int i = 0; i < bufferedPressesCount; ++i)
         {
-            txt += char(bufferedPresses[i]);
+            txt.append(char(bufferedPresses[i]));
             textNeedsUpdate = true;
         }
 
@@ -125,7 +125,7 @@ void VulkanFontRender::logicUpdate()
             textNeedsUpdate = true;
         }
 
-        updateText(txt.c_str());
+        updateText(txt.getStr());
     }
 }
 

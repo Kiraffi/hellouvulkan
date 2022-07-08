@@ -72,7 +72,7 @@ bool String::operator == (const char *s) const
 }
 
 
-void String::add(const String &s)
+String &String::append(const String &s)
 {
     buffer.reserve(buffer.getSize() + s.getSize());
     buffer.removeIndex(getSize());
@@ -84,9 +84,10 @@ void String::add(const String &s)
         --addedSize;
     }
     stringPushbackChar(buffer, '\0');
+    return *this;
 }
 
-void String::add(const char *s)
+String &String::append(const char *s)
 {
     buffer.removeIndex(getSize());
     while (s && *s)
@@ -94,9 +95,10 @@ void String::add(const char *s)
         stringPushbackChar(buffer, *s++);
     }
     stringPushbackChar(buffer, '\0');
+    return *this;
 }
 
-void String::add(const char *s, uint32_t charas)
+String &String::append(const char *s, uint32_t charas)
 {
     buffer.removeIndex(getSize());
     while (s && *s && charas > 0)
@@ -105,49 +107,66 @@ void String::add(const char *s, uint32_t charas)
         --charas;
     }
     stringPushbackChar(buffer, '\0');
+    return *this;
 }
 
 
-void String::add(int64_t i)
+String &String::append(int64_t i)
 {
-    char c[32];
-    snprintf(c, 32, "%lli", i);
-    add(c);
+    char c[32] = {};
+    snprintf(c, 32, "%li", i);
+    append(c);
+    return *this;
 }
 
-void String::add(uint64_t u)
+String &String::append(uint64_t u)
 {
-    char c[32];
-    snprintf(c, 32, "%llu", u);
-    add(c);
+    char c[32] = {};
+    snprintf(c, 32, "%lu", u);
+    append(c);
+    return *this;
 }
 
-void String::add(int32_t i)
+String &String::append(int32_t i)
 {
-    char c[32];
+    char c[32] = {};
     snprintf(c, 32, "%i", i);
-    add(c);
+    append(c);
+    return *this;
 }
 
-void String::add(uint32_t u)
+String &String::append(uint32_t u)
 {
-    char c[32];
+    char c[32] = {};
     snprintf(c, 32, "%u", u);
-    add(c);
+    append(c);
+    return *this;
 }
 
-void String::add(float f)
+String &String::append(float f)
 {
-    char c[32];
+    char c[32] = {};
     snprintf(c, 32, "%f", f);
-    add(c);
+    append(c);
+    return *this;
 }
 
-void String::add(double d)
+String &String::append(double d)
 {
-    char c[32];
+    char c[32] = {};
     snprintf(c, 32, "%lf", d);
-    add(c);
+    append(c);
+    return *this;
+}
+
+String &String::append(uint32_t amount, char c)
+{
+    ASSERT(amount < 32);
+    char arr[32] = {};
+    for(;amount > 0; --amount)
+        arr[amount - 1] = c;
+    append(arr);
+    return *this;
 }
 
 char &String::operator[] (uint32_t index) const

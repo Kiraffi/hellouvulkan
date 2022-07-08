@@ -47,8 +47,8 @@ public:
     T popBack();
 
     void clear() { doClear(); }
-    
-    
+
+
     T* begin() const { return (T*)(getBegin()); }
     T* data() const  { return (T*)(getBegin()); }
     T* end() const   { return (T*)(getEnd()  ); }

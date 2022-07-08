@@ -2,16 +2,14 @@
 
 #include "mytypes.h"
 
-#include <container/arraysliceview.h>
 #include <container/podvector.h>
+#include <container/string.h>
 #include <container/stringview.h>
 #include <container/vector.h>
 #include <core/json.h>
 
 #include <math/quaternion.h>
 #include <math/vector3.h>
-
-#include <string>
 
 class WriteJson
 {
@@ -39,13 +37,13 @@ public:
     bool writeVec3(StringView name, const Vector3 &v);
     bool writeQuat(StringView name, const Quaternion &q);
 
-    const std::string &getString() const { return writtenJson; }
+    const String &getString() const { return writtenJson; }
     bool isValid() const { return valid; }
 private:
     bool addNamedString(StringView str, bool addQuotes);
     bool addIndentSpaces();
-    std::string writtenJson;
-    std::string blockTypes;
+    String writtenJson;
+    String blockTypes;
     uint32_t indentAmount = 0;
     bool valid = true;
 };

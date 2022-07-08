@@ -7,9 +7,6 @@
 
 #include <scene/scene.h>
 
-
-#include <string>
-
 LineRenderSystem::~LineRenderSystem()
 {
     destroyPipeline(lineRenderPipeline);
@@ -92,7 +89,7 @@ void LineRenderSystem::render(const Image &colorImage, const Image &depthImage)
         return;
 
     beginDebugRegion("Line rendering", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    beginRenderPass(lineRenderPipeline, {}); 
+    beginRenderPass(lineRenderPipeline, {});
 
     /*
     beginRendering({
@@ -101,8 +98,8 @@ void LineRenderSystem::render(const Image &colorImage, const Image &depthImage)
         */
     bindGraphicsPipelineWithDecriptors(lineRenderPipeline, vulk->frameIndex);
     vkCmdDraw(vulk->commandBuffer, lines.size() * 2, 1, 0, 0);
-    
-    
+
+
     //vkCmdEndRendering(vulk->commandBuffer);
     vkCmdEndRenderPass(vulk->commandBuffer);
 

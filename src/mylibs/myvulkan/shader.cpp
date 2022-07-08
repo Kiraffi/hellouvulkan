@@ -3,6 +3,7 @@
 #include <spirv_cross/spirv.h>
 
 #include <container/podvector.h>
+#include <container/string.h>
 #include <container/stringview.h>
 #include <container/vector.h>
 #include <core/file.h>
@@ -13,7 +14,6 @@
 #include <myvulkan/vulkanglobal.h>
 
 // std::to_string
-#include <string>
 #include <vector>
 
 struct GlobalShaders
@@ -207,16 +207,16 @@ bool loadShader(const char *filename, ShaderType shaderType)
 
     while(true)
     {
-        std::string newFilename = "assets/shader/vulkan_new/spvs/";
+        String newFilename = "assets/shader/vulkan_new/spvs/";
         newFilename.append(filename);
-        newFilename += "_";
-        newFilename += std::to_string(permutationIndex);
-        newFilename += ".spv";
+        newFilename.append("_");
+        newFilename.append(permutationIndex);
+        newFilename.append(".spv");
 
-        if (!fileExists(newFilename.c_str()))
+        if (!fileExists(newFilename.getStr()))
             break;
 
-        if (!loadBytes(newFilename.c_str(), buffer))
+        if (!loadBytes(newFilename.getStr(), buffer))
             return false;
 
         ASSERT(buffer.size() % 4 == 0);
@@ -246,7 +246,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
     bool loadSuccess = permutationIndex > 0u;
     if(!loadSuccess)
     {
-        printf("Failed to load shader: %s\n", std::string(filename).c_str());
+        printf("Failed to load shader: %s\n", filename);
     }
     return loadSuccess;
 }
@@ -382,7 +382,7 @@ bool updateBindDescriptorSet(const Pipeline &pipeline)
 
     return success;
 }
-    
+
 
 bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
     const Vector<PodVector<DescriptorInfo>>& descriptorSetInfos, const PodVector<VkDescriptorSet> &descriptorSets)

@@ -1,3 +1,4 @@
+#include <container/string.h>
 
 #include <core/file.h>
 #include <core/glfw_keys.h>
@@ -16,7 +17,6 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <string>
 #include <string.h>
 
 static constexpr int SCREEN_WIDTH  = 640;
@@ -41,7 +41,7 @@ class VulkanFontDraw : public VulkanApp
 {
 public:
     virtual ~VulkanFontDraw() override;
-    //bool initApp(const std::string &fontFilename);
+    //bool initApp(const String &fontFilename);
     virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
         const VulkanInitializationParameters &params) override;
 
@@ -59,7 +59,7 @@ public:
 
     Pipeline graphicsPipeline;
 
-    std::string fontFilename;
+    String fontFilename;
 
     char buffData[12] = {};
     int32_t chosenLetter = 'a';
@@ -163,7 +163,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
             return false;
         }
     }
-    
+
     return resized() && initRun();
 }
 
@@ -172,9 +172,9 @@ bool VulkanFontDraw::initRun()
 {
     const uint32_t charCount = 128 - 32;
 
-    if (!loadBytes(fontFilename.c_str(), characterData))
+    if (!loadBytes(fontFilename.getStr(), characterData))
     {
-        printf("Failed to load file: %s\n", fontFilename.c_str());
+        printf("Failed to load file: %s\n", fontFilename.getStr());
         return false;
     }
 
@@ -287,10 +287,10 @@ void VulkanFontDraw::logicUpdate()
         }
 
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            writeBytes(fontFilename.c_str(), sliceFromPodVectorBytes(characterData));
+            writeBytes(fontFilename.getStr(), sliceFromPodVectorBytes(characterData));
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
-            loadBytes(fontFilename.c_str(), characterData);
+            loadBytes(fontFilename.getStr(), characterData);
 
         if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {
@@ -372,7 +372,7 @@ void VulkanFontDraw::renderDraw()
     // Drawingg
 
     {
- 
+
         beginRenderPass(graphicsPipeline, { colorClear });
         // draw calls here
         // Render
@@ -398,7 +398,7 @@ void VulkanFontDraw::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    std::string filename;
+    String filename;
     if (argCount < 2)
     {
         filename = "assets/font/new_font.dat";

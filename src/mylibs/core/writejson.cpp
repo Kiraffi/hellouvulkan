@@ -2,11 +2,10 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <string>
 
 WriteJson::WriteJson(uint32_t magicNumber, uint32_t versionNumber) : indentAmount(INDENT_INSPACES), valid(true)
 {
-    writtenJson += "{\n";
+    writtenJson.append("{\n");
     addMagicNumberAndVersion(magicNumber, versionNumber);
 }
 
@@ -22,28 +21,43 @@ bool WriteJson::addString(StringView name, StringView value, bool addQuotes)
     }
     addIndentSpaces();
     addNamedString(name, true);
-    writtenJson += " : ";
+    writtenJson.append(" : ");
     addNamedString(value, addQuotes);
-    writtenJson += ", \n";
+    writtenJson.append(", \n");
     return valid;
 }
 
-bool WriteJson::addInteger(StringView name, int64_t number) { return addString(name, std::to_string(number).c_str(), false); }
-bool WriteJson::addNumber(StringView name, double number) { return addString(name, std::to_string(number).c_str(), false); }
-bool WriteJson::addBool(StringView name, bool b) { return addString(name, b ? "true" : "false", false); }
+bool WriteJson::addInteger(StringView name, int64_t number)
+{
+    String s;
+    s.append(number);
+    return addString(name, s.getStr(), false);
+}
+
+bool WriteJson::addNumber(StringView name, double number)
+{
+    String s;
+    s.append(number);
+    return addString(name, s.getStr(), false);
+}
+
+bool WriteJson::addBool(StringView name, bool b)
+{
+    return addString(name, b ? "true" : "false", false);
+}
 
 bool WriteJson::addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber)
 {
     if(!valid)
         return false;
     addIndentSpaces();
-    writtenJson += "\"magicNumber\" : ";
-    writtenJson += std::to_string(magicNumber);
-    writtenJson += ",\n";
+    writtenJson.append("\"magicNumber\" : ");
+    writtenJson.append(magicNumber);
+    writtenJson.append(",\n");
     addIndentSpaces();
-    writtenJson += "\"versionNumber\" : ";
-    writtenJson += std::to_string(versionNumber);
-    writtenJson += ",\n";
+    writtenJson.append("\"versionNumber\" : ");
+    writtenJson.append(versionNumber);
+    writtenJson.append(",\n");
     return valid;
 }
 
@@ -59,10 +73,10 @@ bool WriteJson::addArray(StringView name)
     }
     addIndentSpaces();
     addNamedString(name, true);
-    writtenJson += " : [\n";
+    writtenJson.append(" : [\n");
 
     indentAmount += INDENT_INSPACES;
-    blockTypes += "]";
+    blockTypes.append("]");
     return valid;
 }
 
@@ -77,14 +91,14 @@ bool WriteJson::endArray()
         valid = false;
         return false;
     }
-    if(blockTypes.back() != ']')
+    if(blockTypes[blockTypes.size() - 1] != ']')
     {
         valid = false;
         return false;
     }
     indentAmount -= INDENT_INSPACES;
     addIndentSpaces();
-    writtenJson += "],\n";
+    writtenJson.append("],\n");
     blockTypes.erase(blockTypes.size() - 1);
     return valid;
 }
@@ -110,12 +124,12 @@ bool WriteJson::addObject(StringView name)
     if(name.size() > 0)
     {
         addNamedString(name, true);
-        writtenJson += " : ";
+        writtenJson.append(" : ");
     }
-    writtenJson += "{\n";
+    writtenJson.append("{\n");
 
     indentAmount += INDENT_INSPACES;
-    blockTypes += "}";
+    blockTypes.append("}");
     return valid;
 }
 
@@ -130,10 +144,10 @@ bool WriteJson::addObject()
         return false;
     }
     addIndentSpaces();
-    writtenJson += "{\n";
+    writtenJson.append("{\n");
 
     indentAmount += INDENT_INSPACES;
-    blockTypes += "}";
+    blockTypes.append("}");
     return valid;
 }
 
@@ -149,20 +163,20 @@ bool WriteJson::endObject()
 {
     if(!valid)
         return false;
-
+printf("%s\nsize: %i\n", blockTypes.getStr(), blockTypes.getSize());
     if(blockTypes.size() == 0 && indentAmount > INDENT_INSPACES)
     {
         valid = false;
         return false;
     }
-    if(blockTypes.back() != '}')
+    if(blockTypes[blockTypes.size() - 1] != '}')
     {
         valid = false;
         return false;
     }
     indentAmount -= INDENT_INSPACES;
     addIndentSpaces();
-    writtenJson += "},\n";
+    writtenJson.append("},\n");
     blockTypes.erase(blockTypes.size() - 1);
     return valid;
 }
@@ -179,14 +193,14 @@ bool WriteJson::writeVec3(StringView name, const Vector3 &v)
     }
     addIndentSpaces();
     addNamedString(name, true);
-    
-    writtenJson += " : [ ";
-    writtenJson += std::to_string(v.x);
-    writtenJson += ", ";
-    writtenJson += std::to_string(v.y);
-    writtenJson += ", ";
-    writtenJson += std::to_string(v.z);
-    writtenJson += " ],\n";
+
+    writtenJson.append(" : [ ");
+    writtenJson.append(v.x);
+    writtenJson.append(", ");
+    writtenJson.append(v.y);
+    writtenJson.append(", ");
+    writtenJson.append(v.z);
+    writtenJson.append(" ],\n");
     return true;
 }
 bool WriteJson::writeQuat(StringView name, const Quaternion &q)
@@ -202,15 +216,15 @@ bool WriteJson::writeQuat(StringView name, const Quaternion &q)
     addIndentSpaces();
     addNamedString(name, true);
 
-    writtenJson += " : [ ";
-    writtenJson += std::to_string(q.v.x);
-    writtenJson += ", ";
-    writtenJson += std::to_string(q.v.y);
-    writtenJson += ", ";
-    writtenJson += std::to_string(q.v.z);
-    writtenJson += ", ";
-    writtenJson += std::to_string(q.w);
-    writtenJson += " ],\n";
+    writtenJson.append(" : [ ");
+    writtenJson.append(q.v.x);
+    writtenJson.append(", ");
+    writtenJson.append(q.v.y);
+    writtenJson.append(", ");
+    writtenJson.append(q.v.z);
+    writtenJson.append(", ");
+    writtenJson.append(q.w);
+    writtenJson.append(" ],\n");
     return true;
 }
 
@@ -231,9 +245,9 @@ bool WriteJson::finishWrite()
         valid = false;
         return false;
     }
-    writtenJson += "}\n\0";
+    writtenJson.append("}\n\0");
 
-    printf("output:\n%s", writtenJson.c_str());
+    printf("output:\n%s", writtenJson.getStr());
     return true;
 }
 
@@ -244,12 +258,12 @@ bool WriteJson::addNamedString(StringView name, bool quoteValue)
         return false;
 
     if(quoteValue)
-        writtenJson += "\"";
+        writtenJson.append("\"");
 
-    writtenJson += std::string(name.ptr, name.length);
+    writtenJson.append(name.ptr, name.length);
 
     if(quoteValue)
-        writtenJson += "\"";
+        writtenJson.append("\"");
     return true;
 }
 

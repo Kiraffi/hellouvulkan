@@ -1,12 +1,12 @@
 
 #include "gameentity.h"
 
+#include <container/string.h>
+
 #include <core/json.h>
 #include <core/writejson.h>
 
 #include <resources/globalresources.h>
-
-#include <string>
 
 bool findEntityType(const char *name, EntityType &outType)
 {
@@ -41,7 +41,6 @@ static bool writeGameObjectContent(const GameEntity &entity, WriteJson &json)
     if(uint32_t(entity.entityType) >= globalResources->models.size())
         return false;
     const auto &model = globalResources->models[uint32_t(entity.entityType)];
-
     json.addMagicNumberAndVersion(GameEntity::MagicNumber, GameEntity::VersionNumber);
     json.addString("name", entity.name.getStr());
     writeTransform(entity.transform, json);
@@ -88,7 +87,7 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
     if(!json.getChild("modelType").parseString(objTypeName))
         return false;
 
-    if(!findEntityType(std::string(objTypeName.ptr, objTypeName.length).c_str(), outEntity.entityType))
+    if(!findEntityType(String(objTypeName.ptr, objTypeName.length).getStr(), outEntity.entityType))
         return false;
 
     StringView meshName;
@@ -96,11 +95,11 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
 
     StringView animName;
     bool foundAnim = json.getChild("anim").parseString(animName);
-    
+
 
     outEntity.meshIndex = 0u;
     outEntity.animationIndex = 0u;
-    
+
     if(uint32_t(outEntity.entityType) < globalResources->models.size())
     {
         const auto &model = globalResources->models[uint32_t(outEntity.entityType)];
@@ -129,6 +128,6 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
 
     }
 
-    outEntity.name = std::string(name.ptr, name.length).c_str();
+    outEntity.name = String(name.ptr, name.length).getStr();
     return true;
 }

@@ -63,26 +63,32 @@ static void testStringAdd()
     printf("%s\n", s2.getStr());
     testStringValidness(s2, "Bar\0");
 
-    String s3;
-    s3.add(s1);
-    s3.add(s2);
+    String s3("Fii");
+    s3.append(s1);
+    s3.append(s2);
+    s3.append("Pooopaaa");
     printf("%s\n", s3.getStr());
-    testStringValidness(s3, "FooBar\0");
+    testStringValidness(s3, "FiiFooBarPooopaaa\0");
 
     String s4;
-    s4.add(2);
+    s4.append(2);
     printf("%s\n", s4.getStr());
     testStringValidness(s4, "2\0");
 
     String s6;
-    s6.add(-1);
+    s6.append(-1);
     printf("%s\n", s6.getStr());
     testStringValidness(s6, "-1\0");
 
     String s7;
-    s7.add(1.0);
+    s7.append(1.0);
     printf("%s\n", s7.getStr());
     testStringValidnessFloat(s7, "1.0\0");
+
+    String s8("Fifi");
+    s8.append(5, 'a');
+    printf("%s\n", s8.getStr());
+    testStringValidness(s8, "Fifiaaaaa");
 
 }
 

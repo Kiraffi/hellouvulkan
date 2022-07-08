@@ -17,7 +17,6 @@
 
 // FLT_MAX
 #include <float.h>
-#include <string>
 
 static GameEntity ConstEntity{ .entityType = EntityType::NUM_OF_ENTITY_TYPES };
 

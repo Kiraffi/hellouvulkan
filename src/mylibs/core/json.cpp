@@ -1,8 +1,9 @@
 #include "json.h"
 
+#include <container/string.h>
+
 #include <ctype.h>
 #include <string.h>
-#include <string>
 
 const JsonBlock JsonBlock::emptyBlock = { };
 
@@ -28,8 +29,8 @@ static bool printBlock(const JsonBlock &bl, int spaces = 0)
 
     if(!bl.blockName.empty())
     {
-        std::string s(bl.blockName.ptr, bl.blockName.length);
-        printf("%s: ", s.c_str());
+        String s(bl.blockName.ptr, bl.blockName.length);
+        printf("%s: ", s.getStr());
     }
 
     if(!bl.isValid())

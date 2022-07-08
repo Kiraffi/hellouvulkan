@@ -513,7 +513,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 
         uint32_t meshCount = meshBlock.getChildCount();
         data.meshes.resize(meshCount, GltfMeshNode());
-        
+
         outModel.modelMeshes.resize(meshCount);
 
         for(int i = 0; i < meshCount; ++i)
@@ -573,7 +573,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
             child.getChild("translation").parseVec3(node.trans);
 
             child.getChild("scale").parseVec3(node.scale);
-            
+
             const JsonBlock& childrenBlock = child.getChild("children");
             node.childNodeIndices.reserve(childrenBlock.children.size());
             for(const auto &childBlock : childrenBlock.children)
@@ -986,16 +986,16 @@ bool readGLTF(const char *filename, GltfModel &outModel)
             if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
                 return false;
 
-            
-            
-            
+
+
+
             PodVector<Matrix> inverseMatrices;
             uint32_t inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
             inverseMatrices.resize(inverseMatricesCount);
             outModel.inverseNormalMatrices.resize(inverseMatricesCount);
             outModel.inverseMatrices.resize(inverseMatricesCount);
 
-            auto calculateInverseMatrices = 
+            auto calculateInverseMatrices =
                 [&](auto &f, const Mat3x4 &parent, const Mat3x4 &parentNormal, uint32_t nodeIndex)
             {
                 if(nodeIndex >= data.nodes.size())
@@ -1036,7 +1036,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
             };
             for(uint32_t jointIndex : skinNode.joints)
                 calculateInverseMatrices(calculateInverseMatrices, Mat3x4(), Mat3x4(), jointIndex);
-            
+
 
 
 
@@ -1052,7 +1052,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
                 /*
                 uint32_t nodeJointIndex = skinNode.joints[i];
                 const auto &node = data.nodes[nodeJointIndex];
-                printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, std::string(node.name).c_str());
+                printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, String(node.name).getStr());
                 printVector3(node.trans, "Pos");
                 printQuaternion(node.rot, "Rot");
                 printVector3(node.scale, "Scale");
@@ -1391,7 +1391,7 @@ static bool interpolateBetweenPoses(const EvaluateBoneParams &params, uint32_t j
 }
 
 static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex,
-    const Mat3x4 &parentMatrix, const Mat3x4 &parentNormalMatrix, 
+    const Mat3x4 &parentMatrix, const Mat3x4 &parentNormalMatrix,
     ArraySliceView<Transform> transforms, ArraySliceViewMutable<Mat3x4> outMatrices)
 {
     if(jointIndex >= params.animationData.size())
@@ -1440,7 +1440,7 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
     if(model.inverseMatrices.size() > 255)
         return false;
     outMatrices.uninitializedResize(model.inverseMatrices.getSize() * 2);
-    
+
     PodVector<Transform> transforms;
     transforms.uninitializedResize(model.inverseMatrices.getSize());
     auto mutableTransforms = sliceFromPodVectorMutable(transforms);
@@ -1454,7 +1454,7 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
     {
         if(((animationState.activeIndices >> i) & 1) != 1)
             continue;
-        
+
         uint32_t animationIndex = animationState.animationIndices[i];
         float time = animationState.time[i];
         float weight = animationState.blendValues[i];
@@ -1482,9 +1482,9 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
             time += duration;
         while(time > animEndTime)
             time -= duration;
-        
+
         totalWeight += weight;
-        
+
         for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
         {
             auto &t = mutableTransforms[index];
