@@ -11,6 +11,8 @@ add_library(MyLibraries
 
     "container/bytebuffer.h"
     "container/mymemory.h"
+    "container/string.h"
+    "container/stringview.h"
 
     "components/transform.h"
 
@@ -40,11 +42,14 @@ add_library(MyLibraries
 
 
     "container/bytebuffer.cpp"
+    "container/string.cpp"
     "container/mymemory.cpp"
+    "container/stringview.cpp"
 
     "components/transform.cpp"
 
     "core/camera.cpp"
+    "core/image.cpp"
     "core/file.cpp"
     "core/general.cpp"
     "core/timer.cpp"
@@ -65,7 +70,8 @@ add_library(MyLibraries
 
     "model/animation.cpp"
     "resources/globalresources.cpp"
- "container/stringview.h" "container/stringview.cpp")
+
+)
 
 add_library(MyImgui
     "gui/componentviews.h"
