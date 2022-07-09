@@ -81,6 +81,13 @@ add_library(MyLibraries
 
 )
 
+add_library(MyAudio
+    "audio/myaudio.h"
+
+    "audio/myaudio.cpp"
+
+)
+
 add_library(MyImgui
     "gui/componentviews.h"
 
@@ -142,6 +149,10 @@ add_library(MyVulkan
 
 
 target_link_libraries(MyLibraries PUBLIC
+)
+
+target_link_libraries(MyAudio PRIVATE
+    Miniaudio
 )
 
 

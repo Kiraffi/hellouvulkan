@@ -16,5 +16,5 @@ target_link_libraries(sound_test PRIVATE
     MyVulkan
     MyImgui
     glfw
-    Miniaudio
+    MyAudio
     )

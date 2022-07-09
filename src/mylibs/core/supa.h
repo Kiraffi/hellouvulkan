@@ -28,19 +28,23 @@ namespace Supa
     float minf(float a, float b);
     float maxf(float a, float b);
     float clampf(float a, float b, float value);
+    float powf(float a, float b);
+    float expf(float a);
 
-    float atan2d(double a, double b);
-    float tand(double a);
-    float sind(double a);
-    float cosd(double a);
-    float acosd(double a);
-    float asind(double a);
-    float absd(double a);
-    float sqrtd(double a);
-    float modd(double a, double b);
-    float mind(double a, double b);
-    float maxd(double a, double b);
-    float clampd(double a, double b, double value);
+    double atan2d(double a, double b);
+    double tand(double a);
+    double sind(double a);
+    double cosd(double a);
+    double acosd(double a);
+    double asind(double a);
+    double absd(double a);
+    double sqrtd(double a);
+    double modd(double a, double b);
+    double mind(double a, double b);
+    double maxd(double a, double b);
+    double clampd(double a, double b, double value);
 
+    double powd(double a, double b);
+    double expd(double a);
 
 }

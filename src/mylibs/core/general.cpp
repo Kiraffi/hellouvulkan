@@ -60,19 +60,24 @@ namespace Supa
     float minf(float a, float b) { return (a < b) ? a : b; }
     float maxf(float a, float b) { return (a > b) ? a : b; }
     float clampf(float a, float b, float value) { return maxf(a, minf(b, value)); }
+    float powf(float a, float b) { return ::powf(a, b); }
+    float expd(float a) { return ::expf(a); }
 
-    float atan2d(double a, double b) { return ::atan2(a, b); }
-    float sqrtd(double a) { return ::sqrt(a); }
-    float tand(double a) { return ::tan(a); }
-    float sind(double a) { return ::sin(a); }
-    float cosd(double a) { return ::cos(a); }
-    float asind(double a) { return ::asin(a); }
-    float acosd(double a) { return ::acos(a); }
-    float absd(double a) { uint64_t b = *( ( uint64_t * )( &a ) ); b &= 0x7fff'ffff'ffff'ffff; return *( ( double * )( &b ) ); }
-    float modd(double a, double b) { return ::fmod(a, b); }
-    float mind(double a, double b) { return ( a < b ) ? a : b; }
-    float maxd(double a, double b) { return ( a > b ) ? a : b; }
-    float clampd(double a, double b, double value) { return maxd(a, mind(b, value)); }
+    double atan2d(double a, double b) { return ::atan2(a, b); }
+    double sqrtd(double a) { return ::sqrt(a); }
+    double tand(double a) { return ::tan(a); }
+    double sind(double a) { return ::sin(a); }
+    double cosd(double a) { return ::cos(a); }
+    double asind(double a) { return ::asin(a); }
+    double acosd(double a) { return ::acos(a); }
+    double absd(double a) { uint64_t b = *( ( uint64_t * )( &a ) ); b &= 0x7fff'ffff'ffff'ffff; return *( ( double * )( &b ) ); }
+    double modd(double a, double b) { return ::fmod(a, b); }
+    double mind(double a, double b) { return ( a < b ) ? a : b; }
+    double maxd(double a, double b) { return ( a > b ) ? a : b; }
+    double clampd(double a, double b, double value) { return maxd(a, mind(b, value)); }
+    double powd(double a, double b) { return ::pow(a, b); }
+    double expd(double a) { return ::exp(a); }
+
 }
 
 

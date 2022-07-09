@@ -20,6 +20,21 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 # imgui stuff to support vulkan with x86
 ADD_DEFINITIONS(-DImTextureID=ImU64)
 
+# miniaudio remove unneccessary stuff
+ADD_DEFINITIONS(-DMA_NO_DECODING)
+ADD_DEFINITIONS(-DMA_NO_ENCODING)
+ADD_DEFINITIONS(-DMA_NO_WAV)
+
+ADD_DEFINITIONS(-DMA_NO_FLAC)
+ADD_DEFINITIONS(-DMA_NO_MP3)
+ADD_DEFINITIONS(-DMA_NO_GENERATION)
+#ADD_DEFINITIONS(-DMA_NO_SSE2)
+ADD_DEFINITIONS(-DMA_NO_AVX2)
+#ADD_DEFINITIONS(-DMA_NO_NEON)
+
+
+
+
 include(${PROJECT_SOURCE_DIR}/cmake/my_cmake.cmake)
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
@@ -125,12 +140,12 @@ include_directories("external/VulkanMemoryAllocator/include")
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
 add_library(Imgui
-    "external/imgui/backends/imgui_impl_glfw.cpp"
-    "external/imgui/backends/imgui_impl_vulkan.cpp"
     "external/imgui/imgui.cpp"
     "external/imgui/imgui_draw.cpp"
     "external/imgui/imgui_tables.cpp"
     "external/imgui/imgui_widgets.cpp"
+    "external/imgui/backends/imgui_impl_glfw.cpp"
+    "external/imgui/backends/imgui_impl_vulkan.cpp"
 )
 
 
@@ -138,7 +153,7 @@ add_library(Miniaudio
     "external/miniaudio/extras/miniaudio_split/miniaudio.c"
 )
 
-#add_subdirectory("external/meshoptimizer")
+# add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")
 add_subdirectory("src")
 
