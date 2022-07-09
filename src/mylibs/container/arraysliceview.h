@@ -1,9 +1,9 @@
-#pragma once
-#include <core/mytypes.h>
-#include <container/podvector.h>
-#include <container/vector.h>
 
-#include <stdint.h>
+#pragma once
+
+#include <core/mytypes.h>
+#include <container/podvectorsbase.h>
+#include <container/vectorsbase.h>
 
 template <typename T>
 class ArraySliceView final
@@ -12,7 +12,7 @@ public:
     ArraySliceView(const T *const ptrData, uint32_t length) : ptr(ptrData), length(ptrData ? length : 0) {}
     ArraySliceView(const ArraySliceView &view, uint32_t start, uint32_t length) :
         ptr(view.ptr == nullptr || start >= view.length ? view.ptr : view.ptr + start),
-        length(view.ptr == nullptr || start >= view.length ? 0 : 
+        length(view.ptr == nullptr || start >= view.length ? 0 :
             start + length >= view.length ? view.length - start : length)
     {
     }
@@ -47,7 +47,7 @@ public:
         ptr(view.ptr == nullptr || start >= view.length ? view.ptr : view.ptr + start),
         length(view.ptr == nullptr || start >= view.length ? 0 :
             start + length >= view.length ? view.length - start : length) {}
-    
+
     T *const begin() const { return ptr; }
     T *const end() const { return ptr + length; }
 

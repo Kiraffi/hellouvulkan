@@ -46,6 +46,8 @@ public:
     uint32_t getCapasity() const { return bufferData.capasity; }
     uint32_t getDataSize() const { return bufferData.dataTypeSize; }
 
+    BufferType getBufferType() const { return bufferData.dataBufferType; }
+
 private:
     ByteBufferData bufferData {};
 };
