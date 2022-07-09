@@ -1,6 +1,9 @@
 
 #include <components/transform.h>
 
+#include <container/podvector.h>
+#include <container/vector.h>
+
 #include <core/camera.h>
 #include <core/general.h>
 #include <core/timer.h>

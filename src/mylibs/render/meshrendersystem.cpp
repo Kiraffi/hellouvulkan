@@ -1,7 +1,9 @@
 #include "meshrendersystem.h"
 
 #include <container/arraysliceview.h>
+#include <container/podvector.h>
 #include <container/string.h>
+#include <container/vector.h>
 
 #include <core/general.h>
 #include <core/timer.h>

@@ -1,5 +1,6 @@
 #include "tonemaprendersystem.h"
 
+#include <container/podvector.h>
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>

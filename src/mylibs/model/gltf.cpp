@@ -1,6 +1,7 @@
 #include "gltf.h"
 
 #include <container/arraysliceview.h>
+#include <container/podvector.h>
 
 #include <components/transform_functions.h>
 

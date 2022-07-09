@@ -2,6 +2,8 @@
 
 #include <components/transform_functions.h>
 
+#include <container/podvector.h>
+
 #include <core/file.h>
 #include <core/general.h>
 #include <core/json.h>

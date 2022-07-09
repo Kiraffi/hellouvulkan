@@ -1,5 +1,7 @@
 #include "globalresources.h"
 
+#include <container/podvector.h>
+
 #include <core/file.h>
 #include <core/json.h>
 #include <core/timer.h>

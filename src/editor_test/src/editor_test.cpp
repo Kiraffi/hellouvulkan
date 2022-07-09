@@ -1,6 +1,8 @@
 
 #include <components/transform_functions.h>
 
+#include <container/podvector.h>
+
 #include <core/camera.h>
 #include <core/general.h>
 #include <core/glfw_keys.h>

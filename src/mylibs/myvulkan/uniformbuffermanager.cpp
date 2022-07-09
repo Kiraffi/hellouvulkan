@@ -1,5 +1,7 @@
 #include "uniformbuffermanager.h"
 
+#include <container/podvector.h>
+
 void UniformBufferManager::init(Buffer &buf)
 { 
     buffer = &buf;

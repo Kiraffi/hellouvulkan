@@ -1,5 +1,7 @@
 #pragma once
 
+#include <container/vectorbase.h>
+
 namespace std
 {
     template <typename T>

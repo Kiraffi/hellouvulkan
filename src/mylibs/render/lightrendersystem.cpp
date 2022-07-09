@@ -1,5 +1,7 @@
 #include "lightrendersystem.h"
 
+#include <container/podvector.h>
+
 #include <math/vector3_inline_functions.h>
 
 #include <myvulkan/myvulkan.h>

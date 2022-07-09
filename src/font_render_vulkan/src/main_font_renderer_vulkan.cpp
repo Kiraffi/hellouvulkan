@@ -1,6 +1,8 @@
 
+#include <container/podvector.h>
 #include <container/string.h>
 #include <container/stringview.h>
+#include <container/vector.h>
 
 #include <core/general.h>
 #include <core/glfw_keys.h>

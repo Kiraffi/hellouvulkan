@@ -26,7 +26,7 @@ void myPrint(const char *ptr, ...);
 
 extern "C" int printf(const char *__restrict __format, ...);
 #if WIN32
-    extern "C" int snprintf(char *__restrict buffer, size_t bufferCount, const char *__restrict __format, ...);
+    extern "C"  __declspec(dllexport) int snprintf(char *buffer, size_t bufferCount, const char *__format, ...);
 #else
 extern "C" int snprintf (char *__restrict __s, size_t __maxlen, const char *__restrict __format, ...)
     __THROWNL __attribute__ ((__format__ (__printf__, 3, 4)));
