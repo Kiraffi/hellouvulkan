@@ -1,6 +1,7 @@
 #include "lightrendersystem.h"
 
 #include <container/podvector.h>
+#include <container/vector.h>
 
 #include <math/vector3_inline_functions.h>
 
@@ -56,7 +57,7 @@ bool LightRenderSystem::init()
     return true;
 }
 
-bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTargets, 
+bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTargets,
     const LightingRenderTargets &lightingRenderTargets)
 {
     const auto& outputTex = lightingRenderTargets.lightingTargetImage;

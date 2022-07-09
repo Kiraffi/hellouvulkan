@@ -13,15 +13,6 @@
     static constexpr bool trivialCopy = std::is_trivially_copyable<T>(); \
     static_assert(!(layout && trivialCopy), "Pod class!");
 
-template <typename T>
-Vector<T>::~Vector()
-{
-    for (T& t : *this)
-    {
-        t.~T();
-    }
-}
-
 
 template <typename T>
 Vector<T>::Vector() : VectorBase(sizeof(T), BufferType::VECTOR)
@@ -114,14 +105,6 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
     }
 
     return *this;
-}
-
-template <typename T>
-T & Vector<T>::operator[] (uint32_t index) const
-{
-    ASSERT(index < getSize());
-    uint8_t *ptr = this->buffer.getDataIndex(index);
-    return (T &)(*ptr);
 }
 
 

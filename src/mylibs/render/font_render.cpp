@@ -1,4 +1,6 @@
+
 #include <container/podvector.h>
+#include <container/vector.h>
 
 #include <core/file.h>
 #include <core/general.h>

@@ -46,3 +46,21 @@ public:
     T& back()  const { return *((T*)(getBack() )); }
 
 };
+
+template <typename T>
+Vector<T>::~Vector()
+{
+    for (T& t : *this)
+    {
+        t.~T();
+    }
+}
+
+template <typename T>
+T & Vector<T>::operator[] (uint32_t index) const
+{
+    ASSERT(index < getSize());
+    uint8_t *ptr = this->buffer.getDataIndex(index);
+    return (T &)(*ptr);
+}
+

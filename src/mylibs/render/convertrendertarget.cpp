@@ -2,6 +2,8 @@
 
 #include <container/podvector.h>
 #include <container/string.h>
+#include <container/vector.h>
+
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
@@ -39,7 +41,7 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
     ASSERT(srcImage.width == toImage.width && srcImage.height == toImage.height);
 
     auto& pipeline = computePipeline;
-    
+
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
     for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
@@ -50,7 +52,7 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
             DescriptorInfo(toImage.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
         };
     }
-    
+
     if(!updateBindDescriptorSet(pipeline))
         return false;
 
