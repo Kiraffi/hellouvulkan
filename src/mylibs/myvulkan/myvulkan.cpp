@@ -5,6 +5,7 @@
 #include "myvulkan.h"
 
 #include <container/podvector.h>
+#include <container/podvectortypedefine.h>
 #include <container/string.h>
 #include <container/stringview.h>
 

@@ -2,16 +2,14 @@
 
 #include "vectorbase.h"
 #include "podvectorsbase.h"
+#include "podvectortype.h"
+
 #include <core/supa.h>
 
 #include <initializer_list>
-#include <type_traits>
+//#include <type_traits>
 
-#define CHECK_POD_MACRO() \
-    static constexpr bool layout = std::is_standard_layout<T>(); \
-    /*static constexpr bool trivial = std::is_trivial<T>();*/ \
-    static constexpr bool trivialCopy = std::is_trivially_copyable<T>(); \
-    static_assert(layout && trivialCopy, "Not pod class!");
+#define CHECK_POD_MACRO() isPodType<T>();
 
 template <typename T>
 PodVector<T>::PodVector() : VectorBase(sizeof(T), BufferType::PODVECTOR)

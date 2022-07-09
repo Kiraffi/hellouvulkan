@@ -2,6 +2,7 @@
 
 #include <container/arraysliceview.h>
 #include <container/podvector.h>
+#include <container/podvectortypedefine.h>
 
 #include <components/transform_functions.h>
 

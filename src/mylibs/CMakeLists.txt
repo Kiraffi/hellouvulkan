@@ -11,8 +11,15 @@ add_library(MyLibraries
 
     "container/bytebuffer.h"
     "container/mymemory.h"
+    "container/podvector.h"
+    "container/podvectorsbase.h"
+    "container/podvectortype.h"
+    "container/podvectortypedefine.h"
     "container/string.h"
     "container/stringview.h"
+    "container/vector.h"
+    "container/vectorbase.h"
+    "container/vectorsbase.h"
 
     "components/transform.h"
 
@@ -42,6 +49,7 @@ add_library(MyLibraries
 
 
     "container/bytebuffer.cpp"
+    "container/podvectortype.cpp"
     "container/string.cpp"
     "container/mymemory.cpp"
     "container/stringview.cpp"

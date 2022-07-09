@@ -1,17 +1,13 @@
 #pragma once
 
-#include <initializer_list>
+#include "podvectortype.h"
 #include "vectorbase.h"
 #include "vectorsbase.h"
 
-#include <type_traits>
+#include <initializer_list>
 #include <new>
 
-#define CHECK_NO_POD_MACRO() \
-    static constexpr bool layout = std::is_standard_layout<T>(); \
-    /*static constexpr bool trivial = std::is_trivial<T>();*/ \
-    static constexpr bool trivialCopy = std::is_trivially_copyable<T>(); \
-    static_assert(!(layout && trivialCopy), "Pod class!");
+#define CHECK_NO_POD_MACRO() isNotPodType<T>();
 
 
 template <typename T>
