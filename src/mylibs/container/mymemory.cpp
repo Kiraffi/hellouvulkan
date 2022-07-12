@@ -30,11 +30,21 @@ static constexpr uint8_t DebugValue = 0xabu;
 #endif
 
 
+struct MemoryArea
+{
+    #if PRINT_ALLOCATION_ADDRESS
+        void* ptrOfAddress = nullptr;
+    #endif // PRINT_ALLOCATION_ADDRESS
+    uint32_t startLocation = 0;
+    uint32_t size = 0;
+};
+
 
 ///// THIS WILL NOT TO WORK WITH MULTIPLE THREADS!
 static constexpr uint32_t MaxAllocations = 65536u;
 static constexpr uint32_t MaxMemorySize = 64u * 1024u * 1024u;
-static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u;
+static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u +
+    (sizeof(MemoryArea) + sizeof(uint32_t) * 3) * MaxAllocations;
 
 // Also alignment!!!
 static constexpr uint32_t MinimumMemoryChunkSize = 256u;
@@ -43,16 +53,6 @@ static constexpr uint32_t MemoryAlignment = 4096u;
 struct AllMemory;
 static AllMemory *allMemory = nullptr;
 
-
-struct MemoryArea
-{
-    uint32_t startLocation = 0;
-    uint32_t size = 0;
-    #if PRINT_ALLOCATION_ADDRESS
-        void* ptrOfAddress = nullptr;
-    #endif // PRINT_ALLOCATION_ADDRESS
-
-};
 
 struct AllMemory
 {
@@ -80,11 +80,11 @@ struct AllMemory
     uint8_t *memoryAll = nullptr;
     uint8_t *memoryAligned = nullptr;
 
-    MemoryArea memoryAreas[MaxAllocations] = {};
-    uint32_t freedAllocationIndices[MaxAllocations] = {};
-    uint32_t usedAllocationIndices[MaxAllocations] = {};
+    MemoryArea *memoryAreas = nullptr; //[MaxAllocations] = {};
+    uint32_t *freedAllocationIndices = nullptr; //[MaxAllocations] = {};
+    uint32_t *usedAllocationIndices = nullptr; //[MaxAllocations] = {};
 
-    uint32_t handleIterations[MaxAllocations] = {};
+    uint32_t *handleIterations = nullptr; //[MaxAllocations] = {};
 
     uint32_t freedAllocationCount = 0;
     uint32_t allocationCount = 0;
@@ -113,9 +113,26 @@ static void initMemoryReal()
     if(allMemory)
         return;
     allMemory = new AllMemory();
+
+    uintptr_t startOffset = 0;
     allMemory->memoryAll = new uint8_t[AllocatedSize];
+
+    allMemory->memoryAreas = (MemoryArea *)allMemory->memoryAll;
+    startOffset += MaxAllocations * sizeof(MemoryArea);
+
+    allMemory->freedAllocationIndices = (uint32_t *)(allMemory->memoryAll + startOffset);
+    startOffset += MaxAllocations * sizeof(uint32_t);
+
+    allMemory->usedAllocationIndices = (uint32_t *)(allMemory->memoryAll + startOffset);
+    startOffset += MaxAllocations * sizeof(uint32_t);
+
+    allMemory->handleIterations = (uint32_t *)(allMemory->memoryAll + startOffset);
+    startOffset += MaxAllocations * sizeof(uint32_t);
+
+    startOffset += MemoryAlignment;
+
     uint8_t *newAlignedData =
-        (uint8_t *)((((uintptr_t)allMemory->memoryAll) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
+        (uint8_t *)((((uintptr_t)allMemory->memoryAll + startOffset) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
 
     allMemory->memoryAligned = newAlignedData;
     allMemory->inited = true;
