@@ -7,7 +7,7 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 #print_variables()
 
 
-add_library(MyLibraries
+add_library(MyLibraries EXCLUDE_FROM_ALL
 
     "container/bytebuffer.h"
     "container/mymemory.h"
@@ -81,14 +81,14 @@ add_library(MyLibraries
 
 )
 
-add_library(MyAudio
+add_library(MyAudio EXCLUDE_FROM_ALL
     "audio/myaudio.h"
 
     "audio/myaudio.cpp"
 
 )
 
-add_library(MyImgui
+add_library(MyImgui EXCLUDE_FROM_ALL
     "gui/componentviews.h"
 
     "render/myimguirenderer.h"
@@ -107,7 +107,7 @@ add_library(MyImgui
     "gui/editorsystem.cpp"
 )
 
-add_library(MyVulkan
+add_library(MyVulkan EXCLUDE_FROM_ALL
     "core/vulkan_app.h"
 
     "myvulkan/myvulkan.h"

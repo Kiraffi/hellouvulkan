@@ -1,7 +1,7 @@
 #include "podvectortype.h"
 
 #include <type_traits>
-
+#include <new>
 template <typename T>
 void isPodType()
 {
@@ -19,3 +19,10 @@ void isNotPodType()
     static constexpr bool myStandardTrivialCopy = std::is_trivially_copyable<T>();
     static_assert(!(myStandardLayout && myStandardTrivialCopy) && "Was pod-type but required non-pod");
 }
+
+template <typename T>
+void newInPlace(T *ptr, const T &value)
+{
+    new(ptr)T(value);
+}
+

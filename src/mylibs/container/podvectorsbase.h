@@ -57,7 +57,7 @@ template <typename T>
 T & PodVector<T>::operator[] (uint32_t index) const
 {
     uint8_t *ptr = this->buffer.getDataIndex(index);
-    ASSERT(ptr); // 0x7ffff38a432a ""
+    ASSERT(ptr);
     return (T &)(*ptr);
 }
 

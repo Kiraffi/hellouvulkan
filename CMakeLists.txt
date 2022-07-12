@@ -139,7 +139,7 @@ include_directories("external/VulkanMemoryAllocator/include")
 
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
-add_library(Imgui
+add_library(Imgui OBJECT EXCLUDE_FROM_ALL
     "external/imgui/imgui.cpp"
     "external/imgui/imgui_draw.cpp"
     "external/imgui/imgui_tables.cpp"
@@ -149,7 +149,7 @@ add_library(Imgui
 )
 
 
-add_library(Miniaudio
+add_library(Miniaudio OBJECT EXCLUDE_FROM_ALL
     "external/miniaudio/extras/miniaudio_split/miniaudio.c"
 )
 

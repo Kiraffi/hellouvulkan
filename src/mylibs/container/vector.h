@@ -5,7 +5,7 @@
 #include "vectorsbase.h"
 
 #include <initializer_list>
-#include <new>
+//#include <new>
 
 #define CHECK_NO_POD_MACRO() isNotPodType<T>();
 
@@ -72,7 +72,7 @@ Vector<T>::Vector(const std::initializer_list<T> &initializerList) :
     T* ptr = (T *)buffer.getDataIndex(0);
     for(const T &t : initializerList)
     {
-        new(ptr)T(t);
+        newInPlace(ptr, t);
         ++ptr;
     }
 }
@@ -96,7 +96,7 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
     T* ptr = (T *)buffer.getBegin();
     for(T &value : vec)
     {
-        new(ptr)T(value);
+        newInPlace(ptr, value);
         ptr++;
     }
 
@@ -132,7 +132,7 @@ void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
         T* ptr = (T *)buffer.getDataIndex(currSize);
         while(currSize < newSize)
         {
-            new(ptr)T(defaultValue);
+            newInPlace(ptr, defaultValue);
             ++ptr;
             ++currSize;
         }
@@ -147,7 +147,9 @@ template <typename T>
 void Vector<T>::pushBack(const T &obj)
 {
     this->buffer.insertIndex(this->buffer.getSize());
-    new(&back())T(obj);
+    T *ptr = &back();
+    newInPlace(ptr, obj);
+
 }
 
 
@@ -157,7 +159,7 @@ void Vector<T>::insertIndex(uint32_t index, const T &obj)
 {
     ASSERT(index < getSize());
     this->buffer.insertIndex(index);
-    new(buffer.getDataIndex(index))T(obj);
+    newInPlace((T *)buffer.getDataIndex(index), obj);
 }
 
 template <typename T>
