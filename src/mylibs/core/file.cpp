@@ -31,7 +31,13 @@ bool loadBytes(const char *filename, ByteBuffer &dataOut)
     {
         //std::filesystem::path p(filename);
         //uint32_t t = uint32_t(std::filesystem::file_size(p));
-        FILE *fp = fopen(filename, "rb");
+        #if WIN32
+            FILE *fp = nullptr;
+            fopen_s(&fp, filename, "rb");
+        #else
+
+            FILE *fp = fopen(filename, "rb");
+        #endif
         if(!fp)
             return false;
         uint32_t s = 0;
@@ -65,8 +71,13 @@ bool writeBytes(const char *filename, const ByteBuffer &data)
         //std::filesystem::path p(filename);
         //std::ofstream f(p, std::ios::out | std::ios::binary);
         //bool success = !(f.write((const char *)data.getBegin(), data.getSize())).fail();
+        #if WIN32
+            FILE *fp = nullptr;
+            fopen_s(&fp, filename, "wb");
+        #else
 
-        FILE *fp = fopen(filename, "wb");
+            FILE *fp = fopen(filename, "wb");
+        #endif
         if(!fp)
             return false;
 
@@ -83,9 +94,14 @@ bool writeBytes(const char *filename, const ByteBuffer &data)
 }
 
 
-bool fileExists(const char *fileName)
+bool fileExists(const char *filename)
 {
-    FILE *fp = fopen(fileName, "rb");
+#if WIN32
+    FILE *fp = nullptr;
+    fopen_s(&fp, filename, "rb");
+#else
+    FILE *fp = fopen(filename, "rb");
+#endif
     bool result = fp != nullptr;
     if(fp)
         fclose(fp);
