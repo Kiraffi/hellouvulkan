@@ -1,10 +1,15 @@
 #include "file.h"
 
+#include <core/assert.h>
 #include <core/general.h>
 #include <core/mytypes.h>
 
-#include <filesystem>
-#include <fstream>
+//#include <filesystem>
+//#include <fstream>
+
+#include <stdio.h>
+#include <stdlib.h>
+
 
 /*
 // for GetCurrentDirectory
@@ -24,16 +29,25 @@ bool loadBytes(const char *filename, ByteBuffer &dataOut)
 */
     if(fileExists(filename))
     {
-        std::filesystem::path p(filename);
-        uint32_t s = uint32_t(std::filesystem::file_size(p));
+        //std::filesystem::path p(filename);
+        //uint32_t t = uint32_t(std::filesystem::file_size(p));
+        FILE *fp = fopen(filename, "rb");
+        if(!fp)
+            return false;
+        uint32_t s = 0;
 
+        while(fgetc(fp) != EOF)
+            ++s;
+        rewind(fp);
         dataOut.resize(s);
 
-        std::ifstream f(p, std::ios::in | std::ios::binary);
-
-
-        f.read((char *)dataOut.getBegin(), s);
-
+        uint8_t *ptr = dataOut.getBegin();
+        int c;
+        while((c = fgetc(fp)) != EOF)
+            *ptr++ = c;
+        fclose(fp);
+        //std::ifstream f(p, std::ios::in | std::ios::binary);
+        //f.read((char *)newBuffer.getBegin(), s);
         //printf("filesize: %u\n", s);
         return true;
     }
@@ -46,13 +60,19 @@ bool writeBytes(const char *filename, const ByteBuffer &data)
     //
     //if(std::filesystem::exists(filename))
     {
-        std::filesystem::path p(filename);
-
-
-        std::ofstream f(p, std::ios::out | std::ios::binary);
-
         printf("Writing bytes: %u to :%s\n", data.getSize(), filename);
-        bool success = !(f.write((const char *)data.getBegin(), data.getSize())).fail();
+
+        //std::filesystem::path p(filename);
+        //std::ofstream f(p, std::ios::out | std::ios::binary);
+        //bool success = !(f.write((const char *)data.getBegin(), data.getSize())).fail();
+
+        FILE *fp = fopen(filename, "wb");
+        if(!fp)
+            return false;
+
+        size_t bytesWritten = fwrite(data.getBegin(), 1, data.getSize(), fp);
+        bool success = bytesWritten != data.getSize();
+        fclose(fp);
         if(!success)
         {
             printf("failed to write file\n");
@@ -65,6 +85,13 @@ bool writeBytes(const char *filename, const ByteBuffer &data)
 
 bool fileExists(const char *fileName)
 {
-    return std::filesystem::exists(fileName);
+    FILE *fp = fopen(fileName, "rb");
+    bool result = fp != nullptr;
+    if(fp)
+        fclose(fp);
+    return result;
+
+
+    //return std::filesystem::exists(fileName);
 }
 
