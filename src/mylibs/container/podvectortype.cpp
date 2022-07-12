@@ -98,6 +98,7 @@ template void isPodType<VkPipelineShaderStageCreateInfo>();
 
 template void newInPlace<JsonBlock>(JsonBlock *ptr, const JsonBlock &value);
 template void newInPlace<GltfModel>(GltfModel *ptr, const GltfModel &value);
+template void newInPlace<GltfModel::ModelMesh>(GltfModel::ModelMesh *ptr, const GltfModel::ModelMesh &value);
 
 template void newInPlace<PodVector<uint32_t>>(PodVector<uint32_t> *ptr, const PodVector<uint32_t> &value);
 template void newInPlace<PodVector<DescriptorInfo>>(PodVector<DescriptorInfo> *ptr, const PodVector<DescriptorInfo> &value);
