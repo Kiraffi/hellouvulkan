@@ -20,18 +20,6 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 # imgui stuff to support vulkan with x86
 ADD_DEFINITIONS(-DImTextureID=ImU64)
 
-# miniaudio remove unneccessary stuff
-ADD_DEFINITIONS(-DMA_NO_DECODING)
-ADD_DEFINITIONS(-DMA_NO_ENCODING)
-ADD_DEFINITIONS(-DMA_NO_WAV)
-
-ADD_DEFINITIONS(-DMA_NO_FLAC)
-ADD_DEFINITIONS(-DMA_NO_MP3)
-ADD_DEFINITIONS(-DMA_NO_GENERATION)
-#ADD_DEFINITIONS(-DMA_NO_SSE2)
-ADD_DEFINITIONS(-DMA_NO_AVX2)
-#ADD_DEFINITIONS(-DMA_NO_NEON)
-
 
 
 
@@ -152,7 +140,31 @@ add_library(Imgui OBJECT EXCLUDE_FROM_ALL
 add_library(Miniaudio OBJECT EXCLUDE_FROM_ALL
     "external/miniaudio/extras/miniaudio_split/miniaudio.c"
 )
+## miniaudio remove unneccessary stuff
+#ADD_DEFINITIONS(-DMA_NO_DECODING)
+#ADD_DEFINITIONS(-DMA_NO_ENCODING)
+#ADD_DEFINITIONS(-DMA_NO_WAV)
+#
+#ADD_DEFINITIONS(-DMA_NO_FLAC)
+#ADD_DEFINITIONS(-DMA_NO_MP3)
+#ADD_DEFINITIONS(-DMA_NO_GENERATION)
+##ADD_DEFINITIONS(-DMA_NO_SSE2)
+#ADD_DEFINITIONS(-DMA_NO_AVX2)
+##ADD_DEFINITIONS(-DMA_NO_NEON)
 
+
+target_compile_definitions(Miniaudio PRIVATE
+    MA_NO_DECODING
+    MA_NO_ENCODING
+    MA_NO_WAV
+
+    MA_NO_FLAC
+    MA_NO_MP3
+    MA_NO_GENERATION
+    #MA_NO_SSE2
+    MA_NO_AVX2
+    #MA_NO_NEON
+)
 # add_subdirectory("external/meshoptimizer")
 add_subdirectory("external/glfw")
 add_subdirectory("src")
