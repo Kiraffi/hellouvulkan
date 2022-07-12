@@ -19,8 +19,8 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include <set>
-#include <string>
+//#include <set>
+//#include <string>
 #include <string.h>
 
 static constexpr uint32_t FormatFlagBits =
@@ -138,6 +138,7 @@ static PodVector<const char*> getRequiredInstanceExtensions()
 #endif
     return extensions;
 }
+
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -360,10 +361,10 @@ static bool createSwapchain(VSyncType vsyncMode)
             extent.width = uint32_t(width);
             extent.height = uint32_t(height);
 
-            extent.width = std::max(swapChainSupport.capabilities.minImageExtent.width,
-                std::min(swapChainSupport.capabilities.maxImageExtent.width, extent.width));
-            extent.height = std::max(swapChainSupport.capabilities.minImageExtent.height,
-                std::min(swapChainSupport.capabilities.maxImageExtent.height, extent.height));
+            extent.width = Supa::maxu32(swapChainSupport.capabilities.minImageExtent.width,
+                Supa::minu32(swapChainSupport.capabilities.maxImageExtent.width, extent.width));
+            extent.height = Supa::maxu32(swapChainSupport.capabilities.minImageExtent.height,
+                Supa::minu32(swapChainSupport.capabilities.maxImageExtent.height, extent.height));
         }
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -496,18 +497,27 @@ static bool createInstance()
 }
 
 
-
-
-
 static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 {
-    VkPhysicalDevice devices[256] = {};
+    VkPhysicalDevice devices[32] = {};
     uint32_t count = ARRAYSIZES(devices);
 
     VK_CHECK(vkEnumeratePhysicalDevices(vulk->instance, &count, devices));
 
     VkPhysicalDevice primary = nullptr;
     VkPhysicalDevice secondary = nullptr;
+
+
+    PodVector<const char*> requiredExtensions;
+    for(const char *str : deviceExtensions)
+        if(!requiredExtensions.find(str))
+            requiredExtensions.pushBack(str);
+    for(const char *str : addCheckDeviceExtensions)
+    {
+        if(strcmp(str, "") != 0)
+            if(!requiredExtensions.find(str))
+                requiredExtensions.pushBack(str);
+    }
 
     for(uint32_t i = 0; i < count; ++i)
     {
@@ -568,22 +578,19 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             availableExtensions.resize(extensionCount);
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
-            std::set<std::string> requiredExtensions;
-            for (const char *str : deviceExtensions)
-                requiredExtensions.insert(str);
+            PodVector<const char*> requiredExtensionsTemp = requiredExtensions;
 
-            for(const char *str : addCheckDeviceExtensions)
-            {
-                if(strcmp(str, "") != 0)
-                    requiredExtensions.insert(str);
-            }
             for (const auto& extension : availableExtensions)
             {
                 //printf("available extension: %s\n", extension.extensionName);
-                requiredExtensions.erase(extension.extensionName);
+                for(uint32_t i = 0; i < requiredExtensionsTemp.size(); ++i)
+                {
+                    if(strcmp(requiredExtensionsTemp[i], extension.extensionName) == 0)
+                        requiredExtensionsTemp.removeIndex(i);
+                }
             }
 
-            extensionsSupported = requiredExtensions.empty();
+            extensionsSupported = requiredExtensionsTemp.empty();
 
 
         }
@@ -675,9 +682,10 @@ static bool createDeviceWithQueues()
     ASSERT(vulk->defaultColorFormat != VK_FORMAT_UNDEFINED);
 
     PodVector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {
-        vulk->queueFamilyIndices.graphicsFamily, vulk->queueFamilyIndices.presentFamily
-    };
+    PodVector<uint32_t> uniqueQueueFamilies;
+    uniqueQueueFamilies.pushBack(vulk->queueFamilyIndices.graphicsFamily);
+    if(vulk->queueFamilyIndices.graphicsFamily != vulk->queueFamilyIndices.presentFamily)
+        uniqueQueueFamilies.pushBack(vulk->queueFamilyIndices.presentFamily);
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily : uniqueQueueFamilies)

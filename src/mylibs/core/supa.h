@@ -16,6 +16,9 @@ namespace Supa
 
     int absi(int v);
 
+    uint32_t minu32(uint32_t a, uint32_t b);
+    uint32_t maxu32(uint32_t a, uint32_t b);
+
     float atan2f(float a, float b);
     float tanf(float a);
     float sinf(float a);

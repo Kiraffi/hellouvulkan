@@ -46,7 +46,11 @@ namespace Supa
     {
         return ::strlen(str);
     }
+
     int absi(int v) { return v < 0 ? -v : v; }
+
+    uint32_t minu32(uint32_t a, uint32_t b) { return a < b ? a : b; }
+    uint32_t maxu32(uint32_t a, uint32_t b) { return a > b ? a : b; }
 
     float atan2f(float a, float b) { return ::atan2f(a, b); }
     float sqrtf(float a) { return ::sqrtf(a); }
