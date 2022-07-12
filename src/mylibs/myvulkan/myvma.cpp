@@ -8,7 +8,11 @@
 #endif
 
 #define VMA_IMPLEMENTATION
-
+#define VMA_STATS_STRING_ENABLED 0
+//#define VMA_BIND_MEMORY2 0
+//#define VMA_MEMORY_PRIORITY 0
+//#define VMA_EXTERNAL_MEMORY 0
+//#define VMA_BUFFER_DEVICE_ADDRESS 0
 #include <vk_mem_alloc.h>
 
 #ifdef __clang__
