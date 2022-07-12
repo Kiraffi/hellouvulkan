@@ -37,7 +37,7 @@ Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T), BufferType::VE
     T *ptr = &begin();
     while(b < e)
     {
-        new (ptr)T(*b);
+        newInPlacement(ptr, *b);
         ++ptr;
         ++b;
     }
@@ -58,7 +58,7 @@ Vector<T>::Vector(Vector &&other) noexcept : VectorBase(sizeof(T), BufferType::V
     clear();
     buffer.reset();
     buffer = other.buffer;
-    new (&other.buffer) ByteBuffer(sizeof(T), BufferType::VECTOR);
+    other.buffer = ByteBuffer(sizeof(T), BufferType::VECTOR);
 }
 
 template <typename T>
