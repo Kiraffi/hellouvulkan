@@ -477,8 +477,620 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
 
 
 
+static bool parseMeshes(const JsonBlock &mainBlock, GltfData &data, GltfModel &outModel)
+{
+    const JsonBlock &meshBlock = mainBlock.getChild("meshes");
+    ASSERT(meshBlock.getChildCount() >= 1);
+    if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
+        return false;
+
+    uint32_t meshCount = meshBlock.getChildCount();
+    data.meshes.resize(meshCount, GltfMeshNode());
+
+    outModel.modelMeshes.resize(meshCount);
+
+    for(int i = 0; i < meshCount; ++i)
+    {
+        const JsonBlock &child = meshBlock.children[i];
+        GltfMeshNode &node = data.meshes[i];
+        if(!child.getChild("name").parseString(node.name))
+            return false;
+        outModel.modelMeshes[i].meshName = SmallStackString(node.name.data(), node.name.size());
+        ASSERT(child.getChild("primitives").getChildCount() == 1);
+        const JsonBlock &prims = child.getChild("primitives").getChild(0);
+        if(!prims.isValid())
+            return false;
+
+        if(!prims.getChild("indices").parseUInt(node.indicesIndex) ||
+            !prims.getChild("material").parseUInt(node.materialIndex))
+            return false;
+
+        const JsonBlock &attribs = prims.getChild("attributes");
+        if(!attribs.isValid() || attribs.getChildCount() < 1)
+            return false;
+
+        if(!attribs.getChild("POSITION").parseUInt(node.positionIndex) ||
+            !attribs.getChild("NORMAL").parseUInt(node.normalIndex))
+            return false;
+
+        attribs.getChild("COLOR_0").parseUInt(node.colorIndex);
+
+        attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex);
+
+        attribs.getChild("JOINTS_0").parseUInt(node.jointsIndex);
+        attribs.getChild("WEIGHTS_0").parseUInt(node.weightIndex);
+    }
+    return true;
+}
+
+static bool parseNodes(const JsonBlock &mainBlock, GltfData &data, GltfModel &outModel)
+{
+    const JsonBlock &nodeBlock = mainBlock.getChild("nodes");
+    if(!nodeBlock.isValid() || nodeBlock.getChildCount() < 1)
+        return false;
+
+    data.nodes.resize(nodeBlock.getChildCount());
+    for(int i = 0; i < nodeBlock.getChildCount(); ++i)
+    {
+        const JsonBlock &child = nodeBlock.children[i];
+        GltfSceneNode &node = data.nodes[i];
+        if(!child.getChild("name").parseString(node.name))
+            return false;
+
+        child.getChild("mesh").parseUInt(node.meshIndex);
+        child.getChild("skin").parseUInt(node.skinIndex);
 
 
+        child.getChild("rotation").parseQuat(node.rot);
+        node.rot = normalize(node.rot);
+
+        child.getChild("translation").parseVec3(node.trans);
+
+        child.getChild("scale").parseVec3(node.scale);
+
+        const JsonBlock &childrenBlock = child.getChild("children");
+        node.childNodeIndices.reserve(childrenBlock.children.size());
+        for(const auto &childBlock : childrenBlock.children)
+        {
+            uint32_t tmpIndex = ~0u;
+            if(!childBlock.parseUInt(tmpIndex))
+                return false;
+            node.childNodeIndices.push_back(tmpIndex);
+        }
+    }
+
+    return true;
+
+}
+
+static bool parseSkins(const JsonBlock &mainBlock, GltfData &data, GltfModel &outModel)
+{
+    const JsonBlock &skinBlock = mainBlock.getChild("skins");
+    if(skinBlock.isValid() && skinBlock.getChildCount() > 0)
+    {
+        ASSERT(skinBlock.getChildCount() == 1);
+        data.skins.resize(skinBlock.getChildCount());
+
+        for(int i = 0; i < skinBlock.getChildCount(); ++i)
+        {
+            GltfSkinNode &node = data.skins[i];
+            const JsonBlock &child = skinBlock.children[i];
+
+            if(!child.getChild("name").parseString(node.name))
+                return false;
+
+            if(!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
+                return false;
+
+            const JsonBlock &jointsBlock = child.getChild("joints");
+            if(!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
+                return false;
+            node.joints.reserve(jointsBlock.getChildCount());
+            for(int j = 0; j < jointsBlock.getChildCount(); ++j)
+            {
+                uint32_t tmpInt = ~0u;
+                if(!jointsBlock.getChild(j).parseUInt(tmpInt))
+                    return false;
+
+                node.joints.push_back(tmpInt);
+            }
+
+        }
+    }
+    return true;
+}
+
+
+static bool parseBuffers(const JsonBlock &mainBlock, GltfData &data, GltfModel &outModel)
+{
+    const JsonBlock &bufferBlock = mainBlock.getChild("buffers");
+    if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
+        return false;
+    ASSERT(bufferBlock.getChildCount() == 1);
+
+    data.buffers.resize(bufferBlock.getChildCount());
+
+    for(int i = 0; i < bufferBlock.getChildCount(); ++i)
+    {
+        const JsonBlock &child = bufferBlock.children[i];
+        PodVector<uint8_t> &buffer = data.buffers[i];
+
+        uint32_t bufLen = 0u;
+        if(!child.getChild("byteLength").parseUInt(bufLen))
+            return false;
+
+        if(!child.getChild("uri").parseBuffer(buffer))
+            return false;
+
+        if(bufLen != buffer.size())
+            return false;
+    }
+
+
+    return true;
+}
+
+
+static bool parseAnimations(const JsonBlock &mainBlock, GltfData &data, GltfModel &outModel)
+{
+    const JsonBlock &animationBlocks = mainBlock.getChild("animations");
+    if(animationBlocks.isValid() && animationBlocks.getChildCount() > 0)
+    {
+        uint32_t animationCount = animationBlocks.getChildCount();
+        outModel.animNames.resize(animationCount);
+
+        data.animationNodes.resize(animationCount);
+        for(uint32_t animIndex = 0u; animIndex < animationCount; ++animIndex)
+        {
+            const JsonBlock &animationBlock = animationBlocks.getChild(animIndex);
+            if(!animationBlock.isValid())
+                return false;
+            GltfAnimationNode &animationNode = data.animationNodes[animIndex];
+            if(!animationBlock.getChild("name").parseString(animationNode.name))
+                return false;
+            outModel.animNames[animIndex] = SmallStackString(animationNode.name.data(), animationNode.name.size());
+
+            const JsonBlock &channelsBlock = animationBlock.getChild("channels");
+            const JsonBlock &samplersBlock = animationBlock.getChild("samplers");
+            if(!channelsBlock.isValid() || !samplersBlock.isValid() ||
+                channelsBlock.getChildCount() == 0 || samplersBlock.getChildCount() == 0)
+                return false;
+
+            animationNode.channels.resize(channelsBlock.getChildCount());
+            animationNode.samplers.resize(samplersBlock.getChildCount());
+
+            for(uint32_t i = 0; i < channelsBlock.getChildCount(); ++i)
+            {
+                const JsonBlock &channelBlock = channelsBlock.getChild(i);
+                GltfAnimationNode::Channel &channel = animationNode.channels[i];
+                if(!channelBlock.getChild("sampler").parseUInt(channel.samplerIndex))
+                    return false;
+                if(channel.samplerIndex >= animationNode.samplers.size())
+                    return false;
+                if(!channelBlock.getChild("target").getChild("node").parseUInt(channel.nodeIndex))
+                    return false;
+                StringView pathStr;
+                if(!channelBlock.getChild("target").getChild("path").parseString(pathStr))
+                    return false;
+                if(pathStr == "translation")
+                    channel.channelType = GltfAnimationNode::Channel::ChannelPath::TRANSLATION;
+                else if(pathStr == "rotation")
+                    channel.channelType = GltfAnimationNode::Channel::ChannelPath::ROTAION;
+                else if(pathStr == "scale")
+                    channel.channelType = GltfAnimationNode::Channel::ChannelPath::SCALE;
+                // unsupported?
+                else
+                {
+                    ASSERT(false);
+                    return false;
+                }
+            }
+
+            for(uint32_t i = 0; i < samplersBlock.getChildCount(); ++i)
+            {
+                const JsonBlock &samplerBlock = samplersBlock.getChild(i);
+                GltfAnimationNode::Sampler &sampler = animationNode.samplers[i];
+                if(!samplerBlock.getChild("input").parseUInt(sampler.inputIndex))
+                    return false;
+                if(!samplerBlock.getChild("output").parseUInt(sampler.outputIndex))
+                    return false;
+
+                StringView interpolationStr;
+                if(!samplerBlock.getChild("interpolation").parseString(interpolationStr))
+                    return false;
+                if(interpolationStr == "LINEAR")
+                    sampler.interpolationType = GltfAnimationNode::Sampler::Interpolation::LINEAR;
+                // unsupported?
+                else
+                {
+                    ASSERT(false);
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+
+static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &data, GltfModel &outModel)
+{
+    const JsonBlock &accessorBlocks = mainBlock.getChild("accessors");
+    if(!accessorBlocks.isValid() || accessorBlocks.getChildCount() < 1)
+        return false;
+
+    const JsonBlock &bufferViewBlocks = mainBlock.getChild("bufferViews");
+    if(!bufferViewBlocks.isValid() || bufferViewBlocks.getChildCount() < 1)
+        return false;
+
+    data.accessors.resize(accessorBlocks.getChildCount());
+    data.bufferViews.resize(bufferViewBlocks.getChildCount());
+
+    for(uint32_t index = 0u; index < bufferViewBlocks.getChildCount(); ++index)
+    {
+        GltfBufferView &bufferView = data.bufferViews[index];
+        const JsonBlock &bufferViewBlock = bufferViewBlocks.getChild(index);
+        if(!bufferViewBlock.isValid())
+            return false;
+
+if(!bufferViewBlock.isValid())
+return false;
+
+if(!bufferViewBlock.getChild("buffer").parseUInt(bufferView.bufferIndex)
+    || !bufferViewBlock.getChild("byteLength").parseUInt(bufferView.bufferLength)
+    || !bufferViewBlock.getChild("byteOffset").parseUInt(bufferView.bufferStartOffset)
+    )
+    return false;
+    }
+
+
+    for(uint32_t index = 0u; index < accessorBlocks.getChildCount(); ++index)
+    {
+        GltfBufferAccessor &accessor = data.accessors[index];
+        const JsonBlock &accessorBlock = accessorBlocks.getChild(index);
+        if(!accessorBlock.isValid())
+            return false;
+
+        uint32_t componentType = ~0u;
+        StringView s;
+        if(!accessorBlock.getChild("bufferView").parseUInt(accessor.bufferViewIndex)
+            || !accessorBlock.getChild("componentType").parseUInt(componentType)
+            || !accessorBlock.getChild("count").parseUInt(accessor.count)
+            || !accessorBlock.getChild("type").parseString(s)
+            )
+            return false;
+
+        if(accessorBlock.getChild("sparse").isValid())
+        {
+            LOG("No sparse view are handled!\n");
+            ASSERT(false && "No sparse view are handled");
+            return false;
+        }
+        if(accessorBlock.getChild("min").isValid())
+        {
+            accessor.mins.resize(accessorBlock.getChild("min").getChildCount());
+            for(uint32_t minIndex = 0u; minIndex < accessor.mins.size(); ++minIndex)
+            {
+                double value = 0.0;
+                if(!accessorBlock.getChild("min").getChild(minIndex).parseNumber(value))
+                    return false;
+                accessor.mins[minIndex] = value;
+            }
+        }
+        if(accessorBlock.getChild("max").isValid())
+        {
+            accessor.maxs.resize(accessorBlock.getChild("max").getChildCount());
+            for(uint32_t maxIndex = 0u; maxIndex < accessor.maxs.size(); ++maxIndex)
+            {
+                double value = 0.0;
+                if(!accessorBlock.getChild("max").getChild(maxIndex).parseNumber(value))
+                    return false;
+                accessor.maxs[maxIndex] = value;
+            }
+        }
+
+        if(!accessorBlock.getChild("normalized").parseBool(accessor.normalized))
+            accessor.normalized = false;
+        //"SCALAR"     1
+        //"VEC2"     2
+        //"VEC3"     3
+        //"VEC4"     4
+        //"MAT2"     4
+        //"MAT3"     9
+        //"MAT4"     16
+
+        if(s == "SCALAR") accessor.countType = GltfBufferComponentCountType::SCALAR;
+        else if(s == "VEC2") accessor.countType = GltfBufferComponentCountType::VEC2;
+        else if(s == "VEC3") accessor.countType = GltfBufferComponentCountType::VEC3;
+        else if(s == "VEC4") accessor.countType = GltfBufferComponentCountType::VEC4;
+        else if(s == "MAT2") accessor.countType = GltfBufferComponentCountType::MAT2;
+        else if(s == "MAT3") accessor.countType = GltfBufferComponentCountType::MAT3;
+        else if(s == "MAT4") accessor.countType = GltfBufferComponentCountType::MAT4;
+        else
+        {
+            ASSERT(false && "Unknown type for accessor!");
+        }
+
+        //// Maybe 5124 is int32?
+        //5120 (BYTE)1
+        //5121(UNSIGNED_BYTE)1
+        //5122 (SHORT)2
+        //5123 (UNSIGNED_SHORT)2
+        //5125 (UNSIGNED_INT)4
+        //5126 (FLOAT)4
+        if(componentType == 5120) accessor.componentType = GltfBufferComponentType::INT_8;
+        else if(componentType == 5121) accessor.componentType = GltfBufferComponentType::UINT_8;
+        else if(componentType == 5122) accessor.componentType = GltfBufferComponentType::INT_16;
+        else if(componentType == 5123) accessor.componentType = GltfBufferComponentType::UINT_16;
+        else if(componentType == 5125) accessor.componentType = GltfBufferComponentType::UINT_32;
+        else if(componentType == 5126) accessor.componentType = GltfBufferComponentType::FLOAT_32;
+        else
+        {
+            ASSERT(false && componentType);
+        }
+    }
+    return true;
+}
+
+static bool parseSkinData(GltfData &data, GltfModel &outModel)
+{
+    for(uint32_t i = 0; i < data.skins.size(); ++i)
+    {
+        GltfSkinNode &skinNode = data.skins[i];
+
+        if(skinNode.inverseMatricesIndex >= data.accessors.size())
+            return false;
+
+        if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
+            return false;
+
+
+
+
+        PodVector<Matrix> inverseMatrices;
+        uint32_t inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
+        inverseMatrices.resize(inverseMatricesCount);
+        outModel.inverseNormalMatrices.resize(inverseMatricesCount);
+        outModel.inverseMatrices.resize(inverseMatricesCount);
+
+        auto calculateInverseMatrices =
+            [&](auto &f, const Mat3x4 &parent, const Mat3x4 &parentNormal, uint32_t nodeIndex)
+        {
+            if(nodeIndex >= data.nodes.size())
+                return;
+
+            const auto &childNode = data.nodes[nodeIndex];
+            const auto &pos = childNode.trans;
+            const auto &rot = childNode.rot;
+            const auto &scale = childNode.scale;
+
+            uint32_t boneIndex = 0u;
+            for(; boneIndex < skinNode.joints.size(); ++boneIndex)
+            {
+                if(skinNode.joints[boneIndex] == nodeIndex)
+                    break;
+            }
+            if(boneIndex >= skinNode.joints.size())
+                return;
+
+            if(!isIdentity(outModel.inverseNormalMatrices[boneIndex]))
+                return;
+
+            Transform t {.pos = pos, .rot = rot, .scale = scale};
+            Mat3x4 m = getModelMatrixInverse(t);
+            Mat3x4 m2 = getModelNormalMatrix(t);
+            Mat3x4 m3 = getModelMatrix(t);
+
+            Mat3x4 newParent = m * parent;
+            Mat3x4 newParentNormal = parentNormal * m2;
+
+            outModel.inverseMatrices[boneIndex] = newParent;
+            outModel.inverseNormalMatrices[boneIndex] = newParentNormal;
+
+            for(uint32_t childNodeIndex : childNode.childNodeIndices)
+            {
+                f(f, newParent, newParentNormal, childNodeIndex);
+            }
+        };
+        for(uint32_t jointIndex : skinNode.joints)
+            calculateInverseMatrices(calculateInverseMatrices, Mat3x4(), Mat3x4(), jointIndex);
+
+
+
+
+
+        if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
+            0, sliceFromPodVectorBytesMutable(inverseMatrices)))
+            return false;
+        //printf("\n\n");
+        for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
+        {
+            inverseMatrices[i] = transpose(inverseMatrices[i]);;
+            outModel.inverseMatrices[i] = inverseMatrices[i];
+            /*
+            uint32_t nodeJointIndex = skinNode.joints[i];
+            const auto &node = data.nodes[nodeJointIndex];
+            printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, String(node.name).getStr());
+            printVector3(node.trans, "Pos");
+            printQuaternion(node.rot, "Rot");
+            printVector3(node.scale, "Scale");
+            printMatrix(inverseMatrices[i], " invmat");
+            printMatrix(inverse(inverseMatrices[i]), "inverse of invmat");
+            printMatrix(mat1[nodeJointIndex], "mat1");
+            printMatrix(mat2[nodeJointIndex], "mat2");
+            //printMatrix(mat3[nodeJointIndex], "mat3");
+            printf("\n\n\n");
+            */
+
+            //ASSERT(inverse(inverseMatrices[i]) == mat1[nodeJointIndex]);
+
+        }
+    }
+    return true;
+}
+
+static bool parseAnimationData(GltfData &data, GltfModel &outModel)
+{
+        // Parse animationdata
+    if(data.skins.getSize() == 1 && data.skins[0].joints.size() > 0)
+    {
+        const auto &joints = data.skins[0].joints;
+        uint32_t jointCount = joints.size();
+
+        outModel.animationIndices.resize(data.animationNodes.size());
+        outModel.animStartTimes.resize(data.animationNodes.size());
+        outModel.animEndTimes.resize(data.animationNodes.size());
+
+        for(uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
+        {
+            outModel.animationIndices[animationIndex].resize(jointCount);
+            for(uint32_t jointIndex = 0u; jointIndex < jointCount; ++jointIndex)
+            {
+                uint32_t nodeIndex = joints[jointIndex];
+                ASSERT(nodeIndex < data.nodes.size());
+                if(nodeIndex >= data.nodes.size())
+                    return false;
+
+                auto &animationBoneIndices = outModel.animationIndices[animationIndex][jointIndex];
+
+                uint32_t positionSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
+                    GltfAnimationNode::Channel::ChannelPath::TRANSLATION);
+                uint32_t rotationSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
+                    GltfAnimationNode::Channel::ChannelPath::ROTAION);
+                uint32_t scaleSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
+                    GltfAnimationNode::Channel::ChannelPath::SCALE);
+
+                // parse positions
+                {
+                    PodVector<GltfModel::AnimPos> bonePosVector;
+
+                    if(!parseAnimationChannel(data, animationIndex, positionSamplerIndex,
+                        GltfBufferComponentCountType::VEC3, bonePosVector))
+                    {
+                        ASSERT(false && "failed to parse animation channel for position");
+                        return false;
+                    }
+                    /*
+                    for(const auto &v : bonePosVector)
+                    {
+                        printf("time: %f, pos: [%f, %f, %f]\n",
+                            v.timeStamp, v.value.x, v.value.y, v.value.z);
+                    }
+                    */
+
+                    animationBoneIndices.posStartIndex = outModel.animationPosData.size();
+                    animationBoneIndices.posIndexCount = bonePosVector.size();
+
+                    outModel.animationPosData.pushBack(bonePosVector);
+                }
+                // parse rot
+                {
+                    PodVector<GltfModel::AnimRot> boneRotVector;
+
+                    if(!parseAnimationChannel(data, animationIndex, rotationSamplerIndex,
+                        GltfBufferComponentCountType::VEC4, boneRotVector))
+                    {
+                        ASSERT(false && "failed to parse animation channel for rotation");
+                        return false;
+                    }
+                    /*
+                    for(const auto &v : boneRotVector)
+                    {
+                        printf("time: %f, rot: [%f, %f, %f], [%f]\n",
+                            v.timeStamp, v.value.v.x, v.value.v.y, v.value.v.z, v.value.w);
+                    }
+                    */
+
+                    animationBoneIndices.rotStartIndex = outModel.animationRotData.size();
+                    animationBoneIndices.rotIndexCount = boneRotVector.size();
+
+                    outModel.animationRotData.pushBack(boneRotVector);
+                }
+                // parse scale
+                {
+                    PodVector<GltfModel::AnimScale> boneScaleVector;
+
+                    if(!parseAnimationChannel(data, animationIndex, scaleSamplerIndex,
+                        GltfBufferComponentCountType::VEC3, boneScaleVector))
+                    {
+                        ASSERT(false && "failed to parse animation channel for scale");
+                        return false;
+                    }
+                    /*
+                    for(const auto &v : boneScaleVector)
+                    {
+                        printf("time: %f, scale: [%f, %f, %f]\n",
+                            v.timeStamp, v.value.x, v.value.y, v.value.z);
+                    }
+                    */
+
+                    animationBoneIndices.scaleStartIndex = outModel.animationScaleData.size();
+                    animationBoneIndices.scaleIndexCount = boneScaleVector.size();
+                    outModel.animationScaleData.pushBack(boneScaleVector);
+                }
+
+                // remap children
+                {
+                    const auto &childNodes = data.nodes[nodeIndex].childNodeIndices;
+                    animationBoneIndices.childStartIndex = outModel.childrenJointIndices.size();
+                    uint32_t count = 0u;
+                    for(uint32_t childNodeIndex : childNodes)
+                    {
+                        bool found = false;
+                        for(uint32_t childJointIndex = 0u; childJointIndex < joints.size(); ++childJointIndex)
+                        {
+                            if(joints[childJointIndex] == childNodeIndex)
+                            {
+                                outModel.childrenJointIndices.push_back(childJointIndex);
+                                ++count;
+                                found = true;
+                                break;
+                            }
+                        }
+                        ASSERT(found);
+                        if(!found)
+                            return false;
+                    }
+                    animationBoneIndices.childIndexCount = count;
+                }
+            }
+        }
+
+        for(uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
+        {
+            float animStartTime = 1e10;
+            float animEndTime = -1e10;
+            ASSERT(animationIndex < outModel.animationIndices.size());
+
+            if(animationIndex >= outModel.animationIndices.size())
+                return false;
+            const auto &animationVector = outModel.animationIndices[animationIndex];
+            for(const auto &animNode : animationVector)
+            {
+                for(uint32_t ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
+                {
+                    animStartTime = Supa::minf(animStartTime, outModel.animationPosData[ind].timeStamp);
+                    animEndTime = Supa::maxf(animEndTime, outModel.animationPosData[ind].timeStamp);
+                }
+
+                for(uint32_t ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
+                {
+                    animStartTime = Supa::minf(animStartTime, outModel.animationRotData[ind].timeStamp);
+                    animEndTime = Supa::maxf(animEndTime, outModel.animationRotData[ind].timeStamp);
+                }
+
+                for(uint32_t ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
+                {
+                    animStartTime = Supa::minf(animStartTime, outModel.animationScaleData[ind].timeStamp);
+                    animEndTime = Supa::maxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
+                }
+            }
+            outModel.animStartTimes[animationIndex] = animStartTime;
+            outModel.animEndTimes[animationIndex] = animEndTime;
+        }
+    }
+    return true;
+}
 
 bool readGLTF(const char *filename, GltfModel &outModel)
 {
@@ -507,342 +1119,28 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 
 
     // Parse meshes
-    {
-        const JsonBlock &meshBlock = bl.getChild("meshes");
-        ASSERT(meshBlock.getChildCount() >= 1);
-        if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
-            return false;
+    if(!parseMeshes(bl, data, outModel))
+        return false;
 
-        uint32_t meshCount = meshBlock.getChildCount();
-        data.meshes.resize(meshCount, GltfMeshNode());
+    if(!parseNodes(bl, data, outModel))
+        return false;
 
-        outModel.modelMeshes.resize(meshCount);
+    if(!parseSkins(bl, data, outModel))
+        return false;
 
-        for(int i = 0; i < meshCount; ++i)
-        {
-            const JsonBlock &child = meshBlock.children [i];
-            GltfMeshNode &node = data.meshes [i];
-            if(!child.getChild("name").parseString(node.name))
-                return false;
-            outModel.modelMeshes[i].meshName = SmallStackString(node.name.data(), node.name.size());
-            ASSERT(child.getChild("primitives").getChildCount() == 1);
-            const JsonBlock &prims = child.getChild("primitives").getChild(0);
-            if(!prims.isValid())
-                return false;
+    if(!parseBuffers(bl, data, outModel))
+        return false;
 
-            if(!prims.getChild("indices").parseUInt(node.indicesIndex) ||
-                !prims.getChild("material").parseUInt(node.materialIndex))
-                return false;
+    if(!parseAnimations(bl, data, outModel))
+        return false;
 
-            const JsonBlock &attribs = prims.getChild("attributes");
-            if(!attribs.isValid() || attribs.getChildCount() < 1)
-                return false;
+    if(!parseAnimations(bl, data, outModel))
+        return false;
 
-            if(!attribs.getChild("POSITION").parseUInt(node.positionIndex) ||
-                !attribs.getChild("NORMAL").parseUInt(node.normalIndex))
-                return false;
-
-            attribs.getChild("COLOR_0").parseUInt(node.colorIndex);
-
-            attribs.getChild("TEXCOORD_0").parseUInt(node.uvIndex);
-
-            attribs.getChild("JOINTS_0").parseUInt(node.jointsIndex);
-            attribs.getChild("WEIGHTS_0").parseUInt(node.weightIndex);
+    if(!parseAccessorsAndBufferViews(bl, data, outModel))
+        return false;
 
 
-        }
-    }
-    {
-        const JsonBlock &nodeBlock = bl.getChild("nodes");
-        if(!nodeBlock.isValid() || nodeBlock.getChildCount() < 1)
-            return false;
-
-        data.nodes.resize(nodeBlock.getChildCount());
-        for(int i = 0; i < nodeBlock.getChildCount(); ++i)
-        {
-            const JsonBlock &child = nodeBlock.children [i];
-            GltfSceneNode &node = data.nodes [i];
-            if(!child.getChild("name").parseString(node.name))
-                return false;
-
-            child.getChild("mesh").parseUInt(node.meshIndex);
-            child.getChild("skin").parseUInt(node.skinIndex);
-
-
-            child.getChild("rotation").parseQuat(node.rot);
-            node.rot = normalize(node.rot);
-
-            child.getChild("translation").parseVec3(node.trans);
-
-            child.getChild("scale").parseVec3(node.scale);
-
-            const JsonBlock& childrenBlock = child.getChild("children");
-            node.childNodeIndices.reserve(childrenBlock.children.size());
-            for(const auto &childBlock : childrenBlock.children)
-            {
-                uint32_t tmpIndex = ~0u;
-                if(!childBlock.parseUInt(tmpIndex))
-                    return false;
-                node.childNodeIndices.push_back(tmpIndex);
-            }
-        }
-    }
-
-    {
-        const JsonBlock& skinBlock = bl.getChild("skins");
-        if (skinBlock.isValid() && skinBlock.getChildCount() > 0)
-        {
-            ASSERT(skinBlock.getChildCount() == 1);
-            data.skins.resize(skinBlock.getChildCount());
-
-            for (int i = 0; i < skinBlock.getChildCount(); ++i)
-            {
-                GltfSkinNode& node = data.skins[i];
-                const JsonBlock& child = skinBlock.children[i];
-
-                if (!child.getChild("name").parseString(node.name))
-                    return false;
-
-                if (!child.getChild("inverseBindMatrices").parseUInt(node.inverseMatricesIndex))
-                    return false;
-
-                const JsonBlock& jointsBlock = child.getChild("joints");
-                if (!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
-                    return false;
-                node.joints.reserve(jointsBlock.getChildCount());
-                for (int j = 0; j < jointsBlock.getChildCount(); ++j)
-                {
-                    uint32_t tmpInt = ~0u;
-                    if (!jointsBlock.getChild(j).parseUInt(tmpInt))
-                        return false;
-
-                    node.joints.push_back(tmpInt);
-                }
-
-            }
-        }
-    }
-
-    {
-        const JsonBlock &bufferBlock = bl.getChild("buffers");
-        if(!bufferBlock.isValid() || bufferBlock.getChildCount() < 1)
-            return false;
-        ASSERT(bufferBlock.getChildCount() == 1);
-
-        data.buffers.resize(bufferBlock.getChildCount());
-
-        for(int i = 0; i < bufferBlock.getChildCount(); ++i)
-        {
-            const JsonBlock &child = bufferBlock.children [i];
-            PodVector<uint8_t> &buffer = data.buffers [i];
-
-            uint32_t bufLen = 0u;
-            if(!child.getChild("byteLength").parseUInt(bufLen))
-                return false;
-
-            if(!child.getChild("uri").parseBuffer(buffer))
-                return false;
-
-            if(bufLen != buffer.size())
-                return false;
-        }
-    }
-
-    {
-        const JsonBlock &animationBlocks = bl.getChild("animations");
-        if(animationBlocks.isValid() && animationBlocks.getChildCount() > 0)
-        {
-            uint32_t animationCount = animationBlocks.getChildCount();
-            outModel.animNames.resize(animationCount);
-
-            data.animationNodes.resize(animationCount);
-            for(uint32_t animIndex = 0u; animIndex < animationCount; ++animIndex)
-            {
-                const JsonBlock &animationBlock = animationBlocks.getChild(animIndex);
-                if(!animationBlock.isValid())
-                    return false;
-                GltfAnimationNode &animationNode = data.animationNodes[animIndex];
-                if(!animationBlock.getChild("name").parseString(animationNode.name))
-                    return false;
-                outModel.animNames[animIndex] = SmallStackString(animationNode.name.data(), animationNode.name.size());
-
-                const JsonBlock &channelsBlock = animationBlock.getChild("channels");
-                const JsonBlock &samplersBlock = animationBlock.getChild("samplers");
-                if(!channelsBlock.isValid() || !samplersBlock.isValid() ||
-                    channelsBlock.getChildCount() == 0 || samplersBlock.getChildCount() == 0)
-                    return false;
-
-                animationNode.channels.resize(channelsBlock.getChildCount());
-                animationNode.samplers.resize(samplersBlock.getChildCount());
-
-                for(uint32_t i = 0; i < channelsBlock.getChildCount(); ++i)
-                {
-                    const JsonBlock &channelBlock = channelsBlock.getChild(i);
-                    GltfAnimationNode::Channel &channel = animationNode.channels[i];
-                    if(!channelBlock.getChild("sampler").parseUInt(channel.samplerIndex))
-                        return false;
-                    if(channel.samplerIndex >= animationNode.samplers.size())
-                        return false;
-                    if(!channelBlock.getChild("target").getChild("node").parseUInt(channel.nodeIndex))
-                        return false;
-                    StringView pathStr;
-                    if(!channelBlock.getChild("target").getChild("path").parseString(pathStr))
-                        return false;
-                    if(pathStr == "translation")
-                        channel.channelType = GltfAnimationNode::Channel::ChannelPath::TRANSLATION;
-                    else if(pathStr == "rotation")
-                        channel.channelType = GltfAnimationNode::Channel::ChannelPath::ROTAION;
-                    else if(pathStr == "scale")
-                        channel.channelType = GltfAnimationNode::Channel::ChannelPath::SCALE;
-                    // unsupported?
-                    else
-                    {
-                        ASSERT(false);
-                        return false;
-                    }
-                }
-
-                for(uint32_t i = 0; i < samplersBlock.getChildCount(); ++i)
-                {
-                    const JsonBlock &samplerBlock = samplersBlock.getChild(i);
-                    GltfAnimationNode::Sampler &sampler = animationNode.samplers[i];
-                    if(!samplerBlock.getChild("input").parseUInt(sampler.inputIndex))
-                        return false;
-                    if(!samplerBlock.getChild("output").parseUInt(sampler.outputIndex))
-                        return false;
-
-                    StringView interpolationStr;
-                    if(!samplerBlock.getChild("interpolation").parseString(interpolationStr))
-                        return false;
-                    if(interpolationStr == "LINEAR")
-                        sampler.interpolationType = GltfAnimationNode::Sampler::Interpolation::LINEAR;
-                    // unsupported?
-                    else
-                    {
-                        ASSERT(false);
-                        return false;
-                    }
-                }
-            }
-        }
-    }
-
-    {
-        const JsonBlock &accessorBlocks = bl.getChild("accessors");
-        if(!accessorBlocks.isValid() || accessorBlocks.getChildCount() < 1)
-            return false;
-
-        const JsonBlock &bufferViewBlocks = bl.getChild("bufferViews");
-        if(!bufferViewBlocks.isValid() || bufferViewBlocks.getChildCount() < 1)
-            return false;
-
-        data.accessors.resize(accessorBlocks.getChildCount());
-        data.bufferViews.resize(bufferViewBlocks.getChildCount());
-
-        for(uint32_t index = 0u; index < bufferViewBlocks.getChildCount(); ++index)
-        {
-            GltfBufferView &bufferView = data.bufferViews[index];
-            const JsonBlock &bufferViewBlock = bufferViewBlocks.getChild(index);
-            if(!bufferViewBlock.isValid())
-                return false;
-
-            if(!bufferViewBlock.isValid())
-                return false;
-
-            if(!bufferViewBlock.getChild("buffer").parseUInt(bufferView.bufferIndex)
-                || !bufferViewBlock.getChild("byteLength").parseUInt(bufferView.bufferLength)
-                || !bufferViewBlock.getChild("byteOffset").parseUInt(bufferView.bufferStartOffset)
-                )
-                return false;
-        }
-
-
-        for(uint32_t index = 0u; index < accessorBlocks.getChildCount(); ++index)
-        {
-            GltfBufferAccessor &accessor = data.accessors[index];
-            const JsonBlock &accessorBlock = accessorBlocks.getChild(index);
-            if(!accessorBlock.isValid())
-                return false;
-
-            uint32_t componentType = ~0u;
-            StringView s;
-            if(!accessorBlock.getChild("bufferView").parseUInt(accessor.bufferViewIndex)
-                || !accessorBlock.getChild("componentType").parseUInt(componentType)
-                || !accessorBlock.getChild("count").parseUInt(accessor.count)
-                || !accessorBlock.getChild("type").parseString(s)
-            )
-                return false;
-
-            if (accessorBlock.getChild("sparse").isValid())
-            {
-                LOG("No sparse view are handled!\n");
-                ASSERT(false && "No sparse view are handled");
-                return false;
-            }
-            if (accessorBlock.getChild("min").isValid())
-            {
-                accessor.mins.resize(accessorBlock.getChild("min").getChildCount());
-                for(uint32_t minIndex = 0u; minIndex < accessor.mins.size(); ++minIndex)
-                {
-                    double value = 0.0;
-                    if(!accessorBlock.getChild("min").getChild(minIndex).parseNumber(value))
-                        return false;
-                    accessor.mins[minIndex] = value;
-                }
-            }
-            if (accessorBlock.getChild("max").isValid())
-            {
-                accessor.maxs.resize(accessorBlock.getChild("max").getChildCount());
-                for(uint32_t maxIndex = 0u; maxIndex < accessor.maxs.size(); ++maxIndex)
-                {
-                    double value = 0.0;
-                    if(!accessorBlock.getChild("max").getChild(maxIndex).parseNumber(value))
-                        return false;
-                    accessor.maxs[maxIndex] = value;
-                }
-            }
-
-            if(!accessorBlock.getChild("normalized").parseBool(accessor.normalized))
-                accessor.normalized = false;
-            //"SCALAR"     1
-            //"VEC2"     2
-            //"VEC3"     3
-            //"VEC4"     4
-            //"MAT2"     4
-            //"MAT3"     9
-            //"MAT4"     16
-
-            if (s == "SCALAR") accessor.countType = GltfBufferComponentCountType::SCALAR;
-            else if (s == "VEC2") accessor.countType = GltfBufferComponentCountType::VEC2;
-            else if (s == "VEC3") accessor.countType = GltfBufferComponentCountType::VEC3;
-            else if (s == "VEC4") accessor.countType = GltfBufferComponentCountType::VEC4;
-            else if (s == "MAT2") accessor.countType = GltfBufferComponentCountType::MAT2;
-            else if (s == "MAT3") accessor.countType = GltfBufferComponentCountType::MAT3;
-            else if (s == "MAT4") accessor.countType = GltfBufferComponentCountType::MAT4;
-            else
-            {
-                ASSERT(false && "Unknown type for accessor!");
-            }
-
-            //// Maybe 5124 is int32?
-            //5120 (BYTE)1
-            //5121(UNSIGNED_BYTE)1
-            //5122 (SHORT)2
-            //5123 (UNSIGNED_SHORT)2
-            //5125 (UNSIGNED_INT)4
-            //5126 (FLOAT)4
-            if(componentType == 5120) accessor.componentType = GltfBufferComponentType::INT_8;
-            else if(componentType == 5121) accessor.componentType = GltfBufferComponentType::UINT_8;
-            else if(componentType == 5122) accessor.componentType = GltfBufferComponentType::INT_16;
-            else if(componentType == 5123) accessor.componentType = GltfBufferComponentType::UINT_16;
-            else if(componentType == 5125) accessor.componentType = GltfBufferComponentType::UINT_32;
-            else if(componentType == 5126) accessor.componentType = GltfBufferComponentType::FLOAT_32;
-            else
-            {
-                ASSERT(false && componentType);
-            }
-        }
-    }
     for(uint32_t i = 0; i < data.meshes.size(); ++i)
     {
         GltfModel::ModelMesh &modelMesh = outModel.modelMeshes[i];
@@ -976,259 +1274,12 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 
         }
 
+        if(!parseSkinData(data, outModel))
+            return false;
+        if(!parseAnimationData(data, outModel))
+            return false;
 
 
-        for(uint32_t i = 0; i < data.skins.size(); ++i)
-        {
-            GltfSkinNode &skinNode = data.skins[i];
-
-            if(skinNode.inverseMatricesIndex >= data.accessors.size())
-                return false;
-
-            if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
-                return false;
-
-
-
-
-            PodVector<Matrix> inverseMatrices;
-            uint32_t inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
-            inverseMatrices.resize(inverseMatricesCount);
-            outModel.inverseNormalMatrices.resize(inverseMatricesCount);
-            outModel.inverseMatrices.resize(inverseMatricesCount);
-
-            auto calculateInverseMatrices =
-                [&](auto &f, const Mat3x4 &parent, const Mat3x4 &parentNormal, uint32_t nodeIndex)
-            {
-                if(nodeIndex >= data.nodes.size())
-                    return;
-
-                const auto &childNode = data.nodes[nodeIndex];
-                const auto &pos = childNode.trans;
-                const auto &rot = childNode.rot;
-                const auto &scale = childNode.scale;
-
-                uint32_t boneIndex = 0u;
-                for(; boneIndex < skinNode.joints.size(); ++boneIndex)
-                {
-                    if(skinNode.joints[boneIndex] == nodeIndex)
-                        break;
-                }
-                if(boneIndex >= skinNode.joints.size())
-                    return;
-
-                if(!isIdentity(outModel.inverseNormalMatrices[boneIndex]))
-                    return;
-
-                Transform t{ .pos = pos, .rot = rot, .scale = scale };
-                Mat3x4 m = getModelMatrixInverse(t);
-                Mat3x4 m2 = getModelNormalMatrix(t);
-                Mat3x4 m3 = getModelMatrix(t);
-
-                Mat3x4 newParent = m * parent;
-                Mat3x4 newParentNormal = parentNormal * m2;
-
-                outModel.inverseMatrices[boneIndex] = newParent;
-                outModel.inverseNormalMatrices[boneIndex] = newParentNormal;
-
-                for(uint32_t childNodeIndex : childNode.childNodeIndices)
-                {
-                    f(f, newParent, newParentNormal, childNodeIndex);
-                }
-            };
-            for(uint32_t jointIndex : skinNode.joints)
-                calculateInverseMatrices(calculateInverseMatrices, Mat3x4(), Mat3x4(), jointIndex);
-
-
-
-
-
-            if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
-                0, sliceFromPodVectorBytesMutable(inverseMatrices)))
-                return false;
-            //printf("\n\n");
-            for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
-            {
-                inverseMatrices[i]= transpose(inverseMatrices[i]);;
-                outModel.inverseMatrices[i] = inverseMatrices[i];
-                /*
-                uint32_t nodeJointIndex = skinNode.joints[i];
-                const auto &node = data.nodes[nodeJointIndex];
-                printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, String(node.name).getStr());
-                printVector3(node.trans, "Pos");
-                printQuaternion(node.rot, "Rot");
-                printVector3(node.scale, "Scale");
-                printMatrix(inverseMatrices[i], " invmat");
-                printMatrix(inverse(inverseMatrices[i]), "inverse of invmat");
-                printMatrix(mat1[nodeJointIndex], "mat1");
-                printMatrix(mat2[nodeJointIndex], "mat2");
-                //printMatrix(mat3[nodeJointIndex], "mat3");
-                printf("\n\n\n");
-                */
-
-                //ASSERT(inverse(inverseMatrices[i]) == mat1[nodeJointIndex]);
-
-            }
-        }
-
-        // Parse animationdata
-        if (data.skins.getSize() == 1 && data.skins[0].joints.size() > 0)
-        {
-            const auto &joints = data.skins[0].joints;
-            uint32_t jointCount = joints.size();
-
-            outModel.animationIndices.resize(data.animationNodes.size());
-            outModel.animStartTimes.resize(data.animationNodes.size());
-            outModel.animEndTimes.resize(data.animationNodes.size());
-
-            for(uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
-            {
-                outModel.animationIndices[animationIndex].resize(jointCount);
-                for(uint32_t jointIndex = 0u; jointIndex < jointCount; ++jointIndex)
-                {
-                    uint32_t nodeIndex = joints[jointIndex];
-                    ASSERT(nodeIndex < data.nodes.size());
-                    if(nodeIndex >= data.nodes.size())
-                        return false;
-
-                    auto &animationBoneIndices = outModel.animationIndices[animationIndex][jointIndex];
-
-                    uint32_t positionSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
-                        GltfAnimationNode::Channel::ChannelPath::TRANSLATION);
-                    uint32_t rotationSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
-                        GltfAnimationNode::Channel::ChannelPath::ROTAION);
-                    uint32_t scaleSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
-                        GltfAnimationNode::Channel::ChannelPath::SCALE);
-
-                    // parse positions
-                    {
-                        PodVector<GltfModel::AnimPos> bonePosVector;
-
-                        if(!parseAnimationChannel(data, animationIndex, positionSamplerIndex,
-                            GltfBufferComponentCountType::VEC3, bonePosVector))
-                        {
-                            ASSERT(false && "failed to parse animation channel for position");
-                            return false;
-                        }
-                        /*
-                        for(const auto &v : bonePosVector)
-                        {
-                            printf("time: %f, pos: [%f, %f, %f]\n",
-                                v.timeStamp, v.value.x, v.value.y, v.value.z);
-                        }
-                        */
-
-                        animationBoneIndices.posStartIndex = outModel.animationPosData.size();
-                        animationBoneIndices.posIndexCount = bonePosVector.size();
-
-                        outModel.animationPosData.pushBack(bonePosVector);
-                    }
-                    // parse rot
-                    {
-                        PodVector<GltfModel::AnimRot> boneRotVector;
-
-                        if(!parseAnimationChannel(data, animationIndex, rotationSamplerIndex,
-                            GltfBufferComponentCountType::VEC4, boneRotVector))
-                        {
-                            ASSERT(false && "failed to parse animation channel for rotation");
-                            return false;
-                        }
-                        /*
-                        for(const auto &v : boneRotVector)
-                        {
-                            printf("time: %f, rot: [%f, %f, %f], [%f]\n",
-                                v.timeStamp, v.value.v.x, v.value.v.y, v.value.v.z, v.value.w);
-                        }
-                        */
-
-                        animationBoneIndices.rotStartIndex = outModel.animationRotData.size();
-                        animationBoneIndices.rotIndexCount = boneRotVector.size();
-
-                        outModel.animationRotData.pushBack(boneRotVector);
-                    }
-                    // parse scale
-                    {
-                        PodVector<GltfModel::AnimScale> boneScaleVector;
-
-                        if(!parseAnimationChannel(data, animationIndex, scaleSamplerIndex,
-                            GltfBufferComponentCountType::VEC3, boneScaleVector))
-                        {
-                            ASSERT(false && "failed to parse animation channel for scale");
-                            return false;
-                        }
-                        /*
-                        for(const auto &v : boneScaleVector)
-                        {
-                            printf("time: %f, scale: [%f, %f, %f]\n",
-                                v.timeStamp, v.value.x, v.value.y, v.value.z);
-                        }
-                        */
-
-                        animationBoneIndices.scaleStartIndex = outModel.animationScaleData.size();
-                        animationBoneIndices.scaleIndexCount = boneScaleVector.size();
-                        outModel.animationScaleData.pushBack(boneScaleVector);
-                    }
-
-                    // remap children
-                    {
-                        const auto &childNodes = data.nodes[nodeIndex].childNodeIndices;
-                        animationBoneIndices.childStartIndex = outModel.childrenJointIndices.size();
-                        uint32_t count = 0u;
-                        for(uint32_t childNodeIndex : childNodes)
-                        {
-                            bool found = false;
-                            for(uint32_t childJointIndex = 0u; childJointIndex < joints.size(); ++childJointIndex)
-                            {
-                                if(joints[childJointIndex] == childNodeIndex)
-                                {
-                                    outModel.childrenJointIndices.push_back(childJointIndex);
-                                    ++count;
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            ASSERT(found);
-                            if(!found)
-                                return false;
-                        }
-                        animationBoneIndices.childIndexCount = count;
-                    }
-                }
-            }
-
-            for (uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
-            {
-                float animStartTime = 1e10;
-                float animEndTime = -1e10;
-                ASSERT(animationIndex < outModel.animationIndices.size());
-
-                if(animationIndex >= outModel.animationIndices.size())
-                    return false;
-                const auto &animationVector = outModel.animationIndices[animationIndex];
-                for(const auto &animNode : animationVector)
-                {
-                    for(uint32_t ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
-                    {
-                        animStartTime = Supa::minf(animStartTime, outModel.animationPosData[ind].timeStamp);
-                        animEndTime = Supa::maxf(animEndTime, outModel.animationPosData[ind].timeStamp);
-                    }
-
-                    for(uint32_t ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
-                    {
-                        animStartTime = Supa::minf(animStartTime, outModel.animationRotData[ind].timeStamp);
-                        animEndTime = Supa::maxf(animEndTime, outModel.animationRotData[ind].timeStamp);
-                    }
-
-                    for(uint32_t ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
-                    {
-                        animStartTime = Supa::minf(animStartTime, outModel.animationScaleData[ind].timeStamp);
-                        animEndTime = Supa::maxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
-                    }
-                }
-                outModel.animStartTimes[animationIndex] = animStartTime;
-                outModel.animEndTimes[animationIndex] = animEndTime;
-            }
-        }
     }
 /*
     const ArraySliceView<GltfModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
