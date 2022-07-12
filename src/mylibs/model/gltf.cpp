@@ -733,14 +733,14 @@ static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &d
         if(!bufferViewBlock.isValid())
             return false;
 
-if(!bufferViewBlock.isValid())
-return false;
+        if(!bufferViewBlock.isValid())
+            return false;
 
-if(!bufferViewBlock.getChild("buffer").parseUInt(bufferView.bufferIndex)
-    || !bufferViewBlock.getChild("byteLength").parseUInt(bufferView.bufferLength)
-    || !bufferViewBlock.getChild("byteOffset").parseUInt(bufferView.bufferStartOffset)
-    )
-    return false;
+        if(!bufferViewBlock.getChild("buffer").parseUInt(bufferView.bufferIndex)
+            || !bufferViewBlock.getChild("byteLength").parseUInt(bufferView.bufferLength)
+            || !bufferViewBlock.getChild("byteOffset").parseUInt(bufferView.bufferStartOffset)
+            )
+            return false;
     }
 
 
@@ -832,6 +832,143 @@ if(!bufferViewBlock.getChild("buffer").parseUInt(bufferView.bufferIndex)
     return true;
 }
 
+static bool parseMeshData(GltfData &data, GltfModel &outModel)
+{
+    for(uint32_t i = 0; i < data.meshes.size(); ++i)
+    {
+        GltfModel::ModelMesh &modelMesh = outModel.modelMeshes[i];
+
+        GltfMeshNode &node = data.meshes[i];
+        if(node.positionIndex >= data.accessors.size() ||
+            node.normalIndex >= data.accessors.size() ||
+            node.indicesIndex >= data.accessors.size())
+        {
+            return false;
+        }
+        uint32_t vertexCount = data.accessors[node.positionIndex].count;
+        if(vertexCount == ~0u || vertexCount == 0u ||
+            vertexCount != data.accessors[node.normalIndex].count)
+        {
+            return false;
+        }
+        uint32_t indicesCount = data.accessors[node.indicesIndex].count;
+        if(indicesCount == ~0u || indicesCount == 0u)
+            return false;
+
+        // If only one of the jointsindex or weightindex exists.
+        if((node.jointsIndex == ~0u) != (node.weightIndex == ~0u))
+        {
+            ASSERT(false && "Found either only jointindex or weightindex!");
+        }
+
+        if(data.accessors[node.positionIndex].countType != GltfBufferComponentCountType::VEC3)
+            return false;
+        if(data.accessors[node.normalIndex].countType != GltfBufferComponentCountType::VEC3)
+            return false;
+
+        if(node.colorIndex < data.accessors.size() && vertexCount == data.accessors[node.colorIndex].count)
+        {
+            if(data.accessors[node.colorIndex].countType != GltfBufferComponentCountType::VEC4)
+                return false;
+            modelMesh.vertexColors.resize(vertexCount);
+        }
+        if(node.uvIndex < data.accessors.size() && vertexCount == data.accessors[node.uvIndex].count)
+        {
+            if(data.accessors[node.uvIndex].countType != GltfBufferComponentCountType::VEC2)
+                return false;
+            modelMesh.vertexUvs.resize(vertexCount);
+        }
+        if(data.accessors[node.indicesIndex].countType != GltfBufferComponentCountType::SCALAR)
+            return false;
+
+        modelMesh.vertices.resize(vertexCount);
+        modelMesh.indices.resize(indicesCount);
+
+        ArraySliceViewBytesMutable verticesMemoryRange = sliceFromPodVectorBytesMutable(modelMesh.vertices);
+        if(!gltfReadIntoBuffer(data, node.positionIndex,
+            offsetof(GltfModel::Vertex, pos),
+            verticesMemoryRange))
+            return false;
+
+        if(data.accessors[node.positionIndex].mins.size() > 2)
+        {
+            modelMesh.bounds.min.x = data.accessors[node.positionIndex].mins[0];
+            modelMesh.bounds.min.y = data.accessors[node.positionIndex].mins[1];
+            modelMesh.bounds.min.z = data.accessors[node.positionIndex].mins[2];
+        }
+        if(data.accessors[node.positionIndex].maxs.size() > 2)
+        {
+            modelMesh.bounds.max.x = data.accessors[node.positionIndex].maxs[0];
+            modelMesh.bounds.max.y = data.accessors[node.positionIndex].maxs[1];
+            modelMesh.bounds.max.z = data.accessors[node.positionIndex].maxs[2];
+        }
+
+        if(!gltfReadIntoBuffer(data, node.normalIndex,
+            offsetof(GltfModel::Vertex, norm),
+            verticesMemoryRange))
+            return false;
+
+        if(node.colorIndex < data.accessors.size())
+        {
+            if(!gltfReadIntoBuffer(data, node.colorIndex,
+                0,
+                sliceFromPodVectorBytesMutable(modelMesh.vertexColors)))
+                return false;
+        }
+        if(node.uvIndex < data.accessors.size())
+        {
+            if(!gltfReadIntoBuffer(data, node.uvIndex,
+                0,
+                sliceFromPodVectorBytesMutable(modelMesh.vertexUvs)))
+                return false;
+        }
+        if(!gltfReadIntoBuffer(data, node.indicesIndex, 0,
+            sliceFromPodVectorBytesMutable(modelMesh.indices)))
+            return false;
+
+        // Animation vertices?
+        if(node.jointsIndex != ~0u && node.weightIndex != ~0u)
+        {
+            if(node.jointsIndex >= data.accessors.size() ||
+                node.weightIndex >= data.accessors.size())
+            {
+                return false;
+            }
+            if(vertexCount != data.accessors[node.jointsIndex].count ||
+                vertexCount != data.accessors[node.weightIndex].count)
+            {
+                return false;
+            }
+            modelMesh.animationVertices.resize(vertexCount);
+
+            if(data.accessors[node.jointsIndex].countType != GltfBufferComponentCountType::VEC4)
+                return false;
+            if(data.accessors[node.weightIndex].countType != GltfBufferComponentCountType::VEC4)
+                return false;
+
+            if(!gltfReadIntoBuffer(data, node.weightIndex,
+                offsetof(GltfModel::AnimationVertex, weights),
+                sliceFromPodVectorBytesMutable(modelMesh.animationVertices)))
+                return false;
+
+            if(!gltfReadIntoBuffer(data, node.jointsIndex,
+                offsetof(GltfModel::AnimationVertex, boneIndices),
+                sliceFromPodVectorBytesMutable(modelMesh.animationVertices)))
+                return false;
+            /*
+            for(const auto &v : outModel.animationVertices)
+            {
+                printf("boneind: [%u, %u, %u, %u], weight: [%.3f, %.3f, %.3f, %.3f]\n",
+                    v.boneIndices[0], v.boneIndices[1], v.boneIndices[2], v.boneIndices[3],
+                    v.weights.x, v.weights.y, v.weights.z, v.weights.w);
+            }
+            */
+        }
+    }
+
+    return true;
+}
+
 static bool parseSkinData(GltfData &data, GltfModel &outModel)
 {
     for(uint32_t i = 0; i < data.skins.size(); ++i)
@@ -843,9 +980,6 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
 
         if(data.accessors[skinNode.inverseMatricesIndex].countType != GltfBufferComponentCountType::MAT4)
             return false;
-
-
-
 
         PodVector<Matrix> inverseMatrices;
         uint32_t inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
@@ -895,10 +1029,6 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
         for(uint32_t jointIndex : skinNode.joints)
             calculateInverseMatrices(calculateInverseMatrices, Mat3x4(), Mat3x4(), jointIndex);
 
-
-
-
-
         if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
             0, sliceFromPodVectorBytesMutable(inverseMatrices)))
             return false;
@@ -923,7 +1053,6 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
             */
 
             //ASSERT(inverse(inverseMatrices[i]) == mat1[nodeJointIndex]);
-
         }
     }
     return true;
@@ -931,7 +1060,6 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
 
 static bool parseAnimationData(GltfData &data, GltfModel &outModel)
 {
-        // Parse animationdata
     if(data.skins.getSize() == 1 && data.skins[0].joints.size() > 0)
     {
         const auto &joints = data.skins[0].joints;
@@ -1101,8 +1229,8 @@ bool readGLTF(const char *filename, GltfModel &outModel)
     if(!loadBytes(filename, buffer.getBuffer()))
         return false;
 
-    JsonBlock bl;
-    bool parseSuccess = bl.parseJson(StringView(buffer.data(), buffer.size()));
+    JsonBlock mainBlock;
+    bool parseSuccess = mainBlock.parseJson(StringView(buffer.data(), buffer.size()));
 
     if (!parseSuccess)
     {
@@ -1114,173 +1242,41 @@ bool readGLTF(const char *filename, GltfModel &outModel)
         //bl.print();
     }
 
-    if(!bl.isObject() || bl.getChildCount() < 1)
+    if(!mainBlock.isObject() || mainBlock.getChildCount() < 1)
         return false;
 
 
     // Parse meshes
-    if(!parseMeshes(bl, data, outModel))
+    if(!parseMeshes(mainBlock, data, outModel))
         return false;
 
-    if(!parseNodes(bl, data, outModel))
+    if(!parseNodes(mainBlock, data, outModel))
         return false;
 
-    if(!parseSkins(bl, data, outModel))
+    if(!parseSkins(mainBlock, data, outModel))
         return false;
 
-    if(!parseBuffers(bl, data, outModel))
+    if(!parseBuffers(mainBlock, data, outModel))
         return false;
 
-    if(!parseAnimations(bl, data, outModel))
+    if(!parseAnimations(mainBlock, data, outModel))
         return false;
 
-    if(!parseAnimations(bl, data, outModel))
+    if(!parseAnimations(mainBlock, data, outModel))
         return false;
 
-    if(!parseAccessorsAndBufferViews(bl, data, outModel))
+    if(!parseAccessorsAndBufferViews(mainBlock, data, outModel))
+        return false;
+
+    if(!parseMeshData(data, outModel))
+        return false;
+
+    if(!parseSkinData(data, outModel))
+        return false;
+    if(!parseAnimationData(data, outModel))
         return false;
 
 
-    for(uint32_t i = 0; i < data.meshes.size(); ++i)
-    {
-        GltfModel::ModelMesh &modelMesh = outModel.modelMeshes[i];
-
-        GltfMeshNode &node = data.meshes [i];
-        if(node.positionIndex >= data.accessors.size() ||
-            node.normalIndex >= data.accessors.size() ||
-            node.indicesIndex >= data.accessors.size())
-        {
-            return false;
-        }
-        uint32_t vertexCount = data.accessors[node.positionIndex].count;
-        if(vertexCount == ~0u || vertexCount == 0u ||
-            vertexCount != data.accessors[node.normalIndex].count )
-        {
-            return false;
-        }
-        uint32_t indicesCount = data.accessors[node.indicesIndex].count;
-        if(indicesCount == ~0u || indicesCount == 0u)
-            return false;
-
-        // If only one of the jointsindex or weightindex exists.
-        if((node.jointsIndex == ~0u) != (node.weightIndex == ~0u))
-        {
-            ASSERT(false && "Found either only jointindex or weightindex!");
-        }
-
-        if(data.accessors[node.positionIndex].countType != GltfBufferComponentCountType::VEC3)
-            return false;
-        if(data.accessors[node.normalIndex].countType != GltfBufferComponentCountType::VEC3)
-            return false;
-
-        if (node.colorIndex < data.accessors.size() && vertexCount == data.accessors[node.colorIndex].count)
-        {
-            if (data.accessors[node.colorIndex].countType != GltfBufferComponentCountType::VEC4)
-                return false;
-            modelMesh.vertexColors.resize(vertexCount);
-        }
-        if (node.uvIndex < data.accessors.size() && vertexCount == data.accessors[node.uvIndex].count)
-        {
-            if (data.accessors[node.uvIndex].countType != GltfBufferComponentCountType::VEC2)
-                return false;
-            modelMesh.vertexUvs.resize(vertexCount);
-        }
-        if(data.accessors[node.indicesIndex].countType != GltfBufferComponentCountType::SCALAR)
-            return false;
-
-        modelMesh.vertices.resize(vertexCount);
-        modelMesh.indices.resize(indicesCount);
-
-        ArraySliceViewBytesMutable verticesMemoryRange = sliceFromPodVectorBytesMutable(modelMesh.vertices);
-        if(!gltfReadIntoBuffer(data, node.positionIndex,
-            offsetof(GltfModel::Vertex, pos),
-            verticesMemoryRange))
-            return false;
-
-        if(data.accessors[node.positionIndex].mins.size() > 2)
-        {
-            modelMesh.bounds.min.x = data.accessors[node.positionIndex].mins[0];
-            modelMesh.bounds.min.y = data.accessors[node.positionIndex].mins[1];
-            modelMesh.bounds.min.z = data.accessors[node.positionIndex].mins[2];
-        }
-        if(data.accessors[node.positionIndex].maxs.size() > 2)
-        {
-            modelMesh.bounds.max.x = data.accessors[node.positionIndex].maxs[0];
-            modelMesh.bounds.max.y = data.accessors[node.positionIndex].maxs[1];
-            modelMesh.bounds.max.z = data.accessors[node.positionIndex].maxs[2];
-        }
-
-        if(!gltfReadIntoBuffer(data, node.normalIndex,
-            offsetof(GltfModel::Vertex, norm),
-            verticesMemoryRange))
-            return false;
-
-        if (node.colorIndex < data.accessors.size())
-        {
-            if (!gltfReadIntoBuffer(data, node.colorIndex,
-                0,
-                sliceFromPodVectorBytesMutable(modelMesh.vertexColors)))
-                return false;
-        }
-        if (node.uvIndex < data.accessors.size())
-        {
-            if (!gltfReadIntoBuffer(data, node.uvIndex,
-                0,
-                sliceFromPodVectorBytesMutable(modelMesh.vertexUvs)))
-                return false;
-        }
-        if(!gltfReadIntoBuffer(data, node.indicesIndex, 0,
-            sliceFromPodVectorBytesMutable(modelMesh.indices)))
-            return false;
-
-        // Animation vertices?
-        if(node.jointsIndex != ~0u && node.weightIndex != ~0u)
-        {
-            if(node.jointsIndex >= data.accessors.size() ||
-                node.weightIndex >= data.accessors.size())
-            {
-                return false;
-            }
-            if(vertexCount != data.accessors[node.jointsIndex].count ||
-                vertexCount != data.accessors[node.weightIndex].count)
-            {
-                return false;
-            }
-            modelMesh.animationVertices.resize(vertexCount);
-
-            if(data.accessors[node.jointsIndex].countType != GltfBufferComponentCountType::VEC4)
-                return false;
-            if(data.accessors[node.weightIndex].countType != GltfBufferComponentCountType::VEC4)
-                return false;
-
-            if(!gltfReadIntoBuffer(data, node.weightIndex,
-                offsetof(GltfModel::AnimationVertex, weights),
-                sliceFromPodVectorBytesMutable(modelMesh.animationVertices)))
-                return false;
-
-            if(!gltfReadIntoBuffer(data, node.jointsIndex,
-                offsetof(GltfModel::AnimationVertex, boneIndices),
-                sliceFromPodVectorBytesMutable(modelMesh.animationVertices)))
-                return false;
-            /*
-            for(const auto &v : outModel.animationVertices)
-            {
-                printf("boneind: [%u, %u, %u, %u], weight: [%.3f, %.3f, %.3f, %.3f]\n",
-                    v.boneIndices[0], v.boneIndices[1], v.boneIndices[2], v.boneIndices[3],
-                    v.weights.x, v.weights.y, v.weights.z, v.weights.w);
-            }
-            */
-
-
-        }
-
-        if(!parseSkinData(data, outModel))
-            return false;
-        if(!parseAnimationData(data, outModel))
-            return false;
-
-
-    }
 /*
     const ArraySliceView<GltfModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
     for(uint32_t i = 0; i < vertices.size(); ++i)
