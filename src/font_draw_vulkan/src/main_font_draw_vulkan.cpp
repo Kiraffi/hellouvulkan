@@ -21,9 +21,6 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-
-#include <string>
-
 static constexpr int SCREEN_WIDTH  = 640;
 static constexpr int SCREEN_HEIGHT = 540;
 
