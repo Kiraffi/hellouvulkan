@@ -189,7 +189,7 @@ bool VulkanDrawStuff::resized()
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
-    
+
 
     return true;
 }
@@ -338,7 +338,7 @@ void VulkanDrawStuff::renderUpdate()
         lineRenderSystem.addLine(linePoints[4], linePoints[6], drawColor);
         lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
         lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
-        
+
         uint32_t redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
         uint32_t greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
         uint32_t blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
@@ -425,19 +425,22 @@ void VulkanDrawStuff::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    VulkanDrawStuff app;
-    if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = false,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = true,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        VulkanDrawStuff app;
+        if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = false,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = true,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

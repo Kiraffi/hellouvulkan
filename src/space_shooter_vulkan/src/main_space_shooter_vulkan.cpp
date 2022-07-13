@@ -607,20 +607,23 @@ void SpaceShooter::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    SpaceShooter app;
-    if (app.init("Vulkan, space shooter", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = false,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = false,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        SpaceShooter app;
+        if (app.init("Vulkan, space shooter", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = false,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = false,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }
 

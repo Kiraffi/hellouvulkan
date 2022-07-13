@@ -7,7 +7,7 @@ class String
 {
 public:
     String();
-    virtual ~String() {}
+    virtual ~String() { buffer.~ByteBuffer(); }
     String(const char *s);
     String(const char *s, uint32_t len);
     String(const String &s);

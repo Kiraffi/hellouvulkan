@@ -151,6 +151,7 @@ struct VulkanGlobal
 
     VulkanApp* vulkanApp = nullptr;
     PodVector< BufferBarrierInfo > bufferMemoryBarriers;
+    PodVector< VkBufferMemoryBarrier > bufferMemoryBarriersCopy;
     PodVector< VkImageMemoryBarrier > imageMemoryGraphicsBarriers;
     PodVector< VkImageMemoryBarrier > imageMemoryComputeBarriers;
 

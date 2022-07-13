@@ -152,6 +152,7 @@ uint8_t *ByteBuffer::getBegin() const
 {
     return getMemoryBegin(bufferData.memory);
 }
+
 uint8_t *ByteBuffer::getEnd() const
 {
     return getMemoryEnd(bufferData.memory);

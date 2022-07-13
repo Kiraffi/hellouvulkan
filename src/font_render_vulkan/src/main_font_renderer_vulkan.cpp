@@ -40,6 +40,7 @@ public:
 private:
     Vector2 fontSize = Vector2(8.0f, 12.0f);
     Image renderColorImage;
+    String text = "Text";
 };
 
 
@@ -92,13 +93,12 @@ bool VulkanFontRender::resized()
 void VulkanFontRender::logicUpdate()
 {
     VulkanApp::logicUpdate();
-    static String txt = "Test";
 
     {
         bool textNeedsUpdate = false;
         for (int i = 0; i < bufferedPressesCount; ++i)
         {
-            txt.append(char(bufferedPresses[i]));
+            text.append(char(bufferedPresses[i]));
             textNeedsUpdate = true;
         }
 
@@ -127,7 +127,7 @@ void VulkanFontRender::logicUpdate()
             textNeedsUpdate = true;
         }
 
-        updateText(txt.getStr());
+        updateText(text.getStr());
     }
 }
 
@@ -146,19 +146,22 @@ void VulkanFontRender::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    VulkanFontRender app;
-    if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = true,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = false,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        VulkanFontRender app;
+        if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = true,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = false,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

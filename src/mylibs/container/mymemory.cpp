@@ -34,6 +34,7 @@ struct MemoryArea
 {
     #if PRINT_ALLOCATION_ADDRESS
         void* ptrOfAddress = nullptr;
+        uint64_t allocationNumber = ~uint64_t(0);
     #endif // PRINT_ALLOCATION_ADDRESS
     uint32_t startLocation = 0;
     uint32_t size = 0;
@@ -53,7 +54,9 @@ static constexpr uint32_t MemoryAlignment = 4096u;
 struct AllMemory;
 static AllMemory *allMemory = nullptr;
 
-
+#if PRINT_ALLOCATION_ADDRESS
+    static uint64_t AllocationNumber = 0;
+#endif
 struct AllMemory
 {
     ~AllMemory()
@@ -65,7 +68,8 @@ struct AllMemory
             #if PRINT_ALLOCATION_ADDRESS
             for (int i = 0; i < allocationCount; ++i)
             {
-                printf("Allocation pointer: %p\n", memoryAreas[i].ptrOfAddress);
+                printf("Index: %i, Allocation pointer: %p, numb: %u\n",
+                    i, memoryAreas[i].ptrOfAddress, memoryAreas[i].allocationNumber);
             }
             #endif //PRINT_ALLOCATION_ADDRESS
             ASSERT(false);
@@ -85,6 +89,14 @@ struct AllMemory
     uint32_t *usedAllocationIndices = nullptr; //[MaxAllocations] = {};
 
     uint32_t *handleIterations = nullptr; //[MaxAllocations] = {};
+
+
+    //MemoryArea memoryAreas[MaxAllocations] = {};
+    //uint32_t freedAllocationIndices[MaxAllocations] = {};
+    //uint32_t usedAllocationIndices[MaxAllocations] = {};
+
+    //uint32_t handleIterations[MaxAllocations] = {};
+
 
     uint32_t freedAllocationCount = 0;
     uint32_t allocationCount = 0;
@@ -110,6 +122,7 @@ static uint32_t getHandleIteration(Memory memory)
 
 static void initMemoryReal()
 {
+    ASSERT(allMemory == nullptr);
     if(allMemory)
         return;
     allMemory = new AllMemory();
@@ -173,7 +186,7 @@ Memory allocateMemoryBytes(uint32_t size)
 {
     #if PRINT_ALLOCATION_ADDRESS
         void* pvAddressOfReturnAddress = returnAddress;
-        printf("Allocated %p\n", pvAddressOfReturnAddress);
+        printf("Allocated %p, numb: %u\n", pvAddressOfReturnAddress, AllocationNumber);
     #endif // PRINT_ALLOCATION_ADDRESS
     #if USE_PRINTING
         printf("allocating: %u -> ", size);
@@ -230,6 +243,8 @@ Memory allocateMemoryBytes(uint32_t size)
 
     #if PRINT_ALLOCATION_ADDRESS
         alloc.ptrOfAddress = pvAddressOfReturnAddress;
+        alloc.allocationNumber = AllocationNumber++;
+        ASSERT(alloc.ptrOfAddress);
     #endif // PRINT_ALLOCATION_ADDRESS
 
     allMemory->memoryUsed += size;
@@ -254,7 +269,7 @@ Memory allocateMemoryBytes(uint32_t size)
 
 bool deAllocateMemory(Memory memory)
 {
-    if(allMemory->allocationCount == 0)
+    if(!allMemory || allMemory->allocationCount == 0)
         return false;
     if(!isValidMemory(memory))
         return false;
@@ -297,8 +312,8 @@ bool deAllocateMemory(Memory memory)
     alloc.size = 0;
 
     #if PRINT_ALLOCATION_ADDRESS
-        printf("deleted: %p\n", alloc.ptrOfAddress);
-        alloc.ptrOfAddress = nullptr;
+        printf("deleted: %p, numb: %u\n", alloc.ptrOfAddress, alloc.allocationNumber);
+        //alloc.ptrOfAddress = nullptr;
     #endif // PRINT_ALLOCATION_ADDRESS
     allMemory->handleIterations[handleIndex] = (allMemory->handleIterations[handleIndex] + 1) & 0xffu;
 
@@ -307,7 +322,7 @@ bool deAllocateMemory(Memory memory)
     allMemory->allocationCount -= 1;
 
     #if USE_PRINTING
-        printf("rmemoving allocations, allocations left: %u\n", allMemory->allocationCount);
+        printf("removing allocation, allocations left: %u\n", allMemory->allocationCount);
     #endif
 
     return true;
@@ -375,7 +390,7 @@ void defragMemory()
 {
     if(!allMemory->needsDefrag)
         return;
-    //ScopedTimer defragDuration("Defrag duration");
+    ScopedTimer defragDuration("Defrag duration");
     allMemory->needsDefrag = false;
 
     #if USE_PRINTING
@@ -409,7 +424,7 @@ void defragMemory()
 
 bool isValidMemory(Memory memory)
 {
-    if (allMemory->memoryAll == nullptr || allMemory->memoryAligned == nullptr)
+    if (!allMemory || allMemory->memoryAll == nullptr || allMemory->memoryAligned == nullptr)
         return false;
     uint32_t handleIndex = getHandleIndex(memory);
     uint32_t iteration = getHandleIteration(memory);

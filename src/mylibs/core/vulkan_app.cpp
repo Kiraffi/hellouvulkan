@@ -87,7 +87,6 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters &initParameters)
 {
-    initMemory();
     if(!initGlobalResources())
         return false;
 
@@ -154,7 +153,6 @@ VulkanApp::~VulkanApp()
     if(inited)
         glfwTerminate();
     window = nullptr;
-    deinitMemory();
 }
 
 void VulkanApp::resizeWindow(int w, int h)

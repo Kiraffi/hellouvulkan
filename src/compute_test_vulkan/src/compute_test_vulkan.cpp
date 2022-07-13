@@ -297,7 +297,7 @@ void VulkanComputeTest::renderDraw()
     {
         prepareToGraphicsSampleRead(computeColorImage);
         prepareToGraphicsSampleWrite(renderColorFinalImage);
-        
+
         beginRenderPass(graphicsFinalPipeline, {});
         //beginRendering({ RenderImage{ .image = &renderColorFinalImage, .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE } }, {});
         insertDebugRegion("RenderCopy", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
@@ -326,19 +326,22 @@ void VulkanComputeTest::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    VulkanComputeTest app;
-    if (app.init("Vulkan, compute test", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = true,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = false,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        VulkanComputeTest app;
+        if (app.init("Vulkan, compute test", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = true,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = false,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

@@ -64,7 +64,7 @@ public:
 
     Pipeline graphicsPipeline;
 
-    std::string fontFilename;
+    String fontFilename;
 
     char buffData[12] = {};
     int32_t chosenLetter = 'a';
@@ -176,9 +176,9 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 bool VulkanFontDraw::initRun()
 {
     const uint32_t charCount = 128 - 32;
-    if (!loadBytes(fontFilename.c_str(), characterData.getBuffer()))
+    if (!loadBytes(fontFilename.getStr(), characterData.getBuffer()))
     {
-        printf("Failed to load file: %s\n", fontFilename.c_str());
+        printf("Failed to load file: %s\n", fontFilename.getStr());
         return false;
     }
 
@@ -290,10 +290,10 @@ void VulkanFontDraw::logicUpdate()
         }
 
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            writeBytes(fontFilename.c_str(), characterData.getBuffer());
+            writeBytes(fontFilename.getStr(), characterData.getBuffer());
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
-            loadBytes(fontFilename.c_str(), characterData.getBuffer());
+            loadBytes(fontFilename.getStr(), characterData.getBuffer());
 
         if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {
@@ -401,29 +401,32 @@ void VulkanFontDraw::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    std::string filename;
-    if (argCount < 2)
+    initMemory();
     {
-        filename = "assets/font/new_font.dat";
-    }
-    else
-    {
-        filename = argv[ 1 ];
-    }
-    VulkanFontDraw app;
-    app.fontFilename = filename;
-    if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT,
+        String filename;
+        if (argCount < 2)
         {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = true,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = false,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
-    {
-        app.run();
+            filename = "assets/font/new_font.dat";
+        }
+        else
+        {
+            filename = argv[ 1 ];
+        }
+        VulkanFontDraw app;
+        app.fontFilename = filename;
+        if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = true,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = false,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

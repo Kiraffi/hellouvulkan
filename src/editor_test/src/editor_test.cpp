@@ -169,7 +169,7 @@ bool EditorTest::resized()
     lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
     tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
 
-    
+
 
     editorSystem.resizeWindow(meshRenderTargets.albedoImage);
     return true;
@@ -253,7 +253,7 @@ void EditorTest::renderUpdate()
 
     editorSystem.renderUpdateGui();
     viewport = editorSystem.getEditorWindowViewport();
-   
+
     if(viewport.size.x != windowWidth || viewport.size.y != windowHeight)
         vulk->needToResize = needToResize = true;
 
@@ -274,7 +274,7 @@ void EditorTest::renderUpdate()
 
     lightRenderSystem.update();
 
-   
+
 
     lineRenderSystem.prepareToRender();
 }
@@ -336,19 +336,22 @@ void EditorTest::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    EditorTest app;
-    if (app.init("Editor", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = false,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = true,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        EditorTest app;
+        if (app.init("Editor", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = true,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = true,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

@@ -13,7 +13,6 @@ class FontRenderSystem
 {
 public:
     FontRenderSystem() {}
-    ~FontRenderSystem() {}
     bool init(const char *fontFilename);
     void deInit();
     //void update(VkDevice device, VkCommandBuffer commandBuffer,

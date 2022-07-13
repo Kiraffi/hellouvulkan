@@ -122,7 +122,7 @@ static bool win32InitAudio(HWND hwnd)
         return false;
     }
 
-    
+
     {
         DSBUFFERDESC primaryBufferDesc = {
             .dwSize = DWORD(sizeof(_DSBUFFERDESC)),
@@ -139,7 +139,7 @@ static bool win32InitAudio(HWND hwnd)
             .nChannels = DSoundChannels,
             .nSamplesPerSec = DSoundSampleRate,
             .nAvgBytesPerSec = DSoundBufferSize, // len * channels
-            .nBlockAlign = DSoundBytesPerSample, // channels * 
+            .nBlockAlign = DSoundBytesPerSample, // channels *
             .wBitsPerSample = DSoundSampleByteRate * 8,
 
         };
@@ -156,7 +156,7 @@ static bool win32InitAudio(HWND hwnd)
             return false;
         }
     }
-    
+
     return true;
 }
 static bool win32FillSoundBuffer()
@@ -1056,19 +1056,21 @@ void SoundTest::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    SoundTest app;
-    if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = false,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = true,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
-    }
-
+        SoundTest app;
+        if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = false,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = true,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
+    deinitMemory();
     return 0;
 }

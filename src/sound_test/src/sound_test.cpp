@@ -466,19 +466,22 @@ void SoundTest::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    SoundTest app;
-    if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = false,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = true,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        SoundTest app;
+        if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = false,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = true,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

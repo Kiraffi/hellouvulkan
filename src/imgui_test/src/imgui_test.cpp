@@ -100,7 +100,7 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
-    
+
     if (!imgui.init(window))
         return false;
 
@@ -125,8 +125,8 @@ bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight, c
     camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
     scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
-    
- 
+
+
     scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, 0.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
 
     sunCamera.pitch = toRadians(60.0f);
@@ -205,7 +205,7 @@ void ImguiTest::logicUpdate()
     snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f, use sun camera: %s",
         showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount), useSunCamera ? "on" : "off");
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f", 
+    snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
         toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f", sunCamera.position.x, sunCamera.position.y, sunCamera.position.z);
@@ -294,19 +294,22 @@ void ImguiTest::renderDraw()
 
 int main(int argCount, char **argv)
 {
-    ImguiTest app;
-    if (app.init("Imguitest", SCREEN_WIDTH, SCREEN_HEIGHT,
-        {
-            .showInfoMessages = false,
-            .useHDR = false,
-            .useIntegratedGpu = true,
-            .useValidationLayers = true,
-            .useVulkanDebugMarkersRenderDoc = true,
-            .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-        }))
+    initMemory();
     {
-        app.run();
+        ImguiTest app;
+        if (app.init("Imguitest", SCREEN_WIDTH, SCREEN_HEIGHT,
+            {
+                .showInfoMessages = false,
+                .useHDR = false,
+                .useIntegratedGpu = true,
+                .useValidationLayers = true,
+                .useVulkanDebugMarkersRenderDoc = true,
+                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
+            }))
+        {
+            app.run();
+        }
     }
-
+    deinitMemory();
     return 0;
 }

@@ -582,7 +582,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
     if (vulk->bufferMemoryBarriers.size() == 0 && imageBarrierCount == 0)
         return true;
    // vkFlushMappedMemoryRanges?????
-    PodVector< VkBufferMemoryBarrier > bufferBarriers;
+    //PodVector< VkBufferMemoryBarrier > bufferBarriers;
 
     // for flushing
     VkDeviceSize size = vulk->scratchBufferOffset - vulk->scratchBufferLastFlush;
@@ -597,20 +597,21 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
         if (barrier.buffer)
         {
             vkCmdCopyBuffer(vulk->commandBuffer, vulk->scratchBuffer.buffer, barrier.buffer, 1, &barrier.copyRegion);
-            bufferBarriers.push_back(bufferBarrier(barrier.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+            vulk->bufferMemoryBarriersCopy.push_back(bufferBarrier(barrier.buffer, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
                 barrier.copyRegion.size, barrier.copyRegion.dstOffset));
         }
     }
 
-    const VkBufferMemoryBarrier* bufferBarrier = bufferBarriers.size() > 0 ? bufferBarriers.data() : nullptr;
+    const VkBufferMemoryBarrier* bufferBarrier = vulk->bufferMemoryBarriersCopy.size() > 0 ? vulk->bufferMemoryBarriersCopy.data() : nullptr;
 
     vkCmdPipelineBarrier(vulk->commandBuffer, vulk->currentStage, dstStageMask,
         VK_DEPENDENCY_BY_REGION_BIT,
         0, nullptr,
-        vulk->bufferMemoryBarriers.size(), bufferBarrier,
+        vulk->bufferMemoryBarriersCopy.size(), bufferBarrier,
         imageBarrierCount, imageBarrier);
 
     vulk->bufferMemoryBarriers.clear();
+    vulk->bufferMemoryBarriersCopy.clear();
     if(isGraphics)
         vulk->imageMemoryGraphicsBarriers.clear();
     if (isCompute)

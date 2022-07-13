@@ -13,7 +13,6 @@ class PodVector : public VectorBase
 {
 public:
     PodVector();
-
     //PodVector(uint32_t size);
 
     PodVector(const T *b, const T* e);
