@@ -154,6 +154,7 @@ VulkanApp::~VulkanApp()
     if(inited)
         glfwTerminate();
     window = nullptr;
+    deinitMemory();
 }
 
 void VulkanApp::resizeWindow(int w, int h)

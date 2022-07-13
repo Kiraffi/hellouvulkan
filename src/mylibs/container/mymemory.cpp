@@ -157,7 +157,7 @@ static void initMemoryReal()
         allMemory->freedAllocationCount = MaxAllocations;
     }
     #if USE_PRINTING
-        printf("Start: %p - aligned start: %p\n", allMemory->memory, newAlignedData);
+        printf("Start: %p - aligned start: %p\n", allMemory->memoryAligned, newAlignedData);
     #endif
 }
 
@@ -446,4 +446,10 @@ uint8_t *getMemoryEnd(Memory memory)
         return nullptr;
     const MemoryArea &area = allMemory->memoryAreas[handleIndex];
     return allMemory->memoryAligned + area.startLocation + area.size;
+}
+
+void deinitMemory()
+{
+    delete allMemory;
+    allMemory = nullptr;
 }

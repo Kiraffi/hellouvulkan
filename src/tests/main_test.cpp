@@ -224,5 +224,6 @@ int main()
     testMathVector();
 
     testStrings();
+    deinitMemory();
     return 0;
 }

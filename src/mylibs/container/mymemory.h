@@ -5,6 +5,7 @@
 struct Memory;
 
 void initMemory();
+void deinitMemory();
 
 [[nodiscard]] Memory allocateMemoryBytes(uint32_t size);
 bool deAllocateMemory(Memory memory);
