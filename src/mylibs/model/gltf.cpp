@@ -1527,6 +1527,9 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
         float animStartTime = model.animStartTimes[animationIndex];
         float animEndTime = model.animEndTimes[animationIndex];
         float duration = animEndTime - animStartTime;
+        ASSERT(duration != 0.0f);
+        float div = duration > 0.0 ? time / duration : 0.0;
+        time -= int64_t(div) * duration;
         while(time < animStartTime)
             time += duration;
         while(time > animEndTime)

@@ -2,16 +2,21 @@
 
 #include <core/general.h>
 #include <core/mytypes.h>
-
+#if USE_QUERY_PERFORMANCE
+    #include <windows.h>
+#elif USE_CHRONO_TIMER
 
 // This include seems quite big for visual studio
-#include <chrono>
+//#include <chrono>
+#include <thread>
+//#include <__msvc_chrono.hpp>
 
 static std::chrono::high_resolution_clock::time_point getTimepointFromChrono(uint64_t t)
 {
     std::chrono::high_resolution_clock::time_point tp{ std::chrono::nanoseconds{ t } };
     return tp;
 }
+#endif
 
 Timer::TimePoint Timer::getTime(ClockType clockType)
 {
@@ -19,7 +24,12 @@ Timer::TimePoint Timer::getTime(ClockType clockType)
         int timerType = int(clockType);
         TimePoint newTime;
         clock_gettime(timerType, &newTime);
-    #else
+    #elif USE_QUERY_PERFORMANCE
+        uint64_t newTime;
+        LARGE_INTEGER stamp;
+        QueryPerformanceCounter(&stamp);
+        newTime = stamp.QuadPart;
+    #elif USE_CHRONO_TIMER
         std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
         TimePoint newTime = chTime.time_since_epoch().count();
     #endif
@@ -31,8 +41,14 @@ double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoin
     #if USE_UNIX_CLOCK_COARSE
         double dur = double(toTime.tv_sec - fromTime.tv_sec) +
             double(toTime.tv_nsec - fromTime.tv_nsec) * 1.0e-9;
-    #else
+    #elif USE_CHRONO_TIMER
+        
         double dur = (toTime - fromTime) * 1.0e-9;
+    #elif USE_QUERY_PERFORMANCE
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+    
+    double dur = ((toTime - fromTime) * 1.0e6) / double(freq.QuadPart);
     #endif
     return dur;
 }

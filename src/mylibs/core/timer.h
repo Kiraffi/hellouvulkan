@@ -5,6 +5,11 @@
 
 #if __unix__
     #define USE_UNIX_CLOCK_COARSE 1
+#elif WIN32 && 1
+    #define USE_QUERY_PERFORMANCE 1
+//    #include <winnt.h>
+#else // CHRONO
+    #define USE_CHRONO_TIMER 1
 #endif
 
 
@@ -34,7 +39,11 @@ public:
         ClockThreadId = 3,
         ClockCoarseId = 6,
     };
-    using TimePoint = uint64_t;//std::chrono::high_resolution_clock::time_point;
+    #if USE_QUERY_PERFORMANCE
+        using TimePoint = uint64_t;
+    #elif USE_CHRONO_TIMER
+        using TimePoint = uint64_t;//std::chrono::high_resolution_clock::time_point;
+    #endif
 #endif
 
     Timer();

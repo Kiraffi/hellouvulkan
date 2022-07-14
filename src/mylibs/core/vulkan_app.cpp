@@ -2,6 +2,9 @@
 
 #if WIN32
     #include <Windows.h> // begintimeperiod
+    #include <timeapi.h>
+#else
+    #include <unistd.h>
 #endif
 
 #define GLFW_INCLUDE_VULKAN
@@ -18,7 +21,7 @@
 
 #include <resources/globalresources.h>
 
-#include <thread>
+//#include <thread>
 
 
 static double timer_frequency = 0.0;
@@ -276,11 +279,14 @@ void VulkanApp::run()
             printStats(*this);
         }
         defragMemory();
-
+        static constexpr uint32_t SleepDuration = 5;
         #if WIN32
             timeBeginPeriod(1);
+            Sleep(SleepDuration);
+        #else
+            sleep(SleepDuration);
         #endif
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            //std::this_thread::sleep_for(std::chrono::milliseconds(5));
         #if WIN32
             timeEndPeriod(1);
         #endif
