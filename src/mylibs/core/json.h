@@ -52,6 +52,9 @@ public:
     bool parseVec3(Vector3 &v) const;
     bool parseQuat(Quaternion &q) const;
 
+    bool parseNumberArray(double *arr, uint32_t arrayLen) const;
+    bool parseNumberArray(float *arr, uint32_t arrayLen) const;
+    bool parseIntegerArray(int64_t *arr, uint32_t arrayLen) const;
 
     bool equals(uint32_t value) const;
 

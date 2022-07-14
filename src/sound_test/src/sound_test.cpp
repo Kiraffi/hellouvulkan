@@ -6,12 +6,14 @@
 #include <container/podvector.h>
 
 #include <core/camera.h>
+#include <core/file.h>
 #include <core/general.h>
 #include <core/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
+#include <core/writejson.h>
 
 #include <container/arraysliceview.h>
 
@@ -41,7 +43,6 @@
 
 #include <render/lightingrendertargets.h>
 #include <render/meshrendertargets.h>
-
 
 #include <scene/scene.h>
 
@@ -106,6 +107,110 @@ static Vec3 getSunDirection(const Camera &camera)
 
     return -sundir[2];
 }
+static uint32_t SoundsMagicNumber = 3495835844;
+static uint32_t SoundsVersionNumber = 1;
+
+static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_t noteLen)
+{
+    if(!filename || !notes || noteLen == 0)
+        return false;
+
+    PodVector<char> buffer;
+
+    if(!loadBytes(filename, buffer.getBuffer()))
+        return false;
+
+    JsonBlock json;
+    bool parseSuccess = json.parseJson(StringView(buffer.data(), buffer.size()));
+
+    if(!parseSuccess)
+    {
+        printf("Failed to parse: %s\n", filename);
+        return false;
+    }
+    else
+    {
+        //json.print();
+    }
+
+    if(!json.isObject() || json.getChildCount() < 1)
+        return false;
+
+    if(!json.getChild("magicNumber").equals(SoundsMagicNumber))
+        return false;
+
+    uint32_t versionNumber;
+    if(!json.getChild("versionNumber").parseUInt(SoundsVersionNumber))
+        return false;
+
+    if(json.getChild("sounds").getChildCount() == 0)
+        return false;
+
+    if(json.getChild("sounds").getChildCount() > noteLen)
+        return false;
+
+    uint32_t i = 0;
+    for(auto const &obj : json.getChild("sounds"))
+    {
+        auto &note = notes[i++];
+        bool isValid = obj.getChild("sounds").parseNumberArray(note.amplitudes, ARRAYSIZES(note.amplitudes));
+
+        isValid &= obj.getChild("AttackAmplitude").parseNumber(note.attackAmplitude);
+        isValid &= obj.getChild("SustainAmplitude").parseNumber(note.sustainAmplitude);
+
+        isValid &= obj.getChild("Osc LFOtype").parseInt(note.oscLFOType);
+        isValid &= obj.getChild("Osc type").parseInt(note.oscType);
+
+        isValid &= obj.getChild("Osc LFOHz").parseNumber(note.oscLFOHz);
+
+        //isValid &= obj.getChild("Base HZ").parseNumber(note.baseHz);
+
+        isValid &= obj.getChild("Attack duration").parseNumber(note.attackDuration);
+        isValid &= obj.getChild("Decay duration").parseNumber(note.decayDuration);
+        isValid &= obj.getChild("Release duration").parseNumber(note.releaseDuration);
+
+        if(!isValid)
+            return false;
+    }
+    return true;
+}
+
+
+
+static bool saveNotes(const char *filename, NoteFromMainToThread *notes, uint32_t noteLen)
+{
+    if(!filename || !notes || noteLen == 0)
+        return false;
+
+    WriteJson writeJson(SoundsMagicNumber, SoundsVersionNumber);
+    writeJson.addArray("sounds");
+    for(uint32_t i = 0; i < noteLen; ++i)
+    {
+        writeJson.addObject();
+        const auto &note = notes[i];
+        writeJson.addNumberArray("amplitudes", note.amplitudes, uint32_t(ARRAYSIZES(note.amplitudes)));
+
+        writeJson.addNumber("AttackAmplitude", note.attackAmplitude);
+        writeJson.addNumber("SustainAmplitude", note.sustainAmplitude);
+
+        writeJson.addInteger("Osc LFOtype", note.oscLFOType);
+        writeJson.addInteger("Osc type", note.oscType);
+
+        writeJson.addNumber("Osc LFOHz", note.oscLFOHz);
+
+        //writeJson.addNumber("Base HZ", note.baseHz);
+
+        writeJson.addNumber("Attack duration", note.attackDuration);
+        writeJson.addNumber("Decay duration", note.decayDuration);
+        writeJson.addNumber("Release duration", note.releaseDuration);
+        writeJson.endObject();
+    }
+    writeJson.endArray();
+    writeJson.finishWrite();
+    return writeJson.isValid() &&
+        writeBytes(filename, writeJson.getString().getBuffer());
+}
+
 
 class SoundTest : public VulkanApp
 {
@@ -138,8 +243,11 @@ public:
 
     bool showNormalMap = false;
 
-    NoteFromMainToThread currentNote;
+
+    NoteFromMainToThread notes[32];
+
     float baseHz = 220.0f;
+    uint32_t currentNoteIndex = 0;
 };
 
 
@@ -154,33 +262,37 @@ SoundTest::~SoundTest()
     deinitAudio();
 }
 
-
-
-bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+static void resetNote(NoteFromMainToThread &note)
 {
-    currentNote.note = 0;
-    currentNote.oscType = 0;
-    currentNote.oscLFOType = 0;
-    currentNote.oscLFOHz = 100.0;
+    note.note = 0;
+    note.oscType = 0;
+    note.oscLFOType = 0;
+    note.oscLFOHz = 100.0;
 
-    currentNote.attackAmplitude = 0.2f;
-    currentNote.sustainAmplitude = 0.15f;
+    note.attackAmplitude = 0.2f;
+    note.sustainAmplitude = 0.15f;
 
-    currentNote.attackDuration = 0.15f;
-    currentNote.decayDuration = 0.05f;
-    currentNote.releaseDuration = 0.2f;
+    note.attackDuration = 0.15f;
+    note.decayDuration = 0.05f;
+    note.releaseDuration = 0.2f;
 
     for(uint32_t i = 0; i < SAMPLE_POINTS; ++i)
     {
-        currentNote.amplitudes[i] = 0.125 * 0.25;
+        note.amplitudes[i] = 0.125 * 0.25;
         if(i < 4)
-            currentNote.amplitudes[i] *= i * 4 / double(SAMPLE_POINTS);
+            note.amplitudes[i] *= i * 4 / double(SAMPLE_POINTS);
         if(i > 12)
-            currentNote.amplitudes[i] *= (15 - i) * 4 / double(SAMPLE_POINTS);
-        currentNote.tuning[i] = evaluateSound(double(i) / (SAMPLE_POINTS - 1), 100.0, 0);
-        currentNote.tuning[i] = double(i) / (SAMPLE_POINTS - 1);
-        currentNote.tuning[i] = 0;
+            note.amplitudes[i] *= (15 - i) * 4 / double(SAMPLE_POINTS);
+        note.tuning[i] = evaluateSound(double(i) / (SAMPLE_POINTS - 1), 100.0, 0);
+        note.tuning[i] = double(i) / (SAMPLE_POINTS - 1);
+        note.tuning[i] = 0;
     }
+}
+
+bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+{
+    for(uint32_t i = 0; i < ARRAYSIZES(notes); ++i)
+        resetNote(notes[i]);
 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
@@ -266,14 +378,28 @@ void SoundTest::logicUpdate()
     }
     //checkCameraKeypresses(dt, camera);
     if(isPressed(GLFW_KEY_KP_ADD))
-        ++currentNote.oscType;
+        ++notes[currentNoteIndex].oscType;
     if(isPressed(GLFW_KEY_KP_SUBTRACT))
-        --currentNote.oscType;
+        --notes[currentNoteIndex].oscType;
 
-    if(isPressed(GLFW_KEY_KP_8))
+    if(isPressed(GLFW_KEY_KP_9))
         if(baseHz < 880.0f) baseHz *= 2.0f;
-    if(isPressed(GLFW_KEY_KP_5))
+    if(isPressed(GLFW_KEY_KP_6))
         if(baseHz > 60.0f) baseHz *= 0.5f;
+
+    if(isPressed(GLFW_KEY_KP_7))
+        if(currentNoteIndex < ARRAYSIZES(notes)) ++currentNoteIndex;
+    if(isPressed(GLFW_KEY_KP_4))
+        if(currentNoteIndex > 0) --currentNoteIndex;
+
+    if(isPressed(GLFW_KEY_S) && isDown(GLFW_KEY_LEFT_SHIFT))
+    {
+        saveNotes("assets/sound/notes.json", notes, ARRAYSIZES(notes));
+    }
+    if(isPressed(GLFW_KEY_L) && isDown(GLFW_KEY_LEFT_SHIFT))
+    {
+        loadNotes("assets/sound/notes.json", notes, ARRAYSIZES(notes));
+    }
     //if(currentNote.oscType < 0) chosenInstrument = 0;
     //if(chosenInstrument > 4) chosenInstrument = 4;
 
@@ -295,7 +421,7 @@ void SoundTest::logicUpdate()
         checkNotes(index,  runnings, releases, keysUp, currTime);
 
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
-        addNotes(index, runnings, releases, keysDown, currTime, baseHz, currentNote);
+        addNotes(index, runnings, releases, keysDown, currTime, baseHz, notes[currentNoteIndex]);
 
 
     camera.lookAt(Vec3(0, 0, 0));
@@ -313,7 +439,7 @@ void SoundTest::logicUpdate()
     Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
     snprintf(tmpStr, 1024, "Show normal mode: %s, use sun camera: %s, instrument: %i",
-        showNormalMap ? "on" : "off", useSunCamera ? "on" : "off", currentNote.oscType);
+        showNormalMap ? "on" : "off", useSunCamera ? "on" : "off", notes[currentNoteIndex].oscType);
     fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
         toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
@@ -324,10 +450,11 @@ void SoundTest::logicUpdate()
     meshRenderSystem.clear();
 }
 
-static void drawSoundGui(NoteFromMainToThread &currentNote)
+static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t noteIndex)
 {
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sound");
+    ImGui::Text("Sound index: %u", noteIndex);
     ImGui::Text("Base hz: %f", currentNote.baseHz);
     ImGui::DragInt("Osc type", &currentNote.oscType, 1, 0, 4);
     ImGui::DragInt("Osc LFO type", &currentNote.oscLFOType, 1, 0, 4);
@@ -395,8 +522,8 @@ void SoundTest::renderUpdate()
     scene.update(dt);
 
     editorSystem.renderUpdateGui();
-    currentNote.baseHz = baseHz;
-    drawSoundGui(currentNote);
+    notes[currentNoteIndex].baseHz = baseHz;
+    drawSoundGui(notes[currentNoteIndex], currentNoteIndex);
 
     meshRenderSystem.prepareToRender();
 

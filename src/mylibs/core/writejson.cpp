@@ -43,6 +43,63 @@ bool WriteJson::addNumber(StringView name, double number)
     return addString(name, s.getStr(), false);
 }
 
+bool WriteJson::addNumberArray(StringView name, const double *number, uint32_t numberCount)
+{
+    if(!valid)
+        return false;
+    if(!addArray(name))
+        return false;
+
+    addIndentSpaces();
+
+    for(uint32_t i = 0; i < numberCount; ++i)
+    {
+        if(i > 0)
+            writtenJson.append(", ");
+        writtenJson.append(number[i]);
+    }
+    writtenJson.append("\n");
+    return endArray();
+}
+
+bool WriteJson::addNumberArray(StringView name, const float *number, uint32_t numberCount)
+{
+    if(!valid)
+        return false;
+    if(!addArray(name))
+        return false;
+
+    addIndentSpaces();
+
+    for(uint32_t i = 0; i < numberCount; ++i)
+    {
+        if(i > 0)
+            writtenJson.append(", ");
+        writtenJson.append(number[i]);
+    }
+    writtenJson.append("\n");
+    return endArray();
+}
+
+bool WriteJson::addIntegerArray(StringView name, const int64_t *number, uint32_t numberCount)
+{
+    if(!valid)
+        return false;
+    if(!addArray(name))
+        return false;
+
+    addIndentSpaces();
+
+    for(uint32_t i = 0; i < numberCount; ++i)
+    {
+        if(i > 0)
+            writtenJson.append(", ");
+        writtenJson.append(number[i]);
+    }
+    writtenJson.append("\n");
+    return endArray();
+}
+
 bool WriteJson::addBool(StringView name, bool b)
 {
     return addString(name, b ? "true" : "false", false);
@@ -99,6 +156,8 @@ bool WriteJson::endArray()
         return false;
     }
     indentAmount -= INDENT_INSPACES;
+    if(writtenJson[writtenJson.size() - 1] == ',')
+        writtenJson.erase(writtenJson.size() - 1);
     addIndentSpaces();
     writtenJson.append("],\n");
     blockTypes.erase(blockTypes.size() - 1);
@@ -165,7 +224,7 @@ bool WriteJson::endObject()
 {
     if(!valid)
         return false;
-printf("%s\nsize: %i\n", blockTypes.getStr(), blockTypes.getSize());
+    //printf("%s\nsize: %i\n", blockTypes.getStr(), blockTypes.getSize());
     if(blockTypes.size() == 0 && indentAmount > INDENT_INSPACES)
     {
         valid = false;
@@ -177,6 +236,9 @@ printf("%s\nsize: %i\n", blockTypes.getStr(), blockTypes.getSize());
         return false;
     }
     indentAmount -= INDENT_INSPACES;
+    if(writtenJson[writtenJson.size() - 1] == ',')
+        writtenJson.erase(writtenJson.size() - 1);
+
     addIndentSpaces();
     writtenJson.append("},\n");
     blockTypes.erase(blockTypes.size() - 1);
@@ -247,7 +309,7 @@ bool WriteJson::finishWrite()
         valid = false;
         return false;
     }
-    writtenJson.append("}\n\0");
+    writtenJson.append("}\n\n");
 
     printf("output:\n%s", writtenJson.getStr());
     return true;

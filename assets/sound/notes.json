@@ -1,0 +1,424 @@
+{
+    "magicNumber" : 3495835844,
+    "versionNumber" : 1,
+    "sounds" : [
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 1, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.005000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.770000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+        {
+            "amplitudes" : [
+                0.000000, 0.007812, 0.015625, 0.023438, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.031250, 0.015625, 0.007812, 0.000000
+            ],
+            "AttackAmplitude" : 0.200000, 
+            "SustainAmplitude" : 0.150000, 
+            "Osc LFOtype" : 0, 
+            "Osc type" : 0, 
+            "Osc LFOHz" : 100.000000, 
+            "Attack duration" : 0.150000, 
+            "Decay duration" : 0.050000, 
+            "Release duration" : 0.200000, 
+        },
+    ],
+}
+
+ 

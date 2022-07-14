@@ -21,6 +21,11 @@ public:
     bool addNumber(StringView name, double number);
     bool addBool(StringView name, bool b);
 
+    // while in array
+    bool addNumberArray(StringView name, const double *number, uint32_t numberCount);
+    bool addNumberArray(StringView name, const float *number, uint32_t numberCount);
+    bool addIntegerArray(StringView name, const int64_t *number, uint32_t numberCount);
+
     bool addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber);
 
     bool addArray(StringView name);
