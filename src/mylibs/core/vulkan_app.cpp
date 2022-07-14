@@ -284,7 +284,7 @@ void VulkanApp::run()
             timeBeginPeriod(1);
             Sleep(SleepDuration);
         #else
-            sleep(SleepDuration);
+            usleep(SleepDuration * 1000);
         #endif
             //std::this_thread::sleep_for(std::chrono::milliseconds(5));
         #if WIN32
