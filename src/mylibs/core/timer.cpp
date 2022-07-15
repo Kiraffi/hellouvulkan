@@ -48,7 +48,7 @@ double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoin
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     
-    double dur = ((toTime - fromTime) * 1.0e6) / double(freq.QuadPart);
+    double dur = ((toTime - fromTime) * 1.0) / double(freq.QuadPart);
     #endif
     return dur;
 }
