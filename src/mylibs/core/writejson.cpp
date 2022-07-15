@@ -43,8 +43,38 @@ bool WriteJson::addNumber(StringView name, double number)
     return addString(name, s.getStr(), false);
 }
 
+bool WriteJson::addTypeArray(StringView name, const void *number, uint32_t bits, uint32_t numberCount,
+    void (*f) (String &writtenJson, void *writePlace))
+{
+    if(!valid || f == nullptr)
+        return false;
+    if(!addArray(name))
+        return false;
+
+    addIndentSpaces();
+
+    for(uint32_t i = 0; i < numberCount; ++i)
+    {
+        if(i > 0)
+            writtenJson.append(", ");
+        f(writtenJson, ((uint8_t *)number) + bits * i);
+        if(!isValid())
+            return false;
+    }
+    writtenJson.append("\n");
+    return endArray();
+
+}
+
+
 bool WriteJson::addNumberArray(StringView name, const double *number, uint32_t numberCount)
 {
+    return addTypeArray(name, number, sizeof(double), numberCount,
+        [](String &writtenJson, void *writePlace)
+    {
+        writtenJson.append(*((double *)writePlace));
+    });
+    /*
     if(!valid)
         return false;
     if(!addArray(name))
@@ -60,10 +90,18 @@ bool WriteJson::addNumberArray(StringView name, const double *number, uint32_t n
     }
     writtenJson.append("\n");
     return endArray();
+    */
 }
 
 bool WriteJson::addNumberArray(StringView name, const float *number, uint32_t numberCount)
 {
+    return addTypeArray(name, number, sizeof(float), numberCount,
+        [](String &writtenJson, void *writePlace)
+    {
+        writtenJson.append(*((float *)writePlace));
+    });
+
+    /*
     if(!valid)
         return false;
     if(!addArray(name))
@@ -79,10 +117,17 @@ bool WriteJson::addNumberArray(StringView name, const float *number, uint32_t nu
     }
     writtenJson.append("\n");
     return endArray();
+    */
 }
 
 bool WriteJson::addIntegerArray(StringView name, const int64_t *number, uint32_t numberCount)
 {
+    return addTypeArray(name, number, sizeof(int64_t), numberCount,
+        [](String &writtenJson, void *writePlace)
+    {
+        writtenJson.append(*((int64_t *)writePlace));
+    });
+/*
     if(!valid)
         return false;
     if(!addArray(name))
@@ -98,7 +143,35 @@ bool WriteJson::addIntegerArray(StringView name, const int64_t *number, uint32_t
     }
     writtenJson.append("\n");
     return endArray();
+    */
 }
+
+bool WriteJson::addIntegerArray(StringView name, const int32_t *number, uint32_t numberCount)
+{
+    return addTypeArray(name, number, sizeof(int32_t), numberCount,
+        [](String &writtenJson, void *writePlace)
+    {
+        writtenJson.append(*((int32_t *)writePlace));
+    });
+/*
+    if(!valid)
+        return false;
+    if(!addArray(name))
+        return false;
+
+    addIndentSpaces();
+
+    for(uint32_t i = 0; i < numberCount; ++i)
+    {
+        if(i > 0)
+            writtenJson.append(", ");
+        writtenJson.append(number[i]);
+    }
+    writtenJson.append("\n");
+    return endArray();
+    */
+}
+
 
 bool WriteJson::addBool(StringView name, bool b)
 {

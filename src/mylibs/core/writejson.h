@@ -25,6 +25,7 @@ public:
     bool addNumberArray(StringView name, const double *number, uint32_t numberCount);
     bool addNumberArray(StringView name, const float *number, uint32_t numberCount);
     bool addIntegerArray(StringView name, const int64_t *number, uint32_t numberCount);
+    bool addIntegerArray(StringView name, const int32_t *number, uint32_t numberCount);
 
     bool addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber);
 
@@ -44,6 +45,8 @@ public:
 private:
     bool addNamedString(StringView str, bool addQuotes);
     bool addIndentSpaces();
+    bool addTypeArray(StringView name, const void *number, uint32_t bits, uint32_t numberCount,
+        void (*f) (String &writtenJson, void *writePlace));
     String writtenJson;
     String blockTypes;
     uint32_t indentAmount = 0;

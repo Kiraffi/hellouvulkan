@@ -153,7 +153,9 @@ static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_
     for(auto const &obj : json.getChild("sounds"))
     {
         auto &note = notes[i++];
-        bool isValid = obj.getChild("sounds").parseNumberArray(note.amplitudes, ARRAYSIZES(note.amplitudes));
+        bool isValid = true;
+        isValid &= obj.getChild("amplitudes").parseNumberArray(note.amplitudes, ARRAYSIZES(note.amplitudes));
+        isValid &= obj.getChild("tunes").parseIntegerArray(note.tuning, ARRAYSIZES(note.tuning));
 
         isValid &= obj.getChild("AttackAmplitude").parseNumber(note.attackAmplitude);
         isValid &= obj.getChild("SustainAmplitude").parseNumber(note.sustainAmplitude);
@@ -189,6 +191,7 @@ static bool saveNotes(const char *filename, NoteFromMainToThread *notes, uint32_
         writeJson.addObject();
         const auto &note = notes[i];
         writeJson.addNumberArray("amplitudes", note.amplitudes, uint32_t(ARRAYSIZES(note.amplitudes)));
+        writeJson.addIntegerArray("tunes", note.tuning, uint32_t(ARRAYSIZES(note.amplitudes)));
 
         writeJson.addNumber("AttackAmplitude", note.attackAmplitude);
         writeJson.addNumber("SustainAmplitude", note.sustainAmplitude);
@@ -207,8 +210,10 @@ static bool saveNotes(const char *filename, NoteFromMainToThread *notes, uint32_
     }
     writeJson.endArray();
     writeJson.finishWrite();
-    return writeJson.isValid() &&
+    bool result = writeJson.isValid() &&
         writeBytes(filename, writeJson.getString().getBuffer());
+    printf("Saving was: %s\n", result ? "succesful" : "failure");
+    return result;
 }
 
 
@@ -488,23 +493,14 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t noteIndex)
     ImGui::PushID("set2");
     for(int i = 0; i < SAMPLE_POINTS; i++)
     {
+        if(i > 0) ImGui::SameLine();
         ImGui::PushID(i);
-        char btText[16];
-        snprintf(btText, 15, "%i: %i", i, currentNote.tuning[i]);
-
-        ImGui::Button(btText);
+        ImGui::VSliderFloat("##v", ImVec2(18, 160), &currentNote.amplitudes[i], 0, 1, "");
+        if(ImGui::IsItemActive() || ImGui::IsItemHovered())
+            ImGui::SetTooltip("%f", currentNote.amplitudes[i]);
         ImGui::PopID();
     }
     ImGui::PopID();
-
-/*
-    ImGui::DragFloat("Attack dur", &currentNote.attackDur, 0.01f, 0.0f, 10.0f);
-    ImGui::DragFloat("Decrease dur", &currentNote.decDur, 0.01f, 0.0f, 10.0f);
-    ImGui::DragFloat("Release dur", &currentNote.releaseDur, 0.01f, 0.0f, 10.0f);
-
-    ImGui::DragFloat("Attack amplitude", &currentNote.attackAmplitude, 0.01f, 0.0f, 1.5f);
-    ImGui::DragFloat("Sustain amplitude", &currentNote.sustainAmplitude, 0.01f, 0.0f, 1.5f);
-*/
     ImGui::End();
 
 

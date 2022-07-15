@@ -712,6 +712,18 @@ bool JsonBlock::parseIntegerArray(int64_t *arr, uint32_t arrayLen) const
     return true;
 }
 
+bool JsonBlock::parseIntegerArray(int32_t *arr, uint32_t arrayLen) const
+{
+    if(children.size() != arrayLen)
+        return false;
+    for(uint32_t i = 0; i < arrayLen; ++i)
+    {
+        if(!children[i].parseInt(arr[i]))
+            return false;
+    }
+
+    return true;
+}
 
 
 bool JsonBlock::equals(uint32_t value) const

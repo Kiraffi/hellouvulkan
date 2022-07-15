@@ -80,13 +80,17 @@ bool writeBytes(const char *filename, const ByteBuffer &data)
         #endif
         if(!fp)
             return false;
-
-        size_t bytesWritten = fwrite(data.getBegin(), 1, data.getSize(), fp);
-        bool success = bytesWritten != data.getSize();
+        uint32_t dataSize = data.getSize();
+        size_t bytesWritten = fwrite(data.getBegin(), 1, dataSize, fp);
+        bool success = bytesWritten == dataSize;
         fclose(fp);
         if(!success)
         {
             printf("failed to write file\n");
+        }
+        else
+        {
+            printf("Succeeded to writing file: %s\n", filename);
         }
         return success;
     }
