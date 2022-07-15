@@ -40,6 +40,8 @@
 #include <render/linerendersystem.h>
 #include <render/meshrendersystem.h>
 #include <render/tonemaprendersystem.h>
+#include <render/viewport.h>
+
 
 #include <render/lightingrendertargets.h>
 #include <render/meshrendertargets.h>
@@ -253,6 +255,8 @@ public:
 
     float baseHz = 220.0f;
     uint32_t currentNoteIndex = 0;
+
+    Viewport viewport;
 };
 
 
@@ -351,9 +355,15 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
 bool SoundTest::resized()
 {
-    if (!meshRenderTargets.resizeMeshTargets())
+    uint32_t wholeWidth = vulk->swapchain.width;
+    uint32_t wholeHeight = vulk->swapchain.height;
+    viewport = editorSystem.getEditorWindowViewport();
+    windowWidth = uint32_t(viewport.size.x);
+    windowHeight = uint32_t(viewport.size.y);
+
+    if(!meshRenderTargets.resizeMeshTargets(windowWidth, windowHeight))
         return false;
-    if (!lightingRenderTargets.resizeLightingTargets())
+    if(!lightingRenderTargets.resizeLightingTargets(windowWidth, windowHeight))
         return false;
 
     meshRenderSystem.setRenderTargets(meshRenderTargets);
@@ -513,11 +523,22 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t noteIndex)
 
 void SoundTest::renderUpdate()
 {
+    windowWidth = uint32_t(viewport.size.x);
+    windowHeight = uint32_t(viewport.size.y);
+
     VulkanApp::renderUpdate();
+
+    editorSystem.renderUpdateGui();
+    viewport = editorSystem.getEditorWindowViewport();
+
+    if(viewport.size.x != windowWidth || viewport.size.y != windowHeight)
+        vulk->needToResize = needToResize = true;
+
+    editorSystem.renderUpdateViewport();
+
 
     scene.update(dt);
 
-    editorSystem.renderUpdateGui();
     notes[currentNoteIndex].baseHz = baseHz;
     drawSoundGui(notes[currentNoteIndex], currentNoteIndex);
 
