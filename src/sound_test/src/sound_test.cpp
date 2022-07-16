@@ -218,6 +218,22 @@ static bool saveNotes(const char *filename, NoteFromMainToThread *notes, uint32_
     return result;
 }
 
+struct SongChannel
+{
+    PodVector<uint32_t> notes;
+};
+
+struct SongPattern
+{
+    PodVector<uint32_t> songPatternChannels;
+};
+
+struct Song
+{
+    Vector<SongPattern> songPatterns;
+    Vector<SongChannel> songChannels;
+    uint32_t bpm;
+};
 
 class SoundTest : public VulkanApp
 {
@@ -257,6 +273,11 @@ public:
     uint32_t currentNoteIndex = 0;
 
     Viewport viewport;
+
+    Song song;
+    uint32_t notesPerPattern = 64;
+    uint32_t channelsPerPattern = 4;
+    uint32_t currentPattern = 0;
 };
 
 
@@ -298,6 +319,14 @@ static void resetNote(NoteFromMainToThread &note)
     }
 }
 
+static uint32_t addNewChannel(Vector<SongChannel> &channels, uint32_t notesPerPattern)
+{
+    channels.pushBack(SongChannel());
+    SongChannel &channel = channels.back();
+    channel.notes.resize(notesPerPattern, 0);
+    return channels.size() - 1;
+}
+
 bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
 {
     for(uint32_t i = 0; i < ARRAYSIZES(notes); ++i)
@@ -334,6 +363,15 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
 
     if(!initAudio())
         return false;
+
+
+    {
+        song.bpm = 120;
+        for(uint32_t i = 0; i < 4; ++i)
+            addNewChannel(song.songChannels, notesPerPattern);
+        song.songPatterns = { SongPattern {.songPatternChannels {0, 1, 2, 3}}};
+    }
+
     scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
 
     for(float x = -10.0f; x <= 10.0f; x += 5.0f)
@@ -514,11 +552,19 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t noteIndex)
     ImGui::End();
 
 
-    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Sound");
-    ImGui::End();
 
     return;
+}
+
+static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t notesPerPattern)
+{
+    ASSERT(song.songPatterns.size() > 0);
+    currentPatternIndex = Supa::maxu32(currentPatternIndex, song.songPatterns.size() - 1);
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Song");
+    
+    ImGui::End();
+
 }
 
 void SoundTest::renderUpdate()
