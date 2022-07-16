@@ -4,6 +4,7 @@
 #include <components/transform_functions.h>
 
 #include <container/podvector.h>
+#include <container/podvectortypedefine.h>
 
 #include <core/camera.h>
 #include <core/file.h>
