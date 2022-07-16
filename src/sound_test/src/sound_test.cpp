@@ -233,7 +233,9 @@ struct Song
 {
     Vector<SongPattern> songPatterns;
     Vector<SongChannel> songChannels;
-    uint32_t bpm;
+    uint32_t bpm = 120;
+    uint32_t notesPerPattern = 64;
+    uint32_t channelsPerPattern = 4;
 };
 
 class SoundTest : public VulkanApp
@@ -276,8 +278,6 @@ public:
     Viewport viewport;
 
     Song song;
-    uint32_t notesPerPattern = 64;
-    uint32_t channelsPerPattern = 4;
     uint32_t currentPattern = 0;
 };
 
@@ -320,12 +320,12 @@ static void resetNote(NoteFromMainToThread &note)
     }
 }
 
-static uint32_t addNewChannel(Vector<SongChannel> &channels, uint32_t notesPerPattern)
+static uint32_t addNewChannel(Song &song)
 {
-    channels.pushBack(SongChannel());
-    SongChannel &channel = channels.back();
-    channel.notes.resize(notesPerPattern, 0);
-    return channels.size() - 1;
+    song.songChannels.pushBack(SongChannel());
+    SongChannel &channel = song.songChannels.back();
+    channel.notes.resize(song.notesPerPattern, 0);
+    return song.songChannels.size() - 1;
 }
 
 bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
@@ -365,11 +365,11 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
     if(!initAudio())
         return false;
 
-
+    // init song
     {
         song.bpm = 120;
         for(uint32_t i = 0; i < 4; ++i)
-            addNewChannel(song.songChannels, notesPerPattern);
+            addNewChannel(song);
         song.songPatterns = { SongPattern {.songPatternChannels {0, 1, 2, 3}}};
     }
 
@@ -557,13 +557,19 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t noteIndex)
     return;
 }
 
-static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t notesPerPattern)
+static void drawSongGui(Song &song, uint32_t currentPatternIndex)
 {
     ASSERT(song.songPatterns.size() > 0);
     currentPatternIndex = Supa::maxu32(currentPatternIndex, song.songPatterns.size() - 1);
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Song");
-    
+    for(uint32_t rowIndex = 0; rowIndex < song.notesPerPattern; ++rowIndex)
+    {
+        for(uint32_t channelIndex = 0; channelIndex < song.channelsPerPattern; ++channelIndex)
+        {
+
+        }
+    }
     ImGui::End();
 
 }
