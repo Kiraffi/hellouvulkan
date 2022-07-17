@@ -7,6 +7,11 @@ project ("hellouvulkan" VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
+
+#check for instruction/link time optimization supported
+include(CheckIPOSupported)
+
+
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x86)
 
@@ -18,7 +23,7 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 #add_compile_options($<$<CXX_COMPILER_ID:MSVC>-ftime-ftrace)
 if (WIN32)
     ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN=1)
-endif (windows)
+endif (WIN32)
 
 # imgui stuff to support vulkan with x86
 ADD_DEFINITIONS(-DImTextureID=ImU64)
