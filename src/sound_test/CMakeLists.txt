@@ -15,6 +15,10 @@ target_link_libraries(sound_test PRIVATE
     MyLibraries
     MyVulkan
     MyImgui
+    MyGui
     glfw
     MyAudio
     )
+
+#lto? need to figure out how to turn it on only for release, if wanting to use it
+#set_property(TARGET sound_test PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

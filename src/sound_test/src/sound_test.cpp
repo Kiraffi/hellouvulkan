@@ -32,6 +32,8 @@
 
 #include <model/gltf.h>
 
+#include <mygui/mygui.h>
+
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
@@ -949,6 +951,7 @@ void SoundTest::renderDraw()
 int main(int argCount, char **argv)
 {
     initMemory();
+    if(initMyGui())
     {
         SoundTest app;
         if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT,
@@ -964,6 +967,7 @@ int main(int argCount, char **argv)
             app.run();
         }
     }
+    deinitMyGui();
     deinitMemory();
     return 0;
 }

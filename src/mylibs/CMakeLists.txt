@@ -88,6 +88,13 @@ add_library(MyAudio EXCLUDE_FROM_ALL
 
 )
 
+add_library(MyGui EXCLUDE_FROM_ALL
+    "mygui/mygui.h"
+
+
+    "mygui/mygui.cpp"
+)
+
 add_library(MyImgui EXCLUDE_FROM_ALL
     "gui/componentviews.h"
 
@@ -151,10 +158,13 @@ add_library(MyVulkan EXCLUDE_FROM_ALL
 target_link_libraries(MyLibraries PUBLIC
 )
 
+
 target_link_libraries(MyAudio PRIVATE
     Miniaudio
 )
 
+target_link_libraries(MyGui PUBLIC
+)
 
 
 target_link_libraries(MyImgui PUBLIC
