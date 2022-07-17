@@ -16,13 +16,13 @@
 
 
 // std::to_string
-#include <vector>
+//#include <vector>
 
 struct GlobalShaders
 {
-    std::vector<std::vector<Shader>> shaders;
+    Vector<PodVector<Shader>> shaders;
 };
-static GlobalShaders globalShaders;
+static GlobalShaders *globalShaders = nullptr;
 
 // spir-v specs, 1.6 https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.pdf
 static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView filename, Shader& inOutShader)
@@ -241,7 +241,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
         if (!parseSuccess)
             return false;
 
-        globalShaders.shaders[uint32_t(shaderType)].push_back(shader);
+        globalShaders->shaders[uint32_t(shaderType)].push_back(shader);
 
         ++permutationIndex;
     }
@@ -265,14 +265,16 @@ void destroyShader(Shader& shader)
 const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex)
 {
     ASSERT(uint32_t(shaderType) < uint32_t(ShaderType::NumShaders));
-    ASSERT(uint32_t(shaderType) < globalShaders.shaders.size());
-    ASSERT(permutationIndex < globalShaders.shaders[uint32_t(shaderType)].size());
-    return globalShaders.shaders[uint32_t(shaderType)][permutationIndex];
+    ASSERT(uint32_t(shaderType) < globalShaders->shaders.size());
+    ASSERT(permutationIndex < globalShaders->shaders[uint32_t(shaderType)].size());
+    return globalShaders->shaders[uint32_t(shaderType)][permutationIndex];
 }
 
 bool loadShaders()
 {
-    globalShaders.shaders.resize(uint8_t(ShaderType::NumShaders));
+    ASSERT(globalShaders == nullptr);
+    globalShaders = new GlobalShaders();
+    globalShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
     if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
     if (!loadShader("basic3d.vert", ShaderType::Basic3DVert)) return false;
 
@@ -307,13 +309,15 @@ bool loadShaders()
 
 void deleteLoadedShaders()
 {
-    for (auto &shaderPermutations : globalShaders.shaders)
+    for (auto &shaderPermutations : globalShaders->shaders)
     {
         for (auto& shaderModule : shaderPermutations)
             destroyShader(shaderModule);
     }
 
-    globalShaders.shaders.clear();
+    globalShaders->shaders.clear();
+    delete globalShaders;
+    globalShaders = nullptr;
 }
 
 
