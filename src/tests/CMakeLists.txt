@@ -9,4 +9,5 @@ add_executable (tests "main_test.cpp" "matrixtest.cpp" "vectormathtest.cpp" "str
 
 target_link_libraries(tests PRIVATE
     MyLibraries
+    glfw
     )

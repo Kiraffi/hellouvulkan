@@ -14,6 +14,7 @@ add_dependencies(sound_test shaders)
 target_link_libraries(sound_test PRIVATE
     MyLibraries
     #MyVulkan
+    Imgui
     MyImgui
     MyGui
     glfw

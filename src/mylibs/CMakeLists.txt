@@ -140,7 +140,7 @@ add_library(MyGui OBJECT EXCLUDE_FROM_ALL
     "mygui/mygui.cpp"
 )
 
-add_library(MyImgui EXCLUDE_FROM_ALL
+add_library(MyImgui OBJECT EXCLUDE_FROM_ALL
     "gui/componentviews.h"
 
     "render/myimguirenderer.h"
@@ -171,7 +171,7 @@ endif()
 
 
 target_link_libraries(MyLibraries PUBLIC
-    glfw
+    #glfw
     Vulkan::Vulkan
     ${WINMM_LIB}
     #meshoptimizer
