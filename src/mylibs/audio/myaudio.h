@@ -26,7 +26,7 @@ struct NoteFromMainToThread
     int oscLFOType;
     float oscLFOHz;
 
-    float baseHz;
+    float freqHz;
 
     float attackAmplitude;
     float sustainAmplitude;
@@ -53,6 +53,10 @@ AtomicType getRunningNotes();
 AtomicType getReleasedNotes();
 
 //Note fix these
-void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysUp, double time);
+//void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysUp, double time);
+void releaseChannel(AtomicType channelToRelease);
+AtomicType addNote(float playFreqHz, uint32_t noteIndex, const NoteFromMainToThread &currentNote);
+/*
 void addNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown,
     double time, float baseHz, const NoteFromMainToThread &currentNote);
+*/

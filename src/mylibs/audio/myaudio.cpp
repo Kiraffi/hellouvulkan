@@ -13,48 +13,6 @@ static constexpr int DEVICE_CHANNELS = 2;
 static constexpr int DEVICE_SAMPLE_RATE = 48000;
 
 
-static double getFreq(double index)
-{
-    return Supa::powd(2, index / 12.0);
-}
-
-static const double GlobalFreqs [NOTE_COUNT] = {
-    getFreq(0),
-    getFreq(1),
-    getFreq(2),
-    getFreq(3),
-    getFreq(4),
-    getFreq(5),
-    getFreq(6),
-    getFreq(7),
-    getFreq(8),
-    getFreq(9),
-    getFreq(10),
-    getFreq(11),
-    getFreq(12),
-    getFreq(13),
-    getFreq(14),
-    getFreq(15),
-
-
-    getFreq(12),
-    getFreq(13),
-    getFreq(14),
-    getFreq(15),
-    getFreq(16),
-    getFreq(17),
-    getFreq(18),
-    getFreq(19),
-    getFreq(20),
-    getFreq(21),
-    getFreq(22),
-    getFreq(23),
-    getFreq(24),
-    getFreq(25),
-    getFreq(26),
-    getFreq(27),
-};
-
 
 struct GlobalAudioDevice
 {
@@ -72,52 +30,37 @@ static std::atomic<AtomicType> notesRunning(0);
 static std::atomic<AtomicType> notesReleased(0);
 
 
-void checkNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysUp, double time)
+void releaseChannel(AtomicType channelToRelease)
 {
-    AtomicType channelAtom = AtomicType(1) << channel;
-    bool runn = (running & channelAtom) != 0;
-    bool rel = (released & channelAtom) != 0;
-    if(runn && !rel)
-    {
-        NoteFromMainToThread &note = notesFromMain[channel];
-
-        AtomicType atomKey = AtomicType(1) << note.note;
-        bool keyReleased = (keysUp & atomKey) != 0;
-
-        // remove from handled keys
-        keysUp &= ~(atomKey);
-
-        if(keyReleased)
-        {
-            std::atomic_fetch_or(&notesReleased, channelAtom);
-        }
-    }
+    if(channelToRelease >= NOTE_COUNT)
+        return;
+    AtomicType runningNotes = getRunningNotes();
+    AtomicType channelAtom = AtomicType(1) << channelToRelease;
+    if((runningNotes & channelAtom) == 0)
+        return;
+    std::atomic_fetch_or(&notesReleased, channelAtom);
+    return;
 }
 
-void addNotes(AtomicType channel, AtomicType running, AtomicType released, AtomicType &keysDown,
-    double time, float baseHz, const NoteFromMainToThread &currentNote)
+AtomicType addNote(float playFreqHz, uint32_t noteIndex, const NoteFromMainToThread &currentNote)
 {
-    AtomicType channelAtom = AtomicType(1) << channel;
-    bool runn = (running & channelAtom) != 0;
-    if(keysDown == 0 || runn)
-        return;
+    AtomicType releasedNotes = getRunningNotes();
+    for(AtomicType channel = 0; channel < NOTE_COUNT; ++channel)
+    {
+        AtomicType channelAtom = AtomicType(1) << channel;
+        bool isEmpty = (releasedNotes & channelAtom) == 0;
+        if(!isEmpty)
+            continue;
+        releasedNotes |= channelAtom;
 
-    AtomicType bitScanForward = 0;
-
-    while((keysDown & (AtomicType(1) << bitScanForward)) == 0)
-        bitScanForward++;
-    if(bitScanForward >= NOTE_COUNT)
-        return;
-
-    // remove from handled keys
-    keysDown &= ~(AtomicType(1) << bitScanForward);
-    NoteFromMainToThread &note = notesFromMain[channel];
-
-    note = currentNote;
-    note.note = bitScanForward;
-    note.baseHz = baseHz;
-    std::atomic_fetch_or(&notesRunning, channelAtom);
-    return;
+        NoteFromMainToThread &note = notesFromMain[channel];
+        note = currentNote;
+        note.note = noteIndex;
+        note.freqHz = playFreqHz;
+        std::atomic_fetch_or(&notesRunning, channelAtom);
+        return channel;
+    }
+    return ~AtomicType(0);
 }
 
 double evaluateSound(double time, double freq, int instrument)
@@ -293,7 +236,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
             {
                 double timePoint = time - noteThread.startTime;
                 float duration = Supa::maxd(0.005, noteMain.attackDuration + noteMain.decayDuration);
-                double freq = GlobalFreqs[noteMain.note] * noteMain.baseHz;
+                double freq = noteMain.freqHz;
                 double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
                 value *= double(SAMPLE_POINTS);
                 int iValue = int(value) % SAMPLE_POINTS;
