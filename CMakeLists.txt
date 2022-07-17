@@ -160,8 +160,9 @@ add_library(Imgui OBJECT EXCLUDE_FROM_ALL
 )
 
 
-add_library(Miniaudio OBJECT EXCLUDE_FROM_ALL
+add_library(MyAudio OBJECT EXCLUDE_FROM_ALL
     "external/miniaudio/extras/miniaudio_split/miniaudio.c"
+    "src/mylibs/audio/myaudio.cpp"
 )
 ## miniaudio remove unneccessary stuff
 #ADD_DEFINITIONS(-DMA_NO_DECODING)
@@ -176,7 +177,7 @@ add_library(Miniaudio OBJECT EXCLUDE_FROM_ALL
 ##ADD_DEFINITIONS(-DMA_NO_NEON)
 
 
-target_compile_definitions(Miniaudio PRIVATE
+target_compile_definitions(MyAudio PRIVATE
     MA_NO_DECODING
     MA_NO_ENCODING
     MA_NO_WAV

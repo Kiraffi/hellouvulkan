@@ -7,7 +7,7 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 #print_variables()
 
 
-add_library(MyLibraries EXCLUDE_FROM_ALL
+add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 
     "container/bytebuffer.h"
     "container/mymemory.h"
@@ -79,42 +79,14 @@ add_library(MyLibraries EXCLUDE_FROM_ALL
     "model/animation.cpp"
     "resources/globalresources.cpp"
 
-)
-
-add_library(MyAudio EXCLUDE_FROM_ALL
-    "audio/myaudio.h"
-
-    "audio/myaudio.cpp"
-
-)
-
-add_library(MyGui EXCLUDE_FROM_ALL
-    "mygui/mygui.h"
-
-
-    "mygui/mygui.cpp"
-)
-
-add_library(MyImgui EXCLUDE_FROM_ALL
-    "gui/componentviews.h"
-
-    "render/myimguirenderer.h"
-
-    "gui/guiutil.h"
-    "gui/editorsystem.h"
 
 
 
-    "gui/transformview.cpp"
-    "gui/componentviews.cpp"
 
-    "render/myimguirenderer.cpp"
 
-    "gui/guiutil.cpp"
-    "gui/editorsystem.cpp"
-)
 
-add_library(MyVulkan EXCLUDE_FROM_ALL
+
+
     "core/vulkan_app.h"
 
     "myvulkan/myvulkan.h"
@@ -151,17 +123,66 @@ add_library(MyVulkan EXCLUDE_FROM_ALL
 
     "render/lightingrendertargets.cpp"
     "render/meshrendertargets.cpp"
+
 )
 
+#add_library(MyAudio OBJECT EXCLUDE_FROM_ALL
+#    "audio/myaudio.h"
+
+#    "audio/myaudio.cpp"
+
+#)
+
+add_library(MyGui OBJECT EXCLUDE_FROM_ALL
+    "mygui/mygui.h"
+
+
+    "mygui/mygui.cpp"
+)
+
+add_library(MyImgui EXCLUDE_FROM_ALL
+    "gui/componentviews.h"
+
+    "render/myimguirenderer.h"
+
+    "gui/guiutil.h"
+    "gui/editorsystem.h"
+
+
+
+    "gui/transformview.cpp"
+    "gui/componentviews.cpp"
+
+    "render/myimguirenderer.cpp"
+
+    "gui/guiutil.cpp"
+    "gui/editorsystem.cpp"
+)
+
+#add_library(MyVulkan OBJECT EXCLUDE_FROM_ALL
+#)
+
+
+if (WIN32)
+    set(WINMM_LIB winMM.Lib)
+else()
+    set(WINMM_LIB  "")
+endif()
 
 
 target_link_libraries(MyLibraries PUBLIC
+    glfw
+    Vulkan::Vulkan
+    ${WINMM_LIB}
+    #meshoptimizer
+    #PRIVATE MyLibraries
+
 )
 
 
-target_link_libraries(MyAudio PRIVATE
-    Miniaudio
-)
+#target_link_libraries(MyAudio PUBLIC
+#    Miniaudio
+#)
 
 target_link_libraries(MyGui PUBLIC
 )
@@ -171,16 +192,5 @@ target_link_libraries(MyImgui PUBLIC
     Imgui
 )
 
-if (WIN32)
-    set(WINMM_LIB winMM.Lib)
-else()
-    set(WINMM_LIB  "")
-endif()
-
-target_link_libraries(MyVulkan PUBLIC
-    #glfw
-    Vulkan::Vulkan
-    ${WINMM_LIB}
-    #meshoptimizer
-    PRIVATE MyLibraries
-)
+#target_link_libraries(MyVulkan PUBLIC
+#)

@@ -13,7 +13,7 @@ add_dependencies(imgui_test shaders)
 
 target_link_libraries(imgui_test PRIVATE
     MyLibraries
-    MyVulkan
+    #MyVulkan
     MyImgui
     glfw
     )

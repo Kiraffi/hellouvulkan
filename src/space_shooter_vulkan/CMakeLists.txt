@@ -13,7 +13,7 @@ add_dependencies(space_shooter_vulkan shaders)
 
 target_link_libraries(space_shooter_vulkan PRIVATE
     MyLibraries
-    MyVulkan
-    MyImgui
+    #MyVulkan
+    #MyImgui
     glfw
     )
