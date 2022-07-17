@@ -172,9 +172,9 @@ static uint32_t SoundsMagicNumber = 3495835844;
 static uint32_t SoundsVersionNumber = 1;
 
 
-static float getFreqHz(uint32_t octave, uint32_t noteIndex)
+static float getFreqHz(uint32_t noteIndex)
 {
-    return 27.5f * float(1u << (octave + noteIndex / 12)) * FreqTable[noteIndex % 12];
+    return 27.5f * float(1u << (noteIndex / 12)) * FreqTable[noteIndex % 12];
 }
 
 static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_t noteLen)
@@ -298,6 +298,7 @@ struct Song
     Vector<SongPattern> songPatterns;
     Vector<SongChannel> songChannels;
     uint32_t bpm = 120;
+    uint32_t beatsPerNote = 4;
     uint32_t notesPerPattern = 64;
     uint32_t channelsPerPattern = 4;
 };
@@ -347,6 +348,13 @@ public:
     int32_t currentColumnIndex = 0;
 
     uint32_t playingNoteChannels[NOTE_COUNT];
+
+    PodVector<uint32_t> playingMusicChannelNotes;
+
+    uint32_t jumpRowAmount = 1u;
+    bool editMode = false;
+    bool playMode = false;
+    double playStartTime = 0.0;
 };
 
 
@@ -363,7 +371,6 @@ SoundTest::~SoundTest()
 
 static void resetNote(NoteFromMainToThread &note)
 {
-    note.note = 0;
     note.oscType = 0;
     note.oscLFOType = 0;
     note.oscLFOHz = 100.0;
@@ -505,9 +512,14 @@ void SoundTest::logicUpdate()
         --notes[currentNoteIndex].oscType;
 
     if(isPressed(GLFW_KEY_KP_9))
-        if(currentOctave < 7) ++currentOctave;
+        if(currentOctave < 6) ++currentOctave;
     if(isPressed(GLFW_KEY_KP_6))
         if(currentOctave > 0) --currentOctave;
+
+    if(isPressed(GLFW_KEY_KP_8))
+        ++jumpRowAmount;
+    if(isPressed(GLFW_KEY_KP_6))
+        if(jumpRowAmount > 0) --jumpRowAmount;
 
     if(isPressed(GLFW_KEY_KP_7))
         if(currentNoteIndex < ARRAYSIZES(notes)) ++currentNoteIndex;
@@ -535,6 +547,29 @@ void SoundTest::logicUpdate()
     if(isPressed(GLFW_KEY_RIGHT))
         ++currentColumnIndex;
 
+
+    if(isPressed(GLFW_KEY_SPACE))
+    {
+        playMode = false;
+        editMode = !editMode;
+        for(uint32_t i = 0; i < playingMusicChannelNotes.size(); ++i)
+        {
+            releaseChannel(playingMusicChannelNotes[i]);
+            playingMusicChannelNotes[i] = ~0u;
+        }
+    }
+    double currTime = getTime();
+
+    if(isPressed(GLFW_KEY_ENTER))
+    {
+        playMode = true;
+        editMode = false;
+        currentRowIndex = 0;
+        playStartTime = currTime;
+    }
+    if(playingMusicChannelNotes.size() != song.channelsPerPattern)
+        playingMusicChannelNotes.resize(song.channelsPerPattern, ~0u);
+
     while(currentRowIndex < 0)
         currentRowIndex += song.notesPerPattern;
     while(currentColumnIndex < 0)
@@ -548,17 +583,47 @@ void SoundTest::logicUpdate()
     //if(currentNote.oscType < 0) chosenInstrument = 0;
     //if(chosenInstrument > 4) chosenInstrument = 4;
 
-    double currTime = getTime();
     AtomicType runnings = getRunningNotes();
     AtomicType releases = getReleasedNotes();
 
     AtomicType keysDown = 0;
     AtomicType keysUp = 0;
+
+    if(playMode)
+    {
+        uint32_t prevPos = currentRowIndex;
+        currentRowIndex = (currTime - playStartTime) * song.bpm / song.beatsPerNote;
+        currentRowIndex %= song.notesPerPattern;
+        if(prevPos != currentRowIndex || currTime == playStartTime)
+        {
+            auto &pattern = song.songPatterns[currentPatternIndex];
+            for(uint32_t columnIndex = 0; columnIndex < song.channelsPerPattern; ++columnIndex)
+            {
+                auto &channel = song.songChannels[pattern.songPatternChannels[columnIndex]];
+                auto &note = channel.notes[currentRowIndex];
+
+                if(note != 0)
+                {
+                    uint32_t noteIndex = note >> 7u;
+                    uint32_t freqIndex = (note - 1) & 127;
+                    releaseChannel(playingMusicChannelNotes[columnIndex]);
+                    playingMusicChannelNotes[columnIndex] = ~0u;
+
+                    if(note != ~0u)
+                        playingMusicChannelNotes[columnIndex] =
+                            addNote(getFreqHz(freqIndex), notes[noteIndex]);
+                }
+            }
+        }
+    }
+
+
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
     {
         if(isPressed(Keys[index]))
+        {
             keysDown |= AtomicType(1) << index;
-
+        }
         if(isReleased(Keys[index]))
             keysUp |= AtomicType(1) << index;
     }
@@ -572,22 +637,43 @@ void SoundTest::logicUpdate()
 
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
     {
-        uint32_t note = currentOctave * 12 + GlobalKeyMap[index] + 1 + (currentNoteIndex << 7u);
+        uint32_t note = currentOctave * 12 + GlobalKeyMap[index];
         if(((keysDown >> index) & 1) == 1)
             playingNoteChannels[index] =
-                addNote(getFreqHz(currentOctave, GlobalKeyMap[index]), note, notes[currentNoteIndex]);
+                addNote(getFreqHz(note), notes[currentNoteIndex]);
     }
 
-    if(keysDown)
+    if(keysDown && editMode)
     {
         auto &pattern = song.songPatterns[currentPatternIndex];
         auto &channel = song.songChannels[pattern.songPatternChannels[currentColumnIndex]];
         auto &note = channel.notes[currentRowIndex];
 
         AtomicType index = 0;
-        while((keysDown & (AtomicType(1) << index)) == 0)
-            index++;
-        note = 1 + (currentNoteIndex << 7) + (currentOctave * 12 + GlobalKeyMap[index]);
+        for(AtomicType index = 0; index < 64; ++index)
+        {
+            if((keysDown & (AtomicType(1) << index)) == 0)
+                continue;
+            auto &note = channel.notes[currentRowIndex];
+            note = 1 + (currentNoteIndex << 7) + (currentOctave * 12 + GlobalKeyMap[index]);
+            if(editMode)
+            {
+                currentRowIndex += jumpRowAmount;
+                currentRowIndex %= song.notesPerPattern;
+            }
+        }
+    }
+    if(editMode && isPressed(GLFW_KEY_CAPS_LOCK))
+    {
+        auto &pattern = song.songPatterns[currentPatternIndex];
+        auto &channel = song.songChannels[pattern.songPatternChannels[currentColumnIndex]];
+        auto &note = channel.notes[currentRowIndex];
+        if(editMode)
+        {
+            currentRowIndex += jumpRowAmount;
+            currentRowIndex %= song.notesPerPattern;
+        }
+        note = ~0u;
     }
 
     camera.lookAt(Vec3(0, 0, 0));
@@ -670,21 +756,29 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t currentOcta
 }
 
 static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t currentRowIndex,
-    uint32_t currentColumnIndex)
+    uint32_t currentColumnIndex, bool editMode)
 {
     ASSERT(song.songPatterns.size() > 0);
     currentPatternIndex = Supa::maxu32(currentPatternIndex, song.songPatterns.size() - 1);
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Song");
-    Vector<String> lines;
-    lines.resize(song.notesPerPattern);
 
-    for(uint32_t rowIndex = 0; rowIndex < song.notesPerPattern; ++rowIndex)
+    Vector<String> lines;
+    uint32_t startRowIndex = Supa::maxu32(currentRowIndex, 16) - 16;
+    uint32_t endRowIndex = Supa::minu32(startRowIndex + 33, song.notesPerPattern);
+    startRowIndex = endRowIndex - 33;
+    uint32_t rowAmount = endRowIndex - startRowIndex;
+    lines.resize(rowAmount);
+
+    currentRowIndex -= startRowIndex;
+
+    for(uint32_t rowIndex = 0; rowIndex < rowAmount; ++rowIndex)
     {
         auto &line = lines[rowIndex];
-        if(rowIndex < 10)
+        uint32_t lineIndex = rowIndex + startRowIndex;
+        if(lineIndex < 10)
             line.append("0");
-        line.append(rowIndex);
+        line.append(lineIndex);
         line.append(" | ");
     }
 
@@ -694,13 +788,15 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
             continue;
 
         auto &channel = song.songChannels[channelIndex];
-        for(uint32_t rowIndex = 0; rowIndex < song.notesPerPattern; ++rowIndex)
+        for(uint32_t rowIndex = 0; rowIndex < rowAmount; ++rowIndex)
         {
-            auto &note = channel.notes[rowIndex];
+            auto &note = channel.notes[rowIndex + startRowIndex];
             auto &line = lines[rowIndex];
 
             if(note == 0)
-                line.append("--- -- ");
+                line.append("---- --");
+            else if(note == ~0u)
+                line.append("==== --");
             else
             {
                 // cos note == 0 cannot exist...
@@ -723,9 +819,11 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
                     case 10: line.append("G-"); break;
                     case 11: line.append("G#"); break;
                 }
+                if(octave < 10)
+                    line.append("0");
                 line.append(octave);
                 if(instrumentIndex < 10)
-                    line.append("  ");
+                    line.append(" 0");
                 else
                     line.append(" ");
                 line.append(instrumentIndex);
@@ -743,10 +841,14 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", s.getStr());
         for(uint32_t j = 0; j < song.channelsPerPattern; ++j)
         {
-            s = String(lines[i].getStr() + 3 + (j * 10), 10);
+            s = String(lines[i].getStr() + 3 + (j * 10), 9);
             ImGui::SameLine();
-            if(i == currentRowIndex && j == currentColumnIndex)
+            //printf("%s\n", s.getStr());
+            if(i == currentRowIndex && j == currentColumnIndex && editMode)
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", s.getStr());
+            else if(i == currentRowIndex && j == currentColumnIndex)
                 ImGui::TextColored(ImVec4(1, 0, 1, 1), "%s", s.getStr());
+
             else if(i == currentRowIndex)
                 ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", s.getStr());
             else
@@ -775,9 +877,8 @@ void SoundTest::renderUpdate()
 
     scene.update(dt);
 
-    notes[currentNoteIndex].freqHz = getFreqHz(currentOctave, 0);
     drawSoundGui(notes[currentNoteIndex], currentOctave, currentNoteIndex);
-    drawSongGui(song, currentPatternIndex, currentRowIndex, currentColumnIndex);
+    drawSongGui(song, currentPatternIndex, currentRowIndex, currentColumnIndex, editMode);
 
     meshRenderSystem.prepareToRender();
 

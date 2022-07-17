@@ -42,7 +42,7 @@ void releaseChannel(AtomicType channelToRelease)
     return;
 }
 
-AtomicType addNote(float playFreqHz, uint32_t noteIndex, const NoteFromMainToThread &currentNote)
+AtomicType addNote(float playFreqHz, const NoteFromMainToThread &currentNote)
 {
     AtomicType releasedNotes = getRunningNotes();
     for(AtomicType channel = 0; channel < NOTE_COUNT; ++channel)
@@ -55,7 +55,6 @@ AtomicType addNote(float playFreqHz, uint32_t noteIndex, const NoteFromMainToThr
 
         NoteFromMainToThread &note = notesFromMain[channel];
         note = currentNote;
-        note.note = noteIndex;
         note.freqHz = playFreqHz;
         std::atomic_fetch_or(&notesRunning, channelAtom);
         return channel;
