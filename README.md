@@ -15,6 +15,7 @@ This is just my own toy project to test vulkan rendering and other random stuffs
 * GLFW for windowing and platform support: https://github.com/glfw/glfw
 * Meshoptimizer for optimising meshes: https://github.com/zeux/meshoptimizer
 * Miniaudio for audio: https://github.com/mackron/miniaudio
+* Vulkan memory allocator: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 
 ## Requirements
 
