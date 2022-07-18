@@ -16,6 +16,7 @@
 #include <math/plane.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>
+#include <math/vector3_inline_functions.h>
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/shader.h>
@@ -30,6 +31,16 @@ static constexpr float buttonSize = 20.0f;
 static constexpr float smallButtonSize = 2.0f;
 static constexpr float borderSizes = 2.0f;
 
+static constexpr uint32_t  LetterStartIndex = 32;
+static constexpr uint32_t  LetterEndIndex = 128;
+static constexpr uint32_t LetterCount =  LetterEndIndex -  LetterStartIndex;
+
+static constexpr uint32_t LetterWidth = 8;
+static constexpr uint32_t LetterHeight = 12;
+
+static constexpr float LetterPanelOffsetX = 10.0f;
+static constexpr float LetterPanelOffsetY = 10.0f;
+
 struct GPUVertexData
 {
     float posX;
@@ -37,6 +48,12 @@ struct GPUVertexData
     uint16_t pixelSizeX;
     uint16_t pixelSizeY;
     uint32_t color;
+};
+
+struct Box
+{
+    Vec2 pos;
+    Vec2 size;
 };
 
 class VulkanFontDraw : public VulkanApp
@@ -54,6 +71,10 @@ public:
     virtual bool resized() override;
 
 public:
+    void updateCharacterImageData(uint32_t characterIndex);
+    void updateDrawAreaData();
+    Vec2 getDrawAreaStartPos() const;
+
     Image renderColorImage;
 
     Buffer quadBuffer[VulkanGlobal::FramesInFlight];
@@ -63,11 +84,14 @@ public:
 
     String fontFilename;
 
-    char buffData[12] = {};
+    uint8_t buffData[12] = {};
     int32_t chosenLetter = 'a';
 
+    // index 0 = selected box, 1..letters * lettersize = letter pixels, after that drawing area
     PodVector<GPUVertexData> vertData;
-    PodVector<char> characterData;
+    PodVector<uint8_t> characterData;
+
+    PodVector<Box> charactersInScreen;
 
     static constexpr VkClearValue colorClear = { .color{ 0.0f, 0.5f, 1.0f, 1.0f } };
 };
@@ -172,67 +196,46 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
 bool VulkanFontDraw::initRun()
 {
-    const uint32_t charCount = 128 - 32;
     if (!loadBytes(fontFilename.getStr(), characterData.getBuffer()))
     {
         printf("Failed to load file: %s\n", fontFilename.getStr());
         return false;
     }
+    charactersInScreen.resize(LetterCount);
 
-    vertData.resize(12 * 8 * (charCount + 1) + 1);
+    vertData.resize(LetterHeight * LetterWidth * (LetterCount + 1) + 1);
 
 
-
+    // selected red box
     {
         float offX = (borderSizes + buttonSize) + windowWidth * 0.5f;
         float offY = (borderSizes + buttonSize) + windowHeight * 0.5f;
 
         GPUVertexData& vdata = vertData[0];
         vdata.color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
-        vdata.pixelSizeX = uint16_t(smallButtonSize) * 8 + 4;
-        vdata.pixelSizeY = uint16_t(smallButtonSize) * 12 + 4;
+        vdata.pixelSizeX = uint16_t(smallButtonSize) * LetterWidth + 4;
+        vdata.pixelSizeY = uint16_t(smallButtonSize) * LetterHeight + 4;
         vdata.posX = offX;
         vdata.posY = offY;
     }
 
-    for (int j = 0; j < 12; ++j)
+    // Draw area boxes
     {
-        for (int i = 0; i < 8; ++i)
-        {
-            float offX = float((i - 4) * (borderSizes + buttonSize)) + windowWidth * 0.5f;// -buttonSize * 0.5f;
-            float offY = float((j - 6) * (borderSizes + buttonSize)) + windowHeight * 0.5f;// -buttonSize * 0.5f;
-
-            GPUVertexData& vdata = vertData[i + size_t(j) * 8 + 1];
-            vdata.color = 0;
-            vdata.pixelSizeX = vdata.pixelSizeY = buttonSize;
-            vdata.posX = offX;
-            vdata.posY = offY;
-        }
+        updateDrawAreaData();
     }
-
-    for (int k = 0; k < charCount; ++k)
+    for (int k = 0; k < LetterCount; ++k)
     {
-        int x = k % 8;
-        int y = k / 8;
-        for (int j = 0; j < 12; ++j)
-        {
-            for (int i = 0; i < 8; ++i)
-            {
-                GPUVertexData& vdata = vertData[i + size_t(j) * 8 + (size_t(k) + 1) * 8 * 12 + 1];
+        int x = k % LetterWidth;
+        int y = k / LetterWidth;
+        float smallOffX =
+            LetterPanelOffsetX + float(x * LetterWidth) * smallButtonSize + x * 2;
+        float smallOffY =
+            LetterPanelOffsetY + float(y * LetterHeight) * smallButtonSize + y * 2;
 
-                float smallOffX = float(i * (smallButtonSize)) + 10.0f + float(x * 8) * smallButtonSize + x * 2;
-                float smallOffY = float(j * (smallButtonSize)) + 10.0f + float(y * 12) * smallButtonSize + y * 2;
+        charactersInScreen[k].pos = Vec2(smallOffX, smallOffY);
+        charactersInScreen[k].size = Vec2(LetterWidth * smallButtonSize, LetterHeight * smallButtonSize);
 
-                uint32_t indx = k * 12 + j;
-                bool isVisible = ((characterData[indx] >> i) & 1) == 1;
-
-                vdata.color = isVisible ? ~0u : 0u;
-                vdata.pixelSizeX = vdata.pixelSizeY = smallButtonSize;
-                vdata.posX = smallOffX;
-                vdata.posY = smallOffY;
-
-            }
-        }
+        updateCharacterImageData(k +  LetterStartIndex);
     }
     return true;
 }
@@ -258,6 +261,70 @@ bool VulkanFontDraw::resized()
     return true;
 }
 
+void VulkanFontDraw::updateCharacterImageData(uint32_t characterIndex)
+{
+    ASSERT(characterIndex >=  LetterStartIndex && characterIndex <  LetterEndIndex);
+    characterIndex -=  LetterStartIndex;
+
+    const Vec2 startOffset = charactersInScreen[characterIndex].pos;
+    const Vec2 size = charactersInScreen[characterIndex].size / Vec2(LetterWidth, LetterHeight);
+
+    uint32_t startIndex = characterIndex * LetterHeight;
+    uint8_t *visibility = (uint8_t *)&characterData[startIndex];
+
+    // first LetterWidth * LetterHeight is reserved for the drawing middle.
+    GPUVertexData *vertDataPtr = &vertData[(characterIndex + 1) * LetterWidth * LetterHeight + 1];
+
+    for (uint32_t j = 0; j < LetterHeight; ++j)
+    {
+        uint8_t rowVisibility = visibility[j];
+        for (uint32_t i = 0; i < LetterWidth; ++i)
+        {
+            bool isVisible = ((rowVisibility >> i) & 1) == 1;
+
+            vertDataPtr->color = isVisible ? ~0u : 0u;
+            vertDataPtr->posX = uint16_t(startOffset.x + i * smallButtonSize);
+            vertDataPtr->posY = uint16_t(startOffset.y + j * smallButtonSize);
+            vertDataPtr->pixelSizeX = uint16_t(size.x);
+            vertDataPtr->pixelSizeY = uint16_t(size.y);
+            ++vertDataPtr;
+        }
+
+    }
+
+}
+
+void VulkanFontDraw::updateDrawAreaData()
+{
+    ASSERT(chosenLetter >=  LetterStartIndex && chosenLetter <  LetterEndIndex);
+    uint32_t startIndex = (chosenLetter -  LetterStartIndex) * LetterHeight;
+    uint8_t *visibility = (uint8_t *)&characterData[startIndex];
+
+        // Draw area boxes
+    Vec2 drawStart = getDrawAreaStartPos();
+    for (int j = 0; j < LetterHeight; ++j)
+    {
+        uint8_t visibilityBits = visibility[j];
+        for (int i = 0; i < LetterWidth; ++i)
+        {
+            Vec2 pos = drawStart + Vec2(i, j) * (borderSizes + buttonSize);
+            GPUVertexData& vdata = vertData[i + size_t(j) * LetterWidth + 1];
+            vdata.color = ((visibilityBits >> i) & 1) ? ~0u : 0u;
+            vdata.pixelSizeX = vdata.pixelSizeY = buttonSize;
+            vdata.posX = pos.x;
+            vdata.posY = pos.y;
+        }
+    }
+}
+
+Vec2 VulkanFontDraw::getDrawAreaStartPos() const
+{
+    return Vec2(
+        float(LetterWidth * -0.5f) * (borderSizes + buttonSize) + windowWidth * 0.5f,
+        float(LetterHeight * -0.5f) * (borderSizes + buttonSize) + windowHeight * 0.5f);
+}
+
+
 void VulkanFontDraw::logicUpdate()
 {
     VulkanApp::logicUpdate();
@@ -280,79 +347,91 @@ void VulkanFontDraw::logicUpdate()
 
         for (int i = 0; i < bufferedPressesCount; ++i)
         {
-            if (!isControlDown && bufferedPresses[i] >= 32 && bufferedPresses[i] < 128)
+            if (!isControlDown && bufferedPresses[i] >=  LetterStartIndex && bufferedPresses[i] <  LetterEndIndex)
             {
                 chosenLetter = (int)bufferedPresses[i];
             }
         }
 
+        if (chosenLetter <  LetterStartIndex)
+            chosenLetter =  LetterStartIndex;
+        if (chosenLetter >=  LetterEndIndex)
+            chosenLetter =  LetterEndIndex - 1;
+
+
         if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
             writeBytes(fontFilename.getStr(), characterData.getBuffer());
 
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
+        {
             loadBytes(fontFilename.getStr(), characterData.getBuffer());
+            for(uint32_t i  = 0; i < LetterCount; ++i)
+                updateCharacterImageData(i +  LetterStartIndex);
+        }
 
         if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {
-            for (int i = 0; i < 12; ++i)
+            uint32_t ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
+            uint8_t *ptr = &characterData[ind];
+            for (int i = 0; i < LetterHeight; ++i)
             {
-                uint32_t ind = (chosenLetter - 32) * 12 + i;
-                buffData[i] = characterData[ind];
+                buffData[i] = ptr[i];
             }
         }
 
         if (keyDowns[GLFW_KEY_V].isDown && keyDowns[GLFW_KEY_V].pressCount > 0u && isControlDown)
         {
-            for (int i = 0; i < 12; ++i)
+            uint32_t ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
+            uint8_t *ptr = &characterData[ind];
+            for (int i = 0; i < LetterHeight; ++i)
             {
-                uint32_t ind = (chosenLetter - 32) * 12 + i;
-                characterData[ind] = char(buffData[i]);
+                ptr[i] = buffData[i];
             }
         }
-
-        if (chosenLetter < 32)
-            chosenLetter = 32;
-        if (chosenLetter > 127)
-            chosenLetter = 127;
-
-        for (int j = 0; j < 12; ++j)
+        // check if we click any of the characters?
+        if(mouseState.leftButtonDown)
         {
-
-            for (int i = 0; i < 8; ++i)
+            for(uint32_t i = 0; i < charactersInScreen.size(); ++i)
             {
-                float offX = float((i - 4) * (borderSizes + buttonSize)) + windowWidth * 0.5f;
-                float offY = float((j - 6) * (borderSizes + buttonSize)) + windowHeight * 0.5f;
-
-                bool insideRect = mouseState.x > offX - (borderSizes + buttonSize) * 0.5f &&
-                    mouseState.x < offX + (borderSizes + buttonSize) * 0.5f &&
-                    mouseState.y > offY - (borderSizes + buttonSize) * 0.5f &&
-                    mouseState.y < offY + (borderSizes + buttonSize) * 0.5f;
-
-                offX -= 0.5f * buttonSize;
-                offY -= 0.5f * buttonSize;
-
-                uint32_t indx = (chosenLetter - 32) * 12 + j;
-
-                if (mouseState.leftButtonDown && insideRect)
-                    characterData[indx] |= (1 << i);
-                else if (mouseState.rightButtonDown && insideRect)
-                    characterData[indx] &= ~(char(1 << i));
-
-                bool isVisible = ((characterData[indx] >> i) & 1) == 1;
-
-                vertData[i + size_t(j) * 8 + 1].color = isVisible ? ~0u : 0u;
-                vertData[i + size_t(j) * 8 + 1].posX = uint16_t(offX);
-                vertData[i + size_t(j) * 8 + 1].posY = uint16_t(offY);
-                vertData[(size_t(indx) + 12) * 8 + i + 1].color = isVisible ? ~0u : 0u;
-
+                const auto &box = charactersInScreen[i];
+                if(mouseState.x >= box.pos.x && mouseState.x <= box.pos.x + box.size.x &&
+                    mouseState.y >= box.pos.y && mouseState.y <= box.pos.y + box.size.y)
+                {
+                    chosenLetter =  LetterStartIndex + i;
+                    break;
+                }
             }
-
         }
-        uint32_t xOff = (chosenLetter - 32) % 8;
-        uint32_t yOff = (chosenLetter - 32) / 8;
+        // Check if drawing or erasing font letter pixels
+        if(mouseState.leftButtonDown || mouseState.rightButtonDown)
+        {
+            Vec2 drawBox = Vec2(mouseState.x, mouseState.y) - getDrawAreaStartPos();
 
-        vertData[0].posX = 10.0f + (xOff * 8) * smallButtonSize + xOff * 2 - 2;
-        vertData[0].posY = 10.0f + (yOff * 12) * smallButtonSize + yOff * 2 - 2;
+            int foundI = drawBox.x / ((borderSizes + buttonSize));
+            int foundJ = drawBox.y / ((borderSizes + buttonSize));
+            // -0.1 / 1 = 0... so cannot check if foundI >= 0
+            if(drawBox.x >= 0.0f && foundI < LetterWidth
+                && drawBox.y >= 0.0f && foundJ < LetterHeight)
+            {
+                uint8_t *visiblePtr = &characterData[(chosenLetter -  LetterStartIndex) * LetterHeight];
+                uint8_t &visibleRow = visiblePtr[foundJ];
+                uint8_t bit = (1 << foundI);
+                // set bit
+                if (mouseState.leftButtonDown)
+                    visibleRow |= bit;
+                // remove bit
+                else if (mouseState.rightButtonDown)
+                    visibleRow &= ~(bit);
+            }
+        }
+        updateCharacterImageData(chosenLetter);
+        updateDrawAreaData();
+
+        uint32_t xOff = ((chosenLetter -  LetterStartIndex) % LetterWidth);
+        uint32_t yOff = ((chosenLetter -  LetterStartIndex) / LetterWidth);
+
+        vertData[0].posX = LetterPanelOffsetX + (xOff * LetterWidth ) * smallButtonSize + xOff * 2 - 2;
+        vertData[0].posY = LetterPanelOffsetY + (yOff * LetterHeight) * smallButtonSize + yOff * 2 - 2;
     }
 
     ASSERT(vertData.size() * sizeof(GPUVertexData) < QuadBufferSize);
