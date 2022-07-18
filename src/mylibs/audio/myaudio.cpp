@@ -130,7 +130,8 @@ double evaluateSound(double time, double freq, int instrument)
 //std::chrono::high_resolution_clock::time_point tp;
 static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
-    //std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
+//    static std::chrono::high_resolution_clock::time_point chTimePrevious = std::chrono::high_resolution_clock::now();
+//    std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
     //printf("time: %f, frames: %u\n", (chTime - tp).count() / 100000.0f, frameCount);
     //tp = chTime;
     static uint64_t threadFrameCounter = 0;
@@ -299,6 +300,16 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
         std::atomic_fetch_and(&notesRunning, newThreadsFinished);
         std::atomic_fetch_and(&notesReleased, newThreadsFinished);
     }
+/*
+    std::chrono::high_resolution_clock::time_point endTime = std::chrono::high_resolution_clock::now();
+
+    printf("Interval: %f, duration:%f in seconds\n",
+        (chTime - chTimePrevious).count() * 1.0e-9f,
+        (endTime - chTime).count() * 1.0e-9f);
+    chTimePrevious = chTime;
+*/
+    //printf("time: %f, frames: %u\n", (chTime - tp).count() / 100000.0f, frameCount);
+
     //printf("start: %f, end: %f, samplecount: %u\n", float(lastPos), float(startPos), frameCount);
 }
 
