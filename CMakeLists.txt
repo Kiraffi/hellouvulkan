@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS FALSE)
 #check for instruction/link time optimization supported
 include(CheckIPOSupported)
 
+#set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x86)

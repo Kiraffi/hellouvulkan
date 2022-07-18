@@ -1,10 +1,12 @@
 {
     "cmake.saveBeforeBuild": true,
     "cmake.configureOnOpen": true,
+    //"cmake.generator": "Unix Makefiles",
     "cmake.generator": "Ninja",
     "cmake.debugConfig": {
         "cwd": "${workspaceFolder}"
     },
+
     "files.associations": {
         "string_view": "cpp",
         "*.tcc": "cpp",
