@@ -1,6 +1,7 @@
 #include "mygui.h"
 
 #include <core/general.h>
+#include <container/vector.h>
 #include <container/podvector.h>
 #include <container/podvectortypedefine.h>
 
@@ -23,13 +24,21 @@ struct GuiObject
     uint32_t padding;
 };
 
-
+struct GuiWindow
+{
+    PodVector<GuiObject> guiObjects;
+};
 
 struct GuiState
 {
     float currentX = 0.0f;
     float currentY = 0.0f;
-    PodVector<GuiObject> guiObjects;
+
+    Vector<GuiWindow> guiWindows;
+
+    GuiWindow *currentWindows = nullptr;
+
+    const char *previousFocusedGuiWindow = nullptr;
 };
 
 static GuiState *globalGuiState = nullptr;
@@ -52,21 +61,36 @@ void deinitMyGui()
 
 void startFrame()
 {
-    globalGuiState->guiObjects.clear();
+    globalGuiState->guiWindows.clear();
+}
+
+void endFrame()
+{
+//    for(const auto &obj : globalGuiState->guiObjects)
+//    {
+//
+//    }
 }
 
 void drawGui()
 {
-    for(const auto &obj : globalGuiState->guiObjects)
-    {
-        
-    }
+//    for(const auto &obj : globalGuiState->guiObjects)
+//    {
+//
+//    }
 }
 
+void window(const char *name)
+{
+
+}
 
 void guiColoredBox(const Vec2 &pos, const Vec2 &size, const Vec4 &color)
 {
-    globalGuiState->guiObjects.push_back(GuiObject{
+    ASSERT(globalGuiState->currentWindows);
+    if(globalGuiState->currentWindows == nullptr)
+        return;
+    globalGuiState->currentWindows->guiObjects.push_back(GuiObject{
         .pos = pos,
         .size = size,
         .uv = Vec4(),
@@ -79,6 +103,9 @@ void guiColoredBox(const Vec2 &pos, const Vec2 &size, const Vec4 &color)
 void guiText(const Vec2 &pos, const Vec2 &fontSize, const Vec4 &color, const char *txt)
 {
     if(!txt)
+        return;
+    ASSERT(globalGuiState->currentWindows);
+    if(globalGuiState->currentWindows == nullptr)
         return;
 
     uint32_t i = 0;
@@ -95,7 +122,7 @@ void guiText(const Vec2 &pos, const Vec2 &fontSize, const Vec4 &color, const cha
         if(c < 32)
             continue;
 
-        globalGuiState->guiObjects.push_back(
+        globalGuiState->currentWindows->guiObjects.push_back(
             GuiObject{
                 .pos = renderPos,
                 .size = fontSize,

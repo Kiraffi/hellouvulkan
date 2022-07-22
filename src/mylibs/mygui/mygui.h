@@ -7,6 +7,11 @@ bool initMyGui();
 void deinitMyGui();
 
 void startFrame();
+void endFrame();
+
+// USE STRING LITERALS ONLY
+void window(const char *name);
+
 void drawGui();
 
 void guiColoredBox(const Vec2 &pos, const Vec2 &size, const Vec4 &color);
