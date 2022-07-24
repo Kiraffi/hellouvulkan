@@ -56,7 +56,7 @@
 //#define MINIAUDIO_IMPLEMENTATION
 //#include <miniaudio.h>
 
-#include <string.h>
+//#include <string.h>
 
 
 static constexpr int SCREEN_WIDTH = 1024;

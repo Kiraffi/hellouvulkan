@@ -3,7 +3,7 @@
 #include <core/general.h>
 
 #include <ctype.h>
-#include <string.h>
+//#include <string.h>
 
 WriteJson::WriteJson(uint32_t magicNumber, uint32_t versionNumber) : indentAmount(INDENT_INSPACES), valid(true)
 {

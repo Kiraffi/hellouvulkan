@@ -22,8 +22,8 @@
 
 #include <render/font_render.h>
 
-#include <string.h>
-#include <math.h>
+#include <math.h> // rand and RAND_MAX
+
 static constexpr int SCREEN_WIDTH = 800;
 static constexpr int SCREEN_HEIGHT = 600;
 

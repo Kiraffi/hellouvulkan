@@ -11,7 +11,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 
-#include <string.h>
+//#include <string.h>
 #include <stdlib.h>         // abort
 
 static void check_vk_result(VkResult err)

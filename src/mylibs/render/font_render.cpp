@@ -10,8 +10,6 @@
 
 #include <myvulkan/myvulkan.h>
 
-#include <string.h>
-
 ////////////////////////
 //
 // DEINIT

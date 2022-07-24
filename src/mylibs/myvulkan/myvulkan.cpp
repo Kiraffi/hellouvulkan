@@ -21,7 +21,7 @@
 
 //#include <set>
 //#include <string>
-#include <string.h>
+//#include <string.h>
 
 static constexpr uint32_t FormatFlagBits =
     VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
@@ -208,7 +208,7 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
     for (const auto& extension : availableExtensions)
     {
         //printf("%s\n", extension.extensionName);
-        if(vulk->initParams.useVulkanDebugMarkersRenderDoc && strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
+        if(vulk->initParams.useVulkanDebugMarkersRenderDoc && Supa::strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
             result.canUseVulkanRenderdocExtensionMarker = true;
     }
 
@@ -514,7 +514,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             requiredExtensions.pushBack(str);
     for(const char *str : addCheckDeviceExtensions)
     {
-        if(strcmp(str, "") != 0)
+        if(Supa::strcmp(str, "") != 0)
             if(!requiredExtensions.find(str))
                 requiredExtensions.pushBack(str);
     }
@@ -585,7 +585,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
                 //printf("available extension: %s\n", extension.extensionName);
                 for(uint32_t i = 0; i < requiredExtensionsTemp.size(); ++i)
                 {
-                    if(strcmp(requiredExtensionsTemp[i], extension.extensionName) == 0)
+                    if(Supa::strcmp(requiredExtensionsTemp[i], extension.extensionName) == 0)
                         requiredExtensionsTemp.removeIndex(i);
                 }
             }
