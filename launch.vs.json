@@ -1,85 +1,90 @@
 {
   "version": "0.2.1",
   "defaults": {},
-  "configurations": [
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "vulkan_test.exe (src\\vulkan_test\\vulkan_test.exe)",
-      "name": "vulkan_test.exe (src\\vulkan_test\\vulkan_test.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "font_render_vulkan.exe (src\\font_render_vulkan\\font_render_vulkan.exe)",
-      "name": "font_render_vulkan.exe (src\\font_render_vulkan\\font_render_vulkan.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "font_draw_vulkan.exe (src\\font_draw_vulkan\\font_draw_vulkan.exe)",
-      "name": "font_draw_vulkan.exe (src\\font_draw_vulkan\\font_draw_vulkan.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "space_shooter_vulkan.exe (src\\space_shooter_vulkan\\space_shooter_vulkan.exe)",
-      "name": "space_shooter_vulkan.exe (src\\space_shooter_vulkan\\space_shooter_vulkan.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
-      "name": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "compute_test_vulkan.exe (src\\compute_test_vulkan\\compute_test_vulkan.exe)",
-      "name": "compute_test_vulkan.exe (src\\compute_test_vulkan\\compute_test_vulkan.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "imgui_test.exe (src\\imgui_test\\imgui_test.exe)",
-      "name": "imgui_test.exe (src\\imgui_test\\imgui_test.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-        "type": "default",
-        "project": "CMakeLists.txt",
-        "projectTarget": "editor_test.exe (src\\editor_test\\editor_test.exe)",
-        "name": "editor_test.exe (src\\editor_test\\editor_test.exe)",
-        "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "game.exe (src\\game\\game.exe)",
-      "name": "game.exe (src\\game\\game.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "sound_test.exe (src\\sound_test\\sound_test.exe)",
-      "name": "sound_test.exe (src\\sound_test\\sound_test.exe)",
-      "currentDir": "${workspaceRoot}"
-    },
-    {
-      "type": "default",
-      "project": "CMakeLists.txt",
-      "projectTarget": "sound_test_dsound.exe (src\\sound_test_dsound\\sound_test_dsound.exe)",
-      "name": "sound_test_dsound.exe (src\\sound_test_dsound\\sound_test_dsound.exe)",
-      "currentDir": "${workspaceRoot}"
-    }
-
-
-  ]
+    "configurations": [
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "vulkan_test.exe (src\\vulkan_test\\vulkan_test.exe)",
+            "name": "vulkan_test.exe (src\\vulkan_test\\vulkan_test.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "font_render_vulkan.exe (src\\font_render_vulkan\\font_render_vulkan.exe)",
+            "name": "font_render_vulkan.exe (src\\font_render_vulkan\\font_render_vulkan.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "font_draw_vulkan.exe (src\\font_draw_vulkan\\font_draw_vulkan.exe)",
+            "name": "font_draw_vulkan.exe (src\\font_draw_vulkan\\font_draw_vulkan.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "space_shooter_vulkan.exe (src\\space_shooter_vulkan\\space_shooter_vulkan.exe)",
+            "name": "space_shooter_vulkan.exe (src\\space_shooter_vulkan\\space_shooter_vulkan.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
+            "name": "draw_stuff_vulkan.exe (src\\draw_stuff_vulkan\\draw_stuff_vulkan.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "compute_test_vulkan.exe (src\\compute_test_vulkan\\compute_test_vulkan.exe)",
+            "name": "compute_test_vulkan.exe (src\\compute_test_vulkan\\compute_test_vulkan.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "imgui_test.exe (src\\imgui_test\\imgui_test.exe)",
+            "name": "imgui_test.exe (src\\imgui_test\\imgui_test.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "editor_test.exe (src\\editor_test\\editor_test.exe)",
+            "name": "editor_test.exe (src\\editor_test\\editor_test.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "game.exe (src\\game\\game.exe)",
+            "name": "game.exe (src\\game\\game.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "sound_test.exe (src\\sound_test\\sound_test.exe)",
+            "name": "sound_test.exe (src\\sound_test\\sound_test.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "sound_test_dsound.exe (src\\sound_test_dsound\\sound_test_dsound.exe)",
+            "name": "sound_test_dsound.exe (src\\sound_test_dsound\\sound_test_dsound.exe)",
+            "currentDir": "${workspaceRoot}"
+        },
+        {
+            "type": "default",
+            "project": "CMakeLists.txt",
+            "projectTarget": "serialize_component.exe (src\\serialize_component\\serialize_component.exe)",
+            "name": "serialize_component.exe (src\\serialize_component\\serialize_component.exe)",
+            "currentDir": "${workspaceRoot}"
+        }
+    ]
 }

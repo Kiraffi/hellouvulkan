@@ -20,6 +20,7 @@ add_subdirectory ("imgui_test")
 add_subdirectory ("editor_test")
 add_subdirectory ("game")
 add_subdirectory ("sound_test")
+add_subdirectory ("serialize_component")
 
 #if (UNIX)
 #    add_subdirectory ("sound_test_pulse")
