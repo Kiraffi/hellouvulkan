@@ -90,12 +90,14 @@ void printClass(const SerializableClassBase &obj, const char *str)
     LOG("Obj: %s is: ", str);
     switch(obj.getObjMagicNumber())
     {
-        case SerializableClassBase::getClassMagicNumber():
+        /*
+        case SerializableClassBase::getStaticClassMagicNumber():
         {
             LOG("Base class\n");
             break;
         }
-        case Heritaged::getClassMagicNumber():
+        */
+        case Heritaged::getStaticClassMagicNumber():
         {
             LOG("Heritaged class\n");
             break;
@@ -114,14 +116,15 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
-    SerializableClassBase base;
+    //SerializableClassBase base;
     Heritaged her;
-    LOG("Filenumber base: %i, ser: %i\n", base.getFileMagicNumber(), her.getFileMagicNumber());
-    LOG("class ser: %i vs her: %i, version ser: %i, her: %i\n", base.getClassMagicNumber(), her.getClassMagicNumber(), base.getClassVersion(), her.getClassVersion());
-    LOG("obj ser: %i vs her: %i, version ser: %i, her: %i\n", base.getObjMagicNumber(), her.getObjMagicNumber(), base.getObjVersion(), her.getObjVersion());
+    //LOG("Filenumber base: %i\n", base.getFileMagicNumber());
+    LOG("Filenumber heritaged: %i\n", her.getFileMagicNumber());
+    //LOG("base: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", base.getClassMagicNumber(), base.getObjMagicNumber(), base.getClassVersion(), base.getObjVersion());
+    LOG("heritaged: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", her.getStaticClassMagicNumber(), her.getObjMagicNumber(), her.getStaticClassVersion(), her.getObjVersion());
 
-    printClass(base, "Base");
-    printClass(her, "Heritaged");
+    //printClass(base, "Base");
+    printClass(her.getBase(), "Heritaged");
 
     LOG("TempInt value: %i, TempFloat value: %f\n", her.getTempInt(), her.getTempFloat());
     LOG("TempInt name: %s TempFloat name: %s\n", her.getTempIntString(), her.getTempFloatString());
@@ -131,14 +134,21 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
     LOG("TempInt value: %i, TempFloat value: %f\n", her.getTempInt(), her.getTempFloat());
     LOG("TempInt index: %i, TempFloat index: %i\n", her.getTempIntIndex(), her.getTempFloatIndex());
 
-    float *memory = nullptr;
+    float *floatMemory = nullptr;
+    int *intMemory = nullptr;
     FieldType type = FieldType::NumTypes;
-    
-    if(her.getMemoryPtr("TempFloat", (void **) &memory, type))
+
+    if(her.getMemoryPtr("TempInt", (void **)&intMemory, type))
     {
-        LOG("add: %p, type: %i\n", memory, type);
-        LOG("Float is: %f\n", *memory);
+        LOG("add: %p, type: %i\n", intMemory, type);
+        LOG("Int is: %i\n", *intMemory);
     }
+    if(her.getMemoryPtr("TempFloat", (void **) &floatMemory, type))
+    {
+        LOG("add: %p, type: %i\n", floatMemory, type);
+        LOG("Float is: %f\n", *floatMemory);
+    }
+    her.serialize();
 
     return resized();
 }

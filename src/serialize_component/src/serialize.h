@@ -8,19 +8,33 @@ enum FieldType
     NumTypes
 };
 
+
+struct FieldInfo
+{
+    const char* fieldName;
+    void* fieldMemoryAddress;
+    int fieldIndex;
+    FieldType type;
+    bool isValid;
+};
+
+/*
 class SerializableClassBase
 {
 public:
-    SerializableClassBase() { objMagicNumber = magicNumberClass; objVersion = versionClass; }
-    virtual ~SerializableClassBase() {}
+    //SerializableClassBase() : objMagicNumber(magicNumberClass), objVersion(versionClass) {}
+    //virtual ~SerializableClassBase() {}
 
     virtual bool serialize() { return true; };
     virtual bool deSerialize() { return true; };
 
     // Needed maybe, maybe not?
     static constexpr int getFileMagicNumber() { return 0xABBAABB; }
-    static constexpr int getClassMagicNumber() { return magicNumberClass; }
-    static constexpr int getClassVersion() { return versionClass; }
+    virtual const int getClassMagicNumber() const { return SerializableClassBase::magicNumberClass; }
+    virtual const int getClassVersion() const { return SerializableClassBase::versionClass; }
+
+    static constexpr int getStaticClassMagicNumber() { return SerializableClassBase::magicNumberClass; }
+    static constexpr int getStaticClassVersion() { return SerializableClassBase::versionClass; }
 
     int getObjMagicNumber() const { return objMagicNumber; }
     int getObjVersion() const { return objVersion; }
@@ -34,27 +48,51 @@ private:
     static constexpr int versionClass = 1;
 
 };
-
+*/
+struct SerializableClassBase
+{
+    int getObjMagicNumber() const { return objMagicNumber; }
+    int getObjVersion() const { return objVersion; }
+    int getObjSize() const { return objSize; }
+    int objMagicNumber;
+    int objVersion;
+    int objSize;
+};
+// remove inheritage
 
 #define SER_DATA_BEGIN(CLASS_NAME, MAGIC_NUMBER, VERSION_NUMBER) \
-class CLASS_NAME : public SerializableClassBase \
+class CLASS_NAME \
 { \
 public: \
-    CLASS_NAME() : SerializableClassBase() { objMagicNumber = magicNumberClass; objVersion = versionClass; } \
-    static constexpr int getClassMagicNumber() { return magicNumberClass; } \
-    static constexpr int getClassVersion() { return versionClass; } \
+    CLASS_NAME() { serObjBase.objMagicNumber = magicNumberClass; serObjBase.objVersion = versionClass; serObjBase.objSize = sizeof(CLASS_NAME); } \
+    static constexpr int getFileMagicNumber() { return 0xABBAABB; } \
+    static constexpr int getStaticClassMagicNumber() { return CLASS_NAME::magicNumberClass; } \
+    static constexpr int getStaticClassVersion() { return CLASS_NAME::versionClass; } \
+\
+    const SerializableClassBase &getBase() const { return serObjBase; } \
+    SerializableClassBase &getBase() { return serObjBase; } \
+    int getObjMagicNumber() const { return serObjBase.getObjMagicNumber(); } \
+    int getObjVersion() const { return serObjBase.getObjVersion(); } \
+    int getObjSize() const { return serObjBase.getObjSize(); } \
+\
     bool getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType); \
-    virtual bool serialize() override; \
-    virtual bool deSerialize() override; \
+    void* getMemory(const char* fieldName); \
+    bool serialize(); \
+    bool deSerialize(); \
 private: \
+    FieldInfo getFieldInfo(const char* fieldName) const; \
+    FieldInfo getFieldInfoIndex(int index) const; \
     static constexpr int magicNumberClass = MAGIC_NUMBER; \
     static constexpr int versionClass = VERSION_NUMBER; \
-    static constexpr int startParameterRow = __LINE__;
+    static constexpr int startParameterRow = __LINE__; \
+\
+    SerializableClassBase serObjBase;
 
 #define SER_DATA_END() \
 private: \
     static constexpr int endParameterRow = __LINE__; \
     static constexpr int fieldCount = __LINE__ - 1 - startParameterRow; \
+    static const FieldInfo fieldInfos[]; \
 };
 
 
@@ -68,10 +106,11 @@ public: \
     static constexpr int get##FIELD_NAME##Index() { return FIELD_NAME##Index; } \
     static constexpr FieldType get##FIELD_NAME##Type() { return FIELD_TYPE_TYPE; } \
 protected: \
+public: \
     FIELD_TYPE FIELD_NAME = FIELD_DEFAULT_VALUE; \
     static constexpr const char* FIELD_NAME##String = #FIELD_NAME; \
 private: \
-    static constexpr int FIELD_NAME##Index = __LINE__ - startParameterRow - 1; \
+    static constexpr int FIELD_NAME##Index = __LINE__ - startParameterRow - 1;
 
 
 
