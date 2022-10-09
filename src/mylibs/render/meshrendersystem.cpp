@@ -374,20 +374,18 @@ void MeshRenderSystem::render(bool isShadowOnly)
     uint32_t passIndex = isShadowOnly ? 1u : 0u;
     // draw calls here
     // Render
+    static constexpr const char* debugNames[] = {
+        "Animated normal render",
+        "Animated depth only render",
+        "NonAnimated normal render",
+        "NonAnimated depth only render"
+    };
 
     for (; passIndex < 4; passIndex += 2)
     {
-        String debugName;
-        if (passIndex == 0)
-            debugName = "Animated normal render";
-        else if (passIndex == 1)
-            debugName = "Animated depth only render";
-        else if (passIndex == 2)
-            debugName = "NonAnimated normal render";
-        else if (passIndex == 3)
-            debugName = "NonAnimated depth only render";
+        const char* debugName = debugNames[passIndex];
 
-        beginDebugRegion(debugName.getStr(), Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+        beginDebugRegion(debugName, Vec4(1.0f, 1.0f, 0.0f, 1.0f));
         bindGraphicsPipelineWithDecriptors(meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
         for (uint32_t modelIndex = 0u; modelIndex < models.size(); ++modelIndex)
         {
