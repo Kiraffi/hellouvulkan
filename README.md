@@ -23,10 +23,9 @@ Requires VulkanSDK 1.3 for using VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME and dri
 
 I have used CMake Tools extension with vscode for linux: https://code.visualstudio.com/docs/cpp/cmake-linux
 
-With windows10 + visual stdudio, the project should? work if vulkansdk is configured and Visual Studio has CMake projects
-installed by just right click the folder and open with Visual Studio. It should compile with ninja without having
-to manually generating Visual Studio solution with cmake.
+With windows10 + visual stdudio, the project should? work if vulkansdk is configured and Visual Studio has CMake projects installed by just right click the folder and open with Visual Studio. It should compile with ninja without having to manually generating Visual Studio solution with cmake.
 
+For linux set the setup.sh to point correct version of vulkan sdk before running source paths.sh. Also check that the icd it uses is correct from paths.sh. Otherwise for me it might want to use x86 version of amd gpu drivers.
 
 ## Problems/cases I have run into
 
