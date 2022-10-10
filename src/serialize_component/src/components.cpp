@@ -1,4 +1,3 @@
-#include "serialize.h"
 #include "components.h"
 
 #include "core/general.h"
@@ -50,84 +49,51 @@ bool CLASS_NAME::serialize() \
     } \
     return true; \
 } \
-\
 bool CLASS_NAME::deSerialize() \
 { \
     return true; \
 } \
-\
-bool CLASS_NAME::getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType) \
+bool CLASS_NAME::getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType) const \
 { \
     FieldInfo info = getFieldInfo(fieldName); \
     *outMemAddress = info.fieldMemoryAddress; \
     outFieldType = info.type; \
     return info.isValid; \
 } \
-\
+bool CLASS_NAME::setValue(const char* fieldName, void* value, int valueByteSize) \
+{ \
+    FieldInfo info = getFieldInfo(fieldName); \
+    if(value && info.isValid && valueByteSize == info.fieldByteSize && \
+        valueByteSize > 0 && info.fieldMemoryAddress) \
+    { \
+        Supa::memcpy(info.fieldMemoryAddress, value, valueByteSize); \
+    } \
+    return false; \
+} \
 FieldInfo CLASS_NAME::getFieldInfo(const char *fieldName) const \
 { \
-
-#define SER_DATA_END() \
-    return FieldInfo{}; \
-}
-
-
-
-#undef HELPER_FIELD
-#undef HELPER_FIELD_COPY_TYPE
-#undef HELPER_FIELD_NO_COPY_TYPE
-
-#define HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) \
-    if(Supa::strcmp(fieldName, FIELD_NAME##String) == 0) \
+    CLASS_NAME::HelperStruct fieldInfos = getFieldInfos(); \
+    for(int i = 0; i < CLASS_NAME::fieldCount; ++i) \
     { \
-        return FieldInfo { \
-            .fieldName = get##FIELD_NAME##String(), \
-            .fieldMemoryAddress = (void *)&this->FIELD_NAME, \
-            .fieldIndex = get##FIELD_NAME##Index(), \
-            .type = get##FIELD_NAME##Type(), \
-            .isValid = true \
-        }; \
-    }
-
-
-#undef FLOAT_FIELD
-#undef INT_FIELD
-
-#define FLOAT_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE)
-#define INT_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE)
-
-// Make sure include works
-#ifdef COMPONENTS_INCLUDE_FILE_H
-    #undef COMPONENTS_INCLUDE_FILE_H
-#endif
-
-#include "components.h"
-
-
-
-
-
-
-
-
-
-
-#undef SER_DATA_BEGIN
-#undef SER_DATA_END
-
-#define SER_DATA_BEGIN(CLASS_NAME, MAGIC_NUMBER, VERSION_NUMBER) \
-FieldInfo CLASS_NAME::getFieldInfoIndex(int fieldIndex) const \
-{ \
-    switch(fieldIndex) \
-    { \
-    
-#define SER_DATA_END() \
-        default: \
-        { \
-            break; \
-        } \
+        if(Supa::strcmp(fieldName, fieldInfos.arr[i].fieldName) == 0) \
+            return fieldInfos.arr[i]; \
     } \
     return FieldInfo{}; \
+} \
+FieldInfo CLASS_NAME::getFieldInfoIndex(int fieldIndex) const \
+{ \
+    if(fieldIndex < 0 || fieldIndex >= CLASS_NAME::fieldCount) \
+        return FieldInfo{}; \
+    return getFieldInfos().arr[fieldIndex]; \
+} \
+CLASS_NAME::HelperStruct CLASS_NAME::getFieldInfos() const \
+{ \
+    return CLASS_NAME::HelperStruct { \
+        .arr = {
+
+#define SER_DATA_END() \
+        } \
+    }; \
 }
 
 
@@ -135,18 +101,15 @@ FieldInfo CLASS_NAME::getFieldInfoIndex(int fieldIndex) const \
 #undef HELPER_FIELD_COPY_TYPE
 #undef HELPER_FIELD_NO_COPY_TYPE
 
-
 #define HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) \
-    case get##FIELD_NAME##Index(): \
-    { \
-        return FieldInfo { \
-            .fieldName = get##FIELD_NAME##String(), \
-            .fieldMemoryAddress = (void *)&this->FIELD_NAME, \
-            .fieldIndex = get##FIELD_NAME##Index(), \
-            .type = get##FIELD_NAME##Type(), \
-            .isValid = true \
-        }; \
-    }
+            FieldInfo { \
+                .fieldName = get##FIELD_NAME##String(), \
+                .fieldMemoryAddress = (void *)&this->FIELD_NAME, \
+                .fieldIndex = get##FIELD_NAME##Index(), \
+                .fieldByteSize = sizeof(FIELD_NAME), \
+                .type = get##FIELD_NAME##Type(), \
+                .isValid = true \
+            },
 
 #undef FLOAT_FIELD
 #undef INT_FIELD
@@ -158,4 +121,5 @@ FieldInfo CLASS_NAME::getFieldInfoIndex(int fieldIndex) const \
 #ifdef COMPONENTS_INCLUDE_FILE_H
     #undef COMPONENTS_INCLUDE_FILE_H
 #endif
+
 #include "components.h"

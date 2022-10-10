@@ -14,6 +14,7 @@ struct FieldInfo
     const char* fieldName;
     void* fieldMemoryAddress;
     int fieldIndex;
+    int fieldByteSize;
     FieldType type;
     bool isValid;
 };
@@ -63,36 +64,48 @@ struct SerializableClassBase
 #define SER_DATA_BEGIN(CLASS_NAME, MAGIC_NUMBER, VERSION_NUMBER) \
 class CLASS_NAME \
 { \
+private: \
+    struct HelperStruct; \
 public: \
-    CLASS_NAME() { serObjBase.objMagicNumber = magicNumberClass; serObjBase.objVersion = versionClass; serObjBase.objSize = sizeof(CLASS_NAME); } \
+    /* CLASS_NAME() { serObjBase.objMagicNumber = magicNumberClass; serObjBase.objVersion = versionClass; serObjBase.objSize = sizeof(CLASS_NAME); } */ \
     static constexpr int getFileMagicNumber() { return 0xABBAABB; } \
     static constexpr int getStaticClassMagicNumber() { return CLASS_NAME::magicNumberClass; } \
     static constexpr int getStaticClassVersion() { return CLASS_NAME::versionClass; } \
 \
-    const SerializableClassBase &getBase() const { return serObjBase; } \
-    SerializableClassBase &getBase() { return serObjBase; } \
-    int getObjMagicNumber() const { return serObjBase.getObjMagicNumber(); } \
-    int getObjVersion() const { return serObjBase.getObjVersion(); } \
-    int getObjSize() const { return serObjBase.getObjSize(); } \
+    SerializableClassBase getBase() const { \
+        return SerializableClassBase { \
+            .objMagicNumber = CLASS_NAME::magicNumberClass, .objVersion = CLASS_NAME::versionClass, .objSize = sizeof(CLASS_NAME) \
+        }; \
+    } \
+    /* SerializableClassBase &getBase() { return serObjBase; } */ \
+    /* int getObjMagicNumber() const { return serObjBase.getObjMagicNumber(); } */ \
+    /* int getObjVersion() const { return serObjBase.getObjVersion(); } */ \
+    /* int getObjSize() const { return serObjBase.getObjSize(); } */ \
 \
-    bool getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType); \
-    void* getMemory(const char* fieldName); \
+    bool setValue(const char* fieldName, void* value, int valueByteSize); \
+    bool getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType) const; \
+    void* getMemory(const char* fieldName) const ; \
     bool serialize(); \
     bool deSerialize(); \
 private: \
+    HelperStruct getFieldInfos() const;  \
     FieldInfo getFieldInfo(const char* fieldName) const; \
     FieldInfo getFieldInfoIndex(int index) const; \
     static constexpr int magicNumberClass = MAGIC_NUMBER; \
     static constexpr int versionClass = VERSION_NUMBER; \
     static constexpr int startParameterRow = __LINE__; \
 \
-    SerializableClassBase serObjBase;
+    //SerializableClassBase serObjBase;
 
 #define SER_DATA_END() \
 private: \
     static constexpr int endParameterRow = __LINE__; \
     static constexpr int fieldCount = __LINE__ - 1 - startParameterRow; \
-    static const FieldInfo fieldInfos[]; \
+    \
+    struct HelperStruct \
+    { \
+        FieldInfo arr[fieldCount];\
+    }; \
 };
 
 
@@ -106,7 +119,6 @@ public: \
     static constexpr int get##FIELD_NAME##Index() { return FIELD_NAME##Index; } \
     static constexpr FieldType get##FIELD_NAME##Type() { return FIELD_TYPE_TYPE; } \
 protected: \
-public: \
     FIELD_TYPE FIELD_NAME = FIELD_DEFAULT_VALUE; \
     static constexpr const char* FIELD_NAME##String = #FIELD_NAME; \
 private: \

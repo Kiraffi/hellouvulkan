@@ -121,7 +121,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
     //LOG("Filenumber base: %i\n", base.getFileMagicNumber());
     LOG("Filenumber heritaged: %i\n", her.getFileMagicNumber());
     //LOG("base: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", base.getClassMagicNumber(), base.getObjMagicNumber(), base.getClassVersion(), base.getObjVersion());
-    LOG("heritaged: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", her.getStaticClassMagicNumber(), her.getObjMagicNumber(), her.getStaticClassVersion(), her.getObjVersion());
+    LOG("heritaged: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", her.getStaticClassMagicNumber(), her.getBase().getObjMagicNumber(), her.getStaticClassVersion(), her.getBase().getObjVersion());
 
     //printClass(base, "Base");
     printClass(her.getBase(), "Heritaged");
@@ -149,6 +149,16 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         LOG("Float is: %f\n", *floatMemory);
     }
     her.serialize();
+
+
+    int tempValue = 234;
+    Heritaged2 her2;
+    her2.setTempInt2(1000);
+    her2.setTempFloat2(40.0f);
+    her2.serialize();
+    her2.setValue("TempInt2", &tempValue, sizeof(int));
+    LOG("After set value TempInt2 should be 234\n");
+    her2.serialize();
 
     return resized();
 }
