@@ -318,6 +318,26 @@ bool WriteJson::endObject()
     return valid;
 }
 
+bool WriteJson::writeVec2(StringView name, const Vector2 &v)
+{
+    if(!valid)
+        return false;
+
+    if(name.size() == 0)
+    {
+        valid = false;
+        return false;
+    }
+    addIndentSpaces();
+    addNamedString(name, true);
+
+    writtenJson.append(" : [ ");
+    writtenJson.append(v.x);
+    writtenJson.append(", ");
+    writtenJson.append(v.y);
+    writtenJson.append(" ],\n");
+    return true;
+}
 bool WriteJson::writeVec3(StringView name, const Vector3 &v)
 {
     if(!valid)
@@ -337,6 +357,31 @@ bool WriteJson::writeVec3(StringView name, const Vector3 &v)
     writtenJson.append(v.y);
     writtenJson.append(", ");
     writtenJson.append(v.z);
+    writtenJson.append(" ],\n");
+    return true;
+}
+
+bool WriteJson::writeVec4(StringView name, const Vector4 &v)
+{
+    if(!valid)
+        return false;
+
+    if(name.size() == 0)
+    {
+        valid = false;
+        return false;
+    }
+    addIndentSpaces();
+    addNamedString(name, true);
+
+    writtenJson.append(" : [ ");
+    writtenJson.append(v.x);
+    writtenJson.append(", ");
+    writtenJson.append(v.y);
+    writtenJson.append(", ");
+    writtenJson.append(v.z);
+    writtenJson.append(", ");
+    writtenJson.append(v.w);
     writtenJson.append(" ],\n");
     return true;
 }

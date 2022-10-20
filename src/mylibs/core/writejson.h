@@ -37,7 +37,9 @@ public:
     bool addObject(uint32_t magicNumber, uint32_t versionNumber);
     bool endObject();
 
+    bool writeVec2(StringView name, const Vector2 &v);
     bool writeVec3(StringView name, const Vector3 &v);
+    bool writeVec4(StringView name, const Vector4 &v);
     bool writeQuat(StringView name, const Quaternion &q);
 
     const String &getString() const { return writtenJson; }

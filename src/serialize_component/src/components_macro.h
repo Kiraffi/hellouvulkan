@@ -8,6 +8,11 @@ enum FieldType
     IntType,
     FloatType,
 
+
+    Vec2Type,
+    Vec3Type,
+    Vec4Type,
+
     NumTypes
 };
 
@@ -72,14 +77,14 @@ private: \
 public: \
     /* CLASS_NAME() { serObjBase.objMagicNumber = magicNumberClass; serObjBase.objVersion = versionClass; serObjBase.objSize = sizeof(CLASS_NAME); } */ \
     static constexpr int getFileMagicNumber() { return 0xABBAABB; } \
-    static constexpr int getStaticClassMagicNumber() { return CLASS_NAME::magicNumberClass; } \
-    static constexpr int getStaticClassVersion() { return CLASS_NAME::versionClass; } \
+    static constexpr int getStaticClassMagicNumber() { return MAGIC_NUMBER; } \
+    static constexpr int getStaticClassVersion() { return VERSION_NUMBER; } \
 \
     static bool isJsonType(const JsonBlock &json); \
 \
     SerializableClassBase getBase() const { \
         return SerializableClassBase { \
-            .objMagicNumber = CLASS_NAME::magicNumberClass, .objVersion = CLASS_NAME::versionClass, .objSize = sizeof(CLASS_NAME) \
+            .objMagicNumber = MAGIC_NUMBER, .objVersion = VERSION_NUMBER, .objSize = sizeof(CLASS_NAME) \
         }; \
     } \
     /* SerializableClassBase &getBase() { return serObjBase; } */ \
@@ -94,23 +99,26 @@ public: \
     bool serialize(WriteJson &writeJson); \
     bool deSerialize(const JsonBlock &json); \
 private: \
+    static constexpr int getStartParameterRow() { return __LINE__; } \
     HelperStruct getFieldInfos() const;  \
     FieldInfo getFieldInfo(const char* fieldName) const; \
     FieldInfo getFieldInfoIndex(int index) const; \
-    static constexpr int magicNumberClass = MAGIC_NUMBER; \
-    static constexpr int versionClass = VERSION_NUMBER; \
+    /* static constexpr int magicNumberClass = MAGIC_NUMBER; */ \
+    /* static constexpr int versionClass = VERSION_NUMBER; */ \
     static constexpr int startParameterRow = __LINE__; \
 \
     //SerializableClassBase serObjBase;
 
 #define SER_DATA_END() \
 private: \
-    static constexpr int endParameterRow = __LINE__; \
+    static constexpr int getEndParameterRow() { return __LINE__; } \
+    static constexpr int getFieldCount() { return __LINE__ - 1 - startParameterRow; } \
+    /* static constexpr int endParameterRow = __LINE__; */ \
     static constexpr int fieldCount = __LINE__ - 1 - startParameterRow; \
     \
     struct HelperStruct \
     { \
-        FieldInfo arr[fieldCount];\
+        FieldInfo arr[fieldCount]; \
     }; \
 };
 
@@ -118,23 +126,37 @@ private: \
 
 
 
-#define HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE, FIELD_TYPE_TYPE) \
+#define HELPER_FIELD(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
 public: \
     FIELD_TYPE& get##FIELD_NAME() { return FIELD_NAME; } \
-    static constexpr const char* get##FIELD_NAME##String() { return FIELD_NAME##String; } \
-    static constexpr int get##FIELD_NAME##Index() { return FIELD_NAME##Index; } \
+    static constexpr const char* get##FIELD_NAME##String() { return #FIELD_NAME; } \
+    static constexpr int get##FIELD_NAME##Index() { return /*FIELD_NAME##Index;*/ __LINE__ - getStartParameterRow() - 1; } \
     static constexpr FieldType get##FIELD_NAME##Type() { return FIELD_TYPE_TYPE; } \
-protected: \
-    FIELD_TYPE FIELD_NAME = FIELD_DEFAULT_VALUE; \
-    static constexpr const char* FIELD_NAME##String = #FIELD_NAME; \
+    /*static constexpr const char* FIELD_NAME##String = #FIELD_NAME;*/ \
 private: \
-    static constexpr int FIELD_NAME##Index = __LINE__ - startParameterRow - 1;
+//    static constexpr int FIELD_NAME##Index = __LINE__ - startParameterRow - 1;
 
+#define HELPER_FIELD1(FIELD_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE) \
+    protected: \
+        FIELD_TYPE FIELD_NAME = FIELD_DEFAULT_VALUE; \
+
+
+#define HELPER_FIELD2(FIELD_NAME, DEFAULT_VAL1, DEFAULT_VAL2, FIELD_TYPE) \
+    protected: \
+        FIELD_TYPE FIELD_NAME = {DEFAULT_VAL1, DEFAULT_VAL2}; \
+
+#define HELPER_FIELD3(FIELD_NAME, DEFAULT_VAL1, DEFAULT_VAL2, DEFAULT_VAL3, FIELD_TYPE) \
+    protected: \
+        FIELD_TYPE FIELD_NAME = {DEFAULT_VAL1, DEFAULT_VAL2, DEFAULT_VAL3}; \
+
+#define HELPER_FIELD4(FIELD_NAME, DEFAULT_VAL1, DEFAULT_VAL2, DEFAULT_VAL3, DEFAULT_VAL4, FIELD_TYPE) \
+    protected: \
+        FIELD_TYPE FIELD_NAME = {DEFAULT_VAL1, DEFAULT_VAL2, DEFAULT_VAL3, DEFAULT_VAL4}; \
 
 
 // Setting and getting simple copy types like int, float etc....
-#define HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE, FIELD_TYPE_TYPE) \
-    HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE, FIELD_TYPE_TYPE) \
+#define HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
 public: \
     FIELD_TYPE get##FIELD_NAME() const { return FIELD_NAME; } \
     bool set##FIELD_NAME(FIELD_TYPE value) { FIELD_NAME = value; return true; }
@@ -142,17 +164,73 @@ public: \
 
 
 // Setting and getting ref types, mostly for structs and classes....
-#define HELPER_FIELD_NO_COPY_TYPE(FIELD_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE, FIELD_TYPE_TYPE) \
-    HELPER_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE, FIELD_TYPE_TYPE) \
+#define HELPER_FIELD_NO_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
 public: \
-    FIELD_TYPE &get##FIELD_NAME() const { return FIELD_NAME; } \
+    const FIELD_TYPE &get##FIELD_NAME() const { return FIELD_NAME; } \
     bool set##FIELD_NAME(const FIELD_TYPE &value) { FIELD_NAME = value; return true; }
 
 
 
 
-#define FLOAT_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_DEFAULT_VALUE, float, FieldType::FloatType)
-#define INT_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE)   HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_DEFAULT_VALUE, int, FieldType::IntType)
 
+
+
+
+#define HELPER_FIELD_COPY_TYPE1(FIELD_NAME, DEF_VAL1, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD1(FIELD_NAME, DEF_VAL1, FIELD_TYPE)
+
+#define HELPER_FIELD_COPY_TYPE2(FIELD_NAME, DEF_VAL1, DEF_VAL2, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD2(FIELD_NAME, DEF_VAL1, DEF_VAL2, FIELD_TYPE)
+
+#define HELPER_FIELD_COPY_TYPE3(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD3(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, FIELD_TYPE)
+
+#define HELPER_FIELD_COPY_TYPE4(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, DEF_VAL4, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD4(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, DEF_VAL4, FIELD_TYPE)
+
+
+#define HELPER_FIELD_NO_COPY_TYPE1(FIELD_NAME, DEF_VAL1, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_NO_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD1(FIELD_NAME, DEF_VAL1, FIELD_TYPE)
+
+
+#define HELPER_FIELD_NO_COPY_TYPE2(FIELD_NAME, DEF_VAL1, DEF_VAL2, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_NO_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD2(FIELD_NAME, DEF_VAL1, DEF_VAL2, FIELD_TYPE)
+
+
+#define HELPER_FIELD_NO_COPY_TYPE3(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_NO_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD3(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, FIELD_TYPE)
+
+
+#define HELPER_FIELD_NO_COPY_TYPE4(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, DEF_VAL4, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD_NO_COPY_TYPE(FIELD_NAME, FIELD_TYPE, FIELD_TYPE_TYPE) \
+    HELPER_FIELD4(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, DEF_VAL4, FIELD_TYPE)
+
+
+
+
+
+
+
+
+
+#define FLOAT_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) \
+    HELPER_FIELD_COPY_TYPE1(FIELD_NAME, FIELD_DEFAULT_VALUE, float, FieldType::FloatType)
+#define INT_FIELD(FIELD_NAME, FIELD_DEFAULT_VALUE) \
+    HELPER_FIELD_COPY_TYPE1(FIELD_NAME, FIELD_DEFAULT_VALUE, int, FieldType::IntType)
+
+#define VEC2_FIELD(FIELD_NAME, DEF_VAL1, DEF_VAL2 ) \
+    HELPER_FIELD_NO_COPY_TYPE2(FIELD_NAME, DEF_VAL1, DEF_VAL2, Vector2, FieldType::Vec2Type)
+#define VEC3_FIELD(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3) \
+    HELPER_FIELD_NO_COPY_TYPE3(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, Vector3, FieldType::Vec3Type)
+#define VEC4_FIELD(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, DEF_VAL4 ) \
+    HELPER_FIELD_NO_COPY_TYPE4(FIELD_NAME, DEF_VAL1, DEF_VAL2, DEF_VAL3, DEF_VAL4, Vector4, FieldType::Vec4Type)
 
 

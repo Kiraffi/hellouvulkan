@@ -639,6 +639,22 @@ bool JsonBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
     return true;
 }
 
+bool JsonBlock::parseVec2(Vector2 &v) const
+{
+    if(children.size() != 2)
+        return false;
+    float f[2];
+
+    for(uint32_t i = 0; i < 2; ++i)
+    {
+        if(!children[i].parseFloat(f[i]))
+            return false;
+    }
+    v.x = f[0];
+    v.y = f[1];
+    return true;
+}
+
 bool JsonBlock::parseVec3(Vector3 &v) const
 {
     if(children.size() != 3)
@@ -653,6 +669,24 @@ bool JsonBlock::parseVec3(Vector3 &v) const
     v.x = f[0];
     v.y = f[1];
     v.z = f[2];
+    return true;
+}
+
+bool JsonBlock::parseVec4(Vector4 &v) const
+{
+    if(children.size() != 4)
+        return false;
+    float f[4];
+
+    for(uint32_t i = 0; i < 4; ++i)
+    {
+        if(!children[i].parseFloat(f[i]))
+            return false;
+    }
+    v.x = f[0];
+    v.y = f[1];
+    v.z = f[2];
+    v.w = f[3];
     return true;
 }
 

@@ -22,6 +22,9 @@ enum DataTypes
 SER_DATA_BEGIN(Heritaged, DataTypes::HeritagedType, 1)
     INT_FIELD(TempInt, 10)
     FLOAT_FIELD(TempFloat, 20.0f)
+    VEC2_FIELD(TempV2, 41, 520)
+    VEC3_FIELD(TempV3, 10, 20, 30)
+    VEC4_FIELD(TempV4, 7, 8, -30, 10)
 SER_DATA_END()
 
 

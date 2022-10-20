@@ -49,7 +49,9 @@ public:
     bool parseBool(bool &outBool) const;
     bool parseBuffer(PodVector<uint8_t> &outBuffer) const;
 
+    bool parseVec2(Vector2 &v) const;
     bool parseVec3(Vector3 &v) const;
+    bool parseVec4(Vector4 &v) const;
     bool parseQuat(Quaternion &q) const;
 
     bool parseNumberArray(double *arr, uint32_t arrayLen) const;
