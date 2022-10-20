@@ -148,17 +148,78 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         LOG("add: %p, type: %i\n", floatMemory, type);
         LOG("Float is: %f\n", *floatMemory);
     }
-    her.serialize();
+
+    WriteJson writeJson1(2, 2);
+    writeJson1.addArray("Components");
+    {
+        her.serialize(writeJson1);
+    }
+    {
+        int tempValue = 234;
+        Heritaged2 her2;
+        her2.setTempInt2(1000);
+        her2.setTempFloat2(40.0f);
+        her2.serialize(writeJson1);
 
 
-    int tempValue = 234;
-    Heritaged2 her2;
-    her2.setTempInt2(1000);
-    her2.setTempFloat2(40.0f);
-    her2.serialize();
-    her2.setValue("TempInt2", &tempValue, sizeof(int));
-    LOG("After set value TempInt2 should be 234\n");
-    her2.serialize();
+        her2.setValue("TempInt2", &tempValue, sizeof(int));
+        LOG("After set value TempInt2 should be 234\n");
+        her2.serialize(writeJson1);
+    }
+    {
+        Heritaged3 her3;
+        her3.serialize(writeJson1);
+    }
+    writeJson1.endArray();
+    writeJson1.finishWrite();
+
+    {
+        JsonBlock json;
+        const String &strJson = writeJson1.getString();
+        bool parseSuccess = json.parseJson(StringView(strJson.data(), strJson.size()));
+
+        if(!parseSuccess)
+        {
+            printf("Failed to parse writeJson1\n");
+            return false;
+        }
+
+        if(!json.isObject() || json.getChildCount() < 1)
+            return false;
+
+        if(!json.getChild("magicNumber").equals(2))
+            return false;
+
+        for(auto const &obj : json.getChild("Components"))
+        {
+            if(Heritaged::isJsonType(obj))
+            {
+                LOG("Type is Heritaged!\n");
+                Heritaged newHer;
+                newHer.deSerialize(obj);
+                newHer.print();
+                LOG("\n");
+            }
+            else if(Heritaged2::isJsonType(obj))
+            {
+                LOG("Type is Heritaged2!\n");
+                Heritaged2 newHer;
+                newHer.deSerialize(obj);
+                newHer.print();
+                LOG("\n");
+            }
+            else if(Heritaged3::isJsonType(obj))
+            {
+                LOG("Type is Heritaged3!\n");
+                Heritaged3 newHer;
+                newHer.deSerialize(obj);
+                newHer.print();
+                LOG("\n");
+            }
+        }
+
+    }
+
 
     return resized();
 }

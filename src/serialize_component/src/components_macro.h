@@ -1,5 +1,8 @@
 #pragma once
 
+#include <core/json.h>
+#include <core/writejson.h>
+
 enum FieldType
 {
     IntType,
@@ -72,6 +75,8 @@ public: \
     static constexpr int getStaticClassMagicNumber() { return CLASS_NAME::magicNumberClass; } \
     static constexpr int getStaticClassVersion() { return CLASS_NAME::versionClass; } \
 \
+    static bool isJsonType(const JsonBlock &json); \
+\
     SerializableClassBase getBase() const { \
         return SerializableClassBase { \
             .objMagicNumber = CLASS_NAME::magicNumberClass, .objVersion = CLASS_NAME::versionClass, .objSize = sizeof(CLASS_NAME) \
@@ -82,11 +87,12 @@ public: \
     /* int getObjVersion() const { return serObjBase.getObjVersion(); } */ \
     /* int getObjSize() const { return serObjBase.getObjSize(); } */ \
 \
+    void print() const; \
     bool setValue(const char* fieldName, void* value, int valueByteSize); \
     bool getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType) const; \
     void* getMemory(const char* fieldName) const ; \
-    bool serialize(); \
-    bool deSerialize(); \
+    bool serialize(WriteJson &writeJson); \
+    bool deSerialize(const JsonBlock &json); \
 private: \
     HelperStruct getFieldInfos() const;  \
     FieldInfo getFieldInfo(const char* fieldName) const; \
