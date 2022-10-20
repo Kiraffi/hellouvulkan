@@ -10,7 +10,7 @@
 #define DEBUG_BREAK_MACRO() raise(SIGTRAP)
 #endif
 
-#define HELPER_ASSERT_STRING(STUFF, STUFFSTRING) \
+#define ASSERT_STRING(STUFF, STUFFSTRING) \
 do \
 { \
     if (STUFF) {} \
@@ -21,5 +21,5 @@ do \
     } \
 } while (0)
 
-#define ASSERT(STUFF) HELPER_ASSERT_STRING(STUFF, #STUFF)
+#define ASSERT(STUFF) ASSERT_STRING(STUFF, #STUFF)
 
