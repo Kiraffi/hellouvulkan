@@ -736,6 +736,15 @@ bool JsonBlock::equals(uint32_t value) const
     return p == value;
 }
 
+bool JsonBlock::equals(StringView str) const
+{
+    StringView s;
+    if(!parseString(s))
+        return false;
+    return str == s;
+}
+
+
 bool JsonBlock::hasChild(StringView childName) const
 {
     for(const JsonBlock &child : children)

@@ -58,7 +58,7 @@ public:
     bool parseIntegerArray(int32_t *arr, uint32_t arrayLen) const;
 
     bool equals(uint32_t value) const;
-
+    bool equals(StringView str) const;
 
     bool hasChild(StringView childName) const;
 
