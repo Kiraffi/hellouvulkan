@@ -30,7 +30,6 @@ static bool parseFieldInfo(const FieldInfo &info, const JsonBlock &json)
         case FieldType::FloatType:
         {
             float &f = *((float*)info.fieldMemoryAddress);
-            int &i = *((int*)info.fieldMemoryAddress);
             if(!json.getChild(info.fieldName).parseFloat(f))
                 return false;
             break;
