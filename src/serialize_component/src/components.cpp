@@ -1,14 +1,81 @@
 #include "components.h"
 
+#include "core/assert.h"
 #include "core/general.h"
 #include "core/log.h"
 
+#include <unordered_set>
 
 #undef SER_DATA_BEGIN
 #undef SER_DATA_END
 
+// For debugging that we have all types set, and all types are unique indices
+static std::unordered_set<uint32_t> AllDataTypes;
 
-static void printFieldValue(void *value, FieldType field)
+
+static void printFieldValue(const char* fieldName, void *value, FieldType field);
+static bool writeFieldInfo(const FieldInfo &info, WriteJson &writeJson);
+
+static bool parseFieldInfo(const FieldInfo &info, const JsonBlock &json)
+{
+    switch(info.type)
+    {
+        case FieldType::IntType:
+        {
+            int &i = *((int*)info.fieldMemoryAddress);
+            if(!json.getChild(info.fieldName).parseInt(i))
+                return false;
+            break;
+        }
+        case FieldType::FloatType:
+        {
+            float &f = *((float*)info.fieldMemoryAddress);
+            int &i = *((int*)info.fieldMemoryAddress);
+            if(!json.getChild(info.fieldName).parseFloat(f))
+                return false;
+            break;
+        }
+        default:
+        {
+            ASSERT_STRING(false, "Unknown field type!");
+        }
+
+    }
+    return true;
+}
+
+static bool writeFieldInfo(const FieldInfo &info, WriteJson &writeJson)
+{
+    if(!info.isValid)
+        return false;
+
+    //LOG("Field: %s, index: %i, type: %i, ", info.fieldName, info.fieldIndex, info.type);
+    printFieldValue(info.fieldName, info.fieldMemoryAddress, info.type); \
+    switch(info.type)
+    {
+        case FieldType::IntType:
+        {
+            int i = *((int*)info.fieldMemoryAddress);
+            writeJson.addInteger(info.fieldName, i);
+            break;
+        }
+        case FieldType::FloatType:
+        {
+            float f = *((float*)info.fieldMemoryAddress);
+            writeJson.addNumber(info.fieldName, f);
+            break;
+        }
+        default:
+        {
+            ASSERT_STRING(false, "Unknown field type!");
+        }
+    }
+
+    return writeJson.isValid();
+}
+
+
+static void printFieldValue(const char* fieldName, void *value, FieldType field)
 {
     if(!value)
     {
@@ -19,12 +86,12 @@ static void printFieldValue(void *value, FieldType field)
     {
         case IntType:
         {
-            LOG("value: %i\n", *((int *)value));
+            LOG("%s: %i\n", fieldName, *((int *)value));
             break;
         }
         case FloatType:
         {
-            LOG("value: %f\n", *((float *)value));
+            LOG("%s: %f\n", fieldName, *((float *)value));
             break;
         }
 
@@ -34,23 +101,71 @@ static void printFieldValue(void *value, FieldType field)
         }
     }
 }
+// Checker to see that every data class is unique
+#define SER_DATA_BEGIN_HELPER_CHECK(CLASS_NAME, MAGIC_NUMBER) \
+struct RunOnce##CLASS_NAME \
+{ \
+    RunOnce##CLASS_NAME() \
+    { \
+        if(AllDataTypes.find(MAGIC_NUMBER) != AllDataTypes.end()) \
+        { \
+            ASSERT_STRING(false, #MAGIC_NUMBER " added already"); \
+        } \
+        AllDataTypes.insert(MAGIC_NUMBER); \
+    } \
+}; \
+static RunOnce##CLASS_NAME runOnce##CLASS_NAME; \
 
 #define SER_DATA_BEGIN(CLASS_NAME, MAGIC_NUMBER, VERSION_NUMBER) \
-bool CLASS_NAME::serialize() \
+\
+SER_DATA_BEGIN_HELPER_CHECK(CLASS_NAME, MAGIC_NUMBER) \
+\
+bool CLASS_NAME::isJsonType(const JsonBlock &json) \
+{ \
+    if(!json.isObject()) \
+        return false; \
+\
+    if(!json.getChild("ComponentType").equals(#CLASS_NAME)) \
+        return false; \
+    if(!json.getChild("ComponentTypeId").equals(MAGIC_NUMBER)) \
+        return false; \
+\
+    return true; \
+} \
+bool CLASS_NAME::serialize(WriteJson &writeJson) \
+{ \
+    writeJson.addObject(); \
+    writeJson.addString("ComponentType", #CLASS_NAME); \
+    writeJson.addInteger("ComponentTypeId", MAGIC_NUMBER); \
+    writeJson.addInteger("ComponentVersion", VERSION_NUMBER); \
+    for(int i = 0; i < CLASS_NAME::fieldCount; ++i) \
+    { \
+        FieldInfo info = getFieldInfoIndex(i); \
+        if(!writeFieldInfo(info, writeJson)) \
+            return false; \
+    } \
+    writeJson.endObject(); \
+    return writeJson.isValid(); \
+} \
+void CLASS_NAME::print() const \
 { \
     for(int i = 0; i < CLASS_NAME::fieldCount; ++i) \
     { \
         FieldInfo info = getFieldInfoIndex(i); \
-        if(info.isValid) \
-        { \
-            LOG("Field: %s, index: %i, type: %i, ", info.fieldName, info.fieldIndex, info.type); \
-            printFieldValue(info.fieldMemoryAddress, info.type); \
-        } \
+        printFieldValue(info.fieldName, info.fieldMemoryAddress, info.type); \
     } \
-    return true; \
 } \
-bool CLASS_NAME::deSerialize() \
+bool CLASS_NAME::deSerialize(const JsonBlock &json) \
 { \
+    if(!CLASS_NAME::isJsonType(json)) \
+        return false; \
+\
+    for(int i = 0; i < CLASS_NAME::fieldCount; ++i) \
+    { \
+        FieldInfo info = getFieldInfoIndex(i); \
+        parseFieldInfo(info, json); \
+    } \
+\
     return true; \
 } \
 bool CLASS_NAME::getMemoryPtr(const char* fieldName, void **outMemAddress, FieldType &outFieldType) const \
