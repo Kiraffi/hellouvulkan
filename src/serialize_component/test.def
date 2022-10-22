@@ -1,0 +1,15 @@
+ComponentBegin
+Heritaged31 DataTypes::HeritagedType 1
+int TempInt = 10
+float TempFloat = 20.0f
+Vector2 TempV2 = {41, 520}
+Vector3 TempV3 = {10, 20, 30}
+Vector4 TempV4 = {7, 8, -30, 10}
+ComponentEnd
+
+
+ComponentBegin
+Heritaged21 DataTypes::HeritagedType2 1
+int TempInt2 = 10
+float TempFloat2 = 20.0f
+ComponentEnd
