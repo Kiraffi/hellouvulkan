@@ -43,16 +43,13 @@ struct Heritaged31
 
     void* getElementIndex(unsigned int index)
     {
-        ASSERT(index < ComponentFieldAmount);
-        if(index >= ComponentFieldAmount)
-            return nullptr;
         switch(index)
         {
-            case 0: return (uint8_t*)(this) + offsetof(Heritaged31, TempInt);
-            case 1: return (uint8_t*)(this) + offsetof(Heritaged31, TempFloat);
-            case 2: return (uint8_t*)(this) + offsetof(Heritaged31, TempV2);
-            case 3: return (uint8_t*)(this) + offsetof(Heritaged31, TempV3);
-            case 4: return (uint8_t*)(this) + offsetof(Heritaged31, TempV4);
+            case 0: return &TempInt;
+            case 1: return &TempFloat;
+            case 2: return &TempV2;
+            case 3: return &TempV3;
+            case 4: return &TempV4;
 
             default: ASSERT_STRING(false, "Unknown index");
         }
@@ -86,13 +83,10 @@ struct Heritaged21
 
     void* getElementIndex(unsigned int index)
     {
-        ASSERT(index < ComponentFieldAmount);
-        if(index >= ComponentFieldAmount)
-            return nullptr;
         switch(index)
         {
-            case 0: return (uint8_t*)(this) + offsetof(Heritaged21, TempInt2);
-            case 1: return (uint8_t*)(this) + offsetof(Heritaged21, TempFloat2);
+            case 0: return &TempInt2;
+            case 1: return &TempFloat2;
 
             default: ASSERT_STRING(false, "Unknown index");
         }

@@ -50,9 +50,6 @@ ${COMPONENT_ELEMENT_GET_FUNC}\n}\;\n")
         set(COMPONENT_FIELD_NAMES "    static constexpr const char* fieldNames[] =\n    {")
         set(COMPONENT_ELEMENT_GET_FUNC "    void* getElementIndex(unsigned int index)
     {
-        ASSERT(index < ComponentFieldAmount)\;
-        if(index >= ComponentFieldAmount)
-            return nullptr\;
         switch(index)
         {")
 #        return (uint8_t*)(this) + fieldOffsets[index]\;
@@ -115,7 +112,8 @@ ${COMPONENT_ELEMENT_GET_FUNC}\n}\;\n")
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Vec4Type,")
         endif()
         #string(APPEND COMPONENT_FIELD_OFFSETS "\n        offsetof(${COMPONENT_NAME}, ${ELEM1}),")
-        string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n            case ${COMPONENT_ROW_COUNT}: return (uint8_t*)(this) + offsetof(${COMPONENT_NAME}, ${ELEM1})\;")
+        #string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n            case ${COMPONENT_ROW_COUNT}: return (uint8_t*)(this) + offsetof(${COMPONENT_NAME}, ${ELEM1})\;")
+        string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n            case ${COMPONENT_ROW_COUNT}: return &${ELEM1}\;")
         string(APPEND COMPONENT_FIELD_NAMES "\n        \"${ELEM1}\",")
 
         string(APPEND COMPONENT_VARS "\n    // Row ${COMPONENT_ROW_COUNT}, Size ${COMPONENT_ROW_ELEMENT_SIZE}
