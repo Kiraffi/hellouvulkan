@@ -128,14 +128,6 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         return false;
 
     {
-        static constexpr size_t offset = offsetof(Heritaged31, TempInt);
-        Heritaged31 her31;
-        LOG("Her31 comps: %u\n", her31.componentFieldAmount);
-        LOG("Her31 comp0: %i\n", *(int *)her31.getElementIndex(0));
-    }
-
-
-    {
         StaticModelEntity testEntity;
         testEntity.addEntity();
         testEntity.addEntity();
@@ -243,7 +235,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         if(!json.getChild("magicNumber").equals(2))
             return false;
 
-        for(auto const &obj : json.getChild("Components"))
+        for(const auto &obj : json.getChild("Components"))
         {
             if(Heritaged::isJsonType(obj))
             {

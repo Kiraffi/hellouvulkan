@@ -31,7 +31,6 @@ struct Heritaged31
         FieldType::Vec3Type,
         FieldType::Vec4Type,
     };
-
     static constexpr const char* fieldNames[] =
     {
         "TempInt",
@@ -40,36 +39,6 @@ struct Heritaged31
         "TempV3",
         "TempV4",
     };
-
-    void* getElementIndexRef(u32 index)
-    {
-        switch(index)
-        {
-            case 0: return &TempInt;
-            case 1: return &TempFloat;
-            case 2: return &TempV2;
-            case 3: return &TempV3;
-            case 4: return &TempV4;
-
-            default: ASSERT_STRING(false, "Unknown index");
-        }
-        return nullptr;
-    }
-
-    const void* getElementIndex(u32 index) const
-    {
-        switch(index)
-        {
-            case 0: return &TempInt;
-            case 1: return &TempFloat;
-            case 2: return &TempV2;
-            case 3: return &TempV3;
-            case 4: return &TempV4;
-
-            default: ASSERT_STRING(false, "Unknown index");
-        }
-        return nullptr;
-    }
 
     bool serialize(WriteJson &json) const
     {
@@ -101,6 +70,35 @@ struct Heritaged31
             deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
         }
         return true;
+    }
+
+private:
+    void* getElementIndexRef(u32 index)
+    {
+        switch(index)
+        {
+            case 0: return &TempInt;
+            case 1: return &TempFloat;
+            case 2: return &TempV2;
+            case 3: return &TempV3;
+            case 4: return &TempV4;
+            default: ASSERT_STRING(false, "Unknown index");
+        }
+        return nullptr;
+    }
+
+    const void* getElementIndex(u32 index) const
+    {
+        switch(index)
+        {
+            case 0: return &TempInt;
+            case 1: return &TempFloat;
+            case 2: return &TempV2;
+            case 3: return &TempV3;
+            case 4: return &TempV4;
+            default: ASSERT_STRING(false, "Unknown index");
+        }
+        return nullptr;
     }
 };
 
@@ -121,36 +119,11 @@ struct Heritaged21
         FieldType::IntType,
         FieldType::FloatType,
     };
-
     static constexpr const char* fieldNames[] =
     {
         "TempInt2",
         "TempFloat2",
     };
-
-    void* getElementIndexRef(u32 index)
-    {
-        switch(index)
-        {
-            case 0: return &TempInt2;
-            case 1: return &TempFloat2;
-
-            default: ASSERT_STRING(false, "Unknown index");
-        }
-        return nullptr;
-    }
-
-    const void* getElementIndex(u32 index) const
-    {
-        switch(index)
-        {
-            case 0: return &TempInt2;
-            case 1: return &TempFloat2;
-
-            default: ASSERT_STRING(false, "Unknown index");
-        }
-        return nullptr;
-    }
 
     bool serialize(WriteJson &json) const
     {
@@ -183,8 +156,30 @@ struct Heritaged21
         }
         return true;
     }
-};
 
+private:
+    void* getElementIndexRef(u32 index)
+    {
+        switch(index)
+        {
+            case 0: return &TempInt2;
+            case 1: return &TempFloat2;
+            default: ASSERT_STRING(false, "Unknown index");
+        }
+        return nullptr;
+    }
+
+    const void* getElementIndex(u32 index) const
+    {
+        switch(index)
+        {
+            case 0: return &TempInt2;
+            case 1: return &TempFloat2;
+            default: ASSERT_STRING(false, "Unknown index");
+        }
+        return nullptr;
+    }
+};
 
 struct StaticModelEntity
 {
@@ -192,7 +187,7 @@ struct StaticModelEntity
     static constexpr EntityType entitySystemID = EntityType::StaticModelEntityType;
     static constexpr u32 entityVersion = 1;
 
-    static constexpr ComponentType componentTypes[] = 
+    static constexpr ComponentType componentTypes[] =
     {
         Heritaged31::componentID,
         Heritaged21::componentID,
@@ -251,7 +246,6 @@ struct StaticModelEntity
         return EntitySystemHandle();
     }
 
-
     bool addHeritaged31Component(u32 entityIndex, const Heritaged31& component)
     {
         if(entityIndex >= entityComponents.size())
@@ -289,19 +283,21 @@ struct StaticModelEntity
 
         return true;
     }
+
     bool serialize(WriteJson &json) const
     {
         u32 entityAmount = entityComponents.size();
         if(entityAmount == 0)
             return false;
 
-        json.addArray(entitySystemName);
+        json.addObject(entitySystemName);
+        json.addString("EntityType", entitySystemName);
+        json.addInteger("EntityTypeId", u32(entitySystemID));
+        json.addInteger("EntityVersion", entityVersion);
+        json.addArray("Entities");
         for(u32 i = 0; i < entityAmount; ++i)
         {
             json.addObject();
-            json.addString("EntityType", entitySystemName);
-            json.addInteger("EntityTypeId", u32(entitySystemID));
-            json.addInteger("EntityVersion", entityVersion);
             json.addArray("Components");
 
             if(hasComponent(i, Heritaged31::componentID))
@@ -316,23 +312,28 @@ struct StaticModelEntity
             json.endObject();
         }
         json.endArray();
+        json.endObject();
         return json.isValid();
     }
+
     bool deserialize(const JsonBlock &json)
     {
         if(!json.isObject() || json.getChildCount() < 1)
             return false;
 
+        const JsonBlock& child = json.getChild(entitySystemName);
+        if(!child.isValid())
+            return false;
+
+        if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
+            return false;
+
         u32 addedCount = 0u;
-        for(const JsonBlock& child : json.getChild(entitySystemName))
+        for(const auto &entityJson : child.getChild("Entities"))
         {
-            if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
-                return false;
-
             addEntity();
-            for(auto const &obj : child.getChild("Components"))
+            for(const auto &obj : entityJson.getChild("Components"))
             {
-
                 if(Her31Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged31::componentID);
@@ -352,16 +353,14 @@ struct StaticModelEntity
                     continue;
                 }
             }
+            addedCount++;
         }
-        addedCount++;
         return true;
     }
-
 
 private:
     std::vector<Heritaged31> Her31Array;
     std::vector<Heritaged21> Her21Array;
-
 
     std::vector<u16> entityVersions;
 

@@ -12,6 +12,10 @@ set(COMPONENT_NAME "")
 set(COMPONENT_ID -1)
 set(COMPONENT_VERSION -1)
 
+set(ENTITY_NAME "")
+set(ENTITY_ID 0)
+set(ENTITY_VERSION 0)
+
 # Set our reading state to 0, there is probably a lot better way
 set(READ_STATE ${READ_STATE_NONE})
 set(COMPONENT_FIELD_COUNT 0)
@@ -21,8 +25,6 @@ file(READ "${FROM_FILE}" DEF_CONTENTS)
 
 # Split the DEF-file by new-lines.
 string(REPLACE "\n" ";" DEF_LIST ${DEF_CONTENTS})
-
-set(COMPONENT_DEF_STR "")
 
 #not sure if this write + append is good....
 file(WRITE ${FILENAME_TO_MODIFY}
@@ -36,7 +38,7 @@ file(WRITE ${FILENAME_TO_MODIFY}
 # Loop through each line in the DEF file.
 foreach(DEF_ROW ${DEF_LIST})
     #remove trailing and leading spaces
-    string(STRIP ${DEF_ROW} DEF_ROW)
+    string(STRIP "${DEF_ROW}" DEF_ROW)
 
 
 ################################### PARSE ENTITY ############################################
@@ -44,11 +46,17 @@ foreach(DEF_ROW ${DEF_LIST})
     if(DEF_ROW STREQUAL "EntityTypeEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
 
-        string(APPEND ENTITY_COMPONENT_TYPES_ARRAY "\n    };")
+        file(APPEND ${FILENAME_TO_MODIFY} "
+struct ${ENTITY_NAME}
+{
+    static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
+    static constexpr EntityType entitySystemID = ${ENTITY_ID};
+    static constexpr u32 entityVersion = ${ENTITY_VERSION};
 
-        file(APPEND ${FILENAME_TO_MODIFY} "\n${ENTITY_CONTENTS_BEGIN}")
-        file(APPEND ${FILENAME_TO_MODIFY} "\n\n${ENTITY_COMPONENT_TYPES_ARRAY}")
-        file(APPEND ${FILENAME_TO_MODIFY} "\n
+    static constexpr ComponentType componentTypes[] =
+    {${ENTITY_COMPONENT_TYPES_ARRAY}
+    };
+
     u32 getComponentIndex(ComponentType componentType) const
     {
         for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
@@ -106,43 +114,50 @@ ${ENTITY_ADD_COMPONENT}
         if(entityAmount == 0)
             return false;
 
-        json.addArray(entitySystemName);
+        json.addObject(entitySystemName);
+        json.addString(\"EntityType\", entitySystemName);
+        json.addInteger(\"EntityTypeId\", u32(entitySystemID));
+        json.addInteger(\"EntityVersion\", entityVersion);
+        json.addArray(\"Entities\");
         for(u32 i = 0; i < entityAmount; ++i)
         {
             json.addObject();
-            json.addString(\"EntityType\", entitySystemName);
-            json.addInteger(\"EntityTypeId\", u32(entitySystemID));
-            json.addInteger(\"EntityVersion\", entityVersion);
             json.addArray(\"Components\");
 ${ENTITY_WRITE_CONTENTS}
             json.endArray();
             json.endObject();
         }
         json.endArray();
+        json.endObject();
         return json.isValid();
     }
+
     bool deserialize(const JsonBlock &json)
     {
         if(!json.isObject() || json.getChildCount() < 1)
             return false;
 
-        u32 addedCount = 0u;
-        for(const JsonBlock& child : json.getChild(entitySystemName))
-        {
-            if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
-                return false;
+        const JsonBlock& child = json.getChild(entitySystemName);
+        if(!child.isValid())
+            return false;
 
+        if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
+            return false;
+
+        u32 addedCount = 0u;
+        for(const auto &entityJson : child.getChild(\"Entities\"))
+        {
             addEntity();
-            for(auto const &obj : child.getChild(\"Components\"))
-            {
-${ENTITY_LOAD_CONTENTS}
+            for(const auto &obj : entityJson.getChild(\"Components\"))
+            {${ENTITY_LOAD_CONTENTS}
             }
+            addedCount++;
         }
-        addedCount++;
         return true;
     }
-${ENTITY_ARRAYS_FIELD}
-\n
+
+private:${ENTITY_ARRAYS_FIELD}
+
     std::vector<u16> entityVersions;
 
     // This might be problematic if component is activated/deactived in middle of a frame
@@ -156,13 +171,12 @@ ${ENTITY_ARRAYS_FIELD}
 
     elseif(DEF_ROW STREQUAL "EntityTypeBegin"  AND READ_STATE EQUAL READ_STATE_NONE)
         set(READ_STATE ${READ_STATE_ENTITY_BEGIN})
-        set(ENTITY_CONTENTS_BEGIN "")
         set(ENTITY_LOAD_CONTENTS "")
         set(ENTITY_WRITE_CONTENTS "")
-        set(ENTITY_ARRAYS_FIELD "\n\nprivate:")
+        set(ENTITY_ARRAYS_FIELD "")
         set(ENTITY_ARRAY_PUSHBACKS "")
         set(ENTITY_ADD_COMPONENT "")
-        set(ENTITY_COMPONENT_TYPES_ARRAY "    static constexpr ComponentType componentTypes[] = \n    {")
+        set(ENTITY_COMPONENT_TYPES_ARRAY "")
 
     elseif(READ_STATE EQUAL READ_STATE_ENTITY_BEGIN)
         set(READ_STATE ${READ_STATE_ENTITY_FIELDS})
@@ -178,12 +192,8 @@ ${ENTITY_ARRAYS_FIELD}
         string(STRIP ${ELEM2} ELEM2)
 
         set(ENTITY_NAME ${ELEM0})
-        set(ENTITY_CONTENTS_BEGIN "
-struct ${ENTITY_NAME}
-{
-    static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
-    static constexpr EntityType entitySystemID = ${ELEM1};
-    static constexpr u32 entityVersion = ${ELEM2};")
+        set(ENTITY_ID ${ELEM1})
+        set(ENTITY_VERSION ${ELEM2})
 
 
 
@@ -197,8 +207,8 @@ struct ${ENTITY_NAME}
         list(GET TYPE_AND_NAME 1 ELEM0) # fieldname
 
         #remove leading and trailing spaces
-        string(STRIP ${ELEM0} ELEM0)
-        string(STRIP ${ELEM1} ELEM1)
+        string(STRIP "${ELEM0}" ELEM0)
+        string(STRIP "${ELEM1}" ELEM1)
 
         string(APPEND ENTITY_WRITE_CONTENTS "
             if(hasComponent(i, ${ELEM0}::componentID))
@@ -219,7 +229,7 @@ struct ${ENTITY_NAME}
                     continue;
                 }")
 
-        string(APPEND ENTITY_ADD_COMPONENT "\n
+        string(APPEND ENTITY_ADD_COMPONENT "
     bool add${ELEM0}Component(u32 entityIndex, const ${ELEM0}& component)
     {
         if(entityIndex >= entityComponents.size())
@@ -237,7 +247,7 @@ struct ${ENTITY_NAME}
         entityComponents[entityIndex] |= u64(1) << componentIndex;
 
         return true;
-    }")
+    }\n")
 
 
 
@@ -247,30 +257,22 @@ struct ${ENTITY_NAME}
 
     elseif(DEF_ROW STREQUAL "ComponentEnd" AND READ_STATE EQUAL READ_STATE_COMPONENT_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
-        string(APPEND COMPONENT_FIELD_TYPES "\n    };")
-        string(APPEND COMPONENT_FIELD_NAMES "\n    };")
-        #string(APPEND COMPONENT_FIELD_OFFSETS "\n    };")
-        string(APPEND COMPONENT_STATIC_VARS "    static constexpr u32 componentFieldAmount = ${COMPONENT_FIELD_COUNT};")
-        string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n
-            default: ASSERT_STRING(false, \"Unknown index\");
-        }
-        return nullptr;")
 
-        string(APPEND COMPONENT_DEF_STR "\n${COMPONENT_STATIC_VARS}
-${COMPONENT_VARS}\n
-${COMPONENT_FIELD_TYPES}\n
-${COMPONENT_FIELD_NAMES}\n
-    void* getElementIndexRef(u32 index)
-    {
-        switch(index)
-        {${COMPONENT_ELEMENT_GET_FUNC}
-    }
+        file(APPEND ${FILENAME_TO_MODIFY} "
+struct ${COMPONENT_NAME}
+{
+    static constexpr const char* componentName = \"${COMPONENT_NAME}\";
+    static constexpr ComponentType componentID = ${COMPONENT_ID};
+    static constexpr u32 componentVersion = ${COMPONENT_VERSION};
+    static constexpr u32 componentFieldAmount = ${COMPONENT_FIELD_COUNT};
+${COMPONENT_VARS}
 
-    const void* getElementIndex(u32 index) const
-    {
-        switch(index)
-        {${COMPONENT_ELEMENT_GET_FUNC}
-    }
+    static constexpr FieldType fieldTypes[] =
+    {${COMPONENT_FIELD_TYPES}
+    };
+    static constexpr const char* fieldNames[] =
+    {${COMPONENT_FIELD_NAMES}
+    };
 
     bool serialize(WriteJson &json) const
     {
@@ -303,51 +305,51 @@ ${COMPONENT_FIELD_NAMES}\n
         }
         return true;
     }
-};\n")
 
-        file(APPEND ${FILENAME_TO_MODIFY} "${COMPONENT_DEF_STR}")
+private:
+    void* getElementIndexRef(u32 index)
+    {
+        switch(index)
+        {${COMPONENT_ELEMENT_GET_FUNC}
+            default: ASSERT_STRING(false, \"Unknown index\");
+        }
+        return nullptr;
+    }
+
+    const void* getElementIndex(u32 index) const
+    {
+        switch(index)
+        {${COMPONENT_ELEMENT_GET_FUNC}
+            default: ASSERT_STRING(false, \"Unknown index\");
+        }
+        return nullptr;
+    }
+};\n")
 
     elseif(DEF_ROW STREQUAL "ComponentBegin" AND READ_STATE EQUAL READ_STATE_NONE)
         set(READ_STATE ${READ_STATE_COMPONENT_BEGIN})
         set(COMPONENT_FIELD_COUNT 0)
-        set(COMPONENT_DEF_STR "\nstruct ")
         set(COMPONENT_VARS "")
-        #set(COMPONENT_FIELD_OFFSETS "    constexpr size_t fieldOffsets[] =\n    {")
-        set(COMPONENT_FIELD_TYPES "    static constexpr FieldType fieldTypes[] =\n    {")
-        set(COMPONENT_FIELD_NAMES "    static constexpr const char* fieldNames[] =\n    {")
+        set(COMPONENT_FIELD_TYPES "")
+        set(COMPONENT_FIELD_NAMES "")
         set(COMPONENT_ELEMENT_GET_FUNC "")
 
     elseif(READ_STATE EQUAL READ_STATE_COMPONENT_BEGIN)
-        set(READ_STATE ${READ_STATE_COMPONENT_FIELDS})
+        set(READ_STATE "${READ_STATE_COMPONENT_FIELDS}")
 
-        # Get a list of the elements in this DEF row.
-        string(REPLACE " " ";" DEF_ROW_CONTENTS ${DEF_ROW})
-        #message(STATUS "contents = ${DEF_ROW_CONTENTS}")
-
-
-        #list(LENGTH DEF_ROW_CONTENTS len)
-        #message(STATUS "len = ${len}")
-        # len = 3
-
-        # Get variables to each element.
+        string(REPLACE " " ";" DEF_ROW_CONTENTS "${DEF_ROW}")
 
         list(GET DEF_ROW_CONTENTS 0 ELEM0) # component name
         list(GET DEF_ROW_CONTENTS 1 ELEM1) # component id
         list(GET DEF_ROW_CONTENTS 2 ELEM2) # component version
         #remove leading and trailing spaces
-        string(STRIP ${ELEM0} ELEM0)
-        string(STRIP ${ELEM1} ELEM1)
-        string(STRIP ${ELEM2} ELEM2)
+        string(STRIP "${ELEM0}" ELEM0)
+        string(STRIP "${ELEM1}" ELEM1)
+        string(STRIP "${ELEM2}" ELEM2)
 
-        string(APPEND COMPONENT_DEF_STR "${ELEM0}\n{")
         set(COMPONENT_NAME ${ELEM0})
         set(COMPONENT_ID ${ELEM1})
         set(COMPONENT_VERSION ${ELEM2})
-
-        set(COMPONENT_STATIC_VARS
-"    static constexpr const char* componentName = \"${ELEM0}\";
-    static constexpr ComponentType componentID = ${ELEM1};
-    static constexpr u32 componentVersion = ${ELEM2};\n")
 
     elseif(READ_STATE EQUAL READ_STATE_COMPONENT_FIELDS)
 
@@ -361,9 +363,9 @@ ${COMPONENT_FIELD_NAMES}\n
         list(GET TYPE_AND_NAME 1 ELEM0) # fieldname
 
         #remove leading and trailing spaces
-        string(STRIP ${ELEM0} ELEM0)
-        string(STRIP ${ELEM1} ELEM1)
-        string(STRIP ${ELEM2} ELEM2)
+        string(STRIP "${ELEM0}" ELEM0)
+        string(STRIP "${ELEM1}" ELEM1)
+        string(STRIP "${ELEM2}" ELEM2)
 
         set(COMPONENT_FIELD_ELEMENT_SIZE "sizeof(${ELEM0})")
         if(ELEM0 STREQUAL "int")
@@ -382,12 +384,13 @@ ${COMPONENT_FIELD_NAMES}\n
             set(COMPONENT_FIELD_ELEMENT_SIZE 16)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Vec4Type,")
         endif()
-        #string(APPEND COMPONENT_FIELD_OFFSETS "\n        offsetof(${COMPONENT_NAME}, ${ELEM1}),")
-        #string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n            case ${COMPONENT_FIELD_COUNT}: return (uint8_t*)(this) + offsetof(${COMPONENT_NAME}, ${ELEM1});")
-        string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n            case ${COMPONENT_FIELD_COUNT}: return &${ELEM1};")
+
+        string(APPEND COMPONENT_ELEMENT_GET_FUNC "
+            case ${COMPONENT_FIELD_COUNT}: return &${ELEM1};")
         string(APPEND COMPONENT_FIELD_NAMES "\n        \"${ELEM1}\",")
 
-        string(APPEND COMPONENT_VARS "\n    // Row ${COMPONENT_FIELD_COUNT}, Size ${COMPONENT_FIELD_ELEMENT_SIZE}
+        string(APPEND COMPONENT_VARS "
+    // Row ${COMPONENT_FIELD_COUNT}, Size ${COMPONENT_FIELD_ELEMENT_SIZE}
     ${ELEM0} ${ELEM1} = ${ELEM2};")
 
         # Count up the COMPONENT_FIELD_COUNT, there is probably far better way for adding...
@@ -396,4 +399,3 @@ ${COMPONENT_FIELD_NAMES}\n
     endif()
 endforeach()
 endfunction(PARSE_DEF_FILE)
-#message(STATUS "STR: ${COMPONENT_DEF_STR}")
