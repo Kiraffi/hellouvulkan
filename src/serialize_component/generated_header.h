@@ -9,23 +9,23 @@
 
 #include <vector>
 
-struct Heritaged31
+struct Heritaged1
 {
-    static constexpr const char* componentName = "Heritaged31";
+    static constexpr const char* componentName = "Heritaged1";
     static constexpr ComponentType componentID = ComponentType::HeritagedType;
     static constexpr u32 componentVersion = 1;
     static constexpr u32 componentFieldAmount = 5;
 
     // Row 0, Size 4
-    int TempInt = 10;
+    int tempInt = 10;
     // Row 1, Size 4
-    float TempFloat = 20.0f;
+    float tempFloat = 20.0f;
     // Row 2, Size 8
-    Vector2 TempV2 = {41, 520};
+    Vector2 tempV2 = {41, 520};
     // Row 3, Size 12
-    Vector3 TempV3 = {10, 20, 30};
+    Vector3 tempV3 = {10, 20, 30};
     // Row 4, Size 16
-    Vector4 TempV4 = {7, 8, -30, 10};
+    Vector4 tempV4 = {7, 8, -30, 10};
 
     static constexpr FieldType fieldTypes[] =
     {
@@ -37,11 +37,11 @@ struct Heritaged31
     };
     static constexpr const char* fieldNames[] =
     {
-        "TempInt",
-        "TempFloat",
-        "TempV2",
-        "TempV3",
-        "TempV4",
+        "tempInt",
+        "tempFloat",
+        "tempV2",
+        "tempV3",
+        "tempV4",
     };
 
     bool serialize(WriteJson &json) const
@@ -81,11 +81,11 @@ private:
     {
         switch(index)
         {
-            case 0: return &TempInt;
-            case 1: return &TempFloat;
-            case 2: return &TempV2;
-            case 3: return &TempV3;
-            case 4: return &TempV4;
+            case 0: return &tempInt;
+            case 1: return &tempFloat;
+            case 2: return &tempV2;
+            case 3: return &tempV3;
+            case 4: return &tempV4;
             default: ASSERT_STRING(false, "Unknown index");
         }
         return nullptr;
@@ -95,28 +95,28 @@ private:
     {
         switch(index)
         {
-            case 0: return &TempInt;
-            case 1: return &TempFloat;
-            case 2: return &TempV2;
-            case 3: return &TempV3;
-            case 4: return &TempV4;
+            case 0: return &tempInt;
+            case 1: return &tempFloat;
+            case 2: return &tempV2;
+            case 3: return &tempV3;
+            case 4: return &tempV4;
             default: ASSERT_STRING(false, "Unknown index");
         }
         return nullptr;
     }
 };
 
-struct Heritaged21
+struct Heritaged2
 {
-    static constexpr const char* componentName = "Heritaged21";
+    static constexpr const char* componentName = "Heritaged2";
     static constexpr ComponentType componentID = ComponentType::HeritagedType2;
     static constexpr u32 componentVersion = 1;
     static constexpr u32 componentFieldAmount = 2;
 
     // Row 0, Size 4
-    int TempInt2 = 10;
+    int tempInt2 = 10;
     // Row 1, Size 4
-    float TempFloat2 = 20.0f;
+    float tempFloat2 = 20.0f;
 
     static constexpr FieldType fieldTypes[] =
     {
@@ -125,8 +125,8 @@ struct Heritaged21
     };
     static constexpr const char* fieldNames[] =
     {
-        "TempInt2",
-        "TempFloat2",
+        "tempInt2",
+        "tempFloat2",
     };
 
     bool serialize(WriteJson &json) const
@@ -166,8 +166,8 @@ private:
     {
         switch(index)
         {
-            case 0: return &TempInt2;
-            case 1: return &TempFloat2;
+            case 0: return &tempInt2;
+            case 1: return &tempFloat2;
             default: ASSERT_STRING(false, "Unknown index");
         }
         return nullptr;
@@ -177,8 +177,8 @@ private:
     {
         switch(index)
         {
-            case 0: return &TempInt2;
-            case 1: return &TempFloat2;
+            case 0: return &tempInt2;
+            case 1: return &tempFloat2;
             default: ASSERT_STRING(false, "Unknown index");
         }
         return nullptr;
@@ -193,8 +193,8 @@ struct StaticModelEntity
 
     static constexpr ComponentType componentTypes[] =
     {
-        Heritaged31::componentID,
-        Heritaged21::componentID,
+        Heritaged1::componentID,
+        Heritaged2::componentID,
     };
 
     u32 getComponentIndex(ComponentType componentType) const
@@ -207,16 +207,23 @@ struct StaticModelEntity
         return ~0u;
     }
 
-    bool hasComponent(u32 entityIndex, ComponentType componentType) const
+    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const
     {
-        if(entityIndex >= entityComponents.size())
+        if(handle.entitySystemType != entitySystemID)
             return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
         u64 componentIndex = getComponentIndex(componentType);
 
         if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
             return false;
 
-        return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+        return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
     }
 
     EntitySystemHandle getEntitySystemHandle(u32 index) const
@@ -225,16 +232,19 @@ struct StaticModelEntity
             return EntitySystemHandle();
 
         return EntitySystemHandle {
-            .entitySystemIndex = entitySystemID,
+            .entitySystemType = entitySystemID,
             .entityIndexVersion = entityVersions[index],
             .entityIndex = index };
     }
+
     EntitySystemHandle addEntity()
     {
+        // Some error if no lock
+
         if(freeEntityIndices.size() == 0)
         {
-            Her31Array.emplace_back();
-            Her21Array.emplace_back();
+            her1Array.emplace_back();
+            her2Array.emplace_back();
             entityComponents.emplace_back(0);
             entityVersions.emplace_back(0);
             return getEntitySystemHandle(entityComponents.size() - 1);
@@ -244,46 +254,81 @@ struct StaticModelEntity
             u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
             freeEntityIndices.resize(freeEntityIndices.size() - 1);
             entityComponents[freeIndex] = 0;
-            ++entityVersions[freeIndex];
             return getEntitySystemHandle(freeIndex);
         }
         return EntitySystemHandle();
     }
 
-    bool addHeritaged31Component(u32 entityIndex, const Heritaged31& component)
+    bool removeEntity(EntitySystemHandle handle)
     {
-        if(entityIndex >= entityComponents.size())
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
             return false;
 
-        u64 componentIndex = getComponentIndex(Heritaged31::componentID);
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u32 freeIndex = handle.entityIndex;
+        entityComponents[freeIndex] = 0;
+        ++entityVersions[freeIndex];
+        freeEntityIndices.emplace_back(freeIndex);
+        return true;
+    }
+
+    bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component)
+    {
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
+            return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u64 componentIndex = getComponentIndex(Heritaged1::componentID);
 
         if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
             return false;
 
-        if(hasComponent(entityIndex, Heritaged31::componentID))
+        if(hasComponent(handle, Heritaged1::componentID))
             return false;
 
-        Her31Array[entityIndex] = component;
-        entityComponents[entityIndex] |= u64(1) << componentIndex;
+        her1Array[handle.entityIndex] = component;
+        entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
         return true;
     }
 
-    bool addHeritaged21Component(u32 entityIndex, const Heritaged21& component)
+    bool addHeritaged2Component(EntitySystemHandle handle, const Heritaged2& component)
     {
-        if(entityIndex >= entityComponents.size())
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
             return false;
 
-        u64 componentIndex = getComponentIndex(Heritaged21::componentID);
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u64 componentIndex = getComponentIndex(Heritaged2::componentID);
 
         if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
             return false;
 
-        if(hasComponent(entityIndex, Heritaged21::componentID))
+        if(hasComponent(handle, Heritaged2::componentID))
             return false;
 
-        Her21Array[entityIndex] = component;
-        entityComponents[entityIndex] |= u64(1) << componentIndex;
+        her2Array[handle.entityIndex] = component;
+        entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
         return true;
     }
@@ -304,13 +349,13 @@ struct StaticModelEntity
             json.addObject();
             json.addArray("Components");
 
-            if(hasComponent(i, Heritaged31::componentID))
+            if(hasComponent(getEntitySystemHandle(i), Heritaged1::componentID))
             {
-                Her31Array[i].serialize(json);
+                her1Array[i].serialize(json);
             }
-            if(hasComponent(i, Heritaged21::componentID))
+            if(hasComponent(getEntitySystemHandle(i), Heritaged2::componentID))
             {
-                Her21Array[i].serialize(json);
+                her2Array[i].serialize(json);
             }
             json.endArray();
             json.endObject();
@@ -338,18 +383,18 @@ struct StaticModelEntity
             addEntity();
             for(const auto &obj : entityJson.getChild("Components"))
             {
-                if(Her31Array[addedCount].deserialize(obj))
+                if(her1Array[addedCount].deserialize(obj))
                 {
-                    u64 componentIndex = getComponentIndex(Heritaged31::componentID);
+                    u64 componentIndex = getComponentIndex(Heritaged1::componentID);
                     if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
                         return false;
 
                     entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }
-                if(Her21Array[addedCount].deserialize(obj))
+                if(her2Array[addedCount].deserialize(obj))
                 {
-                    u64 componentIndex = getComponentIndex(Heritaged21::componentID);
+                    u64 componentIndex = getComponentIndex(Heritaged2::componentID);
                     if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
                         return false;
 
@@ -363,8 +408,8 @@ struct StaticModelEntity
     }
 
 private:
-    std::vector<Heritaged31> Her31Array;
-    std::vector<Heritaged21> Her21Array;
+    std::vector<Heritaged1> her1Array;
+    std::vector<Heritaged2> her2Array;
 
     std::vector<u16> entityVersions;
 

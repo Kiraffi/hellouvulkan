@@ -26,7 +26,7 @@ enum class EntityType : u16
 
 struct EntitySystemHandle
 {
-    EntityType entitySystemIndex = EntityType::EntityTypeCount;
+    EntityType entitySystemType = EntityType::EntityTypeCount;
     u16 entityIndexVersion = ~u16(0);
     u32 entityIndex = ~u32(0);
  };

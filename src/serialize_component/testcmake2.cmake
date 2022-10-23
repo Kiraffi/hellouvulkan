@@ -71,16 +71,23 @@ struct ${ENTITY_NAME}
         return ~0u;
     }
 
-    bool hasComponent(u32 entityIndex, ComponentType componentType) const
+    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const
     {
-        if(entityIndex >= entityComponents.size())
+        if(handle.entitySystemType != entitySystemID)
             return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
         u64 componentIndex = getComponentIndex(componentType);
 
         if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
             return false;
 
-        return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+        return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
     }
 
     EntitySystemHandle getEntitySystemHandle(u32 index) const
@@ -89,12 +96,15 @@ struct ${ENTITY_NAME}
             return EntitySystemHandle();
 
         return EntitySystemHandle {
-            .entitySystemIndex = entitySystemID,
+            .entitySystemType = entitySystemID,
             .entityIndexVersion = entityVersions[index],
             .entityIndex = index };
     }
+
     EntitySystemHandle addEntity()
     {
+        // Some error if no lock
+
         if(freeEntityIndices.size() == 0)
         {${ENTITY_ARRAY_PUSHBACKS}
             entityComponents.emplace_back(0);
@@ -106,10 +116,29 @@ struct ${ENTITY_NAME}
             u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
             freeEntityIndices.resize(freeEntityIndices.size() - 1);
             entityComponents[freeIndex] = 0;
-            ++entityVersions[freeIndex];
             return getEntitySystemHandle(freeIndex);
         }
         return EntitySystemHandle();
+    }
+
+    bool removeEntity(EntitySystemHandle handle)
+    {
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
+            return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u32 freeIndex = handle.entityIndex;
+        entityComponents[freeIndex] = 0;
+        ++entityVersions[freeIndex];
+        freeEntityIndices.emplace_back(freeIndex);
+        return true;
     }
 ${ENTITY_ADD_COMPONENT}
     bool serialize(WriteJson &json) const
@@ -215,7 +244,7 @@ private:${ENTITY_ARRAYS_FIELD}
         string(STRIP "${ELEM1}" ELEM1)
 
         string(APPEND ENTITY_WRITE_CONTENTS "
-            if(hasComponent(i, ${ELEM0}::componentID))
+            if(hasComponent(getEntitySystemHandle(i), ${ELEM0}::componentID))
             {
                 ${ELEM1}Array[i].serialize(json);
             }")
@@ -234,9 +263,17 @@ private:${ENTITY_ARRAYS_FIELD}
                 }")
 
         string(APPEND ENTITY_ADD_COMPONENT "
-    bool add${ELEM0}Component(u32 entityIndex, const ${ELEM0}& component)
+    bool add${ELEM0}Component(EntitySystemHandle handle, const ${ELEM0}& component)
     {
-        if(entityIndex >= entityComponents.size())
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
+            return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
             return false;
 
         u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
@@ -244,11 +281,11 @@ private:${ENTITY_ARRAYS_FIELD}
         if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
             return false;
 
-        if(hasComponent(entityIndex, ${ELEM0}::componentID))
+        if(hasComponent(handle, ${ELEM0}::componentID))
             return false;
 
-        ${ELEM1}Array[entityIndex] = component;
-        entityComponents[entityIndex] |= u64(1) << componentIndex;
+        ${ELEM1}Array[handle.entityIndex] = component;
+        entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
         return true;
     }\n")

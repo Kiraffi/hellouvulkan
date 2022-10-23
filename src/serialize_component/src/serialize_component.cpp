@@ -77,16 +77,16 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         {
             // auto lck = testEntity.getModifyLockGuard();
 
-            testEntity.addEntity();
-            testEntity.addEntity();
-            testEntity.addEntity();
-            testEntity.addEntity();
+            EntitySystemHandle handle1 = testEntity.addEntity();
+            EntitySystemHandle handle2 = testEntity.addEntity();
+            EntitySystemHandle handle3 = testEntity.addEntity();
+            EntitySystemHandle handle4 = testEntity.addEntity();
 
-            testEntity.addHeritaged21Component(0, Heritaged21{.TempFloat2 = 234234.40});
-            testEntity.addHeritaged31Component(0, Heritaged31{});
-            testEntity.addHeritaged21Component(1, Heritaged21{});
-            //testEntity.addHeritaged21Component(2, Heritaged21{});
-            testEntity.addHeritaged31Component(3, Heritaged31{.TempFloat = 2304.04f});
+            testEntity.addHeritaged2Component(handle1, Heritaged2{.tempFloat2 = 234234.40});
+            testEntity.addHeritaged1Component(handle1, Heritaged1{});
+            testEntity.addHeritaged2Component(handle2, Heritaged2{.tempInt2 = 1234, .tempFloat2 = 1234});
+            //testEntity.addHeritaged2Component(handle3, Heritaged21{});
+            testEntity.addHeritaged1Component(handle4, Heritaged1{.tempFloat = 2304.04f});
         }
 
         WriteJson writeJson1(1, 1);
@@ -107,9 +107,14 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         {
             // auto lck = testEntity2.getModifyLock();
             testEntity2.deserialize(json);
+            testEntity2.removeEntity(testEntity2.getEntitySystemHandle(1));
+            EntitySystemHandle newHandle = testEntity2.addEntity();
+            testEntity2.addHeritaged2Component(newHandle, Heritaged2{.tempInt2 = 123});
+
             // testEntity2.releaseModifyLock(lck);
         }
-        LOG("has comp: %u\n", testEntity2.hasComponent(0, ComponentType::HeritagedType));
+        LOG("has comp: %u\n", testEntity2.hasComponent(
+            testEntity2.getEntitySystemHandle(1), ComponentType::HeritagedType));
     }
 
     return resized();
