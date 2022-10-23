@@ -9,7 +9,12 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/testcmake2.cmake)
 
-PARSE_DEF_FILE("${CMAKE_CURRENT_LIST_DIR}/test.def" "${CMAKE_CURRENT_LIST_DIR}/generated_header.h")
+set(DEF_FILE "${CMAKE_CURRENT_LIST_DIR}/test.def")
+set(DEF_OUT_FILE "${CMAKE_CURRENT_LIST_DIR}/generated_header.h")
+
+#file(GLOB_RECURSE DEF_FILE CONFIGURE_DEPENDS "*.def")
+#message(STATUS "Def file: ${DEF_FILE}")
+PARSE_DEF_FILE("${DEF_FILE}" "${DEF_OUT_FILE}")
 
 # Add source to this project's executable.
 add_executable (serialize_component
@@ -18,7 +23,7 @@ add_executable (serialize_component
     "src/components.h"
     "src/components.cpp")
 
-add_dependencies(serialize_component shaders)
+add_dependencies(shaders serialize_component)
 
 target_link_libraries(serialize_component PRIVATE
     MyLibraries

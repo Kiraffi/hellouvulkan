@@ -1,4 +1,7 @@
-function(PARSE_DEF_FILE FROM_FILE TO_FILE)
+function(PARSE_DEF_FILE SOURCE_DEF_FILE DES_DEF_FILE)
+
+# https://www.reddit.com/r/cmake/comments/iokem9/force_cmake_rerun_when_file_changes/
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SOURCE_DEF_FILE}")
 
 set(READ_STATE_NONE 0)
 set(READ_STATE_COMPONENT_BEGIN 1)
@@ -19,9 +22,9 @@ set(ENTITY_VERSION 0)
 # Set our reading state to 0, there is probably a lot better way
 set(READ_STATE ${READ_STATE_NONE})
 set(COMPONENT_FIELD_COUNT 0)
-set(FILENAME_TO_MODIFY "${TO_FILE}")
+set(FILENAME_TO_MODIFY "${DES_DEF_FILE}")
 # Read the entire DEF file.
-file(READ "${FROM_FILE}" DEF_CONTENTS)
+file(READ "${SOURCE_DEF_FILE}" DEF_CONTENTS)
 
 # Split the DEF-file by new-lines.
 string(REPLACE "\n" ";" DEF_LIST ${DEF_CONTENTS})

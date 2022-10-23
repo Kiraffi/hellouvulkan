@@ -107,7 +107,7 @@ foreach(SHADER IN LISTS SPV_SHADERS)
         # For example if basic3d.vert has PEERMUTATIONS defined as 4, will create
         ## { basic3d.vert_0.spv, basic3d.vert_1.spv, basic3d.vert_2.spv, basic3d.vert_3.spv }
         # If there is no PERMUTATIONS defined in shader-file then we just make shadername_0.spv
-        compile_shader("${VALUE_OUT}")
+        COMPILE_SHADER("${VALUE_OUT}")
         list(APPEND SPIRV_BINARY_FILES ${SPIRV})
     endwhile()
 endForeach()
