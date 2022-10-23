@@ -8,9 +8,9 @@
 struct Heritaged31
 {
     static constexpr const char* componentName = "Heritaged31";
-    static constexpr unsigned int componentID = DataTypes::HeritagedType;
+    static constexpr unsigned int componentID = ComponentType::HeritagedType;
     static constexpr unsigned int componentVersion = 1;
-    static constexpr unsigned int ComponentFieldAmount = 5;
+    static constexpr unsigned int componentFieldAmount = 5;
 
     // Row 0, Size 4
     int TempInt = 10;
@@ -60,9 +60,9 @@ struct Heritaged31
 struct Heritaged21
 {
     static constexpr const char* componentName = "Heritaged21";
-    static constexpr unsigned int componentID = DataTypes::HeritagedType2;
+    static constexpr unsigned int componentID = ComponentType::HeritagedType2;
     static constexpr unsigned int componentVersion = 1;
-    static constexpr unsigned int ComponentFieldAmount = 2;
+    static constexpr unsigned int componentFieldAmount = 2;
 
     // Row 0, Size 4
     int TempInt2 = 10;
