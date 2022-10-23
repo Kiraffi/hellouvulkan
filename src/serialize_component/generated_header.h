@@ -1,8 +1,12 @@
 #pragma once
 // This is generated file, do not modify.
 
-#include "src/components_macro.h"
+#include "src/components.h"
+
+#include <core/json.h>
+#include <core/writejson.h>
 #include <math/vector3.h>
+
 #include <vector>
 
 struct Heritaged31

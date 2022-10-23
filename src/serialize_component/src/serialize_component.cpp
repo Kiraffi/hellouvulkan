@@ -4,11 +4,13 @@
 #include <container/stringview.h>
 #include <container/vector.h>
 
+#include <core/json.h>
 #include <core/general.h>
 #include <core/glfw_keys.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
 #include <core/vulkan_app.h>
+#include <core/writejson.h>
 
 #include <math/general_math.h>
 #include <math/matrix.h>
@@ -20,6 +22,8 @@
 #include <myvulkan/vulkanresources.h>
 
 #include "components.h"
+
+#include "../generated_header.h"
 
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
@@ -159,113 +163,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
         LOG("has comp: %u\n", testEntity2.hasComponent(0, ComponentType::HeritagedType));
     }
-#if 0
 
-    //SerializableClassBase base;
-    Heritaged her;
-    //LOG("Filenumber base: %i\n", base.getFileMagicNumber());
-    LOG("Filenumber heritaged: %i\n", her.getFileMagicNumber());
-    //LOG("base: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", base.getClassMagicNumber(), base.getObjMagicNumber(), base.getClassVersion(), base.getObjVersion());
-    LOG("heritaged: class magic: %i, obj magic: %i, class version: %i, obj ver: %i\n", her.getStaticClassMagicNumber(), her.getBase().getObjMagicNumber(), her.getStaticClassVersion(), her.getBase().getObjVersion());
-
-    //printClass(base, "Base");
-    printClass(her.getBase(), "Heritaged");
-
-    LOG("TempInt value: %i, TempFloat value: %f\n", her.getTempInt(), her.getTempFloat());
-    LOG("TempInt name: %s TempFloat name: %s\n", her.getTempIntString(), her.getTempFloatString());
-
-    her.setTempInt(50935);
-    her.setTempFloat(1023.40f);
-    LOG("TempInt value: %i, TempFloat value: %f\n", her.getTempInt(), her.getTempFloat());
-    LOG("TempInt index: %i, TempFloat index: %i\n", her.getTempIntIndex(), her.getTempFloatIndex());
-
-    float *floatMemory = nullptr;
-    int *intMemory = nullptr;
-    FieldType type = FieldType::NumTypes;
-
-    if(her.getMemoryPtr("TempInt", (void **)&intMemory, type))
-    {
-        LOG("add: %p, type: %i\n", intMemory, i32(type));
-        LOG("Int is: %i\n", *intMemory);
-    }
-    if(her.getMemoryPtr("TempFloat", (void **) &floatMemory, i32(type)))
-    {
-        LOG("add: %p, type: %i\n", floatMemory, i32(type));
-        LOG("Float is: %f\n", *floatMemory);
-    }
-
-    WriteJson writeJson1(2, 2);
-    writeJson1.addArray("Components");
-    {
-        her.serialize(writeJson1);
-    }
-    {
-        int tempValue = 234;
-        Heritaged2 her2;
-        her2.setTempInt2(1000);
-        her2.setTempFloat2(40.0f);
-        her2.serialize(writeJson1);
-
-
-        her2.setValue("TempInt2", &tempValue, sizeof(int));
-        LOG("After set value TempInt2 should be 234\n");
-        her2.serialize(writeJson1);
-    }
-    {
-        Heritaged3 her3;
-        her3.serialize(writeJson1);
-    }
-    writeJson1.endArray();
-    writeJson1.finishWrite();
-
-    {
-        JsonBlock json;
-        const String &strJson = writeJson1.getString();
-        bool parseSuccess = json.parseJson(StringView(strJson.data(), strJson.size()));
-
-        if(!parseSuccess)
-        {
-            printf("Failed to parse writeJson1\n");
-            return false;
-        }
-
-        if(!json.isObject() || json.getChildCount() < 1)
-            return false;
-
-        if(!json.getChild("magicNumber").equals(2))
-            return false;
-
-        for(const auto &obj : json.getChild("Components"))
-        {
-            if(Heritaged::isJsonType(obj))
-            {
-                LOG("Type is Heritaged!\n");
-                Heritaged newHer;
-                newHer.deSerialize(obj);
-                newHer.print();
-                LOG("\n");
-            }
-            else if(Heritaged2::isJsonType(obj))
-            {
-                LOG("Type is Heritaged2!\n");
-                Heritaged2 newHer;
-                newHer.deSerialize(obj);
-                newHer.print();
-                LOG("\n");
-            }
-            else if(Heritaged3::isJsonType(obj))
-            {
-                LOG("Type is Heritaged3!\n");
-                Heritaged3 newHer;
-                newHer.deSerialize(obj);
-                newHer.print();
-                LOG("\n");
-            }
-        }
-
-    }
-
-#endif
     return resized();
 }
 

@@ -31,8 +31,12 @@ file(WRITE ${FILENAME_TO_MODIFY}
 "#pragma once
 // This is generated file, do not modify.
 
-#include \"src/components_macro.h\"
+#include \"src/components.h\"
+
+#include <core/json.h>
+#include <core/writejson.h>
 #include <math/vector3.h>
+
 #include <vector>\n")
 
 # Loop through each line in the DEF file.

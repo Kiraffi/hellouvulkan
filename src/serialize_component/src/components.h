@@ -1,83 +1,58 @@
-#ifndef COMPONENTS_INCLUDE_FILE_H
-#define COMPONENTS_INCLUDE_FILE_H
+#pragma once
 
-#include "components_macro.h"
-#include "../generated_header.h"
+#include <core/mytypes.h>
 
-/*
-SER_DATA_BEGIN(Heritaged, ComponentType::HeritagedType, 1)
-    INT_FIELD(TempInt, 10)
-    FLOAT_FIELD(TempFloat, 20.0f)
-    VEC2_FIELD(TempV2, 41, 520)
-    VEC3_FIELD(TempV3, 10, 20, 30)
-    VEC4_FIELD(TempV4, 7, 8, -30, 10)
-SER_DATA_END(Heritaged)
+struct JsonBlock;
+struct WriteJson;
 
-
-SER_DATA_BEGIN(Heritaged2, ComponentType::HeritagedType2, 1)
-    INT_FIELD(TempInt2, 10)
-    FLOAT_FIELD(TempFloat2, 20.0f)
-SER_DATA_END(Heritaged2)
-
-
-SER_DATA_BEGIN(Heritaged3, ComponentType::HeritagedType3, 1)
-    INT_FIELD(TempInt3, 10)
-    INT_FIELD(TempInt4, 20)
-    FLOAT_FIELD(TempFloat3, 20.0f)
-SER_DATA_END(Heritaged3)
-*/
-
-/*
-class EntityTypeSystem
+// Never delete any value, only add to this...
+// Might be bit bad if multiple people were to modify at the same time
+// or at least possibly cause problems.
+enum class ComponentType : u32
 {
-public:
-    static constexpr const* entityTypeName = "EntityName";
-    static constexpr unsigned int entityTypeID = EntityType::EntityTypeId;
+    HeritagedType = 1,
+    HeritagedType2,
+    HeritagedType3,
 
-    struct EntityNameTypeEntityHandle { int index; int iterationNumber; }
-    bool serialize();
-    bool deserialize();
+    ComponentTypeCount
+};
 
-    bool getHandleForIndex(int index, EntityNameTypeEntityHandle &outHandle) const;
+enum class EntityType : u16
+{
+    StaticModelEntityType = 1,
 
-    // Check that the accessor only has either read or write, cannot have both, and
-    // definitely no adding...
-    const std::Vector<Type>& getTypeVectorRead() const;
+    EntityTypeCount
+};
 
-    // Only one writer, no readers until sync point.
-    PodVector<Type>& getTypeVectorWrite();
+struct EntitySystemHandle
+{
+    EntityType entitySystemIndex = EntityType::EntityTypeCount;
+    u16 entityIndexVersion = ~u16(0);
+    u32 entityIndex = ~u32(0);
+ };
 
-    const PodVector<u8>& getEntityStateVector() const;
+enum class FieldType
+{
+    IntType,
+    FloatType,
 
-    // Check accessors... cannot have read nor write accessors at all or even getActive...
-    // Needs some locking mechanism...
-    bool startAddingEntities();
-    EntityNameTypeEntityHandle addEntity();
-    bool endAddingEntities();
+    Vec2Type,
+    Vec3Type,
+    Vec4Type,
 
-    // Making entity inactive should be fine.
-    bool removeEntity(unsigned int index);
+    NumTypes
+};
 
-    // Called on sync points.
-    void resetAccessors();
+bool serializeField(WriteJson &writeJson,
+    const char* const fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType fieldType);
 
-private:
-    PodVector<u64> activeComponents;
-    PodVector<Type> ;
-    PodVector<Type2>;
+bool deserializeField(const JsonBlock &json,
+    const char* const fieldName,
+    void* fieldMemoryAddress,
+    FieldType fieldType);
 
-    std::atomic<u32> accessorsForType1; // some bits, read, write
-    std::atomic<u32> accessorsForType2; // some bits, read, write
-
-
-    std::atomic<u32> accessorAddActive; // accessors for adding or getEntityStateVector being called.
-
-    // These probably need mutexes especially when adding entities....
-    PodVector<u16> entityVersions; // what versionNumber is each entity at?
-    PodVector<u32> unusedEntities; // Where is a free slot at? Could be bad idea, maybe scanning is better?
-                                   // thinking about multithreading, this would require lock, where as scanning
-                                   // would just work, although it might be expensive to scan to find holes.
-                                   // These adds would still probably be deferred to some place... have to think
-}
-*/
-#endif
+void printFieldValue(const char* fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType field);
