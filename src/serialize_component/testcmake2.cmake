@@ -1,7 +1,7 @@
-function(PARSE_DEF_FILE SOURCE_DEF_FILE DES_DEF_FILE)
+#function(PARSE_DEF_FILE SOURCE_DEF_FILE DES_DEF_FILE)
 
 # https://www.reddit.com/r/cmake/comments/iokem9/force_cmake_rerun_when_file_changes/
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SOURCE_DEF_FILE}")
+# set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SOURCE_DEF_FILE}")
 
 set(READ_STATE_NONE 0)
 set(READ_STATE_COMPONENT_BEGIN 1)
@@ -442,4 +442,4 @@ private:
 
     endif()
 endforeach()
-endfunction(PARSE_DEF_FILE)
+#endfunction(PARSE_DEF_FILE)
