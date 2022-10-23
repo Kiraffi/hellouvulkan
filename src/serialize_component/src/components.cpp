@@ -268,7 +268,7 @@ CLASS_NAME::HelperStruct CLASS_NAME::getFieldInfos() const \
     return CLASS_NAME::HelperStruct { \
         .arr = {
 
-#define SER_DATA_END() \
+#define SER_DATA_END(CLASS_NAME) \
         } \
     }; \
 }

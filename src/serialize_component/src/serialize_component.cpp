@@ -49,7 +49,16 @@ private:
 
 */
 
+struct SceneEntity
+{
+    int componentBits;
 
+};
+
+struct SceneEntityIter
+{
+
+};
 
 
 class SerializeComponent : public VulkanApp
@@ -116,6 +125,13 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
+
+        {
+            static constexpr size_t offset = offsetof(Heritaged31, TempInt);
+            Heritaged31 her31;
+            LOG("Her31 comps: %u\n", her31.componentFieldAmount);
+            LOG("Her31 comp0: %i\n", *(int *)her31.getElementIndex(0));
+        }
     //SerializableClassBase base;
     Heritaged her;
     //LOG("Filenumber base: %i\n", base.getFileMagicNumber());

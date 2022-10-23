@@ -3,6 +3,26 @@
 #include <core/json.h>
 #include <core/writejson.h>
 
+// Never delete any value, only add to this...
+// Might be bit bad if multiple people were to modify at the same time or at least possibly cause problems.
+enum ComponentType
+{
+    HeritagedType,
+    HeritagedType2,
+    HeritagedType3,
+
+
+    ComponentTypeCount
+};
+
+enum EntityType
+{
+    StaticModelEntityType,
+
+
+    EntityTypeCount
+};
+
 enum FieldType
 {
     IntType,
@@ -109,16 +129,16 @@ private: \
 \
     //SerializableClassBase serObjBase;
 
-#define SER_DATA_END() \
+#define SER_DATA_END(CLASS_NAME) \
 private: \
-    static constexpr int getEndParameterRow() { return __LINE__; } \
-    static constexpr int getFieldCount() { return __LINE__ - 1 - startParameterRow; } \
+    static constexpr const int getEndParameterRow() { return __LINE__; } \
+    static const int getFieldCount() { return __LINE__ - 1 - CLASS_NAME::getStartParameterRow(); } \
     /* static constexpr int endParameterRow = __LINE__; */ \
     static constexpr int fieldCount = __LINE__ - 1 - startParameterRow; \
     \
     struct HelperStruct \
     { \
-        FieldInfo arr[fieldCount]; \
+        FieldInfo arr[ fieldCount ]; \
     }; \
 };
 
