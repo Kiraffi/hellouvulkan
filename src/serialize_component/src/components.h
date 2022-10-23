@@ -20,6 +20,7 @@ enum class ComponentType : u32
 enum class EntityType : u16
 {
     StaticModelEntityType = 1,
+    OtherTestEntityType,
 
     EntityTypeCount
 };

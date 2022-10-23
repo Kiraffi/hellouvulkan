@@ -421,3 +421,197 @@ private:
 
     static_assert(sizeof(componentTypes) / sizeof(ComponentType) < 64, "Only 64 components are allowed for entity!");
 };
+
+struct OtherTestEntity
+{
+    static constexpr const char* entitySystemName = "OtherTestEntity";
+    static constexpr EntityType entitySystemID = EntityType::OtherTestEntityType;
+    static constexpr u32 entityVersion = 1;
+
+    static constexpr ComponentType componentTypes[] =
+    {
+        Heritaged1::componentID,
+    };
+
+    u32 getComponentIndex(ComponentType componentType) const
+    {
+        for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
+        {
+            if(componentType == componentTypes[i])
+                return i;
+        }
+        return ~0u;
+    }
+
+    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const
+    {
+        if(handle.entitySystemType != entitySystemID)
+            return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u64 componentIndex = getComponentIndex(componentType);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
+    }
+
+    EntitySystemHandle getEntitySystemHandle(u32 index) const
+    {
+        if(index >= entityComponents.size())
+            return EntitySystemHandle();
+
+        return EntitySystemHandle {
+            .entitySystemType = entitySystemID,
+            .entityIndexVersion = entityVersions[index],
+            .entityIndex = index };
+    }
+
+    EntitySystemHandle addEntity()
+    {
+        // Some error if no lock
+
+        if(freeEntityIndices.size() == 0)
+        {
+            her1Array.emplace_back();
+            entityComponents.emplace_back(0);
+            entityVersions.emplace_back(0);
+            return getEntitySystemHandle(entityComponents.size() - 1);
+        }
+        else
+        {
+            u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
+            freeEntityIndices.resize(freeEntityIndices.size() - 1);
+            entityComponents[freeIndex] = 0;
+            return getEntitySystemHandle(freeIndex);
+        }
+        return EntitySystemHandle();
+    }
+
+    bool removeEntity(EntitySystemHandle handle)
+    {
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
+            return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u32 freeIndex = handle.entityIndex;
+        entityComponents[freeIndex] = 0;
+        ++entityVersions[freeIndex];
+        freeEntityIndices.emplace_back(freeIndex);
+        return true;
+    }
+
+    bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component)
+    {
+        // Some error if no lock
+
+        if(handle.entitySystemType != entitySystemID)
+            return false;
+
+        if(handle.entityIndex >= entityComponents.size())
+            return false;
+
+        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+            return false;
+
+        u64 componentIndex = getComponentIndex(Heritaged1::componentID);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        if(hasComponent(handle, Heritaged1::componentID))
+            return false;
+
+        her1Array[handle.entityIndex] = component;
+        entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
+
+        return true;
+    }
+
+    bool serialize(WriteJson &json) const
+    {
+        u32 entityAmount = entityComponents.size();
+        if(entityAmount == 0)
+            return false;
+
+        json.addObject(entitySystemName);
+        json.addString("EntityType", entitySystemName);
+        json.addInteger("EntityTypeId", u32(entitySystemID));
+        json.addInteger("EntityVersion", entityVersion);
+        json.addArray("Entities");
+        for(u32 i = 0; i < entityAmount; ++i)
+        {
+            json.addObject();
+            json.addArray("Components");
+
+            if(hasComponent(getEntitySystemHandle(i), Heritaged1::componentID))
+            {
+                her1Array[i].serialize(json);
+            }
+            json.endArray();
+            json.endObject();
+        }
+        json.endArray();
+        json.endObject();
+        return json.isValid();
+    }
+
+    bool deserialize(const JsonBlock &json)
+    {
+        if(!json.isObject() || json.getChildCount() < 1)
+            return false;
+
+        const JsonBlock& child = json.getChild(entitySystemName);
+        if(!child.isValid())
+            return false;
+
+        if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
+            return false;
+
+        u32 addedCount = 0u;
+        for(const auto &entityJson : child.getChild("Entities"))
+        {
+            addEntity();
+            for(const auto &obj : entityJson.getChild("Components"))
+            {
+                if(her1Array[addedCount].deserialize(obj))
+                {
+                    u64 componentIndex = getComponentIndex(Heritaged1::componentID);
+                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                        return false;
+
+                    entityComponents[addedCount] |= u64(1) << componentIndex;
+                    continue;
+                }
+            }
+            addedCount++;
+        }
+        return true;
+    }
+
+private:
+    std::vector<Heritaged1> her1Array;
+
+    std::vector<u16> entityVersions;
+
+    // This might be problematic if component is activated/deactived in middle of a frame
+    std::vector<u64> entityComponents;
+
+    // Need to think how this adding should work, because it would need to have mutex and all.
+    std::vector<u32> freeEntityIndices;
+
+    static_assert(sizeof(componentTypes) / sizeof(ComponentType) < 64, "Only 64 components are allowed for entity!");
+};

@@ -19,3 +19,10 @@ StaticModelEntity EntityType::StaticModelEntityType 1
     her1 ? Heritaged1
     her2 ? Heritaged2
 EntityTypeEnd
+
+EntityTypeBegin
+OtherTestEntity EntityType::OtherTestEntityType 1
+    her1 ? Heritaged1
+EntityTypeEnd
+
+

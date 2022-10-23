@@ -113,8 +113,15 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
             // testEntity2.releaseModifyLock(lck);
         }
+
+        OtherTestEntity otherEntity;
+        EntitySystemHandle otherHandle = otherEntity.addEntity();
+        {
+            otherEntity.addHeritaged1Component(otherHandle, Heritaged1{.tempV2{97,23}});
+        }
         LOG("has comp: %u\n", testEntity2.hasComponent(
             testEntity2.getEntitySystemHandle(1), ComponentType::HeritagedType));
+
     }
 
     return resized();
