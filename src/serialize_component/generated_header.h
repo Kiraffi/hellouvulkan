@@ -1,9 +1,9 @@
 #pragma once
-
 // This is generated file, do not modify.
 
 #include "src/components_macro.h"
 #include <math/vector3.h>
+#include <vector>
 
 struct Heritaged31
 {
@@ -41,7 +41,7 @@ struct Heritaged31
         "TempV4",
     };
 
-    void* getElementIndex(unsigned int index)
+    void* getElementIndexRef(unsigned int index)
     {
         switch(index)
         {
@@ -54,6 +54,52 @@ struct Heritaged31
             default: ASSERT_STRING(false, "Unknown index");
         }
         return nullptr;
+    }
+
+    const void* getElementIndex(unsigned int index) const
+    {
+        switch(index)
+        {
+            case 0: return &TempInt;
+            case 1: return &TempFloat;
+            case 2: return &TempV2;
+            case 3: return &TempV3;
+            case 4: return &TempV4;
+
+            default: ASSERT_STRING(false, "Unknown index");
+        }
+        return nullptr;
+    }
+
+    bool serialize(WriteJson &json) const
+    {
+        json.addObject();
+        json.addString("ComponentType", componentName);
+        json.addInteger("ComponentTypeId", componentID);
+        json.addInteger("ComponentVersion", componentVersion);
+
+        for(int i = 0; i < componentFieldAmount; ++i)
+        {
+            if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
+                return false;
+        }
+        return json.isValid();
+    }
+
+    bool deserialize(const JsonBlock &json)
+    {
+        if(!json.isObject() || !json.isValid())
+            return false;
+
+        if(!json.getChild("ComponentType").equals(componentName))
+            return false;
+        if(!json.getChild("ComponentTypeId").equals(componentID))
+            return false;
+        for(unsigned int i = 0; i < componentFieldAmount; ++i)
+        {
+            deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
+        }
+        return true;
     }
 };
 
@@ -81,7 +127,7 @@ struct Heritaged21
         "TempFloat2",
     };
 
-    void* getElementIndex(unsigned int index)
+    void* getElementIndexRef(unsigned int index)
     {
         switch(index)
         {
@@ -92,4 +138,89 @@ struct Heritaged21
         }
         return nullptr;
     }
+
+    const void* getElementIndex(unsigned int index) const
+    {
+        switch(index)
+        {
+            case 0: return &TempInt2;
+            case 1: return &TempFloat2;
+
+            default: ASSERT_STRING(false, "Unknown index");
+        }
+        return nullptr;
+    }
+
+    bool serialize(WriteJson &json) const
+    {
+        json.addObject();
+        json.addString("ComponentType", componentName);
+        json.addInteger("ComponentTypeId", componentID);
+        json.addInteger("ComponentVersion", componentVersion);
+
+        for(int i = 0; i < componentFieldAmount; ++i)
+        {
+            if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
+                return false;
+        }
+        return json.isValid();
+    }
+
+    bool deserialize(const JsonBlock &json)
+    {
+        if(!json.isObject() || !json.isValid())
+            return false;
+
+        if(!json.getChild("ComponentType").equals(componentName))
+            return false;
+        if(!json.getChild("ComponentTypeId").equals(componentID))
+            return false;
+        for(unsigned int i = 0; i < componentFieldAmount; ++i)
+        {
+            deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
+        }
+        return true;
+    }
+};
+
+
+struct StaticModelEntity
+{
+    static constexpr const char* entityName = "StaticModelEntity";
+    static constexpr unsigned int entityID = EntityType::StaticModelEntityType;
+    static constexpr unsigned int entityVersion = 1;
+    bool serialize() const
+    {
+        return true;
+    }
+    bool deserialize(const JsonBlock &json)
+    {
+        if(!json.isObject() || json.getChildCount() < 1)
+            return false;
+
+        unsigned int addedCount = 0u;
+        for(const JsonBlock& child : json)
+        {
+            if(!child.getChild("EntityID").equals(entityID) || !child.getChild("EntityType").equals(entityName))
+                return false;
+
+            for(auto const &obj : child.getChild("Components"))
+            {
+                if(Her31Array[addedCount].deserialize(obj))
+                {
+                    continue;
+                }
+                if(Her21Array[addedCount].deserialize(obj))
+                {
+                    continue;
+                }
+            }
+        }
+        addedCount++;
+        return true;
+    }
+private:
+    std::vector<Heritaged31> Her31Array;
+    std::vector<Heritaged21> Her21Array;
+    std::vector<u64> entityComponents;
 };

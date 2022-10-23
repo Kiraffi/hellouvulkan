@@ -1,21 +1,21 @@
 ComponentBegin
 Heritaged31 ComponentType::HeritagedType 1
-    TempInt : int = 10
-    TempFloat : float = 20.0f
-    TempV2 : Vector2 = {41, 520}
-    TempV3 : Vector3 = {10, 20, 30}
-    TempV4 : Vector4 = {7, 8, -30, 10}
+    TempInt ? int = 10
+    TempFloat ? float = 20.0f
+    TempV2 ? Vector2 = {41, 520}
+    TempV3 ? Vector3 = {10, 20, 30}
+    TempV4 ? Vector4 = {7, 8, -30, 10}
 ComponentEnd
 
 
 ComponentBegin
 Heritaged21 ComponentType::HeritagedType2 1
-    TempInt2 : int = 10
-    TempFloat2 : float = 20.0f
+    TempInt2 ? int = 10
+    TempFloat2 ? float = 20.0f
 ComponentEnd
 
 EntityTypeBegin
-StaticModelEntity EntityType::StaticModelEntityType
-    Heritaged31
-    Heritaged21
+StaticModelEntity EntityType::StaticModelEntityType 1
+    Her31 ? Heritaged31
+    Her21 ? Heritaged21
 EntityTypeEnd

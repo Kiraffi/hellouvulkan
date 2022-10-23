@@ -9,6 +9,8 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/testcmake2.cmake)
 
+PARSE_DEF_FILE("${CMAKE_CURRENT_LIST_DIR}/test.def" "${CMAKE_CURRENT_LIST_DIR}/generated_header.h")
+
 # Add source to this project's executable.
 add_executable (serialize_component "src/serialize_component.cpp" "src/components_macro.h" "src/components.h" "src/components.cpp")
 
