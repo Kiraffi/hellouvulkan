@@ -352,9 +352,9 @@ static bool parseValue(const StringView &buffer, JSONMarker &marker, JsonBlock &
         inOutBlock.children.emplace_back(JsonBlock());
         res = &inOutBlock.children.back();
     }
-
+    // Accept empty arrays
     if(!skipWhiteSpace(buffer, marker))
-        return false;
+        return isArray;
 
     char cc = buffer [index];
     if(isNumOrMinus(cc))
