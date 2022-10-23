@@ -219,7 +219,7 @@ static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_
         return false;
 
     uint32_t i = 0;
-    for(auto const &obj : json.getChild("sounds"))
+    for(const auto &obj : json.getChild("sounds"))
     {
         auto &note = notes[i++];
         bool isValid = true;

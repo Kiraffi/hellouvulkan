@@ -270,7 +270,7 @@ bool Scene::readLevel(const char *levelName)
 
     PodVector<AnimationState> newAnimationStates;
     PodVector<GameEntity> newEntities;
-    for(auto const &obj : json.getChild("objects"))
+    for(const auto &obj : json.getChild("objects"))
     {
         GameEntity ent;
         if(!loadGameObject(obj, ent))
