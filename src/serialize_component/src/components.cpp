@@ -16,6 +16,111 @@ static std::unordered_set<uint32_t> AllDataTypes;
 static void printFieldValue(const char* fieldName, void *value, FieldType field);
 static bool writeFieldInfo(const FieldInfo &info, WriteJson &writeJson);
 
+
+
+bool serializeField(WriteJson &writeJson,
+    const char* const fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType fieldType)
+{
+    if(!writeJson.isValid() || fieldMemoryAddress == nullptr || fieldName == nullptr)
+        return false;
+
+    switch(fieldType)
+    {
+        case FieldType::IntType:
+        {
+            int i = *((int*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::FloatType:
+        {
+            float f = *((float*)fieldMemoryAddress);
+            writeJson.addNumber(fieldName, f);
+            break;
+        }
+        case FieldType::Vec2Type:
+        {
+            const Vector2 &v = *((Vector2*)fieldMemoryAddress);
+            writeJson.writeVec2(fieldName, v);
+            break;
+        }
+        case FieldType::Vec3Type:
+        {
+            const Vector3 &v = *((Vector3*)fieldMemoryAddress);
+            writeJson.writeVec3(fieldName, v);
+            break;
+        }
+        case FieldType::Vec4Type:
+        {
+            const Vector4 &v = *((Vector4*)fieldMemoryAddress);
+            writeJson.writeVec4(fieldName, v);
+            break;
+        }
+
+        default:
+        {
+            ASSERT_STRING(false, "Unknown field type!");
+        }
+    }
+
+    return writeJson.isValid();
+
+}
+
+bool deserializeField(const JsonBlock &json,
+    const char* const fieldName,
+    void* fieldMemoryAddress,
+    FieldType fieldType)
+{
+    switch(fieldType)
+    {
+        case FieldType::IntType:
+        {
+            int &i = *((int*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseInt(i))
+                return false;
+            break;
+        }
+        case FieldType::FloatType:
+        {
+            float &f = *((float*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseFloat(f))
+                return false;
+            break;
+        }
+        case FieldType::Vec2Type:
+        {
+            Vector2 &v = *((Vector2*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseVec2(v))
+                return false;
+            break;
+        }
+        case FieldType::Vec3Type:
+        {
+            Vector3 &v = *((Vector3*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseVec3(v))
+                return false;
+            break;
+        }
+        case FieldType::Vec4Type:
+        {
+            Vector4 &v = *((Vector4*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseVec4(v))
+                return false;
+            break;
+        }
+
+        default:
+        {
+            ASSERT_STRING(false, "Unknown field type!");
+        }
+    }
+    return true;
+}
+
+
 static bool parseFieldInfo(const FieldInfo &info, const JsonBlock &json)
 {
     switch(info.type)
@@ -73,46 +178,7 @@ static bool writeFieldInfo(const FieldInfo &info, WriteJson &writeJson)
 
     //LOG("Field: %s, index: %i, type: %i, ", info.fieldName, info.fieldIndex, info.type);
     printFieldValue(info.fieldName, info.fieldMemoryAddress, info.type); \
-    switch(info.type)
-    {
-        case FieldType::IntType:
-        {
-            int i = *((int*)info.fieldMemoryAddress);
-            writeJson.addInteger(info.fieldName, i);
-            break;
-        }
-        case FieldType::FloatType:
-        {
-            float f = *((float*)info.fieldMemoryAddress);
-            writeJson.addNumber(info.fieldName, f);
-            break;
-        }
-        case FieldType::Vec2Type:
-        {
-            const Vector2 &v = *((Vector2*)info.fieldMemoryAddress);
-            writeJson.writeVec2(info.fieldName, v);
-            break;
-        }
-        case FieldType::Vec3Type:
-        {
-            const Vector3 &v = *((Vector3*)info.fieldMemoryAddress);
-            writeJson.writeVec3(info.fieldName, v);
-            break;
-        }
-        case FieldType::Vec4Type:
-        {
-            const Vector4 &v = *((Vector4*)info.fieldMemoryAddress);
-            writeJson.writeVec4(info.fieldName, v);
-            break;
-        }
-
-        default:
-        {
-            ASSERT_STRING(false, "Unknown field type!");
-        }
-    }
-
-    return writeJson.isValid();
+    return serializeField(writeJson, info.fieldName, info.fieldMemoryAddress, info.type);
 }
 
 

@@ -37,6 +37,18 @@ enum FieldType
 };
 
 
+bool serializeField(WriteJson &writeJson,
+    const char* const fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType fieldType);
+
+bool deserializeField(const JsonBlock &json,
+    const char* const fieldName,
+    void* fieldMemoryAddress,
+    FieldType fieldType);
+
+
+
 struct FieldInfo
 {
     const char* fieldName;
