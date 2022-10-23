@@ -57,17 +57,20 @@ struct Heritaged2
     static constexpr const char* componentName = "Heritaged2";
     static constexpr ComponentType componentID = ComponentType::HeritagedType2;
     static constexpr u32 componentVersion = 1;
-    static constexpr u32 componentFieldAmount = 3;
+    static constexpr u32 componentFieldAmount = 4;
 
     // Row 0, Size 4
     int tempInt = 98756;
     // Row 1, Size 4
     int tempInt2 = 10;
     // Row 2, Size 4
+    int tempInt3 = 10;
+    // Row 3, Size 4
     float tempFloat2 = 20.0f;
 
     static constexpr FieldType fieldTypes[] =
     {
+        FieldType::IntType,
         FieldType::IntType,
         FieldType::IntType,
         FieldType::FloatType,
@@ -76,6 +79,7 @@ struct Heritaged2
     {
         "tempInt",
         "tempInt2",
+        "tempInt3",
         "tempFloat2",
     };
 
@@ -106,10 +110,10 @@ struct StaticModelEntity
     EntitySystemHandle addEntity();
     bool removeEntity(EntitySystemHandle handle);
 
-    const Heritaged1* gether1ReadArray() const;
-    Heritaged1* gether1WriteArray();
-    const Heritaged2* gether2ReadArray() const;
-    Heritaged2* gether2WriteArray();
+    const Heritaged1* getHeritaged1ReadArray() const;
+    Heritaged1* getHeritaged1WriteArray();
+    const Heritaged2* getHeritaged2ReadArray() const;
+    Heritaged2* getHeritaged2WriteArray();
 
     bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component);
     bool addHeritaged2Component(EntitySystemHandle handle, const Heritaged2& component);
@@ -118,8 +122,8 @@ struct StaticModelEntity
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
 
 private:
-    std::vector<Heritaged1> her1Array;
-    std::vector<Heritaged2> her2Array;
+    std::vector<Heritaged1> Heritaged1Array;
+    std::vector<Heritaged2> Heritaged2Array;
 
     std::vector<u16> entityVersions;
 
@@ -150,8 +154,8 @@ struct OtherTestEntity
     EntitySystemHandle addEntity();
     bool removeEntity(EntitySystemHandle handle);
 
-    const Heritaged1* gether1ReadArray() const;
-    Heritaged1* gether1WriteArray();
+    const Heritaged1* getHeritaged1ReadArray() const;
+    Heritaged1* getHeritaged1WriteArray();
 
     bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component);
     bool serialize(WriteJson &json) const;
@@ -159,7 +163,7 @@ struct OtherTestEntity
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
 
 private:
-    std::vector<Heritaged1> her1Array;
+    std::vector<Heritaged1> Heritaged1Array;
 
     std::vector<u16> entityVersions;
 

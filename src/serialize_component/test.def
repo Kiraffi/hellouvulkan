@@ -10,20 +10,23 @@ ComponentEnd
 
 ComponentBegin
 Heritaged2 ComponentType::HeritagedType2 1
+
     tempInt ? int = 98756
     tempInt2 ? int = 10
+    tempInt3 ? int = 10
+
     tempFloat2 ? float = 20.0f
 ComponentEnd
 
 EntityTypeBegin
 StaticModelEntity EntityType::StaticModelEntityType 1
-    her1 ? Heritaged1
-    her2 ? Heritaged2
+    Heritaged1
+    Heritaged2
 EntityTypeEnd
 
 EntityTypeBegin
 OtherTestEntity EntityType::OtherTestEntityType 1
-    her1 ? Heritaged1
+    Heritaged1
 EntityTypeEnd
 
 

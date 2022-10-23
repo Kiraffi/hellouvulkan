@@ -92,22 +92,26 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         }
 
         {
-            auto ptr = testEntity.gether1ReadArray();
+            auto ptr = testEntity.getHeritaged1ReadArray();
             u32 entityCount = testEntity.getEntityCount();
             for(u32 i = 0; i < entityCount; ++i)
             {
-                LOG("%u: Heri1.tempInt:%i, Heri1.tempFloat:%f\n", i, ptr->tempInt, ptr->tempFloat);
+                LOG("%u: %s.tempInt:%i, %s.tempFloat:%f\n", i, ptr->componentName, ptr->tempInt,
+                    ptr->componentName, ptr->tempFloat);
                 //ptr->tempInt += 1;
                 ++ptr;
             }
 
-            auto ptrRef = testEntity.gether2WriteArray();
+            auto ptrRef = testEntity.getHeritaged2WriteArray();
             for(u32 i = 0; i < entityCount; ++i)
             {
                 ptrRef->tempInt += 239 + i;
                 ptrRef->tempInt2 += 1;
                 ptrRef->tempFloat2 += 0.5f;
-                LOG("REF%u: Heri2.tempInt:%i, Heri2.tempInt2:%i, Heri2.tempFloat2:%f\n", i, ptrRef->tempInt, ptrRef->tempInt2, ptrRef->tempFloat2);
+                LOG("REF%u: %s.tempInt:%i, %s.tempInt2:%i, %s.tempFloat2:%f\n", i,
+                    ptrRef->componentName, ptrRef->tempInt,
+                    ptrRef->componentName, ptrRef->tempInt2,
+                    ptrRef->componentName, ptrRef->tempFloat2);
                 ++ptrRef;
             }
         }

@@ -272,8 +272,11 @@ private:${ENTITY_ARRAYS_FIELD}
         # Get a list of the elements in this DEF row.
         string(REPLACE "?" ";" TYPE_AND_NAME "${DEF_ROW}")
 
-        list(GET TYPE_AND_NAME 0 ELEM1) # type
-        list(GET TYPE_AND_NAME 1 ELEM0) # fieldname
+        #list(GET TYPE_AND_NAME 0 ELEM1) # type
+        #list(GET TYPE_AND_NAME 1 ELEM0) # fieldname
+
+        set(ELEM0 "${TYPE_AND_NAME}")
+        set(ELEM1 "${TYPE_AND_NAME}")
 
         #remove leading and trailing spaces
         string(STRIP "${ELEM0}" ELEM0)

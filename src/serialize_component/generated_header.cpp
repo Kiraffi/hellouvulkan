@@ -108,7 +108,8 @@ void* Heritaged2::getElementIndexRef(u32 index)
     {
             case 0: return &tempInt;
             case 1: return &tempInt2;
-            case 2: return &tempFloat2;
+            case 2: return &tempInt3;
+            case 3: return &tempFloat2;
         default: ASSERT_STRING(false, "Unknown index");
     }
     return nullptr;
@@ -120,7 +121,8 @@ const void* Heritaged2::getElementIndex(u32 index) const
     {
             case 0: return &tempInt;
             case 1: return &tempInt2;
-            case 2: return &tempFloat2;
+            case 2: return &tempInt3;
+            case 3: return &tempFloat2;
         default: ASSERT_STRING(false, "Unknown index");
     }
     return nullptr;
@@ -174,8 +176,8 @@ EntitySystemHandle StaticModelEntity::addEntity()
 
     if(freeEntityIndices.size() == 0)
     {
-            her1Array.emplace_back();
-            her2Array.emplace_back();
+            Heritaged1Array.emplace_back();
+            Heritaged2Array.emplace_back();
         entityComponents.emplace_back(0);
         entityVersions.emplace_back(0);
         return getEntitySystemHandle(entityComponents.size() - 1);
@@ -210,21 +212,21 @@ bool StaticModelEntity::removeEntity(EntitySystemHandle handle)
     return true;
 }
 
-const Heritaged1* StaticModelEntity::gether1ReadArray() const
+const Heritaged1* StaticModelEntity::getHeritaged1ReadArray() const
 {
-    return her1Array.data();
+    return Heritaged1Array.data();
 }
-Heritaged1* StaticModelEntity::gether1WriteArray()
+Heritaged1* StaticModelEntity::getHeritaged1WriteArray()
 {
-    return her1Array.data();
+    return Heritaged1Array.data();
 }
-const Heritaged2* StaticModelEntity::gether2ReadArray() const
+const Heritaged2* StaticModelEntity::getHeritaged2ReadArray() const
 {
-    return her2Array.data();
+    return Heritaged2Array.data();
 }
-Heritaged2* StaticModelEntity::gether2WriteArray()
+Heritaged2* StaticModelEntity::getHeritaged2WriteArray()
 {
-    return her2Array.data();
+    return Heritaged2Array.data();
 }
 
 bool StaticModelEntity::addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component)
@@ -248,7 +250,7 @@ bool StaticModelEntity::addHeritaged1Component(EntitySystemHandle handle, const 
     if(hasComponent(handle, Heritaged1::componentID))
         return false;
 
-    her1Array[handle.entityIndex] = component;
+    Heritaged1Array[handle.entityIndex] = component;
     entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
     return true;
@@ -275,7 +277,7 @@ bool StaticModelEntity::addHeritaged2Component(EntitySystemHandle handle, const 
     if(hasComponent(handle, Heritaged2::componentID))
         return false;
 
-    her2Array[handle.entityIndex] = component;
+    Heritaged2Array[handle.entityIndex] = component;
     entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
     return true;
@@ -299,11 +301,11 @@ bool StaticModelEntity::serialize(WriteJson &json) const
 
             if(hasComponent(getEntitySystemHandle(i), Heritaged1::componentID))
             {
-                her1Array[i].serialize(json);
+                Heritaged1Array[i].serialize(json);
             }
             if(hasComponent(getEntitySystemHandle(i), Heritaged2::componentID))
             {
-                her2Array[i].serialize(json);
+                Heritaged2Array[i].serialize(json);
             }
         json.endArray();
         json.endObject();
@@ -331,7 +333,7 @@ bool StaticModelEntity::deserialize(const JsonBlock &json)
         addEntity();
         for(const auto &obj : entityJson.getChild("Components"))
         {
-                if(her1Array[addedCount].deserialize(obj))
+                if(Heritaged1Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged1::componentID);
                     if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
@@ -340,7 +342,7 @@ bool StaticModelEntity::deserialize(const JsonBlock &json)
                     entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }
-                if(her2Array[addedCount].deserialize(obj))
+                if(Heritaged2Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged2::componentID);
                     if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
@@ -403,7 +405,7 @@ EntitySystemHandle OtherTestEntity::addEntity()
 
     if(freeEntityIndices.size() == 0)
     {
-            her1Array.emplace_back();
+            Heritaged1Array.emplace_back();
         entityComponents.emplace_back(0);
         entityVersions.emplace_back(0);
         return getEntitySystemHandle(entityComponents.size() - 1);
@@ -438,13 +440,13 @@ bool OtherTestEntity::removeEntity(EntitySystemHandle handle)
     return true;
 }
 
-const Heritaged1* OtherTestEntity::gether1ReadArray() const
+const Heritaged1* OtherTestEntity::getHeritaged1ReadArray() const
 {
-    return her1Array.data();
+    return Heritaged1Array.data();
 }
-Heritaged1* OtherTestEntity::gether1WriteArray()
+Heritaged1* OtherTestEntity::getHeritaged1WriteArray()
 {
-    return her1Array.data();
+    return Heritaged1Array.data();
 }
 
 bool OtherTestEntity::addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component)
@@ -468,7 +470,7 @@ bool OtherTestEntity::addHeritaged1Component(EntitySystemHandle handle, const He
     if(hasComponent(handle, Heritaged1::componentID))
         return false;
 
-    her1Array[handle.entityIndex] = component;
+    Heritaged1Array[handle.entityIndex] = component;
     entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
     return true;
@@ -492,7 +494,7 @@ bool OtherTestEntity::serialize(WriteJson &json) const
 
             if(hasComponent(getEntitySystemHandle(i), Heritaged1::componentID))
             {
-                her1Array[i].serialize(json);
+                Heritaged1Array[i].serialize(json);
             }
         json.endArray();
         json.endObject();
@@ -520,7 +522,7 @@ bool OtherTestEntity::deserialize(const JsonBlock &json)
         addEntity();
         for(const auto &obj : entityJson.getChild("Components"))
         {
-                if(her1Array[addedCount].deserialize(obj))
+                if(Heritaged1Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged1::componentID);
                     if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
