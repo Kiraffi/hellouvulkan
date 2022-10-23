@@ -1,9 +1,12 @@
 #pragma once
 
+#include <core/json.h>
 #include <core/mytypes.h>
+#include <core/writejson.h>
 
-struct JsonBlock;
-struct WriteJson;
+// For some reason windows didnt like forward declaring, or there was something missing.
+//struct JsonBlock;
+//struct WriteJson;
 
 // Never delete any value, only add to this...
 // Might be bit bad if multiple people were to modify at the same time

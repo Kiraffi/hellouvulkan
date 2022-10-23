@@ -109,7 +109,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             testEntity2.deserialize(json);
             testEntity2.removeEntity(testEntity2.getEntitySystemHandle(1));
             EntitySystemHandle newHandle = testEntity2.addEntity();
-            testEntity2.addHeritaged2Component(newHandle, Heritaged2{.tempInt2 = 123});
+            testEntity2.addHeritaged1Component(newHandle, Heritaged1{.tempInt = 123});
 
             // testEntity2.releaseModifyLock(lck);
         }
