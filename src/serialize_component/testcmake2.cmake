@@ -30,10 +30,8 @@ file(READ "${SOURCE_DEF_FILE}" DEF_CONTENTS)
 string(REPLACE "\n" ";" DEF_LIST ${DEF_CONTENTS})
 
 #not sure if this write + append is good....
-file(WRITE ${FILENAME_TO_MODIFY}
-"#pragma once
-// This is generated file, do not modify.
-
+set(MY_HEADER_FIRST_LINE "// This is generated file, do not modify.")
+set(MY_FILE_HEADER "
 #include \"src/components.h\"
 
 #include <core/json.h>
@@ -41,6 +39,14 @@ file(WRITE ${FILENAME_TO_MODIFY}
 #include <math/vector3.h>
 
 #include <vector>\n")
+
+file(WRITE "${FILENAME_TO_MODIFY}.h" "${MY_HEADER_FIRST_LINE}
+#pragma once
+${MY_FILE_HEADER}")
+file(WRITE "${FILENAME_TO_MODIFY}.cpp" "${MY_HEADER_FIRST_LINE}
+#include \"generated_header.h\"
+${MY_FILE_HEADER}")
+
 
 # Loop through each line in the DEF file.
 foreach(DEF_ROW ${DEF_LIST})
@@ -53,7 +59,147 @@ foreach(DEF_ROW ${DEF_LIST})
     if(DEF_ROW STREQUAL "EntityTypeEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
 
-        file(APPEND ${FILENAME_TO_MODIFY} "
+####################### ENTITY CPP ########################
+
+        file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
+
+bool ${ENTITY_NAME}::hasComponent(EntitySystemHandle handle, ComponentType componentType) const
+{
+    if(handle.entitySystemType != entitySystemID)
+        return false;
+
+    if(handle.entityIndex >= entityComponents.size())
+        return false;
+
+    if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+        return false;
+
+    u64 componentIndex = getComponentIndex(componentType);
+
+    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+        return false;
+
+    return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
+}
+
+u32 ${ENTITY_NAME}::getComponentIndex(ComponentType componentType) const
+{
+    for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
+    {
+        if(componentType == componentTypes[i])
+            return i;
+    }
+    return ~0u;
+}
+
+EntitySystemHandle ${ENTITY_NAME}::getEntitySystemHandle(u32 index) const
+{
+    if(index >= entityComponents.size())
+        return EntitySystemHandle();
+
+    return EntitySystemHandle {
+        .entitySystemType = entitySystemID,
+        .entityIndexVersion = entityVersions[index],
+        .entityIndex = index };
+}
+
+EntitySystemHandle ${ENTITY_NAME}::addEntity()
+{
+    // Some error if no lock
+
+    if(freeEntityIndices.size() == 0)
+    {${ENTITY_ARRAY_PUSHBACKS}
+        entityComponents.emplace_back(0);
+        entityVersions.emplace_back(0);
+        return getEntitySystemHandle(entityComponents.size() - 1);
+    }
+    else
+    {
+        u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
+        freeEntityIndices.resize(freeEntityIndices.size() - 1);
+        entityComponents[freeIndex] = 0;
+        return getEntitySystemHandle(freeIndex);
+    }
+    return EntitySystemHandle();
+}
+
+bool ${ENTITY_NAME}::removeEntity(EntitySystemHandle handle)
+{
+    // Some error if no lock
+
+    if(handle.entitySystemType != entitySystemID)
+        return false;
+
+    if(handle.entityIndex >= entityComponents.size())
+        return false;
+
+    if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+        return false;
+
+    u32 freeIndex = handle.entityIndex;
+    entityComponents[freeIndex] = 0;
+    ++entityVersions[freeIndex];
+    freeEntityIndices.emplace_back(freeIndex);
+    return true;
+}
+${ENTITY_COMPONENT_ARRAY_GETTERS}
+${ENTITY_ADD_COMPONENT}
+bool ${ENTITY_NAME}::serialize(WriteJson &json) const
+{
+    u32 entityAmount = entityComponents.size();
+    if(entityAmount == 0)
+        return false;
+
+    json.addObject(entitySystemName);
+    json.addString(\"EntityType\", entitySystemName);
+    json.addInteger(\"EntityTypeId\", u32(entitySystemID));
+    json.addInteger(\"EntityVersion\", entityVersion);
+    json.addArray(\"Entities\");
+    for(u32 i = 0; i < entityAmount; ++i)
+    {
+        json.addObject();
+        json.addArray(\"Components\");
+${ENTITY_WRITE_CONTENTS}
+        json.endArray();
+        json.endObject();
+    }
+    json.endArray();
+    json.endObject();
+    return json.isValid();
+}
+
+bool ${ENTITY_NAME}::deserialize(const JsonBlock &json)
+{
+    if(!json.isObject() || json.getChildCount() < 1)
+        return false;
+
+    const JsonBlock& child = json.getChild(entitySystemName);
+    if(!child.isValid())
+        return false;
+
+    if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
+        return false;
+
+    u32 addedCount = 0u;
+    for(const auto &entityJson : child.getChild(\"Entities\"))
+    {
+        addEntity();
+        for(const auto &obj : entityJson.getChild(\"Components\"))
+        {${ENTITY_LOAD_CONTENTS}
+        }
+        addedCount++;
+    }
+    return true;
+}
+
+")
+
+
+
+
+####################### ENTITY HEADER ############################
+
+        file(APPEND "${FILENAME_TO_MODIFY}.h" "
 struct ${ENTITY_NAME}
 {
     static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
@@ -64,133 +210,17 @@ struct ${ENTITY_NAME}
     {${ENTITY_COMPONENT_TYPES_ARRAY}
     };
 
-    u32 getComponentIndex(ComponentType componentType) const
-    {
-        for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
-        {
-            if(componentType == componentTypes[i])
-                return i;
-        }
-        return ~0u;
-    }
+    u32 getComponentIndex(ComponentType componentType) const;
+    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
 
-    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const
-    {
-        if(handle.entitySystemType != entitySystemID)
-            return false;
-
-        if(handle.entityIndex >= entityComponents.size())
-            return false;
-
-        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
-            return false;
-
-        u64 componentIndex = getComponentIndex(componentType);
-
-        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
-            return false;
-
-        return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
-    }
-
-    EntitySystemHandle getEntitySystemHandle(u32 index) const
-    {
-        if(index >= entityComponents.size())
-            return EntitySystemHandle();
-
-        return EntitySystemHandle {
-            .entitySystemType = entitySystemID,
-            .entityIndexVersion = entityVersions[index],
-            .entityIndex = index };
-    }
-
-    EntitySystemHandle addEntity()
-    {
-        // Some error if no lock
-
-        if(freeEntityIndices.size() == 0)
-        {${ENTITY_ARRAY_PUSHBACKS}
-            entityComponents.emplace_back(0);
-            entityVersions.emplace_back(0);
-            return getEntitySystemHandle(entityComponents.size() - 1);
-        }
-        else
-        {
-            u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
-            freeEntityIndices.resize(freeEntityIndices.size() - 1);
-            entityComponents[freeIndex] = 0;
-            return getEntitySystemHandle(freeIndex);
-        }
-        return EntitySystemHandle();
-    }
-
-    bool removeEntity(EntitySystemHandle handle)
-    {
-        // Some error if no lock
-
-        if(handle.entitySystemType != entitySystemID)
-            return false;
-
-        if(handle.entityIndex >= entityComponents.size())
-            return false;
-
-        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
-            return false;
-
-        u32 freeIndex = handle.entityIndex;
-        entityComponents[freeIndex] = 0;
-        ++entityVersions[freeIndex];
-        freeEntityIndices.emplace_back(freeIndex);
-        return true;
-    }
-${ENTITY_ADD_COMPONENT}
-    bool serialize(WriteJson &json) const
-    {
-        u32 entityAmount = entityComponents.size();
-        if(entityAmount == 0)
-            return false;
-
-        json.addObject(entitySystemName);
-        json.addString(\"EntityType\", entitySystemName);
-        json.addInteger(\"EntityTypeId\", u32(entitySystemID));
-        json.addInteger(\"EntityVersion\", entityVersion);
-        json.addArray(\"Entities\");
-        for(u32 i = 0; i < entityAmount; ++i)
-        {
-            json.addObject();
-            json.addArray(\"Components\");
-${ENTITY_WRITE_CONTENTS}
-            json.endArray();
-            json.endObject();
-        }
-        json.endArray();
-        json.endObject();
-        return json.isValid();
-    }
-
-    bool deserialize(const JsonBlock &json)
-    {
-        if(!json.isObject() || json.getChildCount() < 1)
-            return false;
-
-        const JsonBlock& child = json.getChild(entitySystemName);
-        if(!child.isValid())
-            return false;
-
-        if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
-            return false;
-
-        u32 addedCount = 0u;
-        for(const auto &entityJson : child.getChild(\"Entities\"))
-        {
-            addEntity();
-            for(const auto &obj : entityJson.getChild(\"Components\"))
-            {${ENTITY_LOAD_CONTENTS}
-            }
-            addedCount++;
-        }
-        return true;
-    }
+    EntitySystemHandle getEntitySystemHandle(u32 index) const;
+    EntitySystemHandle addEntity();
+    bool removeEntity(EntitySystemHandle handle);
+${ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS}
+${ENTITY_ADD_COMPONENT_HEADER}
+    bool serialize(WriteJson &json) const;
+    bool deserialize(const JsonBlock &json);
+    u32 getEntityCount() const { return (u32)entityComponents.size(); }
 
 private:${ENTITY_ARRAYS_FIELD}
 
@@ -212,7 +242,10 @@ private:${ENTITY_ARRAYS_FIELD}
         set(ENTITY_ARRAYS_FIELD "")
         set(ENTITY_ARRAY_PUSHBACKS "")
         set(ENTITY_ADD_COMPONENT "")
+        set(ENTITY_ADD_COMPONENT_HEADER "")
         set(ENTITY_COMPONENT_TYPES_ARRAY "")
+        set(ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "")
+        set(ENTITY_COMPONENT_ARRAY_GETTERS "")
 
     elseif(READ_STATE EQUAL READ_STATE_ENTITY_BEGIN)
         set(READ_STATE ${READ_STATE_ENTITY_FIELDS})
@@ -251,6 +284,19 @@ private:${ENTITY_ARRAYS_FIELD}
             {
                 ${ELEM1}Array[i].serialize(json);
             }")
+        string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "
+    const ${ELEM0}* get${ELEM1}ReadArray() const;
+    ${ELEM0}* get${ELEM1}WriteArray();")
+        string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS "
+const ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}ReadArray() const
+{
+    return ${ELEM1}Array.data();
+}
+${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray()
+{
+    return ${ELEM1}Array.data();
+}")
+
         string(APPEND ENTITY_COMPONENT_TYPES_ARRAY "\n        ${ELEM0}::componentID,")
         string(APPEND ENTITY_ARRAY_PUSHBACKS "\n            ${ELEM1}Array.emplace_back();")
         string(APPEND ENTITY_ARRAYS_FIELD "\n    std::vector<${ELEM0}> ${ELEM1}Array;")
@@ -264,34 +310,34 @@ private:${ENTITY_ARRAYS_FIELD}
                     entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }")
-
+        string(APPEND ENTITY_ADD_COMPONENT_HEADER "\n    bool add${ELEM0}Component(EntitySystemHandle handle, const ${ELEM0}& component);")
         string(APPEND ENTITY_ADD_COMPONENT "
-    bool add${ELEM0}Component(EntitySystemHandle handle, const ${ELEM0}& component)
-    {
-        // Some error if no lock
+bool ${ENTITY_NAME}::add${ELEM0}Component(EntitySystemHandle handle, const ${ELEM0}& component)
+{
+    // Some error if no lock
 
-        if(handle.entitySystemType != entitySystemID)
-            return false;
+    if(handle.entitySystemType != entitySystemID)
+        return false;
 
-        if(handle.entityIndex >= entityComponents.size())
-            return false;
+    if(handle.entityIndex >= entityComponents.size())
+        return false;
 
-        if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
-            return false;
+    if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+        return false;
 
-        u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
+    u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
 
-        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
-            return false;
+    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+        return false;
 
-        if(hasComponent(handle, ${ELEM0}::componentID))
-            return false;
+    if(hasComponent(handle, ${ELEM0}::componentID))
+        return false;
 
-        ${ELEM1}Array[handle.entityIndex] = component;
-        entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
+    ${ELEM1}Array[handle.entityIndex] = component;
+    entityComponents[handle.entityIndex] |= u64(1) << componentIndex;
 
-        return true;
-    }\n")
+    return true;
+}\n")
 
 
 
@@ -302,7 +348,64 @@ private:${ENTITY_ARRAYS_FIELD}
     elseif(DEF_ROW STREQUAL "ComponentEnd" AND READ_STATE EQUAL READ_STATE_COMPONENT_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
 
-        file(APPEND ${FILENAME_TO_MODIFY} "
+################### COMPONENT HEADER ######################
+
+        file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
+bool ${COMPONENT_NAME}::serialize(WriteJson &json) const
+{
+    json.addObject();
+    json.addString(\"ComponentType\", componentName);
+    json.addInteger(\"ComponentTypeId\", u32(componentID));
+    json.addInteger(\"ComponentVersion\", componentVersion);
+
+    for(u32 i = 0; i < componentFieldAmount; ++i)
+    {
+        if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
+            return false;
+    }
+    json.endObject();
+    return json.isValid();
+}
+
+bool ${COMPONENT_NAME}::deserialize(const JsonBlock &json)
+{
+    if(!json.isObject() || !json.isValid())
+        return false;
+
+    if(!json.getChild(\"ComponentType\").equals(componentName))
+        return false;
+    if(!json.getChild(\"ComponentTypeId\").equals(u32(componentID)))
+        return false;
+    for(u32 i = 0; i < componentFieldAmount; ++i)
+    {
+        deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
+    }
+    return true;
+}
+
+void* ${COMPONENT_NAME}::getElementIndexRef(u32 index)
+{
+    switch(index)
+    {${COMPONENT_ELEMENT_GET_FUNC}
+        default: ASSERT_STRING(false, \"Unknown index\");
+    }
+    return nullptr;
+}
+
+const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
+{
+    switch(index)
+    {${COMPONENT_ELEMENT_GET_FUNC}
+        default: ASSERT_STRING(false, \"Unknown index\");
+    }
+    return nullptr;
+}
+
+")
+
+#################### COMPONENT HEADER #####################
+
+        file(APPEND "${FILENAME_TO_MODIFY}.h" "
 struct ${COMPONENT_NAME}
 {
     static constexpr const char* componentName = \"${COMPONENT_NAME}\";
@@ -318,56 +421,12 @@ ${COMPONENT_VARS}
     {${COMPONENT_FIELD_NAMES}
     };
 
-    bool serialize(WriteJson &json) const
-    {
-        json.addObject();
-        json.addString(\"ComponentType\", componentName);
-        json.addInteger(\"ComponentTypeId\", u32(componentID));
-        json.addInteger(\"ComponentVersion\", componentVersion);
-
-        for(u32 i = 0; i < componentFieldAmount; ++i)
-        {
-            if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
-                return false;
-        }
-        json.endObject();
-        return json.isValid();
-    }
-
-    bool deserialize(const JsonBlock &json)
-    {
-        if(!json.isObject() || !json.isValid())
-            return false;
-
-        if(!json.getChild(\"ComponentType\").equals(componentName))
-            return false;
-        if(!json.getChild(\"ComponentTypeId\").equals(u32(componentID)))
-            return false;
-        for(u32 i = 0; i < componentFieldAmount; ++i)
-        {
-            deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
-        }
-        return true;
-    }
+    bool serialize(WriteJson &json) const;
+    bool deserialize(const JsonBlock &json);
 
 private:
-    void* getElementIndexRef(u32 index)
-    {
-        switch(index)
-        {${COMPONENT_ELEMENT_GET_FUNC}
-            default: ASSERT_STRING(false, \"Unknown index\");
-        }
-        return nullptr;
-    }
-
-    const void* getElementIndex(u32 index) const
-    {
-        switch(index)
-        {${COMPONENT_ELEMENT_GET_FUNC}
-            default: ASSERT_STRING(false, \"Unknown index\");
-        }
-        return nullptr;
-    }
+    void* getElementIndexRef(u32 index);
+    const void* getElementIndex(u32 index) const;
 };\n")
 
     elseif(DEF_ROW STREQUAL "ComponentBegin" AND READ_STATE EQUAL READ_STATE_NONE)

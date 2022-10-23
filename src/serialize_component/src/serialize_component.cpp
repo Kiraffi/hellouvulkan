@@ -81,12 +81,35 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             EntitySystemHandle handle2 = testEntity.addEntity();
             EntitySystemHandle handle3 = testEntity.addEntity();
             EntitySystemHandle handle4 = testEntity.addEntity();
+            EntitySystemHandle handle5 = testEntity.addEntity();
 
             testEntity.addHeritaged2Component(handle1, Heritaged2{.tempFloat2 = 234234.40});
-            testEntity.addHeritaged1Component(handle1, Heritaged1{});
+            testEntity.addHeritaged1Component(handle1, Heritaged1{.tempInt = 78});
             testEntity.addHeritaged2Component(handle2, Heritaged2{.tempInt2 = 1234, .tempFloat2 = 1234});
             //testEntity.addHeritaged2Component(handle3, Heritaged21{});
             testEntity.addHeritaged1Component(handle4, Heritaged1{.tempFloat = 2304.04f});
+            testEntity.addHeritaged2Component(handle5, Heritaged2{});
+        }
+
+        {
+            auto ptr = testEntity.gether1ReadArray();
+            u32 entityCount = testEntity.getEntityCount();
+            for(u32 i = 0; i < entityCount; ++i)
+            {
+                LOG("%u: Heri1.tempInt:%i, Heri1.tempFloat:%f\n", i, ptr->tempInt, ptr->tempFloat);
+                //ptr->tempInt += 1;
+                ++ptr;
+            }
+
+            auto ptrRef = testEntity.gether2WriteArray();
+            for(u32 i = 0; i < entityCount; ++i)
+            {
+                ptrRef->tempInt += 239 + i;
+                ptrRef->tempInt2 += 1;
+                ptrRef->tempFloat2 += 0.5f;
+                LOG("REF%u: Heri2.tempInt:%i, Heri2.tempInt2:%i, Heri2.tempFloat2:%f\n", i, ptrRef->tempInt, ptrRef->tempInt2, ptrRef->tempFloat2);
+                ++ptrRef;
+            }
         }
 
         WriteJson writeJson1(1, 1);

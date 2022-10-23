@@ -10,6 +10,7 @@ ComponentEnd
 
 ComponentBegin
 Heritaged2 ComponentType::HeritagedType2 1
+    tempInt ? int = 98756
     tempInt2 ? int = 10
     tempFloat2 ? float = 20.0f
 ComponentEnd
