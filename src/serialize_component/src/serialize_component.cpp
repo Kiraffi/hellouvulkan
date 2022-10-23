@@ -30,41 +30,6 @@ static constexpr int SCREEN_HEIGHT = 540;
 
 
 
-
-
-
-
-/*
-class Heritaged : public SerializableClassBase
-{
-public:
-    Heritaged() : SerializableClassBase() { objMagicNumber = magicNumberClass; objVersion = versionClass; }
-
-    static constexpr int getClassMagicNumber() { return magicNumberClass; }
-    static constexpr int getClassVersion() { return versionClass; }
-
-    INT_FIELD(tempInt, 10);
-    FLOAT_FIELD(tempFloat, 20.0f);
-
-private:
-    static constexpr int magicNumberClass = 12;
-    static constexpr int versionClass = 2;
-};
-
-*/
-
-struct SceneEntity
-{
-    int componentBits;
-
-};
-
-struct SceneEntityIter
-{
-
-};
-
-
 class SerializeComponent : public VulkanApp
 {
 public:
@@ -98,32 +63,6 @@ SerializeComponent::~SerializeComponent()
     destroyImage(renderColorImage);
 }
 
-#if 0
-void printClass(const SerializableClassBase &obj, const char *str)
-{
-    LOG("Obj: %s is: ", str);
-    switch(obj.getObjMagicNumber())
-    {
-        /*
-        case SerializableClassBase::getStaticClassMagicNumber():
-        {
-            LOG("Base class\n");
-            break;
-        }
-        */
-        case Heritaged::getStaticClassMagicNumber():
-        {
-            LOG("Heritaged class\n");
-            break;
-        }
-        default:
-        {
-            LOG("Unknown class\n");
-            break;
-        }
-    }
-}
-#endif
 
 bool SerializeComponent::init(const char* windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters& params)
@@ -133,16 +72,22 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
     {
         StaticModelEntity testEntity;
-        testEntity.addEntity();
-        testEntity.addEntity();
-        testEntity.addEntity();
-        testEntity.addEntity();
 
-        testEntity.addHeritaged21Component(0, Heritaged21{.TempFloat2 = 234234.40});
-        testEntity.addHeritaged31Component(0, Heritaged31{});
-        testEntity.addHeritaged21Component(1, Heritaged21{});
-        //testEntity.addHeritaged21Component(2, Heritaged21{});
-        testEntity.addHeritaged31Component(3, Heritaged31{.TempFloat = 2304.04f});
+        // Needs something like getLockGuard / getLock
+        {
+            // auto lck = testEntity.getModifyLockGuard();
+
+            testEntity.addEntity();
+            testEntity.addEntity();
+            testEntity.addEntity();
+            testEntity.addEntity();
+
+            testEntity.addHeritaged21Component(0, Heritaged21{.TempFloat2 = 234234.40});
+            testEntity.addHeritaged31Component(0, Heritaged31{});
+            testEntity.addHeritaged21Component(1, Heritaged21{});
+            //testEntity.addHeritaged21Component(2, Heritaged21{});
+            testEntity.addHeritaged31Component(3, Heritaged31{.TempFloat = 2304.04f});
+        }
 
         WriteJson writeJson1(1, 1);
 
@@ -159,8 +104,11 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         }
 
         StaticModelEntity testEntity2;
-        testEntity2.deserialize(json);
-
+        {
+            // auto lck = testEntity2.getModifyLock();
+            testEntity2.deserialize(json);
+            // testEntity2.releaseModifyLock(lck);
+        }
         LOG("has comp: %u\n", testEntity2.hasComponent(0, ComponentType::HeritagedType));
     }
 
