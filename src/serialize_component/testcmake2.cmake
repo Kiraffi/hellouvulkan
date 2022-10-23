@@ -12,8 +12,6 @@ set(COMPONENT_NAME "")
 set(COMPONENT_ID -1)
 set(COMPONENT_VERSION -1)
 
-set(ENTITY_CONTENTS "")
-
 # Set our reading state to 0, there is probably a lot better way
 set(READ_STATE ${READ_STATE_NONE})
 set(COMPONENT_FIELD_COUNT 0)
@@ -45,23 +43,126 @@ foreach(DEF_ROW ${DEF_LIST})
 
     if(DEF_ROW STREQUAL "EntityTypeEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
-        string(APPEND ENTITY_WRITE_CONTENTS "\n        return true;\n    }")
-        string(APPEND ENTITY_LOAD_CONTENTS "\n            }\n        }\n        addedCount++;\n        return true;\n    }")
-        file(APPEND ${FILENAME_TO_MODIFY} "\n${ENTINTY_CONTENTS_BEGIN}")
-        file(APPEND ${FILENAME_TO_MODIFY} "${ENTITY_WRITE_CONTENTS}")
-        file(APPEND ${FILENAME_TO_MODIFY} "${ENTITY_LOAD_CONTENTS}")
-        file(APPEND ${FILENAME_TO_MODIFY} "${ENTITY_CONTENTS}")
-        file(APPEND ${FILENAME_TO_MODIFY} "${ENTITY_ARRAYS_FIELD}")
-        file(APPEND ${FILENAME_TO_MODIFY} "\n    std::vector<u64> entityComponents;\n};\n")
+
+        string(APPEND ENTITY_COMPONENT_TYPES_ARRAY "\n    };")
+
+        file(APPEND ${FILENAME_TO_MODIFY} "\n${ENTITY_CONTENTS_BEGIN}")
+        file(APPEND ${FILENAME_TO_MODIFY} "\n\n${ENTITY_COMPONENT_TYPES_ARRAY}")
+        file(APPEND ${FILENAME_TO_MODIFY} "\n
+    u32 getComponentIndex(ComponentType componentType) const
+    {
+        for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
+        {
+            if(componentType == componentTypes[i])
+                return i;
+        }
+        return ~0u;
+    }
+
+    bool hasComponent(u32 entityIndex, ComponentType componentType) const
+    {
+        if(entityIndex >= entityComponents.size())
+            return false;
+        u64 componentIndex = getComponentIndex(componentType);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+    }
+
+    EntitySystemHandle getEntitySystemHandle(u32 index) const
+    {
+        if(index >= entityComponents.size())
+            return EntitySystemHandle();
+
+        return EntitySystemHandle {
+            .entitySystemIndex = entitySystemID,
+            .entityIndexVersion = entityVersions[index],
+            .entityIndex = index };
+    }
+    EntitySystemHandle addEntity()
+    {
+        if(freeEntityIndices.size() == 0)
+        {${ENTITY_ARRAY_PUSHBACKS}
+            entityComponents.emplace_back(0);
+            entityVersions.emplace_back(0);
+            return getEntitySystemHandle(entityComponents.size() - 1);
+        }
+        else
+        {
+            u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
+            freeEntityIndices.resize(freeEntityIndices.size() - 1);
+            entityComponents[freeIndex] = 0;
+            ++entityVersions[freeIndex];
+            return getEntitySystemHandle(freeIndex);
+        }
+        return EntitySystemHandle();
+    }
+${ENTITY_ADD_COMPONENT}
+    bool serialize(WriteJson &json) const
+    {
+        u32 entityAmount = entityComponents.size();
+        if(entityAmount == 0)
+            return false;
+
+        json.addArray(entitySystemName);
+        for(u32 i = 0; i < entityAmount; ++i)
+        {
+            json.addObject();
+            json.addString(\"EntityType\", entitySystemName);
+            json.addInteger(\"EntityTypeId\", u32(entitySystemID));
+            json.addInteger(\"EntityVersion\", entityVersion);
+            json.addArray(\"Components\");
+${ENTITY_WRITE_CONTENTS}
+            json.endArray();
+            json.endObject();
+        }
+        json.endArray();
+        return json.isValid();
+    }
+    bool deserialize(const JsonBlock &json)
+    {
+        if(!json.isObject() || json.getChildCount() < 1)
+            return false;
+
+        u32 addedCount = 0u;
+        for(const JsonBlock& child : json.getChild(entitySystemName))
+        {
+            if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
+                return false;
+
+            addEntity();
+            for(auto const &obj : child.getChild(\"Components\"))
+            {
+${ENTITY_LOAD_CONTENTS}
+            }
+        }
+        addedCount++;
+        return true;
+    }
+${ENTITY_ARRAYS_FIELD}
+\n
+    std::vector<u16> entityVersions;
+
+    // This might be problematic if component is activated/deactived in middle of a frame
+    std::vector<u64> entityComponents;
+
+    // Need to think how this adding should work, because it would need to have mutex and all.
+    std::vector<u32> freeEntityIndices;
+
+    static_assert(sizeof(componentTypes) / sizeof(ComponentType) < 64, \"Only 64 components are allowed for entity!\");
+};\n")
 
     elseif(DEF_ROW STREQUAL "EntityTypeBegin"  AND READ_STATE EQUAL READ_STATE_NONE)
         set(READ_STATE ${READ_STATE_ENTITY_BEGIN})
         set(ENTITY_CONTENTS_BEGIN "")
-        set(ENTITY_CONTENTS "")
         set(ENTITY_LOAD_CONTENTS "")
         set(ENTITY_WRITE_CONTENTS "")
-        set(ENTITY_ARRAYS_FIELD "\nprivate:")
+        set(ENTITY_ARRAYS_FIELD "\n\nprivate:")
         set(ENTITY_ARRAY_PUSHBACKS "")
+        set(ENTITY_ADD_COMPONENT "")
+        set(ENTITY_COMPONENT_TYPES_ARRAY "    static constexpr ComponentType componentTypes[] = \n    {")
 
     elseif(READ_STATE EQUAL READ_STATE_ENTITY_BEGIN)
         set(READ_STATE ${READ_STATE_ENTITY_FIELDS})
@@ -77,24 +178,14 @@ foreach(DEF_ROW ${DEF_LIST})
         string(STRIP ${ELEM2} ELEM2)
 
         set(ENTITY_NAME ${ELEM0})
-        set(ENTINTY_CONTENTS_BEGIN "\nstruct ${ENTITY_NAME}\n{
-    static constexpr const char* entityName = \"${ENTITY_NAME}\";
-    static constexpr unsigned int entityID = ${ELEM1};
-    static constexpr unsigned int entityVersion = ${ELEM2};")
+        set(ENTITY_CONTENTS_BEGIN "
+struct ${ENTITY_NAME}
+{
+    static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
+    static constexpr EntityType entitySystemID = ${ELEM1};
+    static constexpr u32 entityVersion = ${ELEM2};")
 
-        set(ENTITY_LOAD_CONTENTS "\n    bool deserialize(const JsonBlock &json)\n    {
-        if(!json.isObject() || json.getChildCount() < 1)
-            return false;
 
-        unsigned int addedCount = 0u;
-        for(const JsonBlock& child : json)
-        {
-            if(!child.getChild(\"EntityID\").equals(entityID) || !child.getChild(\"EntityType\").equals(entityName))
-                return false;
-
-            for(auto const &obj : child.getChild(\"Components\"))\n            {")
-
-        set(ENTITY_WRITE_CONTENTS "\n    bool serialize() const\n    {")
 
 
     elseif(READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
@@ -109,13 +200,44 @@ foreach(DEF_ROW ${DEF_LIST})
         string(STRIP ${ELEM0} ELEM0)
         string(STRIP ${ELEM1} ELEM1)
 
+        string(APPEND ENTITY_WRITE_CONTENTS "
+            if(hasComponent(i, ${ELEM0}::componentID))
+            {
+                ${ELEM1}Array[i].serialize(json);
+            }")
+        string(APPEND ENTITY_COMPONENT_TYPES_ARRAY "\n        ${ELEM0}::componentID,")
+        string(APPEND ENTITY_ARRAY_PUSHBACKS "\n            ${ELEM1}Array.emplace_back();")
         string(APPEND ENTITY_ARRAYS_FIELD "\n    std::vector<${ELEM0}> ${ELEM1}Array;")
         string(APPEND ENTITY_LOAD_CONTENTS "
                 if(${ELEM1}Array[addedCount].deserialize(obj))
                 {
+                    u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
+                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                        return false;
+
+                    entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }")
 
+        string(APPEND ENTITY_ADD_COMPONENT "\n
+    bool add${ELEM0}Component(u32 entityIndex, const ${ELEM0}& component)
+    {
+        if(entityIndex >= entityComponents.size())
+            return false;
+
+        u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        if(hasComponent(entityIndex, ${ELEM0}::componentID))
+            return false;
+
+        ${ELEM1}Array[entityIndex] = component;
+        entityComponents[entityIndex] |= u64(1) << componentIndex;
+
+        return true;
+    }")
 
 
 
@@ -128,7 +250,7 @@ foreach(DEF_ROW ${DEF_LIST})
         string(APPEND COMPONENT_FIELD_TYPES "\n    };")
         string(APPEND COMPONENT_FIELD_NAMES "\n    };")
         #string(APPEND COMPONENT_FIELD_OFFSETS "\n    };")
-        string(APPEND COMPONENT_STATIC_VARS "    static constexpr unsigned int componentFieldAmount = ${COMPONENT_FIELD_COUNT};")
+        string(APPEND COMPONENT_STATIC_VARS "    static constexpr u32 componentFieldAmount = ${COMPONENT_FIELD_COUNT};")
         string(APPEND COMPONENT_ELEMENT_GET_FUNC "\n
             default: ASSERT_STRING(false, \"Unknown index\");
         }
@@ -138,13 +260,13 @@ foreach(DEF_ROW ${DEF_LIST})
 ${COMPONENT_VARS}\n
 ${COMPONENT_FIELD_TYPES}\n
 ${COMPONENT_FIELD_NAMES}\n
-    void* getElementIndexRef(unsigned int index)
+    void* getElementIndexRef(u32 index)
     {
         switch(index)
         {${COMPONENT_ELEMENT_GET_FUNC}
     }
 
-    const void* getElementIndex(unsigned int index) const
+    const void* getElementIndex(u32 index) const
     {
         switch(index)
         {${COMPONENT_ELEMENT_GET_FUNC}
@@ -154,14 +276,15 @@ ${COMPONENT_FIELD_NAMES}\n
     {
         json.addObject();
         json.addString(\"ComponentType\", componentName);
-        json.addInteger(\"ComponentTypeId\", componentID);
+        json.addInteger(\"ComponentTypeId\", u32(componentID));
         json.addInteger(\"ComponentVersion\", componentVersion);
 
-        for(int i = 0; i < componentFieldAmount; ++i)
+        for(u32 i = 0; i < componentFieldAmount; ++i)
         {
             if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
                 return false;
         }
+        json.endObject();
         return json.isValid();
     }
 
@@ -172,9 +295,9 @@ ${COMPONENT_FIELD_NAMES}\n
 
         if(!json.getChild(\"ComponentType\").equals(componentName))
             return false;
-        if(!json.getChild(\"ComponentTypeId\").equals(componentID))
+        if(!json.getChild(\"ComponentTypeId\").equals(u32(componentID)))
             return false;
-        for(unsigned int i = 0; i < componentFieldAmount; ++i)
+        for(u32 i = 0; i < componentFieldAmount; ++i)
         {
             deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
         }
@@ -223,8 +346,8 @@ ${COMPONENT_FIELD_NAMES}\n
 
         set(COMPONENT_STATIC_VARS
 "    static constexpr const char* componentName = \"${ELEM0}\";
-    static constexpr unsigned int componentID = ${ELEM1};
-    static constexpr unsigned int componentVersion = ${ELEM2};\n")
+    static constexpr ComponentType componentID = ${ELEM1};
+    static constexpr u32 componentVersion = ${ELEM2};\n")
 
     elseif(READ_STATE EQUAL READ_STATE_COMPONENT_FIELDS)
 

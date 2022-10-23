@@ -8,9 +8,9 @@
 struct Heritaged31
 {
     static constexpr const char* componentName = "Heritaged31";
-    static constexpr unsigned int componentID = ComponentType::HeritagedType;
-    static constexpr unsigned int componentVersion = 1;
-    static constexpr unsigned int componentFieldAmount = 5;
+    static constexpr ComponentType componentID = ComponentType::HeritagedType;
+    static constexpr u32 componentVersion = 1;
+    static constexpr u32 componentFieldAmount = 5;
 
     // Row 0, Size 4
     int TempInt = 10;
@@ -41,7 +41,7 @@ struct Heritaged31
         "TempV4",
     };
 
-    void* getElementIndexRef(unsigned int index)
+    void* getElementIndexRef(u32 index)
     {
         switch(index)
         {
@@ -56,7 +56,7 @@ struct Heritaged31
         return nullptr;
     }
 
-    const void* getElementIndex(unsigned int index) const
+    const void* getElementIndex(u32 index) const
     {
         switch(index)
         {
@@ -75,14 +75,15 @@ struct Heritaged31
     {
         json.addObject();
         json.addString("ComponentType", componentName);
-        json.addInteger("ComponentTypeId", componentID);
+        json.addInteger("ComponentTypeId", u32(componentID));
         json.addInteger("ComponentVersion", componentVersion);
 
-        for(int i = 0; i < componentFieldAmount; ++i)
+        for(u32 i = 0; i < componentFieldAmount; ++i)
         {
             if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
                 return false;
         }
+        json.endObject();
         return json.isValid();
     }
 
@@ -93,9 +94,9 @@ struct Heritaged31
 
         if(!json.getChild("ComponentType").equals(componentName))
             return false;
-        if(!json.getChild("ComponentTypeId").equals(componentID))
+        if(!json.getChild("ComponentTypeId").equals(u32(componentID)))
             return false;
-        for(unsigned int i = 0; i < componentFieldAmount; ++i)
+        for(u32 i = 0; i < componentFieldAmount; ++i)
         {
             deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
         }
@@ -106,9 +107,9 @@ struct Heritaged31
 struct Heritaged21
 {
     static constexpr const char* componentName = "Heritaged21";
-    static constexpr unsigned int componentID = ComponentType::HeritagedType2;
-    static constexpr unsigned int componentVersion = 1;
-    static constexpr unsigned int componentFieldAmount = 2;
+    static constexpr ComponentType componentID = ComponentType::HeritagedType2;
+    static constexpr u32 componentVersion = 1;
+    static constexpr u32 componentFieldAmount = 2;
 
     // Row 0, Size 4
     int TempInt2 = 10;
@@ -127,7 +128,7 @@ struct Heritaged21
         "TempFloat2",
     };
 
-    void* getElementIndexRef(unsigned int index)
+    void* getElementIndexRef(u32 index)
     {
         switch(index)
         {
@@ -139,7 +140,7 @@ struct Heritaged21
         return nullptr;
     }
 
-    const void* getElementIndex(unsigned int index) const
+    const void* getElementIndex(u32 index) const
     {
         switch(index)
         {
@@ -155,14 +156,15 @@ struct Heritaged21
     {
         json.addObject();
         json.addString("ComponentType", componentName);
-        json.addInteger("ComponentTypeId", componentID);
+        json.addInteger("ComponentTypeId", u32(componentID));
         json.addInteger("ComponentVersion", componentVersion);
 
-        for(int i = 0; i < componentFieldAmount; ++i)
+        for(u32 i = 0; i < componentFieldAmount; ++i)
         {
             if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
                 return false;
         }
+        json.endObject();
         return json.isValid();
     }
 
@@ -173,9 +175,9 @@ struct Heritaged21
 
         if(!json.getChild("ComponentType").equals(componentName))
             return false;
-        if(!json.getChild("ComponentTypeId").equals(componentID))
+        if(!json.getChild("ComponentTypeId").equals(u32(componentID)))
             return false;
-        for(unsigned int i = 0; i < componentFieldAmount; ++i)
+        for(u32 i = 0; i < componentFieldAmount; ++i)
         {
             deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
         }
@@ -186,32 +188,167 @@ struct Heritaged21
 
 struct StaticModelEntity
 {
-    static constexpr const char* entityName = "StaticModelEntity";
-    static constexpr unsigned int entityID = EntityType::StaticModelEntityType;
-    static constexpr unsigned int entityVersion = 1;
-    bool serialize() const
+    static constexpr const char* entitySystemName = "StaticModelEntity";
+    static constexpr EntityType entitySystemID = EntityType::StaticModelEntityType;
+    static constexpr u32 entityVersion = 1;
+
+    static constexpr ComponentType componentTypes[] = 
     {
+        Heritaged31::componentID,
+        Heritaged21::componentID,
+    };
+
+    u32 getComponentIndex(ComponentType componentType) const
+    {
+        for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
+        {
+            if(componentType == componentTypes[i])
+                return i;
+        }
+        return ~0u;
+    }
+
+    bool hasComponent(u32 entityIndex, ComponentType componentType) const
+    {
+        if(entityIndex >= entityComponents.size())
+            return false;
+        u64 componentIndex = getComponentIndex(componentType);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+    }
+
+    EntitySystemHandle getEntitySystemHandle(u32 index) const
+    {
+        if(index >= entityComponents.size())
+            return EntitySystemHandle();
+
+        return EntitySystemHandle {
+            .entitySystemIndex = entitySystemID,
+            .entityIndexVersion = entityVersions[index],
+            .entityIndex = index };
+    }
+    EntitySystemHandle addEntity()
+    {
+        if(freeEntityIndices.size() == 0)
+        {
+            Her31Array.emplace_back();
+            Her21Array.emplace_back();
+            entityComponents.emplace_back(0);
+            entityVersions.emplace_back(0);
+            return getEntitySystemHandle(entityComponents.size() - 1);
+        }
+        else
+        {
+            u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
+            freeEntityIndices.resize(freeEntityIndices.size() - 1);
+            entityComponents[freeIndex] = 0;
+            ++entityVersions[freeIndex];
+            return getEntitySystemHandle(freeIndex);
+        }
+        return EntitySystemHandle();
+    }
+
+
+    bool addHeritaged31Component(u32 entityIndex, const Heritaged31& component)
+    {
+        if(entityIndex >= entityComponents.size())
+            return false;
+
+        u64 componentIndex = getComponentIndex(Heritaged31::componentID);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        if(hasComponent(entityIndex, Heritaged31::componentID))
+            return false;
+
+        Her31Array[entityIndex] = component;
+        entityComponents[entityIndex] |= u64(1) << componentIndex;
+
         return true;
+    }
+
+    bool addHeritaged21Component(u32 entityIndex, const Heritaged21& component)
+    {
+        if(entityIndex >= entityComponents.size())
+            return false;
+
+        u64 componentIndex = getComponentIndex(Heritaged21::componentID);
+
+        if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+            return false;
+
+        if(hasComponent(entityIndex, Heritaged21::componentID))
+            return false;
+
+        Her21Array[entityIndex] = component;
+        entityComponents[entityIndex] |= u64(1) << componentIndex;
+
+        return true;
+    }
+    bool serialize(WriteJson &json) const
+    {
+        u32 entityAmount = entityComponents.size();
+        if(entityAmount == 0)
+            return false;
+
+        json.addArray(entitySystemName);
+        for(u32 i = 0; i < entityAmount; ++i)
+        {
+            json.addObject();
+            json.addString("EntityType", entitySystemName);
+            json.addInteger("EntityTypeId", u32(entitySystemID));
+            json.addInteger("EntityVersion", entityVersion);
+            json.addArray("Components");
+
+            if(hasComponent(i, Heritaged31::componentID))
+            {
+                Her31Array[i].serialize(json);
+            }
+            if(hasComponent(i, Heritaged21::componentID))
+            {
+                Her21Array[i].serialize(json);
+            }
+            json.endArray();
+            json.endObject();
+        }
+        json.endArray();
+        return json.isValid();
     }
     bool deserialize(const JsonBlock &json)
     {
         if(!json.isObject() || json.getChildCount() < 1)
             return false;
 
-        unsigned int addedCount = 0u;
-        for(const JsonBlock& child : json)
+        u32 addedCount = 0u;
+        for(const JsonBlock& child : json.getChild(entitySystemName))
         {
-            if(!child.getChild("EntityID").equals(entityID) || !child.getChild("EntityType").equals(entityName))
+            if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
                 return false;
 
+            addEntity();
             for(auto const &obj : child.getChild("Components"))
             {
+
                 if(Her31Array[addedCount].deserialize(obj))
                 {
+                    u64 componentIndex = getComponentIndex(Heritaged31::componentID);
+                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                        return false;
+
+                    entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }
                 if(Her21Array[addedCount].deserialize(obj))
                 {
+                    u64 componentIndex = getComponentIndex(Heritaged21::componentID);
+                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                        return false;
+
+                    entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }
             }
@@ -219,8 +356,20 @@ struct StaticModelEntity
         addedCount++;
         return true;
     }
+
+
 private:
     std::vector<Heritaged31> Her31Array;
     std::vector<Heritaged21> Her21Array;
+
+
+    std::vector<u16> entityVersions;
+
+    // This might be problematic if component is activated/deactived in middle of a frame
     std::vector<u64> entityComponents;
+
+    // Need to think how this adding should work, because it would need to have mutex and all.
+    std::vector<u32> freeEntityIndices;
+
+    static_assert(sizeof(componentTypes) / sizeof(ComponentType) < 64, "Only 64 components are allowed for entity!");
 };

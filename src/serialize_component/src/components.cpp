@@ -161,8 +161,7 @@ static bool parseFieldInfo(const FieldInfo &info, const JsonBlock &json)
             break;
         }
 
-
-        default:
+        case FieldType::NumTypes:
         {
             ASSERT_STRING(false, "Unknown field type!");
         }
@@ -191,39 +190,39 @@ static void printFieldValue(const char* fieldName, void *value, FieldType field)
 
     switch(field)
     {
-        case IntType:
+        case FieldType::IntType:
         {
             LOG("%s: %i\n", fieldName, *((int *)value));
             break;
         }
-        case FloatType:
+        case FieldType::FloatType:
         {
             LOG("%s: %f\n", fieldName, *((float *)value));
             break;
         }
 
-        case Vec2Type:
+        case FieldType::Vec2Type:
         {
             const Vector2 &v = *((Vector2 *)value);
             LOG("%s: [x: %f, y: %f]\n", fieldName, v.x, v.y);
             break;
         }
 
-        case Vec3Type:
+        case FieldType::Vec3Type:
         {
             const Vector3 &v = *((Vector3 *)value);
             LOG("%s: [x: %f, y: %f, z: %f]\n", fieldName, v.x, v.y, v.z);
             break;
         }
 
-        case Vec4Type:
+        case FieldType::Vec4Type:
         {
             const Vector4 &v = *((Vector4 *)value);
             LOG("%s: [x: %f, y: %f, z: %f, w: %f]\n", fieldName, v.x, v.y, v.z, v.w);
             break;
         }
 
-        default:
+        case FieldType::NumTypes:
         {
             break;
         }
@@ -235,7 +234,7 @@ struct RunOnce##CLASS_NAME \
 { \
     RunOnce##CLASS_NAME() \
     { \
-        if(AllDataTypes.find(MAGIC_NUMBER) != AllDataTypes.end()) \
+        if(AllDataTypes.find(u32(MAGIC_NUMBER)) != AllDataTypes.end()) \
         { \
             ASSERT_STRING(false, #MAGIC_NUMBER " added already"); \
         } \
@@ -255,7 +254,7 @@ bool CLASS_NAME::isJsonType(const JsonBlock &json) \
 \
     if(!json.getChild("ComponentType").equals(#CLASS_NAME)) \
         return false; \
-    if(!json.getChild("ComponentTypeId").equals(MAGIC_NUMBER)) \
+    if(!json.getChild("ComponentTypeId").equals(u32(MAGIC_NUMBER))) \
         return false; \
 \
     return true; \
@@ -264,7 +263,7 @@ bool CLASS_NAME::serialize(WriteJson &writeJson) \
 { \
     writeJson.addObject(); \
     writeJson.addString("ComponentType", #CLASS_NAME); \
-    writeJson.addInteger("ComponentTypeId", MAGIC_NUMBER); \
+    writeJson.addInteger("ComponentTypeId", u32(MAGIC_NUMBER)); \
     writeJson.addInteger("ComponentVersion", VERSION_NUMBER); \
     for(int i = 0; i < CLASS_NAME::getFieldCount(); ++i) \
     { \

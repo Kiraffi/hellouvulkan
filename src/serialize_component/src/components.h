@@ -4,6 +4,7 @@
 #include "components_macro.h"
 #include "../generated_header.h"
 
+/*
 SER_DATA_BEGIN(Heritaged, ComponentType::HeritagedType, 1)
     INT_FIELD(TempInt, 10)
     FLOAT_FIELD(TempFloat, 20.0f)
@@ -24,7 +25,7 @@ SER_DATA_BEGIN(Heritaged3, ComponentType::HeritagedType3, 1)
     INT_FIELD(TempInt4, 20)
     FLOAT_FIELD(TempFloat3, 20.0f)
 SER_DATA_END(Heritaged3)
-
+*/
 
 /*
 class EntityTypeSystem

@@ -3,11 +3,12 @@
 #include <core/json.h>
 #include <core/writejson.h>
 
+
 // Never delete any value, only add to this...
 // Might be bit bad if multiple people were to modify at the same time or at least possibly cause problems.
-enum ComponentType
+enum class ComponentType : u32
 {
-    HeritagedType,
+    HeritagedType = 1,
     HeritagedType2,
     HeritagedType3,
 
@@ -15,15 +16,23 @@ enum ComponentType
     ComponentTypeCount
 };
 
-enum EntityType
+enum class EntityType : u16
 {
-    StaticModelEntityType,
+    StaticModelEntityType = 1,
 
 
     EntityTypeCount
 };
 
-enum FieldType
+struct EntitySystemHandle
+{
+    EntityType entitySystemIndex = EntityType::EntityTypeCount;
+    u16 entityIndexVersion = ~u16(0);
+    u32 entityIndex = ~u32(0);
+ };
+
+
+enum class FieldType
 {
     IntType,
     FloatType,

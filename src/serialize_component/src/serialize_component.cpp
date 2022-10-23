@@ -94,6 +94,7 @@ SerializeComponent::~SerializeComponent()
     destroyImage(renderColorImage);
 }
 
+#if 0
 void printClass(const SerializableClassBase &obj, const char *str)
 {
     LOG("Obj: %s is: ", str);
@@ -118,7 +119,7 @@ void printClass(const SerializableClassBase &obj, const char *str)
         }
     }
 }
-
+#endif
 
 bool SerializeComponent::init(const char* windowStr, int screenWidth, int screenHeight,
     const VulkanInitializationParameters& params)
@@ -126,12 +127,48 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
 
+    {
+        static constexpr size_t offset = offsetof(Heritaged31, TempInt);
+        Heritaged31 her31;
+        LOG("Her31 comps: %u\n", her31.componentFieldAmount);
+        LOG("Her31 comp0: %i\n", *(int *)her31.getElementIndex(0));
+    }
+
+
+    {
+        StaticModelEntity testEntity;
+        testEntity.addEntity();
+        testEntity.addEntity();
+        testEntity.addEntity();
+        testEntity.addEntity();
+
+        testEntity.addHeritaged21Component(0, Heritaged21{.TempFloat2 = 234234.40});
+        testEntity.addHeritaged31Component(0, Heritaged31{});
+        testEntity.addHeritaged21Component(1, Heritaged21{});
+        //testEntity.addHeritaged21Component(2, Heritaged21{});
+        testEntity.addHeritaged31Component(3, Heritaged31{.TempFloat = 2304.04f});
+
+        WriteJson writeJson1(1, 1);
+
+        testEntity.serialize(writeJson1);
+        writeJson1.finishWrite();
+
+        JsonBlock json;
+        const String &strJson = writeJson1.getString();
+        bool parseSuccess = json.parseJson(StringView(strJson.data(), strJson.size()));
+        if(!parseSuccess)
         {
-            static constexpr size_t offset = offsetof(Heritaged31, TempInt);
-            Heritaged31 her31;
-            LOG("Her31 comps: %u\n", her31.componentFieldAmount);
-            LOG("Her31 comp0: %i\n", *(int *)her31.getElementIndex(0));
+            printf("Failed to parse writeJson1\n");
+            return false;
         }
+
+        StaticModelEntity testEntity2;
+        testEntity2.deserialize(json);
+
+        LOG("has comp: %u\n", testEntity2.hasComponent(0, ComponentType::HeritagedType));
+    }
+#if 0
+
     //SerializableClassBase base;
     Heritaged her;
     //LOG("Filenumber base: %i\n", base.getFileMagicNumber());
@@ -156,12 +193,12 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
     if(her.getMemoryPtr("TempInt", (void **)&intMemory, type))
     {
-        LOG("add: %p, type: %i\n", intMemory, type);
+        LOG("add: %p, type: %i\n", intMemory, i32(type));
         LOG("Int is: %i\n", *intMemory);
     }
-    if(her.getMemoryPtr("TempFloat", (void **) &floatMemory, type))
+    if(her.getMemoryPtr("TempFloat", (void **) &floatMemory, i32(type)))
     {
-        LOG("add: %p, type: %i\n", floatMemory, type);
+        LOG("add: %p, type: %i\n", floatMemory, i32(type));
         LOG("Float is: %f\n", *floatMemory);
     }
 
@@ -236,7 +273,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
     }
 
-
+#endif
     return resized();
 }
 
