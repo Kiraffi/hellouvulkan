@@ -69,7 +69,7 @@ static FORCE_INLINE Mat3x4 getMatrixFromTranslation(const Vector3 &pos)
 }
 
 
-static FORCE_INLINE Mat3x4 getMatrixFromTranslation(const Transform &trans)
+static FORCE_INLINE Mat3x4 getMatrixFromTransform(const Transform &trans)
 {
     Mat3x4 result{ Uninit };
     float xy2 = 2.0f * trans.rot.v.x * trans.rot.v.y;
@@ -103,7 +103,7 @@ static FORCE_INLINE Mat3x4 getMatrixFromTranslation(const Transform &trans)
     return result;
 }
 
-static FORCE_INLINE Mat3x4 getInverseMatrixFromTranslation(const Transform &trans)
+static FORCE_INLINE Mat3x4 getInverseMatrixFromTransform(const Transform &trans)
 {
     Mat3x4 result{ Uninit };
     float xy2 = 2.0f * trans.rot.v.x * trans.rot.v.y;

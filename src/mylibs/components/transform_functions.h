@@ -10,7 +10,7 @@ static Mat3x4 getModelMatrix(const Transform &trans)
     //Mat3x4 rotMat = getMatrixFromQuaternion(trans.rot);
     //Mat3x4 result = posMat * rotMat * scaleMat;
     //return result;
-    return getMatrixFromTranslation(trans);
+    return getMatrixFromTransform(trans);
 }
 
 static Mat3x4 getModelMatrixInverse(const Transform &trans)
@@ -25,11 +25,11 @@ static Mat3x4 getModelMatrixInverse(const Transform &trans)
     Mat3x4 posMat = getMatrixFromTranslation(pos);
     Mat3x4 scaleMat = getMatrixFromScale(scale);
     Mat3x4 rotMat = getMatrixFromQuaternion(rot);
-    
+
     return scaleMat * rotMat * posMat;
     */
 
-    return getInverseMatrixFromTranslation(trans);
+    return getInverseMatrixFromTransform(trans);
 }
 
 static Mat3x4 getModelNormalMatrix(const Transform &trans)
@@ -43,5 +43,5 @@ static Mat3x4 getModelNormalMatrix(const Transform &trans)
     //
     //return rotMat * scaleMat;
 
-    return getMatrixFromTranslation({ .pos = {0, 0, 0}, .rot = trans.rot, .scale = scale });
+    return getMatrixFromTransform({ .pos = {0, 0, 0}, .rot = trans.rot, .scale = scale });
 }
