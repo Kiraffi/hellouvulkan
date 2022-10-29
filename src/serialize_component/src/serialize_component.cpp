@@ -72,16 +72,22 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
     {
         StaticModelEntity testEntity;
-
+        /* Will assert having adding and read or write happening without sync.
+        const auto &readWriteHandle1 = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
+            .addArrayRead(ComponentType::HeritagedType) // Will assert if trying to access heritaged1readarray without inserting this to read accessor
+            // .addArrayRead(ComponentType::HeritagedType2) // Will assert when trying to read and write to same array without syncing
+            .addArrayWrite(ComponentType::HeritagedType2) // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
+        );
+        */
         // Needs something like getLockGuard / getLock
         {
-            // auto lck = testEntity.getModifyLockGuard();
+            auto mtx = testEntity.getLockedMutexHandle();
 
-            EntitySystemHandle handle1 = testEntity.addEntity();
-            EntitySystemHandle handle2 = testEntity.addEntity();
-            EntitySystemHandle handle3 = testEntity.addEntity();
-            EntitySystemHandle handle4 = testEntity.addEntity();
-            EntitySystemHandle handle5 = testEntity.addEntity();
+            EntitySystemHandle handle1 = testEntity.addEntity(mtx);
+            EntitySystemHandle handle2 = testEntity.addEntity(mtx);
+            EntitySystemHandle handle3 = testEntity.addEntity(mtx);
+            EntitySystemHandle handle4 = testEntity.addEntity(mtx);
+            EntitySystemHandle handle5 = testEntity.addEntity(mtx);
 
             testEntity.addHeritaged2Component(handle1, Heritaged2{.tempFloat2 = 234234.40});
             testEntity.addHeritaged1Component(handle1, Heritaged1{.tempInt = 78});
@@ -89,14 +95,27 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             //testEntity.addHeritaged2Component(handle3, Heritaged21{});
             testEntity.addHeritaged1Component(handle4, Heritaged1{.tempFloat = 2304.04f});
             testEntity.addHeritaged2Component(handle5, Heritaged2{});
+
+            testEntity.releaseLockedMutexHandle(mtx);
         }
-        const auto& readWriteHandle = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
+        testEntity.syncReadWrites(); // Needs sync to not assert for read/write + adding
+
+
+        const auto &readWriteHandle1 = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
+            .addArrayRead(ComponentType::HeritagedType) // Will assert if trying to access heritaged1readarray without inserting this to read accessor
+            // .addArrayRead(ComponentType::HeritagedType2) // Will assert when trying to read and write to same array without syncing
+            .addArrayWrite(ComponentType::HeritagedType2) // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
+        );
+        testEntity.syncReadWrites();
+
+        const auto& readWriteHandle2 = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
             .addArrayRead(ComponentType::HeritagedType) // Will assert if trying to access heritaged1readarray without inserting this to read accessor
             // .addArrayRead(ComponentType::HeritagedType2) // Will assert when trying to read and write to same array without syncing
             .addArrayWrite(ComponentType::HeritagedType2) // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
         );
         {
-            auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle);
+            //auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle1); // Should assert using old sync point handle
+            auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle2);
             u32 entityCount = testEntity.getEntityCount();
             for(u32 i = 0; i < entityCount; ++i)
             {
@@ -105,8 +124,8 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
                 //ptr->tempInt += 1;
                 ++ptr;
             }
-
-            auto ptrRef = testEntity.getHeritaged2WriteArray(readWriteHandle);
+            //auto ptrRef = testEntity.getHeritaged2WriteArray(readWriteHandle1); // Should assert using old sync point handle
+            auto ptrRef = testEntity.getHeritaged2WriteArray(readWriteHandle2);
             for(u32 i = 0; i < entityCount; ++i)
             {
                 ptrRef->tempInt += 239 + i;
@@ -119,7 +138,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
                 ++ptrRef;
             }
         }
-
+        testEntity.syncReadWrites();
         WriteJson writeJson1(1, 1);
 
         testEntity.serialize(writeJson1);
@@ -136,23 +155,29 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
 
         StaticModelEntity testEntity2;
         {
+            auto mtx = testEntity2.getLockedMutexHandle();
             // auto lck = testEntity2.getModifyLock();
-            testEntity2.deserialize(json);
-            testEntity2.removeEntity(testEntity2.getEntitySystemHandle(1));
-            EntitySystemHandle newHandle = testEntity2.addEntity();
+            testEntity2.deserialize(json, mtx);
+            auto entHandle = testEntity2.getEntitySystemHandle(3);
+            testEntity2.removeEntity(entHandle, mtx);
+            testEntity2.removeEntity(entHandle, mtx);
+            EntitySystemHandle newHandle = testEntity2.addEntity(mtx);
             testEntity2.addHeritaged1Component(newHandle, Heritaged1{.tempInt = 123});
 
-            // testEntity2.releaseModifyLock(lck);
+            testEntity2.releaseLockedMutexHandle(mtx);
         }
 
         OtherTestEntity otherEntity;
-        EntitySystemHandle otherHandle = otherEntity.addEntity();
         {
-            otherEntity.addHeritaged1Component(otherHandle, Heritaged1{.tempV2{97,23}});
+            auto mtx = otherEntity.getLockedMutexHandle();
+            EntitySystemHandle otherHandle = otherEntity.addEntity(mtx);
+            {
+                otherEntity.addHeritaged1Component(otherHandle, Heritaged1{ .tempV2{ 97, 23 } });
+            }
+            LOG("has comp: %u\n", testEntity2.hasComponent(
+                testEntity2.getEntitySystemHandle(1), ComponentType::HeritagedType));
+            otherEntity.releaseLockedMutexHandle(mtx);
         }
-        LOG("has comp: %u\n", testEntity2.hasComponent(
-            testEntity2.getEntitySystemHandle(1), ComponentType::HeritagedType));
-
     }
 
     return resized();

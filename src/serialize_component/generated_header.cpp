@@ -8,6 +8,7 @@
 #include <math/vector3.h>
 
 #include <atomic>
+#include <mutex>
 #include <vector>
 
 bool Heritaged1::serialize(WriteJson &json) const
@@ -131,6 +132,35 @@ const void* Heritaged2::getElementIndex(u32 index) const
 
 
 
+StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::StaticModelEntityReadWriteHandleBuilder::addArrayRead(ComponentType componentType)
+{
+    u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
+    if(componentIndex >= StaticModelEntity::componentTypeCount)
+    {
+        ASSERT(componentIndex < StaticModelEntity::componentTypeCount);
+        return *this;
+    }
+    readArrays |= u64(1) << u64(componentIndex); 
+    return *this;
+}
+
+StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::StaticModelEntityReadWriteHandleBuilder::addArrayWrite(ComponentType componentType)
+{
+    u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
+    if(componentIndex >= StaticModelEntity::componentTypeCount)
+    {
+        ASSERT(componentIndex < StaticModelEntity::componentTypeCount);
+        return *this;
+    }
+    writeArrays |= u64(1) << u64(componentIndex); 
+    return *this;
+}
+
+StaticModelEntity::~StaticModelEntity()
+{
+    syncReadWrites();
+}
+
 bool StaticModelEntity::hasComponent(EntitySystemHandle handle, ComponentType componentType) const
 {
     if(handle.entitySystemType != entitySystemID)
@@ -193,38 +223,84 @@ EntitySystemHandle StaticModelEntity::getEntitySystemHandle(u32 index) const
         .entityIndex = index };
 }
 
-EntitySystemHandle StaticModelEntity::addEntity()
+StaticModelEntity::StaticModelEntityEntityLockedMutexHandle StaticModelEntity::getLockedMutexHandle()
 {
-    // Some error if no lock
+    entityAddRemoveMutex.lock();
+    ++mutexLockIndex;
+    return StaticModelEntity::StaticModelEntityEntityLockedMutexHandle { .lockIndex = mutexLockIndex };
+}
+
+bool StaticModelEntity::releaseLockedMutexHandle(const StaticModelEntity::StaticModelEntityEntityLockedMutexHandle& handle)
+{
+    if(mutexLockIndex != handle.lockIndex)
+        return false;
+
+    ++mutexLockIndex;
+    entityAddRemoveMutex.unlock();
+}
+
+bool StaticModelEntity::syncReadWrites()
+{
+    u64 reads = readArrays.load();
+    u64 writes = writeArrays.load();
+
+    readArrays.store(u64(0));
+    writeArrays.store(u64(0));
+    ++currentSyncIndex;
+
+    // Cannot have both reading and writing to same array in same sync point.
+    ASSERT((reads & writes) == 0);
+
+    bool readWrite = (reads | writes) != 0;
+    bool addRemove = entitiesAdded || entitiesRemoved;
+    ASSERT(!(readWrite && addRemove));
+
+    entitiesAdded = false;
+    entitiesRemoved = false;
+
+    return ((reads & writes) == 0) && !(readWrite && addRemove);
+}
+
+EntitySystemHandle StaticModelEntity::addEntity(const StaticModelEntityEntityLockedMutexHandle& handle)
+{
+    u32 addIndex = ~0u;
 
     if(freeEntityIndices.size() == 0)
     {
-            Heritaged1Array.emplace_back();
-            Heritaged2Array.emplace_back();
+        Heritaged1Array.emplace_back();
+        Heritaged2Array.emplace_back();
         entityComponents.emplace_back(0);
-        entityVersions.emplace_back(0);
-        return getEntitySystemHandle(entityComponents.size() - 1);
+        entityVersions.emplace_back(1);
+        addIndex = entityComponents.size() - 1;
+        
     }
     else
     {
         u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
         freeEntityIndices.resize(freeEntityIndices.size() - 1);
         entityComponents[freeIndex] = 0;
-        return getEntitySystemHandle(freeIndex);
+        ++entityVersions[freeIndex];
+        addIndex = freeIndex;
     }
-    return EntitySystemHandle();
+    entitiesAdded = true;
+    return getEntitySystemHandle(addIndex);
 }
 
-bool StaticModelEntity::removeEntity(EntitySystemHandle handle)
+bool StaticModelEntity::removeEntity(EntitySystemHandle handle, const StaticModelEntityEntityLockedMutexHandle &mutexHandle)
 {
-    // Some error if no lock
+    ASSERT(mutexHandle.lockIndex == mutexLockIndex);
+    if(mutexHandle.lockIndex != mutexLockIndex)
+        return false;
 
+    ASSERT(handle.entitySystemType == entitySystemID);
     if(handle.entitySystemType != entitySystemID)
         return false;
 
+    ASSERT(handle.entityIndex < entityComponents.size());
     if(handle.entityIndex >= entityComponents.size())
         return false;
 
+    ASSERT(handle.entityIndexVersion == entityVersions[handle.entityIndex]);
     if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
         return false;
 
@@ -232,6 +308,9 @@ bool StaticModelEntity::removeEntity(EntitySystemHandle handle)
     entityComponents[freeIndex] = 0;
     ++entityVersions[freeIndex];
     freeEntityIndices.emplace_back(freeIndex);
+    
+    entitiesRemoved = true;
+
     return true;
 }
 
@@ -392,7 +471,7 @@ bool StaticModelEntity::serialize(WriteJson &json) const
     return json.isValid();
 }
 
-bool StaticModelEntity::deserialize(const JsonBlock &json)
+bool StaticModelEntity::deserialize(const JsonBlock &json, const StaticModelEntityEntityLockedMutexHandle &mutexHandle)
 {
     if(!json.isObject() || json.getChildCount() < 1)
         return false;
@@ -403,11 +482,11 @@ bool StaticModelEntity::deserialize(const JsonBlock &json)
 
     if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
         return false;
-
+    
     u32 addedCount = 0u;
     for(const auto &entityJson : child.getChild("Entities"))
     {
-        addEntity();
+        addEntity(mutexHandle);
         for(const auto &obj : entityJson.getChild("Components"))
         {
                 if(Heritaged1Array[addedCount].deserialize(obj))
@@ -435,6 +514,35 @@ bool StaticModelEntity::deserialize(const JsonBlock &json)
 }
 
 
+
+OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTestEntityReadWriteHandleBuilder::addArrayRead(ComponentType componentType)
+{
+    u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
+    if(componentIndex >= OtherTestEntity::componentTypeCount)
+    {
+        ASSERT(componentIndex < OtherTestEntity::componentTypeCount);
+        return *this;
+    }
+    readArrays |= u64(1) << u64(componentIndex); 
+    return *this;
+}
+
+OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTestEntityReadWriteHandleBuilder::addArrayWrite(ComponentType componentType)
+{
+    u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
+    if(componentIndex >= OtherTestEntity::componentTypeCount)
+    {
+        ASSERT(componentIndex < OtherTestEntity::componentTypeCount);
+        return *this;
+    }
+    writeArrays |= u64(1) << u64(componentIndex); 
+    return *this;
+}
+
+OtherTestEntity::~OtherTestEntity()
+{
+    syncReadWrites();
+}
 
 bool OtherTestEntity::hasComponent(EntitySystemHandle handle, ComponentType componentType) const
 {
@@ -498,37 +606,83 @@ EntitySystemHandle OtherTestEntity::getEntitySystemHandle(u32 index) const
         .entityIndex = index };
 }
 
-EntitySystemHandle OtherTestEntity::addEntity()
+OtherTestEntity::OtherTestEntityEntityLockedMutexHandle OtherTestEntity::getLockedMutexHandle()
 {
-    // Some error if no lock
+    entityAddRemoveMutex.lock();
+    ++mutexLockIndex;
+    return OtherTestEntity::OtherTestEntityEntityLockedMutexHandle { .lockIndex = mutexLockIndex };
+}
+
+bool OtherTestEntity::releaseLockedMutexHandle(const OtherTestEntity::OtherTestEntityEntityLockedMutexHandle& handle)
+{
+    if(mutexLockIndex != handle.lockIndex)
+        return false;
+
+    ++mutexLockIndex;
+    entityAddRemoveMutex.unlock();
+}
+
+bool OtherTestEntity::syncReadWrites()
+{
+    u64 reads = readArrays.load();
+    u64 writes = writeArrays.load();
+
+    readArrays.store(u64(0));
+    writeArrays.store(u64(0));
+    ++currentSyncIndex;
+
+    // Cannot have both reading and writing to same array in same sync point.
+    ASSERT((reads & writes) == 0);
+
+    bool readWrite = (reads | writes) != 0;
+    bool addRemove = entitiesAdded || entitiesRemoved;
+    ASSERT(!(readWrite && addRemove));
+
+    entitiesAdded = false;
+    entitiesRemoved = false;
+
+    return ((reads & writes) == 0) && !(readWrite && addRemove);
+}
+
+EntitySystemHandle OtherTestEntity::addEntity(const OtherTestEntityEntityLockedMutexHandle& handle)
+{
+    u32 addIndex = ~0u;
 
     if(freeEntityIndices.size() == 0)
     {
-            Heritaged1Array.emplace_back();
+        Heritaged1Array.emplace_back();
         entityComponents.emplace_back(0);
-        entityVersions.emplace_back(0);
-        return getEntitySystemHandle(entityComponents.size() - 1);
+        entityVersions.emplace_back(1);
+        addIndex = entityComponents.size() - 1;
+        
     }
     else
     {
         u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
         freeEntityIndices.resize(freeEntityIndices.size() - 1);
         entityComponents[freeIndex] = 0;
-        return getEntitySystemHandle(freeIndex);
+        ++entityVersions[freeIndex];
+        addIndex = freeIndex;
     }
-    return EntitySystemHandle();
+    entitiesAdded = true;
+    return getEntitySystemHandle(addIndex);
 }
 
-bool OtherTestEntity::removeEntity(EntitySystemHandle handle)
+bool OtherTestEntity::removeEntity(EntitySystemHandle handle, const OtherTestEntityEntityLockedMutexHandle &mutexHandle)
 {
-    // Some error if no lock
+    ASSERT(mutexHandle.lockIndex == mutexLockIndex);
+    if(mutexHandle.lockIndex != mutexLockIndex)
+        return false;
 
+    ASSERT(handle.entitySystemType == entitySystemID);
     if(handle.entitySystemType != entitySystemID)
         return false;
 
+    ASSERT(handle.entityIndex < entityComponents.size());
     if(handle.entityIndex >= entityComponents.size())
         return false;
 
+    ASSERT(handle.entityIndexVersion == entityVersions[handle.entityIndex]);
     if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
         return false;
 
@@ -536,6 +690,9 @@ bool OtherTestEntity::removeEntity(EntitySystemHandle handle)
     entityComponents[freeIndex] = 0;
     ++entityVersions[freeIndex];
     freeEntityIndices.emplace_back(freeIndex);
+    
+    entitiesRemoved = true;
+
     return true;
 }
 
@@ -630,7 +787,7 @@ bool OtherTestEntity::serialize(WriteJson &json) const
     return json.isValid();
 }
 
-bool OtherTestEntity::deserialize(const JsonBlock &json)
+bool OtherTestEntity::deserialize(const JsonBlock &json, const OtherTestEntityEntityLockedMutexHandle &mutexHandle)
 {
     if(!json.isObject() || json.getChildCount() < 1)
         return false;
@@ -641,11 +798,11 @@ bool OtherTestEntity::deserialize(const JsonBlock &json)
 
     if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
         return false;
-
+    
     u32 addedCount = 0u;
     for(const auto &entityJson : child.getChild("Entities"))
     {
-        addEntity();
+        addEntity(mutexHandle);
         for(const auto &obj : entityJson.getChild("Components"))
         {
                 if(Heritaged1Array[addedCount].deserialize(obj))

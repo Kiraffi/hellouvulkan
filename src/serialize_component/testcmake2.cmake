@@ -39,6 +39,7 @@ set(MY_FILE_HEADER "
 #include <math/vector3.h>
 
 #include <atomic>
+#include <mutex>
 #include <vector>\n")
 
 file(WRITE "${FILENAME_TO_MODIFY}.h" "${MY_HEADER_FIRST_LINE}
@@ -60,9 +61,112 @@ foreach(DEF_ROW ${DEF_LIST})
     if(DEF_ROW STREQUAL "EntityTypeEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
 
-####################### ENTITY CPP ########################
+       ####################### ENTITY HEADER ############################
+
+        file(APPEND "${FILENAME_TO_MODIFY}.h" "
+struct ${ENTITY_NAME}
+{
+    ~${ENTITY_NAME}();
+    struct ${ENTITY_NAME}ReadWriteHandleBuilder
+    {
+        ${ENTITY_NAME}ReadWriteHandleBuilder& addArrayRead(ComponentType componentType);
+        ${ENTITY_NAME}ReadWriteHandleBuilder& addArrayWrite(ComponentType componentType);
+
+        u64 readArrays = 0;
+        u64 writeArrays = 0;
+    };
+    
+    struct ${ENTITY_NAME}EntityLockedMutexHandle
+    {
+        u64 lockIndex = 0;
+    };
+
+    static constexpr ComponentType componentTypes[] =
+    {${ENTITY_COMPONENT_TYPES_ARRAY}
+    };
+    
+    static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
+    static constexpr EntityType entitySystemID = ${ENTITY_ID};
+    static constexpr u32 entityVersion = ${ENTITY_VERSION};
+    static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
+
+    static u32 getComponentIndex(ComponentType componentType);
+    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
+
+    // Different handle types for getting array... These are needed to set atomic locks...
+    static constexpr ${ENTITY_NAME}ReadWriteHandleBuilder getReadWriteHandleBuilder() { return ${ENTITY_NAME}ReadWriteHandleBuilder(); }
+    const EntityReadWriteHandle getReadWriteHandle(const ${ENTITY_NAME}ReadWriteHandleBuilder& builder);
+
+    ${ENTITY_NAME}EntityLockedMutexHandle getLockedMutexHandle();
+    bool releaseLockedMutexHandle(const ${ENTITY_NAME}EntityLockedMutexHandle& handle);
+
+    bool syncReadWrites();
+
+    EntitySystemHandle getEntitySystemHandle(u32 index) const;
+    EntitySystemHandle addEntity(const ${ENTITY_NAME}EntityLockedMutexHandle& handle);
+    bool removeEntity(EntitySystemHandle handle, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle);
+${ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS}
+${ENTITY_ADD_COMPONENT_HEADER}
+    bool serialize(WriteJson &json) const;
+    bool deserialize(const JsonBlock &json, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle);
+    u32 getEntityCount() const { return (u32)entityComponents.size(); }
+
+private:${ENTITY_ARRAYS_FIELD}
+
+    std::vector<u16> entityVersions;
+
+    // This might be problematic if component is activated/deactived in middle of a frame
+    std::vector<u64> entityComponents;
+
+    // Need to think how this adding should work, because it would need to have mutex and all.
+    std::vector<u32> freeEntityIndices;
+
+    static_assert(componentTypeCount < 64, \"Only 64 components are allowed for entity!\");
+    
+    std::mutex entityAddRemoveMutex;
+    u64 mutexLockIndex = 0;
+
+    std::atomic<u64> readArrays {0};
+    std::atomic<u64> writeArrays {0};
+    u32 currentSyncIndex = 0;
+
+    bool entitiesAdded = false;
+    bool entitiesRemoved = false;
+};\n")
+
+
+        ####################### ENTITY CPP ########################
 
         file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
+
+${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder::addArrayRead(ComponentType componentType)
+{
+    u32 componentIndex = ${ENTITY_NAME}::getComponentIndex(componentType);
+    if(componentIndex >= ${ENTITY_NAME}::componentTypeCount)
+    {
+        ASSERT(componentIndex < ${ENTITY_NAME}::componentTypeCount);
+        return *this;
+    }
+    readArrays |= u64(1) << u64(componentIndex); 
+    return *this;
+}
+
+${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder::addArrayWrite(ComponentType componentType)
+{
+    u32 componentIndex = ${ENTITY_NAME}::getComponentIndex(componentType);
+    if(componentIndex >= ${ENTITY_NAME}::componentTypeCount)
+    {
+        ASSERT(componentIndex < ${ENTITY_NAME}::componentTypeCount);
+        return *this;
+    }
+    writeArrays |= u64(1) << u64(componentIndex); 
+    return *this;
+}
+
+${ENTITY_NAME}::~${ENTITY_NAME}()
+{
+    syncReadWrites();
+}
 
 bool ${ENTITY_NAME}::hasComponent(EntitySystemHandle handle, ComponentType componentType) const
 {
@@ -126,36 +230,82 @@ EntitySystemHandle ${ENTITY_NAME}::getEntitySystemHandle(u32 index) const
         .entityIndex = index };
 }
 
-EntitySystemHandle ${ENTITY_NAME}::addEntity()
+${ENTITY_NAME}::${ENTITY_NAME}EntityLockedMutexHandle ${ENTITY_NAME}::getLockedMutexHandle()
 {
-    // Some error if no lock
+    entityAddRemoveMutex.lock();
+    ++mutexLockIndex;
+    return ${ENTITY_NAME}::${ENTITY_NAME}EntityLockedMutexHandle { .lockIndex = mutexLockIndex };
+}
+
+bool ${ENTITY_NAME}::releaseLockedMutexHandle(const ${ENTITY_NAME}::${ENTITY_NAME}EntityLockedMutexHandle& handle)
+{
+    if(mutexLockIndex != handle.lockIndex)
+        return false;
+
+    ++mutexLockIndex;
+    entityAddRemoveMutex.unlock();
+}
+
+bool ${ENTITY_NAME}::syncReadWrites()
+{
+    u64 reads = readArrays.load();
+    u64 writes = writeArrays.load();
+
+    readArrays.store(u64(0));
+    writeArrays.store(u64(0));
+    ++currentSyncIndex;
+
+    // Cannot have both reading and writing to same array in same sync point.
+    ASSERT((reads & writes) == 0);
+
+    bool readWrite = (reads | writes) != 0;
+    bool addRemove = entitiesAdded || entitiesRemoved;
+    ASSERT(!(readWrite && addRemove));
+
+    entitiesAdded = false;
+    entitiesRemoved = false;
+
+    return ((reads & writes) == 0) && !(readWrite && addRemove);
+}
+
+EntitySystemHandle ${ENTITY_NAME}::addEntity(const ${ENTITY_NAME}EntityLockedMutexHandle& handle)
+{
+    u32 addIndex = ~0u;
 
     if(freeEntityIndices.size() == 0)
     {${ENTITY_ARRAY_PUSHBACKS}
         entityComponents.emplace_back(0);
-        entityVersions.emplace_back(0);
-        return getEntitySystemHandle(entityComponents.size() - 1);
+        entityVersions.emplace_back(1);
+        addIndex = entityComponents.size() - 1;
+        
     }
     else
     {
         u32 freeIndex = freeEntityIndices[freeEntityIndices.size() - 1];
         freeEntityIndices.resize(freeEntityIndices.size() - 1);
         entityComponents[freeIndex] = 0;
-        return getEntitySystemHandle(freeIndex);
+        ++entityVersions[freeIndex];
+        addIndex = freeIndex;
     }
-    return EntitySystemHandle();
+    entitiesAdded = true;
+    return getEntitySystemHandle(addIndex);
 }
 
-bool ${ENTITY_NAME}::removeEntity(EntitySystemHandle handle)
+bool ${ENTITY_NAME}::removeEntity(EntitySystemHandle handle, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle)
 {
-    // Some error if no lock
+    ASSERT(mutexHandle.lockIndex == mutexLockIndex);
+    if(mutexHandle.lockIndex != mutexLockIndex)
+        return false;
 
+    ASSERT(handle.entitySystemType == entitySystemID);
     if(handle.entitySystemType != entitySystemID)
         return false;
 
+    ASSERT(handle.entityIndex < entityComponents.size());
     if(handle.entityIndex >= entityComponents.size())
         return false;
 
+    ASSERT(handle.entityIndexVersion == entityVersions[handle.entityIndex]);
     if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
         return false;
 
@@ -163,6 +313,9 @@ bool ${ENTITY_NAME}::removeEntity(EntitySystemHandle handle)
     entityComponents[freeIndex] = 0;
     ++entityVersions[freeIndex];
     freeEntityIndices.emplace_back(freeIndex);
+    
+    entitiesRemoved = true;
+
     return true;
 }
 ${ENTITY_COMPONENT_ARRAY_GETTERS}
@@ -191,7 +344,7 @@ ${ENTITY_WRITE_CONTENTS}
     return json.isValid();
 }
 
-bool ${ENTITY_NAME}::deserialize(const JsonBlock &json)
+bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle)
 {
     if(!json.isObject() || json.getChildCount() < 1)
         return false;
@@ -202,11 +355,11 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json)
 
     if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
         return false;
-
+    
     u32 addedCount = 0u;
     for(const auto &entityJson : child.getChild(\"Entities\"))
     {
-        addEntity();
+        addEntity(mutexHandle);
         for(const auto &obj : entityJson.getChild(\"Components\"))
         {${ENTITY_LOAD_CONTENTS}
         }
@@ -218,83 +371,6 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json)
 ")
 
 
-
-
-####################### ENTITY HEADER ############################
-
-        file(APPEND "${FILENAME_TO_MODIFY}.h" "
-struct ${ENTITY_NAME}
-{
-    struct ${ENTITY_NAME}ReadWriteHandleBuilder
-    {
-        ${ENTITY_NAME}ReadWriteHandleBuilder& addArrayRead(ComponentType componentType)
-        {
-            u32 componentIndex = ${ENTITY_NAME}::getComponentIndex(componentType);
-            if(componentIndex < 0 || componentIndex >= ${ENTITY_NAME}::componentTypeCount)
-            {
-                ASSERT(componentIndex > 0 && componentIndex < ${ENTITY_NAME}::componentTypeCount);
-                return *this;
-            }
-            readArrays |= u64(1) << u64(componentIndex); 
-            return *this;
-        }
-        
-        ${ENTITY_NAME}ReadWriteHandleBuilder& addArrayWrite(ComponentType componentType)
-        {
-            u32 componentIndex = ${ENTITY_NAME}::getComponentIndex(componentType);
-            if(componentIndex < 0 || componentIndex >= ${ENTITY_NAME}::componentTypeCount)
-            {
-                ASSERT(componentIndex > 0 && componentIndex < ${ENTITY_NAME}::componentTypeCount);
-                return *this;
-            }
-            writeArrays |= u64(1) << u64(componentIndex); 
-            return *this;
-        }
-        u64 readArrays = 0;
-        u64 writeArrays = 0;
-    };
-    
-    static constexpr ComponentType componentTypes[] =
-    {${ENTITY_COMPONENT_TYPES_ARRAY}
-    };
-    
-    static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
-    static constexpr EntityType entitySystemID = ${ENTITY_ID};
-    static constexpr u32 entityVersion = ${ENTITY_VERSION};
-    static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
-
-    static u32 getComponentIndex(ComponentType componentType);
-    bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
-
-    // Different handle types for getting array... These are needed to set atomic locks...
-    static constexpr ${ENTITY_NAME}ReadWriteHandleBuilder getReadWriteHandleBuilder() { return ${ENTITY_NAME}ReadWriteHandleBuilder(); }
-    const EntityReadWriteHandle getReadWriteHandle(const ${ENTITY_NAME}ReadWriteHandleBuilder& builder);
-
-    EntitySystemHandle getEntitySystemHandle(u32 index) const;
-    EntitySystemHandle addEntity();
-    bool removeEntity(EntitySystemHandle handle);
-${ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS}
-${ENTITY_ADD_COMPONENT_HEADER}
-    bool serialize(WriteJson &json) const;
-    bool deserialize(const JsonBlock &json);
-    u32 getEntityCount() const { return (u32)entityComponents.size(); }
-
-private:${ENTITY_ARRAYS_FIELD}
-
-    std::vector<u16> entityVersions;
-
-    // This might be problematic if component is activated/deactived in middle of a frame
-    std::vector<u64> entityComponents;
-
-    // Need to think how this adding should work, because it would need to have mutex and all.
-    std::vector<u32> freeEntityIndices;
-
-    static_assert(componentTypeCount < 64, \"Only 64 components are allowed for entity!\");
-    
-    std::atomic<u64> readArrays {0};
-    std::atomic<u64> writeArrays {0};
-    u32 currentSyncIndex = 0;
-};\n")
 
     elseif(DEF_ROW STREQUAL "EntityTypeBegin"  AND READ_STATE EQUAL READ_STATE_NONE)
         set(READ_STATE ${READ_STATE_ENTITY_BEGIN})
@@ -389,7 +465,7 @@ ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray(const EntityReadWriteHandle& han
 }")
 
         string(APPEND ENTITY_COMPONENT_TYPES_ARRAY "\n        ${ELEM0}::componentID,")
-        string(APPEND ENTITY_ARRAY_PUSHBACKS "\n            ${ELEM1}Array.emplace_back();")
+        string(APPEND ENTITY_ARRAY_PUSHBACKS "\n        ${ELEM1}Array.emplace_back();")
         string(APPEND ENTITY_ARRAYS_FIELD "\n    std::vector<${ELEM0}> ${ELEM1}Array;")
         string(APPEND ENTITY_LOAD_CONTENTS "
                 if(${ELEM1}Array[addedCount].deserialize(obj))
@@ -439,7 +515,35 @@ bool ${ENTITY_NAME}::add${ELEM0}Component(EntitySystemHandle handle, const ${ELE
     elseif(DEF_ROW STREQUAL "ComponentEnd" AND READ_STATE EQUAL READ_STATE_COMPONENT_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
 
-################### COMPONENT HEADER ######################
+
+        #################### COMPONENT HEADER #####################
+
+        file(APPEND "${FILENAME_TO_MODIFY}.h" "
+struct ${COMPONENT_NAME}
+{
+    static constexpr const char* componentName = \"${COMPONENT_NAME}\";
+    static constexpr ComponentType componentID = ${COMPONENT_ID};
+    static constexpr u32 componentVersion = ${COMPONENT_VERSION};
+    static constexpr u32 componentFieldAmount = ${COMPONENT_FIELD_COUNT};
+${COMPONENT_VARS}
+
+    static constexpr FieldType fieldTypes[] =
+    {${COMPONENT_FIELD_TYPES}
+    };
+    static constexpr const char* fieldNames[] =
+    {${COMPONENT_FIELD_NAMES}
+    };
+
+    bool serialize(WriteJson &json) const;
+    bool deserialize(const JsonBlock &json);
+
+private:
+    void* getElementIndexRef(u32 index);
+    const void* getElementIndex(u32 index) const;
+};\n")
+
+
+        ################### COMPONENT CPP ######################
 
         file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
 bool ${COMPONENT_NAME}::serialize(WriteJson &json) const
@@ -493,32 +597,6 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
 }
 
 ")
-
-#################### COMPONENT HEADER #####################
-
-        file(APPEND "${FILENAME_TO_MODIFY}.h" "
-struct ${COMPONENT_NAME}
-{
-    static constexpr const char* componentName = \"${COMPONENT_NAME}\";
-    static constexpr ComponentType componentID = ${COMPONENT_ID};
-    static constexpr u32 componentVersion = ${COMPONENT_VERSION};
-    static constexpr u32 componentFieldAmount = ${COMPONENT_FIELD_COUNT};
-${COMPONENT_VARS}
-
-    static constexpr FieldType fieldTypes[] =
-    {${COMPONENT_FIELD_TYPES}
-    };
-    static constexpr const char* fieldNames[] =
-    {${COMPONENT_FIELD_NAMES}
-    };
-
-    bool serialize(WriteJson &json) const;
-    bool deserialize(const JsonBlock &json);
-
-private:
-    void* getElementIndexRef(u32 index);
-    const void* getElementIndex(u32 index) const;
-};\n")
 
     elseif(DEF_ROW STREQUAL "ComponentBegin" AND READ_STATE EQUAL READ_STATE_NONE)
         set(READ_STATE ${READ_STATE_COMPONENT_BEGIN})

@@ -8,6 +8,7 @@
 #include <math/vector3.h>
 
 #include <atomic>
+#include <mutex>
 #include <vector>
 
 struct Heritaged1
@@ -94,35 +95,21 @@ private:
 
 struct StaticModelEntity
 {
+    ~StaticModelEntity();
     struct StaticModelEntityReadWriteHandleBuilder
     {
-        StaticModelEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType)
-        {
-            u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
-            if(componentIndex < 0 || componentIndex >= StaticModelEntity::componentTypeCount)
-            {
-                ASSERT(componentIndex > 0 && componentIndex < StaticModelEntity::componentTypeCount);
-                return *this;
-            }
-            readArrays |= u64(1) << u64(componentIndex); 
-            return *this;
-        }
-        
-        StaticModelEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType)
-        {
-            u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
-            if(componentIndex < 0 || componentIndex >= StaticModelEntity::componentTypeCount)
-            {
-                ASSERT(componentIndex > 0 && componentIndex < StaticModelEntity::componentTypeCount);
-                return *this;
-            }
-            writeArrays |= u64(1) << u64(componentIndex); 
-            return *this;
-        }
+        StaticModelEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType);
+        StaticModelEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType);
+
         u64 readArrays = 0;
         u64 writeArrays = 0;
     };
     
+    struct StaticModelEntityEntityLockedMutexHandle
+    {
+        u64 lockIndex = 0;
+    };
+
     static constexpr ComponentType componentTypes[] =
     {
         Heritaged1::componentID,
@@ -141,9 +128,14 @@ struct StaticModelEntity
     static constexpr StaticModelEntityReadWriteHandleBuilder getReadWriteHandleBuilder() { return StaticModelEntityReadWriteHandleBuilder(); }
     const EntityReadWriteHandle getReadWriteHandle(const StaticModelEntityReadWriteHandleBuilder& builder);
 
+    StaticModelEntityEntityLockedMutexHandle getLockedMutexHandle();
+    bool releaseLockedMutexHandle(const StaticModelEntityEntityLockedMutexHandle& handle);
+
+    bool syncReadWrites();
+
     EntitySystemHandle getEntitySystemHandle(u32 index) const;
-    EntitySystemHandle addEntity();
-    bool removeEntity(EntitySystemHandle handle);
+    EntitySystemHandle addEntity(const StaticModelEntityEntityLockedMutexHandle& handle);
+    bool removeEntity(EntitySystemHandle handle, const StaticModelEntityEntityLockedMutexHandle &mutexHandle);
 
     const Heritaged1* getHeritaged1ReadArray(const EntityReadWriteHandle& handle) const;
     Heritaged1* getHeritaged1WriteArray(const EntityReadWriteHandle& handle);
@@ -153,7 +145,7 @@ struct StaticModelEntity
     bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component);
     bool addHeritaged2Component(EntitySystemHandle handle, const Heritaged2& component);
     bool serialize(WriteJson &json) const;
-    bool deserialize(const JsonBlock &json);
+    bool deserialize(const JsonBlock &json, const StaticModelEntityEntityLockedMutexHandle &mutexHandle);
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
 
 private:
@@ -170,42 +162,34 @@ private:
 
     static_assert(componentTypeCount < 64, "Only 64 components are allowed for entity!");
     
+    std::mutex entityAddRemoveMutex;
+    u64 mutexLockIndex = 0;
+
     std::atomic<u64> readArrays {0};
     std::atomic<u64> writeArrays {0};
     u32 currentSyncIndex = 0;
+
+    bool entitiesAdded = false;
+    bool entitiesRemoved = false;
 };
 
 struct OtherTestEntity
 {
+    ~OtherTestEntity();
     struct OtherTestEntityReadWriteHandleBuilder
     {
-        OtherTestEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType)
-        {
-            u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
-            if(componentIndex < 0 || componentIndex >= OtherTestEntity::componentTypeCount)
-            {
-                ASSERT(componentIndex > 0 && componentIndex < OtherTestEntity::componentTypeCount);
-                return *this;
-            }
-            readArrays |= u64(1) << u64(componentIndex); 
-            return *this;
-        }
-        
-        OtherTestEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType)
-        {
-            u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
-            if(componentIndex < 0 || componentIndex >= OtherTestEntity::componentTypeCount)
-            {
-                ASSERT(componentIndex > 0 && componentIndex < OtherTestEntity::componentTypeCount);
-                return *this;
-            }
-            writeArrays |= u64(1) << u64(componentIndex); 
-            return *this;
-        }
+        OtherTestEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType);
+        OtherTestEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType);
+
         u64 readArrays = 0;
         u64 writeArrays = 0;
     };
     
+    struct OtherTestEntityEntityLockedMutexHandle
+    {
+        u64 lockIndex = 0;
+    };
+
     static constexpr ComponentType componentTypes[] =
     {
         Heritaged1::componentID,
@@ -223,16 +207,21 @@ struct OtherTestEntity
     static constexpr OtherTestEntityReadWriteHandleBuilder getReadWriteHandleBuilder() { return OtherTestEntityReadWriteHandleBuilder(); }
     const EntityReadWriteHandle getReadWriteHandle(const OtherTestEntityReadWriteHandleBuilder& builder);
 
+    OtherTestEntityEntityLockedMutexHandle getLockedMutexHandle();
+    bool releaseLockedMutexHandle(const OtherTestEntityEntityLockedMutexHandle& handle);
+
+    bool syncReadWrites();
+
     EntitySystemHandle getEntitySystemHandle(u32 index) const;
-    EntitySystemHandle addEntity();
-    bool removeEntity(EntitySystemHandle handle);
+    EntitySystemHandle addEntity(const OtherTestEntityEntityLockedMutexHandle& handle);
+    bool removeEntity(EntitySystemHandle handle, const OtherTestEntityEntityLockedMutexHandle &mutexHandle);
 
     const Heritaged1* getHeritaged1ReadArray(const EntityReadWriteHandle& handle) const;
     Heritaged1* getHeritaged1WriteArray(const EntityReadWriteHandle& handle);
 
     bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component);
     bool serialize(WriteJson &json) const;
-    bool deserialize(const JsonBlock &json);
+    bool deserialize(const JsonBlock &json, const OtherTestEntityEntityLockedMutexHandle &mutexHandle);
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
 
 private:
@@ -248,7 +237,13 @@ private:
 
     static_assert(componentTypeCount < 64, "Only 64 components are allowed for entity!");
     
+    std::mutex entityAddRemoveMutex;
+    u64 mutexLockIndex = 0;
+
     std::atomic<u64> readArrays {0};
     std::atomic<u64> writeArrays {0};
     u32 currentSyncIndex = 0;
+
+    bool entitiesAdded = false;
+    bool entitiesRemoved = false;
 };
