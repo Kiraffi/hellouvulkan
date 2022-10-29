@@ -160,7 +160,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             testEntity2.deserialize(json, mtx);
             auto entHandle = testEntity2.getEntitySystemHandle(3);
             testEntity2.removeEntity(entHandle, mtx);
-            testEntity2.removeEntity(entHandle, mtx);
+            // testEntity2.removeEntity(entHandle, mtx); //Will assert trying to remove same entity
             EntitySystemHandle newHandle = testEntity2.addEntity(mtx);
             testEntity2.addHeritaged1Component(newHandle, Heritaged1{.tempInt = 123});
 

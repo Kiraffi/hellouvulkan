@@ -104,7 +104,7 @@ struct StaticModelEntity
         u64 readArrays = 0;
         u64 writeArrays = 0;
     };
-    
+
     struct StaticModelEntityEntityLockedMutexHandle
     {
         u64 lockIndex = 0;
@@ -115,7 +115,7 @@ struct StaticModelEntity
         Heritaged1::componentID,
         Heritaged2::componentID,
     };
-    
+
     static constexpr const char* entitySystemName = "StaticModelEntity";
     static constexpr EntityType entitySystemID = EntityType::StaticModelEntityType;
     static constexpr u32 entityVersion = 1;
@@ -161,8 +161,8 @@ private:
     std::vector<u32> freeEntityIndices;
 
     static_assert(componentTypeCount < 64, "Only 64 components are allowed for entity!");
-    
-    std::mutex entityAddRemoveMutex;
+
+    std::mutex entityAddRemoveMutex {};
     u64 mutexLockIndex = 0;
 
     std::atomic<u64> readArrays {0};
@@ -184,7 +184,7 @@ struct OtherTestEntity
         u64 readArrays = 0;
         u64 writeArrays = 0;
     };
-    
+
     struct OtherTestEntityEntityLockedMutexHandle
     {
         u64 lockIndex = 0;
@@ -194,7 +194,7 @@ struct OtherTestEntity
     {
         Heritaged1::componentID,
     };
-    
+
     static constexpr const char* entitySystemName = "OtherTestEntity";
     static constexpr EntityType entitySystemID = EntityType::OtherTestEntityType;
     static constexpr u32 entityVersion = 1;
@@ -236,8 +236,8 @@ private:
     std::vector<u32> freeEntityIndices;
 
     static_assert(componentTypeCount < 64, "Only 64 components are allowed for entity!");
-    
-    std::mutex entityAddRemoveMutex;
+
+    std::mutex entityAddRemoveMutex {};
     u64 mutexLockIndex = 0;
 
     std::atomic<u64> readArrays {0};

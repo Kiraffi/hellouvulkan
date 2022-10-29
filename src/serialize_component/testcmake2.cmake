@@ -75,7 +75,7 @@ struct ${ENTITY_NAME}
         u64 readArrays = 0;
         u64 writeArrays = 0;
     };
-    
+
     struct ${ENTITY_NAME}EntityLockedMutexHandle
     {
         u64 lockIndex = 0;
@@ -84,7 +84,7 @@ struct ${ENTITY_NAME}
     static constexpr ComponentType componentTypes[] =
     {${ENTITY_COMPONENT_TYPES_ARRAY}
     };
-    
+
     static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
     static constexpr EntityType entitySystemID = ${ENTITY_ID};
     static constexpr u32 entityVersion = ${ENTITY_VERSION};
@@ -122,8 +122,8 @@ private:${ENTITY_ARRAYS_FIELD}
     std::vector<u32> freeEntityIndices;
 
     static_assert(componentTypeCount < 64, \"Only 64 components are allowed for entity!\");
-    
-    std::mutex entityAddRemoveMutex;
+
+    std::mutex entityAddRemoveMutex {};
     u64 mutexLockIndex = 0;
 
     std::atomic<u64> readArrays {0};
@@ -147,7 +147,7 @@ ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_N
         ASSERT(componentIndex < ${ENTITY_NAME}::componentTypeCount);
         return *this;
     }
-    readArrays |= u64(1) << u64(componentIndex); 
+    readArrays |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -159,7 +159,7 @@ ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_N
         ASSERT(componentIndex < ${ENTITY_NAME}::componentTypeCount);
         return *this;
     }
-    writeArrays |= u64(1) << u64(componentIndex); 
+    writeArrays |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -209,7 +209,7 @@ const EntityReadWriteHandle ${ENTITY_NAME}::getReadWriteHandle(const ${ENTITY_NA
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
-        return EntityReadWriteHandle{ 
+        return EntityReadWriteHandle{
             .readArrays = builder.readArrays,
             .writeArrays = builder.writeArrays,
             .syncIndexPoint = currentSyncIndex,
@@ -244,6 +244,7 @@ bool ${ENTITY_NAME}::releaseLockedMutexHandle(const ${ENTITY_NAME}::${ENTITY_NAM
 
     ++mutexLockIndex;
     entityAddRemoveMutex.unlock();
+    return true;
 }
 
 bool ${ENTITY_NAME}::syncReadWrites()
@@ -277,7 +278,7 @@ EntitySystemHandle ${ENTITY_NAME}::addEntity(const ${ENTITY_NAME}EntityLockedMut
         entityComponents.emplace_back(0);
         entityVersions.emplace_back(1);
         addIndex = entityComponents.size() - 1;
-        
+
     }
     else
     {
@@ -313,7 +314,7 @@ bool ${ENTITY_NAME}::removeEntity(EntitySystemHandle handle, const ${ENTITY_NAME
     entityComponents[freeIndex] = 0;
     ++entityVersions[freeIndex];
     freeEntityIndices.emplace_back(freeIndex);
-    
+
     entitiesRemoved = true;
 
     return true;
@@ -355,7 +356,7 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
 
     if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
         return false;
-    
+
     u32 addedCount = 0u;
     for(const auto &entityJson : child.getChild(\"Entities\"))
     {

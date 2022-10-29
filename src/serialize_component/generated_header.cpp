@@ -140,7 +140,7 @@ StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::S
         ASSERT(componentIndex < StaticModelEntity::componentTypeCount);
         return *this;
     }
-    readArrays |= u64(1) << u64(componentIndex); 
+    readArrays |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -152,7 +152,7 @@ StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::S
         ASSERT(componentIndex < StaticModelEntity::componentTypeCount);
         return *this;
     }
-    writeArrays |= u64(1) << u64(componentIndex); 
+    writeArrays |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -202,7 +202,7 @@ const EntityReadWriteHandle StaticModelEntity::getReadWriteHandle(const StaticMo
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
-        return EntityReadWriteHandle{ 
+        return EntityReadWriteHandle{
             .readArrays = builder.readArrays,
             .writeArrays = builder.writeArrays,
             .syncIndexPoint = currentSyncIndex,
@@ -237,6 +237,7 @@ bool StaticModelEntity::releaseLockedMutexHandle(const StaticModelEntity::Static
 
     ++mutexLockIndex;
     entityAddRemoveMutex.unlock();
+    return true;
 }
 
 bool StaticModelEntity::syncReadWrites()
@@ -272,7 +273,7 @@ EntitySystemHandle StaticModelEntity::addEntity(const StaticModelEntityEntityLoc
         entityComponents.emplace_back(0);
         entityVersions.emplace_back(1);
         addIndex = entityComponents.size() - 1;
-        
+
     }
     else
     {
@@ -308,7 +309,7 @@ bool StaticModelEntity::removeEntity(EntitySystemHandle handle, const StaticMode
     entityComponents[freeIndex] = 0;
     ++entityVersions[freeIndex];
     freeEntityIndices.emplace_back(freeIndex);
-    
+
     entitiesRemoved = true;
 
     return true;
@@ -482,7 +483,7 @@ bool StaticModelEntity::deserialize(const JsonBlock &json, const StaticModelEnti
 
     if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
         return false;
-    
+
     u32 addedCount = 0u;
     for(const auto &entityJson : child.getChild("Entities"))
     {
@@ -523,7 +524,7 @@ OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTe
         ASSERT(componentIndex < OtherTestEntity::componentTypeCount);
         return *this;
     }
-    readArrays |= u64(1) << u64(componentIndex); 
+    readArrays |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -535,7 +536,7 @@ OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTe
         ASSERT(componentIndex < OtherTestEntity::componentTypeCount);
         return *this;
     }
-    writeArrays |= u64(1) << u64(componentIndex); 
+    writeArrays |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -585,7 +586,7 @@ const EntityReadWriteHandle OtherTestEntity::getReadWriteHandle(const OtherTestE
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
-        return EntityReadWriteHandle{ 
+        return EntityReadWriteHandle{
             .readArrays = builder.readArrays,
             .writeArrays = builder.writeArrays,
             .syncIndexPoint = currentSyncIndex,
@@ -620,6 +621,7 @@ bool OtherTestEntity::releaseLockedMutexHandle(const OtherTestEntity::OtherTestE
 
     ++mutexLockIndex;
     entityAddRemoveMutex.unlock();
+    return true;
 }
 
 bool OtherTestEntity::syncReadWrites()
@@ -654,7 +656,7 @@ EntitySystemHandle OtherTestEntity::addEntity(const OtherTestEntityEntityLockedM
         entityComponents.emplace_back(0);
         entityVersions.emplace_back(1);
         addIndex = entityComponents.size() - 1;
-        
+
     }
     else
     {
@@ -690,7 +692,7 @@ bool OtherTestEntity::removeEntity(EntitySystemHandle handle, const OtherTestEnt
     entityComponents[freeIndex] = 0;
     ++entityVersions[freeIndex];
     freeEntityIndices.emplace_back(freeIndex);
-    
+
     entitiesRemoved = true;
 
     return true;
@@ -798,7 +800,7 @@ bool OtherTestEntity::deserialize(const JsonBlock &json, const OtherTestEntityEn
 
     if(!child.getChild("EntityTypeId").equals(u32(entitySystemID)) || !child.getChild("EntityType").equals(entitySystemName))
         return false;
-    
+
     u32 addedCount = 0u;
     for(const auto &entityJson : child.getChild("Entities"))
     {
