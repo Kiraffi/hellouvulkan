@@ -7,6 +7,7 @@
 #include <core/writejson.h>
 #include <math/vector3.h>
 
+#include <atomic>
 #include <vector>
 
 bool Heritaged1::serialize(WriteJson &json) const
@@ -143,20 +144,42 @@ bool StaticModelEntity::hasComponent(EntitySystemHandle handle, ComponentType co
 
     u64 componentIndex = getComponentIndex(componentType);
 
-    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+    if(componentIndex >= componentTypeCount)
         return false;
 
     return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
 }
 
-u32 StaticModelEntity::getComponentIndex(ComponentType componentType) const
+u32 StaticModelEntity::getComponentIndex(ComponentType componentType)
 {
-    for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
+    // Could be written with switch-cases if it comes to that. Probably no need to though
+    for(u32 i = 0; i < componentTypeCount; ++i)
     {
         if(componentType == componentTypes[i])
             return i;
     }
     return ~0u;
+}
+
+const EntityReadWriteHandle StaticModelEntity::getReadWriteHandle(const StaticModelEntityReadWriteHandleBuilder& builder)
+{
+    u64 writes = writeArrays.fetch_or(builder.writeArrays);
+    u64 reads = readArrays.fetch_or(builder.readArrays);
+
+    reads |= builder.readArrays;
+    writes |= builder.writeArrays;
+
+    ASSERT((writes & reads) == 0);
+    if((writes & reads) == 0)
+    {
+        return EntityReadWriteHandle{ 
+            .readArrays = builder.readArrays,
+            .writeArrays = builder.writeArrays,
+            .syncIndexPoint = currentSyncIndex,
+            .readWriteHandleTypeId = entitySystemID
+       };
+    }
+    return EntityReadWriteHandle{};
 }
 
 EntitySystemHandle StaticModelEntity::getEntitySystemHandle(u32 index) const
@@ -212,20 +235,74 @@ bool StaticModelEntity::removeEntity(EntitySystemHandle handle)
     return true;
 }
 
-const Heritaged1* StaticModelEntity::getHeritaged1ReadArray() const
+const Heritaged1* StaticModelEntity::getHeritaged1ReadArray(const EntityReadWriteHandle& handle) const
 {
+    u64 componentIndex = getComponentIndex(Heritaged1::componentID);
+    ASSERT(componentIndex < componentTypeCount);
+
+    if(componentIndex >= componentTypeCount ||
+        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.syncIndexPoint != currentSyncIndex ||
+        (((handle.readArrays >> componentIndex) & 1) == 0)
+        )
+    {
+        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.syncIndexPoint == currentSyncIndex);
+        ASSERT(((handle.readArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        return nullptr;
+    }
     return Heritaged1Array.data();
 }
-Heritaged1* StaticModelEntity::getHeritaged1WriteArray()
+Heritaged1* StaticModelEntity::getHeritaged1WriteArray(const EntityReadWriteHandle& handle)
 {
+    u64 componentIndex = getComponentIndex(Heritaged1::componentID);
+    ASSERT(componentIndex < componentTypeCount);
+
+    if(componentIndex >= componentTypeCount ||
+        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.syncIndexPoint != currentSyncIndex ||
+        (((handle.writeArrays >> componentIndex) & 1) == 0))
+    {
+        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.syncIndexPoint == currentSyncIndex);
+        ASSERT(((handle.writeArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        return nullptr;
+    }
     return Heritaged1Array.data();
 }
-const Heritaged2* StaticModelEntity::getHeritaged2ReadArray() const
+const Heritaged2* StaticModelEntity::getHeritaged2ReadArray(const EntityReadWriteHandle& handle) const
 {
+    u64 componentIndex = getComponentIndex(Heritaged2::componentID);
+    ASSERT(componentIndex < componentTypeCount);
+
+    if(componentIndex >= componentTypeCount ||
+        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.syncIndexPoint != currentSyncIndex ||
+        (((handle.readArrays >> componentIndex) & 1) == 0)
+        )
+    {
+        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.syncIndexPoint == currentSyncIndex);
+        ASSERT(((handle.readArrays >> u64(Heritaged2::componentID)) & 1) == 1);
+        return nullptr;
+    }
     return Heritaged2Array.data();
 }
-Heritaged2* StaticModelEntity::getHeritaged2WriteArray()
+Heritaged2* StaticModelEntity::getHeritaged2WriteArray(const EntityReadWriteHandle& handle)
 {
+    u64 componentIndex = getComponentIndex(Heritaged2::componentID);
+    ASSERT(componentIndex < componentTypeCount);
+
+    if(componentIndex >= componentTypeCount ||
+        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.syncIndexPoint != currentSyncIndex ||
+        (((handle.writeArrays >> componentIndex) & 1) == 0))
+    {
+        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.syncIndexPoint == currentSyncIndex);
+        ASSERT(((handle.writeArrays >> u64(Heritaged2::componentID)) & 1) == 1);
+        return nullptr;
+    }
     return Heritaged2Array.data();
 }
 
@@ -244,7 +321,7 @@ bool StaticModelEntity::addHeritaged1Component(EntitySystemHandle handle, const 
 
     u64 componentIndex = getComponentIndex(Heritaged1::componentID);
 
-    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+    if(componentIndex >= componentTypeCount)
         return false;
 
     if(hasComponent(handle, Heritaged1::componentID))
@@ -271,7 +348,7 @@ bool StaticModelEntity::addHeritaged2Component(EntitySystemHandle handle, const 
 
     u64 componentIndex = getComponentIndex(Heritaged2::componentID);
 
-    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+    if(componentIndex >= componentTypeCount)
         return false;
 
     if(hasComponent(handle, Heritaged2::componentID))
@@ -336,7 +413,7 @@ bool StaticModelEntity::deserialize(const JsonBlock &json)
                 if(Heritaged1Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged1::componentID);
-                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                    if(componentIndex >= componentTypeCount)
                         return false;
 
                     entityComponents[addedCount] |= u64(1) << componentIndex;
@@ -345,7 +422,7 @@ bool StaticModelEntity::deserialize(const JsonBlock &json)
                 if(Heritaged2Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged2::componentID);
-                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                    if(componentIndex >= componentTypeCount)
                         return false;
 
                     entityComponents[addedCount] |= u64(1) << componentIndex;
@@ -372,20 +449,42 @@ bool OtherTestEntity::hasComponent(EntitySystemHandle handle, ComponentType comp
 
     u64 componentIndex = getComponentIndex(componentType);
 
-    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+    if(componentIndex >= componentTypeCount)
         return false;
 
     return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
 }
 
-u32 OtherTestEntity::getComponentIndex(ComponentType componentType) const
+u32 OtherTestEntity::getComponentIndex(ComponentType componentType)
 {
-    for(u32 i = 0; i < sizeof(componentTypes) / sizeof(ComponentType); ++i)
+    // Could be written with switch-cases if it comes to that. Probably no need to though
+    for(u32 i = 0; i < componentTypeCount; ++i)
     {
         if(componentType == componentTypes[i])
             return i;
     }
     return ~0u;
+}
+
+const EntityReadWriteHandle OtherTestEntity::getReadWriteHandle(const OtherTestEntityReadWriteHandleBuilder& builder)
+{
+    u64 writes = writeArrays.fetch_or(builder.writeArrays);
+    u64 reads = readArrays.fetch_or(builder.readArrays);
+
+    reads |= builder.readArrays;
+    writes |= builder.writeArrays;
+
+    ASSERT((writes & reads) == 0);
+    if((writes & reads) == 0)
+    {
+        return EntityReadWriteHandle{ 
+            .readArrays = builder.readArrays,
+            .writeArrays = builder.writeArrays,
+            .syncIndexPoint = currentSyncIndex,
+            .readWriteHandleTypeId = entitySystemID
+       };
+    }
+    return EntityReadWriteHandle{};
 }
 
 EntitySystemHandle OtherTestEntity::getEntitySystemHandle(u32 index) const
@@ -440,12 +539,39 @@ bool OtherTestEntity::removeEntity(EntitySystemHandle handle)
     return true;
 }
 
-const Heritaged1* OtherTestEntity::getHeritaged1ReadArray() const
+const Heritaged1* OtherTestEntity::getHeritaged1ReadArray(const EntityReadWriteHandle& handle) const
 {
+    u64 componentIndex = getComponentIndex(Heritaged1::componentID);
+    ASSERT(componentIndex < componentTypeCount);
+
+    if(componentIndex >= componentTypeCount ||
+        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.syncIndexPoint != currentSyncIndex ||
+        (((handle.readArrays >> componentIndex) & 1) == 0)
+        )
+    {
+        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.syncIndexPoint == currentSyncIndex);
+        ASSERT(((handle.readArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        return nullptr;
+    }
     return Heritaged1Array.data();
 }
-Heritaged1* OtherTestEntity::getHeritaged1WriteArray()
+Heritaged1* OtherTestEntity::getHeritaged1WriteArray(const EntityReadWriteHandle& handle)
 {
+    u64 componentIndex = getComponentIndex(Heritaged1::componentID);
+    ASSERT(componentIndex < componentTypeCount);
+
+    if(componentIndex >= componentTypeCount ||
+        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.syncIndexPoint != currentSyncIndex ||
+        (((handle.writeArrays >> componentIndex) & 1) == 0))
+    {
+        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.syncIndexPoint == currentSyncIndex);
+        ASSERT(((handle.writeArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        return nullptr;
+    }
     return Heritaged1Array.data();
 }
 
@@ -464,7 +590,7 @@ bool OtherTestEntity::addHeritaged1Component(EntitySystemHandle handle, const He
 
     u64 componentIndex = getComponentIndex(Heritaged1::componentID);
 
-    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+    if(componentIndex >= componentTypeCount)
         return false;
 
     if(hasComponent(handle, Heritaged1::componentID))
@@ -525,7 +651,7 @@ bool OtherTestEntity::deserialize(const JsonBlock &json)
                 if(Heritaged1Array[addedCount].deserialize(obj))
                 {
                     u64 componentIndex = getComponentIndex(Heritaged1::componentID);
-                    if(componentIndex >= sizeof(componentTypes) / sizeof(ComponentType))
+                    if(componentIndex >= componentTypeCount)
                         return false;
 
                     entityComponents[addedCount] |= u64(1) << componentIndex;

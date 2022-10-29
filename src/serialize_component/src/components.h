@@ -13,7 +13,8 @@
 // or at least possibly cause problems.
 enum class ComponentType : u32
 {
-    HeritagedType = 1,
+    ComponentTypeNone = 0,
+    HeritagedType,
     HeritagedType2,
     HeritagedType3,
 
@@ -22,7 +23,8 @@ enum class ComponentType : u32
 
 enum class EntityType : u16
 {
-    StaticModelEntityType = 1,
+    EntityModelNone = 0,
+    StaticModelEntityType,
     OtherTestEntityType,
 
     EntityTypeCount
@@ -31,10 +33,17 @@ enum class EntityType : u16
 struct EntitySystemHandle
 {
     EntityType entitySystemType = EntityType::EntityTypeCount;
-    u16 entityIndexVersion = ~u16(0);
+    u16 entityIndexVersion = ~(u16(0u));
     u32 entityIndex = ~u32(0);
  };
 
+struct EntityReadWriteHandle
+{
+    u64 readArrays = 0;
+    u64 writeArrays = 0;
+    u32 syncIndexPoint = 0;
+    EntityType readWriteHandleTypeId = EntityType::EntityModelNone;
+};
 enum class FieldType
 {
     IntType,

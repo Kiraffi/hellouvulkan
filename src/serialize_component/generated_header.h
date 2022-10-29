@@ -7,6 +7,7 @@
 #include <core/writejson.h>
 #include <math/vector3.h>
 
+#include <atomic>
 #include <vector>
 
 struct Heritaged1
@@ -93,27 +94,61 @@ private:
 
 struct StaticModelEntity
 {
-    static constexpr const char* entitySystemName = "StaticModelEntity";
-    static constexpr EntityType entitySystemID = EntityType::StaticModelEntityType;
-    static constexpr u32 entityVersion = 1;
-
+    struct StaticModelEntityReadWriteHandleBuilder
+    {
+        StaticModelEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType)
+        {
+            u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
+            if(componentIndex < 0 || componentIndex >= StaticModelEntity::componentTypeCount)
+            {
+                ASSERT(componentIndex > 0 && componentIndex < StaticModelEntity::componentTypeCount);
+                return *this;
+            }
+            readArrays |= u64(1) << u64(componentIndex); 
+            return *this;
+        }
+        
+        StaticModelEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType)
+        {
+            u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
+            if(componentIndex < 0 || componentIndex >= StaticModelEntity::componentTypeCount)
+            {
+                ASSERT(componentIndex > 0 && componentIndex < StaticModelEntity::componentTypeCount);
+                return *this;
+            }
+            writeArrays |= u64(1) << u64(componentIndex); 
+            return *this;
+        }
+        u64 readArrays = 0;
+        u64 writeArrays = 0;
+    };
+    
     static constexpr ComponentType componentTypes[] =
     {
         Heritaged1::componentID,
         Heritaged2::componentID,
     };
+    
+    static constexpr const char* entitySystemName = "StaticModelEntity";
+    static constexpr EntityType entitySystemID = EntityType::StaticModelEntityType;
+    static constexpr u32 entityVersion = 1;
+    static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
 
-    u32 getComponentIndex(ComponentType componentType) const;
+    static u32 getComponentIndex(ComponentType componentType);
     bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
+
+    // Different handle types for getting array... These are needed to set atomic locks...
+    static constexpr StaticModelEntityReadWriteHandleBuilder getReadWriteHandleBuilder() { return StaticModelEntityReadWriteHandleBuilder(); }
+    const EntityReadWriteHandle getReadWriteHandle(const StaticModelEntityReadWriteHandleBuilder& builder);
 
     EntitySystemHandle getEntitySystemHandle(u32 index) const;
     EntitySystemHandle addEntity();
     bool removeEntity(EntitySystemHandle handle);
 
-    const Heritaged1* getHeritaged1ReadArray() const;
-    Heritaged1* getHeritaged1WriteArray();
-    const Heritaged2* getHeritaged2ReadArray() const;
-    Heritaged2* getHeritaged2WriteArray();
+    const Heritaged1* getHeritaged1ReadArray(const EntityReadWriteHandle& handle) const;
+    Heritaged1* getHeritaged1WriteArray(const EntityReadWriteHandle& handle);
+    const Heritaged2* getHeritaged2ReadArray(const EntityReadWriteHandle& handle) const;
+    Heritaged2* getHeritaged2WriteArray(const EntityReadWriteHandle& handle);
 
     bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component);
     bool addHeritaged2Component(EntitySystemHandle handle, const Heritaged2& component);
@@ -133,29 +168,67 @@ private:
     // Need to think how this adding should work, because it would need to have mutex and all.
     std::vector<u32> freeEntityIndices;
 
-    static_assert(sizeof(componentTypes) / sizeof(ComponentType) < 64, "Only 64 components are allowed for entity!");
+    static_assert(componentTypeCount < 64, "Only 64 components are allowed for entity!");
+    
+    std::atomic<u64> readArrays {0};
+    std::atomic<u64> writeArrays {0};
+    u32 currentSyncIndex = 0;
 };
 
 struct OtherTestEntity
 {
-    static constexpr const char* entitySystemName = "OtherTestEntity";
-    static constexpr EntityType entitySystemID = EntityType::OtherTestEntityType;
-    static constexpr u32 entityVersion = 1;
-
+    struct OtherTestEntityReadWriteHandleBuilder
+    {
+        OtherTestEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType)
+        {
+            u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
+            if(componentIndex < 0 || componentIndex >= OtherTestEntity::componentTypeCount)
+            {
+                ASSERT(componentIndex > 0 && componentIndex < OtherTestEntity::componentTypeCount);
+                return *this;
+            }
+            readArrays |= u64(1) << u64(componentIndex); 
+            return *this;
+        }
+        
+        OtherTestEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType)
+        {
+            u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
+            if(componentIndex < 0 || componentIndex >= OtherTestEntity::componentTypeCount)
+            {
+                ASSERT(componentIndex > 0 && componentIndex < OtherTestEntity::componentTypeCount);
+                return *this;
+            }
+            writeArrays |= u64(1) << u64(componentIndex); 
+            return *this;
+        }
+        u64 readArrays = 0;
+        u64 writeArrays = 0;
+    };
+    
     static constexpr ComponentType componentTypes[] =
     {
         Heritaged1::componentID,
     };
+    
+    static constexpr const char* entitySystemName = "OtherTestEntity";
+    static constexpr EntityType entitySystemID = EntityType::OtherTestEntityType;
+    static constexpr u32 entityVersion = 1;
+    static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
 
-    u32 getComponentIndex(ComponentType componentType) const;
+    static u32 getComponentIndex(ComponentType componentType);
     bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
+
+    // Different handle types for getting array... These are needed to set atomic locks...
+    static constexpr OtherTestEntityReadWriteHandleBuilder getReadWriteHandleBuilder() { return OtherTestEntityReadWriteHandleBuilder(); }
+    const EntityReadWriteHandle getReadWriteHandle(const OtherTestEntityReadWriteHandleBuilder& builder);
 
     EntitySystemHandle getEntitySystemHandle(u32 index) const;
     EntitySystemHandle addEntity();
     bool removeEntity(EntitySystemHandle handle);
 
-    const Heritaged1* getHeritaged1ReadArray() const;
-    Heritaged1* getHeritaged1WriteArray();
+    const Heritaged1* getHeritaged1ReadArray(const EntityReadWriteHandle& handle) const;
+    Heritaged1* getHeritaged1WriteArray(const EntityReadWriteHandle& handle);
 
     bool addHeritaged1Component(EntitySystemHandle handle, const Heritaged1& component);
     bool serialize(WriteJson &json) const;
@@ -173,5 +246,9 @@ private:
     // Need to think how this adding should work, because it would need to have mutex and all.
     std::vector<u32> freeEntityIndices;
 
-    static_assert(sizeof(componentTypes) / sizeof(ComponentType) < 64, "Only 64 components are allowed for entity!");
+    static_assert(componentTypeCount < 64, "Only 64 components are allowed for entity!");
+    
+    std::atomic<u64> readArrays {0};
+    std::atomic<u64> writeArrays {0};
+    u32 currentSyncIndex = 0;
 };

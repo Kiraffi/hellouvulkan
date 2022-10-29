@@ -90,9 +90,13 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             testEntity.addHeritaged1Component(handle4, Heritaged1{.tempFloat = 2304.04f});
             testEntity.addHeritaged2Component(handle5, Heritaged2{});
         }
-
+        const auto& readWriteHandle = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
+            .addArrayRead(ComponentType::HeritagedType) // Will assert if trying to access heritaged1readarray without inserting this to read accessor
+            // .addArrayRead(ComponentType::HeritagedType2) // Will assert when trying to read and write to same array without syncing
+            .addArrayWrite(ComponentType::HeritagedType2) // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
+        );
         {
-            auto ptr = testEntity.getHeritaged1ReadArray();
+            auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle);
             u32 entityCount = testEntity.getEntityCount();
             for(u32 i = 0; i < entityCount; ++i)
             {
@@ -102,7 +106,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
                 ++ptr;
             }
 
-            auto ptrRef = testEntity.getHeritaged2WriteArray();
+            auto ptrRef = testEntity.getHeritaged2WriteArray(readWriteHandle);
             for(u32 i = 0; i < entityCount; ++i)
             {
                 ptrRef->tempInt += 239 + i;
