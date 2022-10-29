@@ -1,12 +1,23 @@
 ComponentBegin
+TransformComponent ComponentType::TransformComponent 1
+    position ? Vector4 = {}
+    rotation ? Quat = Quat{}
+    scale ? Vector4 = {}
+ComponentEnd
+
+
+
+
+
+ComponentBegin
 Heritaged1 ComponentType::HeritagedType 1
     tempInt ? int = 10
     tempFloat ? float = 20.0f
     tempV2 ? Vector2 = {41, 520}
     tempV3 ? Vector3 = {10, 20, 30}
     tempV4 ? Vector4 = {7, 8, -30, 10}
+    tempQuat ? Quat = {}
 ComponentEnd
-
 
 ComponentBegin
 Heritaged2 ComponentType::HeritagedType2 1
@@ -16,6 +27,8 @@ Heritaged2 ComponentType::HeritagedType2 1
     tempInt3 ? int = 10
 
     tempFloat2 ? float = 20.0f
+    tempMat3x4 ? Mat3x4 = {}
+    tempMatrix ? Matrix = {}
 ComponentEnd
 
 EntityTypeBegin

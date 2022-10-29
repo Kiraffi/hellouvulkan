@@ -11,12 +11,47 @@
 #include <mutex>
 #include <vector>
 
+struct TransformComponent
+{
+    static constexpr const char* componentName = "TransformComponent";
+    static constexpr ComponentType componentID = ComponentType::TransformComponent;
+    static constexpr u32 componentVersion = 1;
+    static constexpr u32 componentFieldAmount = 3;
+
+    // Row 0, Size 16
+    Vector4 position = {};
+    // Row 1, Size 16
+    Quat rotation = Quat{};
+    // Row 2, Size 16
+    Vector4 scale = {};
+
+    static constexpr FieldType fieldTypes[] =
+    {
+        FieldType::Vec4Type,
+        FieldType::QuatType,
+        FieldType::Vec4Type,
+    };
+    static constexpr const char* fieldNames[] =
+    {
+        "position",
+        "rotation",
+        "scale",
+    };
+
+    bool serialize(WriteJson &json) const;
+    bool deserialize(const JsonBlock &json);
+
+private:
+    void* getElementIndexRef(u32 index);
+    const void* getElementIndex(u32 index) const;
+};
+
 struct Heritaged1
 {
     static constexpr const char* componentName = "Heritaged1";
     static constexpr ComponentType componentID = ComponentType::HeritagedType;
     static constexpr u32 componentVersion = 1;
-    static constexpr u32 componentFieldAmount = 5;
+    static constexpr u32 componentFieldAmount = 6;
 
     // Row 0, Size 4
     int tempInt = 10;
@@ -28,6 +63,8 @@ struct Heritaged1
     Vector3 tempV3 = {10, 20, 30};
     // Row 4, Size 16
     Vector4 tempV4 = {7, 8, -30, 10};
+    // Row 5, Size 16
+    Quat tempQuat = {};
 
     static constexpr FieldType fieldTypes[] =
     {
@@ -36,6 +73,7 @@ struct Heritaged1
         FieldType::Vec2Type,
         FieldType::Vec3Type,
         FieldType::Vec4Type,
+        FieldType::QuatType,
     };
     static constexpr const char* fieldNames[] =
     {
@@ -44,6 +82,7 @@ struct Heritaged1
         "tempV2",
         "tempV3",
         "tempV4",
+        "tempQuat",
     };
 
     bool serialize(WriteJson &json) const;
@@ -59,7 +98,7 @@ struct Heritaged2
     static constexpr const char* componentName = "Heritaged2";
     static constexpr ComponentType componentID = ComponentType::HeritagedType2;
     static constexpr u32 componentVersion = 1;
-    static constexpr u32 componentFieldAmount = 4;
+    static constexpr u32 componentFieldAmount = 6;
 
     // Row 0, Size 4
     int tempInt = 98756;
@@ -69,6 +108,10 @@ struct Heritaged2
     int tempInt3 = 10;
     // Row 3, Size 4
     float tempFloat2 = 20.0f;
+    // Row 4, Size 48
+    Mat3x4 tempMat3x4 = {};
+    // Row 5, Size 64
+    Matrix tempMatrix = {};
 
     static constexpr FieldType fieldTypes[] =
     {
@@ -76,6 +119,8 @@ struct Heritaged2
         FieldType::IntType,
         FieldType::IntType,
         FieldType::FloatType,
+        FieldType::Mat3x4Type,
+        FieldType::Mat4Type,
     };
     static constexpr const char* fieldNames[] =
     {
@@ -83,6 +128,8 @@ struct Heritaged2
         "tempInt2",
         "tempInt3",
         "tempFloat2",
+        "tempMat3x4",
+        "tempMatrix",
     };
 
     bool serialize(WriteJson &json) const;

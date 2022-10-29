@@ -442,7 +442,7 @@ const ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}ReadArray(const EntityReadWriteHandle
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.readArrays >> u64(${ELEM0}::componentID)) & 1) == 1);
+        ASSERT(((handle.readArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return ${ELEM1}Array.data();
@@ -459,7 +459,7 @@ ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray(const EntityReadWriteHandle& han
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.writeArrays >> u64(${ELEM0}::componentID)) & 1) == 1);
+        ASSERT(((handle.writeArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return ${ELEM1}Array.data();
@@ -656,6 +656,15 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         elseif(ELEM0 STREQUAL "Vector4")
             set(COMPONENT_FIELD_ELEMENT_SIZE 16)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Vec4Type,")
+        elseif(ELEM0 STREQUAL "Quat")
+            set(COMPONENT_FIELD_ELEMENT_SIZE 16)
+            string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::QuatType,")
+        elseif(ELEM0 STREQUAL "Mat3x4")
+            set(COMPONENT_FIELD_ELEMENT_SIZE 48)
+            string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Mat3x4Type,")
+        elseif(ELEM0 STREQUAL "Matrix")
+            set(COMPONENT_FIELD_ELEMENT_SIZE 64)
+            string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Mat4Type,")
         endif()
 
         string(APPEND COMPONENT_ELEMENT_GET_FUNC "

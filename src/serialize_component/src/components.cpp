@@ -6,6 +6,7 @@
 #include <core/log.h>
 #include <core/writejson.h>
 
+
 bool serializeField(WriteJson &writeJson,
     const char* const fieldName,
     const void* const fieldMemoryAddress,
@@ -47,7 +48,32 @@ bool serializeField(WriteJson &writeJson,
             break;
         }
 
-        default:
+        case FieldType::QuatType:
+        {
+            const Quat &v = *((Quat*)fieldMemoryAddress);
+            writeJson.writeQuat(fieldName, v);
+            break;
+        }
+
+        case FieldType::Mat3x4Type:
+        {
+            //const Mat3x4 &m = *((Mat3x4*)fieldMemoryAddress);
+            //writeJson.addNumberArray(fieldName, &m[0], 12);
+            const float* const f = (const float* const)fieldMemoryAddress;
+            writeJson.addNumberArray(fieldName, f, 12);
+            break;
+        }
+
+        case FieldType::Mat4Type:
+        {
+            //const Matrix &m = *((Matrix*)fieldMemoryAddress);
+            //writeJson.addNumberArray(fieldName, &m[0], 16);
+            const float* const f = (const float* const)fieldMemoryAddress;
+            writeJson.addNumberArray(fieldName, f, 16);
+            break;
+        }
+
+        case FieldType::NumTypes:
         {
             ASSERT_STRING(false, "Unknown field type!");
         }
@@ -100,7 +126,30 @@ bool deserializeField(const JsonBlock &json,
             break;
         }
 
-        default:
+        case FieldType::QuatType:
+        {
+            Quat &q = *((Quat*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseQuat(q))
+                return false;
+            break;
+        }
+
+        case FieldType::Mat3x4Type:
+        {
+            Mat3x4 &m = *((Mat3x4*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseNumberArray(&m[0], 12))
+                return false;
+            break;
+        }
+        case FieldType::Mat4Type:
+        {
+            Matrix &m = *((Matrix*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseNumberArray(&m[0], 16))
+                return false;
+            break;
+        }
+
+        case FieldType::NumTypes:
         {
             ASSERT_STRING(false, "Unknown field type!");
         }
@@ -148,6 +197,34 @@ void printFieldValue(const char* fieldName,
         {
             const Vector4 &v = *((Vector4 *)fieldMemoryAddress);
             LOG("%s: [x: %f, y: %f, z: %f, w: %f]\n", fieldName, v.x, v.y, v.z, v.w);
+            break;
+        }
+
+        case FieldType::QuatType:
+        {
+            const Quat &q = *((Quat *)fieldMemoryAddress);
+            LOG("%s: [x: %f, y: %f, z: %f, w: %f]\n", fieldName, q.v.x, q.v.y, q.v.z, q.w);
+            break;
+        }
+
+        case FieldType::Mat3x4Type:
+        {
+            const Mat3x4 &m = *((Mat3x4 *)fieldMemoryAddress);
+            LOG("%s\n[%f, %f, %f, %f]\n[%f, %f, %f, %f]\n[%f, %f, %f, %f]\n", fieldName,
+                m[0], m[1], m[2], m[3],
+                m[4], m[5], m[6], m[7],
+                m[8], m[9], m[10], m[11]);
+            break;
+        }
+
+        case FieldType::Mat4Type:
+        {
+            const Matrix &m = *((Matrix *)fieldMemoryAddress);
+            LOG("%s\n[%f, %f, %f, %f]\n[%f, %f, %f, %f]\n[%f, %f, %f, %f]\n[%f, %f, %f, %f]\n", fieldName,
+                m[0], m[1], m[2], m[3],
+                m[4], m[5], m[6], m[7],
+                m[8], m[9], m[10], m[11],
+                m[12], m[13], m[14], m[15]);
             break;
         }
 

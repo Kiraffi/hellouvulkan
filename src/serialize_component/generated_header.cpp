@@ -11,6 +11,63 @@
 #include <mutex>
 #include <vector>
 
+bool TransformComponent::serialize(WriteJson &json) const
+{
+    json.addObject();
+    json.addString("ComponentType", componentName);
+    json.addInteger("ComponentTypeId", u32(componentID));
+    json.addInteger("ComponentVersion", componentVersion);
+
+    for(u32 i = 0; i < componentFieldAmount; ++i)
+    {
+        if(!serializeField(json, fieldNames[i], getElementIndex(i), fieldTypes[i]))
+            return false;
+    }
+    json.endObject();
+    return json.isValid();
+}
+
+bool TransformComponent::deserialize(const JsonBlock &json)
+{
+    if(!json.isObject() || !json.isValid())
+        return false;
+
+    if(!json.getChild("ComponentType").equals(componentName))
+        return false;
+    if(!json.getChild("ComponentTypeId").equals(u32(componentID)))
+        return false;
+    for(u32 i = 0; i < componentFieldAmount; ++i)
+    {
+        deserializeField(json, fieldNames[i], getElementIndexRef(i), fieldTypes[i]);
+    }
+    return true;
+}
+
+void* TransformComponent::getElementIndexRef(u32 index)
+{
+    switch(index)
+    {
+            case 0: return &position;
+            case 1: return &rotation;
+            case 2: return &scale;
+        default: ASSERT_STRING(false, "Unknown index");
+    }
+    return nullptr;
+}
+
+const void* TransformComponent::getElementIndex(u32 index) const
+{
+    switch(index)
+    {
+            case 0: return &position;
+            case 1: return &rotation;
+            case 2: return &scale;
+        default: ASSERT_STRING(false, "Unknown index");
+    }
+    return nullptr;
+}
+
+
 bool Heritaged1::serialize(WriteJson &json) const
 {
     json.addObject();
@@ -52,6 +109,7 @@ void* Heritaged1::getElementIndexRef(u32 index)
             case 2: return &tempV2;
             case 3: return &tempV3;
             case 4: return &tempV4;
+            case 5: return &tempQuat;
         default: ASSERT_STRING(false, "Unknown index");
     }
     return nullptr;
@@ -66,6 +124,7 @@ const void* Heritaged1::getElementIndex(u32 index) const
             case 2: return &tempV2;
             case 3: return &tempV3;
             case 4: return &tempV4;
+            case 5: return &tempQuat;
         default: ASSERT_STRING(false, "Unknown index");
     }
     return nullptr;
@@ -112,6 +171,8 @@ void* Heritaged2::getElementIndexRef(u32 index)
             case 1: return &tempInt2;
             case 2: return &tempInt3;
             case 3: return &tempFloat2;
+            case 4: return &tempMat3x4;
+            case 5: return &tempMatrix;
         default: ASSERT_STRING(false, "Unknown index");
     }
     return nullptr;
@@ -125,6 +186,8 @@ const void* Heritaged2::getElementIndex(u32 index) const
             case 1: return &tempInt2;
             case 2: return &tempInt3;
             case 3: return &tempFloat2;
+            case 4: return &tempMat3x4;
+            case 5: return &tempMatrix;
         default: ASSERT_STRING(false, "Unknown index");
     }
     return nullptr;
@@ -328,7 +391,7 @@ const Heritaged1* StaticModelEntity::getHeritaged1ReadArray(const EntityReadWrit
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.readArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        ASSERT(((handle.readArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return Heritaged1Array.data();
@@ -345,7 +408,7 @@ Heritaged1* StaticModelEntity::getHeritaged1WriteArray(const EntityReadWriteHand
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.writeArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        ASSERT(((handle.writeArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return Heritaged1Array.data();
@@ -363,7 +426,7 @@ const Heritaged2* StaticModelEntity::getHeritaged2ReadArray(const EntityReadWrit
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.readArrays >> u64(Heritaged2::componentID)) & 1) == 1);
+        ASSERT(((handle.readArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return Heritaged2Array.data();
@@ -380,7 +443,7 @@ Heritaged2* StaticModelEntity::getHeritaged2WriteArray(const EntityReadWriteHand
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.writeArrays >> u64(Heritaged2::componentID)) & 1) == 1);
+        ASSERT(((handle.writeArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return Heritaged2Array.data();
@@ -711,7 +774,7 @@ const Heritaged1* OtherTestEntity::getHeritaged1ReadArray(const EntityReadWriteH
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.readArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        ASSERT(((handle.readArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return Heritaged1Array.data();
@@ -728,7 +791,7 @@ Heritaged1* OtherTestEntity::getHeritaged1WriteArray(const EntityReadWriteHandle
     {
         ASSERT(handle.readWriteHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
-        ASSERT(((handle.writeArrays >> u64(Heritaged1::componentID)) & 1) == 1);
+        ASSERT(((handle.writeArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return Heritaged1Array.data();

@@ -4,6 +4,9 @@
 #include <core/mytypes.h>
 #include <core/writejson.h>
 
+#include <math/matrix.h>
+#include <math/quaternion.h>
+#include <math/vector3.h>
 // For some reason windows didnt like forward declaring, or there was something missing.
 //struct JsonBlock;
 //struct WriteJson;
@@ -14,7 +17,12 @@
 enum class ComponentType : u32
 {
     ComponentTypeNone = 0,
-    HeritagedType,
+    TransformComponent,
+
+
+
+
+    HeritagedType = 100'000,
     HeritagedType2,
     HeritagedType3,
 
@@ -52,6 +60,10 @@ enum class FieldType
     Vec2Type,
     Vec3Type,
     Vec4Type,
+    QuatType,
+
+    Mat3x4Type,
+    Mat4Type,
 
     NumTypes
 };
