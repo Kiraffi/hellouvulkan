@@ -76,11 +76,9 @@ foreach(DEF_ROW ${DEF_LIST})
     elseif(DEF_ROW STREQUAL "EntityHeaderEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_INCLUDES)
         set(READ_STATE ${READ_STATE_NONE})
     elseif(READ_STATE EQUAL READ_STATE_COMPONENT_INCLUDES)
-        message(STATUS "comp: ${DEF_ROW}")
         file(APPEND "${FILENAME_TO_MODIFY}_components.h" "${DEF_ROW}\n")
     elseif(READ_STATE EQUAL READ_STATE_ENTITY_INCLUDES)
         file(APPEND "${FILENAME_TO_MODIFY}_systems.h" "${DEF_ROW}\n")
-        message(STATUS "sys: ${DEF_ROW}")
 
 ################################### PARSE ENTITY ############################################
 

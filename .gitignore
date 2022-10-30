@@ -1,5 +1,11 @@
 hellogl
 
+# Generated header/cpp-files
+**/generated_components.cpp
+**/generated_components.h
+**/generated_systems.cpp
+**/generated_systems.h
+
 # Prerequisites
 *.d
 
