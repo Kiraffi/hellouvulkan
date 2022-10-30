@@ -106,14 +106,19 @@ class TestSystem
 public:
     static bool update(EntitySystems& entitySystems, double dt);
     static bool init(EntitySystems &entitySystems);
-    static void deinit(EntitySystems &entitySystems);
+    //static void deinit(EntitySystems &entitySystems);
 };
 class TestSystem2
 {
 public:
     static bool update(EntitySystems &entitySystems, double dt);
     static bool init(EntitySystems &entitySystems);
-    static void deinit(EntitySystems &entitySystems);
+    //static void deinit(EntitySystems &entitySystems);
+};
+class TestSystem3
+{
+public:
+    static bool update(EntitySystems &entitySystems);
 };
 // Implementation here
 struct EntitySystems
@@ -144,7 +149,7 @@ bool TestSystem::init(EntitySystems &entitySystems)
 
         gameEnts.releaseLockedMutexHandle(mtx);
     }
-    gameEnts.syncReadWrites();
+    entitySystems.syncPoints();
 
     return true;
 }
@@ -165,7 +170,7 @@ bool TestSystem2::init(EntitySystems &entitySystems)
 
         gameEnts.releaseLockedMutexHandle(mtx);
     }
-    gameEnts.syncReadWrites();
+    entitySystems.syncPoints();
 
     return true;
 }
@@ -179,10 +184,12 @@ bool TestSystem::update(EntitySystems &entitySystems, double dt)
     auto gameEntsWriteComponents = gameEnts.getComponentArrayHandleBuilder()
         .addComponent(ComponentType::TransformComponent);
 
-    const auto &gameEntsRWHandle = gameEnts.getRWHandle(gameEnts.getComponentArrayHandleBuilder(), gameEntsWriteComponents);
+    const auto &gameEntsRWHandle = gameEnts.getRWHandle({}, gameEntsWriteComponents);
     u32 gameEntCount = gameEnts.getEntityCount();
 
     TransformComponent* transformComponents = gameEnts.getTransformComponentWriteArray(gameEntsRWHandle);
+    if(transformComponents == nullptr)
+        return false;
 
     for(u32 i = 0; i < gameEntCount; ++i)
     {
@@ -190,7 +197,6 @@ bool TestSystem::update(EntitySystems &entitySystems, double dt)
             continue;
         transformComponents[i].position.x += 0.01f * dt;
     }
-
 
     return true;
 }
@@ -213,6 +219,9 @@ bool TestSystem2::update(EntitySystems &entitySystems, double dt)
     const TransformComponent *transformComponents = gameEnts.getTransformComponentReadArray(gameEntsRWHandle);
     Mat4Component* matComponents = gameEnts.getMat4ComponentWriteArray(gameEntsRWHandle);
 
+    if(transformComponents == nullptr || matComponents == nullptr)
+        return false;
+
     for(u32 i = 0; i < gameEntCount; ++i)
     {
         if(!gameEnts.hasComponents(i, gameEntsRWHandle))
@@ -221,9 +230,44 @@ bool TestSystem2::update(EntitySystems &entitySystems, double dt)
         getMatrixFromTransform(transformComponents[i], matComponents[i].mat);
     }
 
+    return true;
+}
+
+bool TestSystem3::update(EntitySystems &entitySystems)
+{
+    GameEntitySystem &gameEnts = entitySystems.gameEntitySystem;
+
+    auto gameEntsReadComponents = gameEnts.getComponentArrayHandleBuilder()
+        .addComponent(ComponentType::TransformComponent)
+        .addComponent(ComponentType::Mat3x4Component);
+
+    const auto &gameEntsRWHandle = gameEnts.getRWHandle(gameEntsReadComponents, {});
+    u32 gameEntCount = gameEnts.getEntityCount();
+
+    const TransformComponent *transformComponents = gameEnts.getTransformComponentReadArray(gameEntsRWHandle);
+    const Mat4Component *matComponents = gameEnts.getMat4ComponentReadArray(gameEntsRWHandle);
+
+    if(transformComponents == nullptr || matComponents == nullptr)
+        return false;
+
+    for(u32 i = 0; i < gameEntCount; ++i)
+    {
+        if(!gameEnts.hasComponents(i, gameEntsRWHandle))
+            continue;
+        const Vector4 &pos = transformComponents[i].position;
+        const Mat3x4 &m = matComponents[i].mat;
+        LOG("%u: pos[%.2f, %.2f, %.2f]\n", i, pos.x, pos.y, pos.z);
+        LOG("[%.2f, %.2f, %.2f, %.2f]\n[%.2f, %.2f, %.2f, %.2f]\n[%.2f, %.2f, %.2f, %.2f]\n",
+            m[0], m[1], m[2], m[3],
+            m[4], m[5], m[6], m[7],
+            m[8], m[9], m[10], m[11]);
+        //getMatrixFromTransform(transformComponents[i], matComponents[i].mat);
+    }
 
     return true;
 }
+
+
 
 
 
@@ -401,6 +445,7 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
 
     {
         TestSystem::init(entitySystems);
+        TestSystem2::init(entitySystems);
     }
 
     return resized();
@@ -435,11 +480,14 @@ bool SerializeComponent::resized()
 void SerializeComponent::logicUpdate()
 {
     VulkanApp::logicUpdate();
+
     TestSystem::update(entitySystems, getDeltaTime());
-    
     entitySystems.syncPoints();
     
     TestSystem2::update(entitySystems, getDeltaTime());
+    entitySystems.syncPoints();
+
+    TestSystem3::update(entitySystems);
     entitySystems.syncPoints();
     {
         bool textNeedsUpdate = false;
