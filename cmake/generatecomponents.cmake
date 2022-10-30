@@ -10,6 +10,9 @@ set(READ_STATE_COMPONENT_FIELDS 2)
 set(READ_STATE_ENTITY_BEGIN 10)
 set(READ_STATE_ENTITY_FIELDS 11)
 #set(READ_STATE_ENTITY_END 12)
+set(READ_STATE_COMPONENT_INCLUDES 30)
+set(READ_STATE_ENTITY_INCLUDES 31)
+
 
 set(COMPONENT_NAME "")
 set(COMPONENT_ID -1)
@@ -32,22 +35,28 @@ string(REPLACE "\n" ";" DEF_LIST ${DEF_CONTENTS})
 #not sure if this write + append is good....
 set(MY_HEADER_FIRST_LINE "// This is generated file, do not modify.")
 set(MY_FILE_HEADER "
-#include \"src/components.h\"
-
+#include <components/components.h>
 #include <core/json.h>
 #include <core/writejson.h>
-#include <math/vector3.h>
+")
 
+set(HEADER_FILE_WRITE "${MY_HEADER_FIRST_LINE}
+#pragma once
+${MY_FILE_HEADER}")
+
+file(WRITE "${FILENAME_TO_MODIFY}_systems.h" "${HEADER_FILE_WRITE}
 #include <atomic>
 #include <mutex>
 #include <vector>\n")
+file(WRITE "${FILENAME_TO_MODIFY}_components.h" "${HEADER_FILE_WRITE}")
 
-file(WRITE "${FILENAME_TO_MODIFY}.h" "${MY_HEADER_FIRST_LINE}
-#pragma once
-${MY_FILE_HEADER}")
-file(WRITE "${FILENAME_TO_MODIFY}.cpp" "${MY_HEADER_FIRST_LINE}
-#include \"generated_header.h\"
-${MY_FILE_HEADER}")
+set(CPP_FILE_WRITE "${MY_HEADER_FIRST_LINE}
+#include \"generated_components.h\"
+#include \"generated_systems.h\"
+${MY_FILE_HEADER}\n")
+
+file(WRITE "${FILENAME_TO_MODIFY}_systems.cpp" "${CPP_FILE_WRITE}")
+file(WRITE "${FILENAME_TO_MODIFY}_components.cpp" "${CPP_FILE_WRITE}")
 
 
 # Loop through each line in the DEF file.
@@ -55,15 +64,32 @@ foreach(DEF_ROW ${DEF_LIST})
     #remove trailing and leading spaces
     string(STRIP "${DEF_ROW}" DEF_ROW)
 
+    ############################# INCLUDES ##################################################
+
+
+    if(DEF_ROW STREQUAL "ComponentHeaderBegin" AND READ_STATE EQUAL READ_STATE_NONE)
+        set(READ_STATE ${READ_STATE_COMPONENT_INCLUDES})
+    elseif(DEF_ROW STREQUAL "ComponentHeaderEnd" AND READ_STATE EQUAL READ_STATE_COMPONENT_INCLUDES)
+        set(READ_STATE ${READ_STATE_NONE})
+    elseif(DEF_ROW STREQUAL "EntityHeaderBegin" AND READ_STATE EQUAL READ_STATE_NONE)
+        set(READ_STATE ${READ_STATE_ENTITY_INCLUDES})
+    elseif(DEF_ROW STREQUAL "EntityHeaderEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_INCLUDES)
+        set(READ_STATE ${READ_STATE_NONE})
+    elseif(READ_STATE EQUAL READ_STATE_COMPONENT_INCLUDES)
+        message(STATUS "comp: ${DEF_ROW}")
+        file(APPEND "${FILENAME_TO_MODIFY}_components.h" "${DEF_ROW}\n")
+    elseif(READ_STATE EQUAL READ_STATE_ENTITY_INCLUDES)
+        file(APPEND "${FILENAME_TO_MODIFY}_systems.h" "${DEF_ROW}\n")
+        message(STATUS "sys: ${DEF_ROW}")
 
 ################################### PARSE ENTITY ############################################
 
-    if(DEF_ROW STREQUAL "EntityTypeEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
+    elseif(DEF_ROW STREQUAL "EntityEnd" AND READ_STATE EQUAL READ_STATE_ENTITY_FIELDS)
         set(READ_STATE ${READ_STATE_NONE})
 
        ####################### ENTITY HEADER ############################
 
-        file(APPEND "${FILENAME_TO_MODIFY}.h" "
+        file(APPEND "${FILENAME_TO_MODIFY}_systems.h" "
 struct ${ENTITY_NAME}
 {
     ~${ENTITY_NAME}();
@@ -85,7 +111,7 @@ struct ${ENTITY_NAME}
     };
 
     static constexpr const char* entitySystemName = \"${ENTITY_NAME}\";
-    static constexpr EntityType entitySystemID = ${ENTITY_ID};
+    static constexpr EntitySystemType entitySystemID = ${ENTITY_ID};
     static constexpr u32 entityVersion = ${ENTITY_VERSION};
     static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
 
@@ -144,7 +170,7 @@ private:${ENTITY_ARRAYS_FIELD}
 
         ####################### ENTITY CPP ########################
 
-        file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
+        file(APPEND "${FILENAME_TO_MODIFY}_systems.cpp" "
 
 ${ENTITY_NAME}::${ENTITY_NAME}ComponentArrayHandleBuilder& ${ENTITY_NAME}::${ENTITY_NAME}ComponentArrayHandleBuilder::addComponent(ComponentType componentType)
 {
@@ -380,8 +406,8 @@ bool ${ENTITY_NAME}::serialize(WriteJson &json) const
         return false;
 
     json.addObject(entitySystemName);
-    json.addString(\"EntityType\", entitySystemName);
-    json.addInteger(\"EntityTypeId\", u32(entitySystemID));
+    json.addString(\"EntitySystemName\", entitySystemName);
+    json.addInteger(\"EntitySystemTypeId\", u32(entitySystemID));
     json.addInteger(\"EntityVersion\", entityVersion);
     json.addArray(\"Entities\");
     for(u32 i = 0; i < entityAmount; ++i)
@@ -406,7 +432,7 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
     if(!child.isValid())
         return false;
 
-    if(!child.getChild(\"EntityTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntityType\").equals(entitySystemName))
+    if(!child.getChild(\"EntitySystemTypeId\").equals(u32(entitySystemID)) || !child.getChild(\"EntitySystemName\").equals(entitySystemName))
         return false;
 
     u32 addedCount = 0u;
@@ -425,7 +451,7 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
 
 
 
-    elseif(DEF_ROW STREQUAL "EntityTypeBegin"  AND READ_STATE EQUAL READ_STATE_NONE)
+    elseif(DEF_ROW STREQUAL "EntityBegin"  AND READ_STATE EQUAL READ_STATE_NONE)
         set(READ_STATE ${READ_STATE_ENTITY_BEGIN})
         set(ENTITY_LOAD_CONTENTS "")
         set(ENTITY_WRITE_CONTENTS "")
@@ -571,7 +597,7 @@ bool ${ENTITY_NAME}::add${ELEM0}Component(EntitySystemHandle handle, const ${ELE
 
         #################### COMPONENT HEADER #####################
 
-        file(APPEND "${FILENAME_TO_MODIFY}.h" "
+        file(APPEND "${FILENAME_TO_MODIFY}_components.h" "
 struct ${COMPONENT_NAME}
 {
     static constexpr const char* componentName = \"${COMPONENT_NAME}\";
@@ -598,7 +624,7 @@ private:
 
         ################### COMPONENT CPP ######################
 
-        file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
+        file(APPEND "${FILENAME_TO_MODIFY}_components.cpp" "
 bool ${COMPONENT_NAME}::serialize(WriteJson &json) const
 {
     json.addObject();

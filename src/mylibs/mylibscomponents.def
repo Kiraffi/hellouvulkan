@@ -1,0 +1,19 @@
+ComponentBegin
+TransformComponent ComponentType::TransformComponent 1
+    position ? Vector4 = {0, 0, 0, 1}
+    rotation ? Quat = Quat{}
+    scale ? Vector4 = {1, 1, 1, 1}
+ComponentEnd
+
+ComponentBegin
+Mat4Component ComponentType::Mat3x4Component 1
+    mat ? Mat3x4 = {}
+ComponentEnd
+
+
+EntityBegin
+GameEntitySystem EntitySystemType::GameEntitySystemType 1
+    TransformComponent
+    Mat4Component
+EntityEnd
+

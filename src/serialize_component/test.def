@@ -1,16 +1,11 @@
-ComponentBegin
-TransformComponent ComponentType::TransformComponent 1
-    position ? Vector4 = {0, 0, 0, 1}
-    rotation ? Quat = Quat{}
-    scale ? Vector4 = {1, 1, 1, 1}
-ComponentEnd
+ComponentHeaderBegin
+#include <math/vector3.h>
+ComponentHeaderEnd
 
-ComponentBegin
-Mat4Component ComponentType::Mat3x4Component 1
-    mat ? Mat3x4 = {}
-ComponentEnd
-
-
+EntityHeaderBegin
+#include <math/matrix.h>
+#include <math/vector3.h>
+EntityHeaderEnd
 
 ComponentBegin
 Heritaged1 ComponentType::HeritagedType 1
@@ -34,21 +29,15 @@ Heritaged2 ComponentType::HeritagedType2 1
     tempMatrix ? Matrix = {}
 ComponentEnd
 
-EntityTypeBegin
-GameEntitySystem EntityType::GameEntityType 1
-    TransformComponent
-    Mat4Component
-EntityTypeEnd
-
-EntityTypeBegin
-StaticModelEntity EntityType::StaticModelEntityType 1
+EntityBegin
+StaticModelEntity EntitySystemType::StaticModelEntitySystemType 1
     Heritaged1
     Heritaged2
-EntityTypeEnd
+EntityEnd
 
-EntityTypeBegin
-OtherTestEntity EntityType::OtherTestEntityType 1
+EntityBegin
+OtherTestEntity EntitySystemType::OtherTestEntitySystemType 1
     Heritaged1
-EntityTypeEnd
+EntityEnd
 
 

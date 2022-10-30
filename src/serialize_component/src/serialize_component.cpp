@@ -14,6 +14,7 @@
 
 #include <math/general_math.h>
 #include <math/matrix.h>
+#include <math/matrix_inline_functions.h>
 #include <math/plane.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>
@@ -21,82 +22,16 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-#include "components.h"
+#include <components/components.h>
 
-#include "../generated_header.h"
+#include <components/generated_components.h>
+#include <components/generated_systems.h>
+
+#include "../generated_components.h"
+#include "../generated_systems.h"
 
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
-
-
-
-
-
-static FORCE_INLINE Mat3x4 getMatrixFromTransform(const TransformComponent &trans)
-{
-    Mat3x4 result{ Uninit };
-    float xy2 = 2.0f * trans.rotation.v.x * trans.rotation.v.y;
-    float xz2 = 2.0f * trans.rotation.v.x * trans.rotation.v.z;
-    float yz2 = 2.0f * trans.rotation.v.y * trans.rotation.v.z;
-
-    float wx2 = 2.0f * trans.rotation.w * trans.rotation.v.x;
-    float wy2 = 2.0f * trans.rotation.w * trans.rotation.v.y;
-    float wz2 = 2.0f * trans.rotation.w * trans.rotation.v.z;
-
-    float xx2 = 2.0f * trans.rotation.v.x * trans.rotation.v.x;
-    float yy2 = 2.0f * trans.rotation.v.y * trans.rotation.v.y;
-    float zz2 = 2.0f * trans.rotation.v.z * trans.rotation.v.z;
-
-    result._00 = (1.0f - yy2 - zz2) * trans.scale.x;
-    result._01 = (xy2 - wz2) * trans.scale.x;
-    result._02 = (xz2 + wy2) * trans.scale.x;
-
-    result._10 = (xy2 + wz2) * trans.scale.y;
-    result._11 = (1.0f - xx2 - zz2) * trans.scale.y;
-    result._12 = (yz2 - wx2) * trans.scale.y;
-
-    result._20 = (xz2 - wy2) * trans.scale.z;
-    result._21 = (yz2 + wx2) * trans.scale.z;
-    result._22 = (1.0f - xx2 - yy2) * trans.scale.z;
-
-    result._03 = trans.position.x;
-    result._13 = trans.position.y;
-    result._23 = trans.position.z;
-
-    return result;
-}
-
-
-static FORCE_INLINE void getMatrixFromTransform(const TransformComponent &trans, Mat3x4 &outMat)
-{
-    float xy2 = 2.0f * trans.rotation.v.x * trans.rotation.v.y;
-    float xz2 = 2.0f * trans.rotation.v.x * trans.rotation.v.z;
-    float yz2 = 2.0f * trans.rotation.v.y * trans.rotation.v.z;
-
-    float wx2 = 2.0f * trans.rotation.w * trans.rotation.v.x;
-    float wy2 = 2.0f * trans.rotation.w * trans.rotation.v.y;
-    float wz2 = 2.0f * trans.rotation.w * trans.rotation.v.z;
-
-    float xx2 = 2.0f * trans.rotation.v.x * trans.rotation.v.x;
-    float yy2 = 2.0f * trans.rotation.v.y * trans.rotation.v.y;
-    float zz2 = 2.0f * trans.rotation.v.z * trans.rotation.v.z;
-
-    outMat._00 = (1.0f - yy2 - zz2) * trans.scale.x;
-    outMat._01 = (xy2 - wz2) * trans.scale.x;
-    outMat._02 = (xz2 + wy2) * trans.scale.x;
-
-    outMat._10 = (xy2 + wz2) * trans.scale.y;
-    outMat._11 = (1.0f - xx2 - zz2) * trans.scale.y;
-    outMat._12 = (yz2 - wx2) * trans.scale.y;
-
-    outMat._20 = (xz2 - wy2) * trans.scale.z;
-    outMat._21 = (yz2 + wx2) * trans.scale.z;
-    outMat._22 = (1.0f - xx2 - yy2) * trans.scale.z;
-
-    outMat._03 = trans.position.x;
-    outMat._13 = trans.position.y;
-    outMat._23 = trans.position.z;
-}
 
 
 // Would be header

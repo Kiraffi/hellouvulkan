@@ -3,9 +3,23 @@
 
 project ("hellouvulkan libs" VERSION 0.0.1)
 
-include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
+include("${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake")
 #print_variables()
 
+set(DEF_FILE "${CMAKE_CURRENT_LIST_DIR}/mylibscomponents.def")
+set(DEF_OUT_FILE "${CMAKE_CURRENT_LIST_DIR}/components/generated")
+set(DEF_CMAKE_FILE "${CMAKE_HOME_DIRECTORY}/cmake/generatecomponents.cmake")
+
+# Run the command whenever building
+add_custom_command(
+    TARGET PRE_BUILD
+    OUTPUT "${DEF_OUT_FILE}_components.h" "${DEF_OUT_FILE}_components.cpp" "${DEF_OUT_FILE}_systems.h" "${DEF_OUT_FILE}_systems.cpp"
+    COMMAND ${CMAKE_COMMAND}
+    -DSOURCE_DEF_FILE=${DEF_FILE} -DDES_DEF_FILE=${DEF_OUT_FILE}
+    -P ${DEF_CMAKE_FILE}
+    DEPENDS ${DEF_FILE} ${DEF_CMAKE_FILE})
+
+add_custom_target(MYLIBS_GENERATED_HEADERS DEPENDS DEPENDS ${DEF_FILE})
 
 add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 
@@ -21,6 +35,9 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "container/vectorbase.h"
     "container/vectorsbase.h"
 
+    "components/components.h"
+    "components/generated_components.h"
+    "components/generated_systems.h"
     "components/transform.h"
 
     "core/camera.h"
@@ -53,7 +70,10 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "container/string.cpp"
     "container/mymemory.cpp"
     "container/stringview.cpp"
-
+ 
+    "components/components.cpp"
+    "components/generated_components.cpp"
+    "components/generated_systems.cpp"
     "components/transform.cpp"
 
     "core/camera.cpp"
@@ -169,11 +189,13 @@ else()
     set(WINMM_LIB  "")
 endif()
 
+add_dependencies(MyLibraries MYLIBS_GENERATED_HEADERS)
 
 target_link_libraries(MyLibraries PUBLIC
     #glfw
     Vulkan::Vulkan
     ${WINMM_LIB}
+
     #meshoptimizer
     #PRIVATE MyLibraries
 

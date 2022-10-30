@@ -7,6 +7,7 @@
 #include <math/matrix.h>
 #include <math/quaternion.h>
 #include <math/vector3.h>
+
 // For some reason windows didnt like forward declaring, or there was something missing.
 //struct JsonBlock;
 //struct WriteJson;
@@ -29,23 +30,23 @@ enum class ComponentType : u32
     ComponentTypeCount
 };
 
-enum class EntityType : u16
+enum class EntitySystemType : u16
 {
-    EntityModelNone = 0,
-    GameEntityType,
+    EntitySystemTypeNone = 0,
+    GameEntitySystemType,
 
 
 
 
-    StaticModelEntityType = 1'000,
-    OtherTestEntityType,
+    StaticModelEntitySystemType = 1'000,
+    OtherTestEntitySystemType,
 
-    EntityTypeCount
+    EntitySystemTypeCount
 };
 
 struct EntitySystemHandle
 {
-    EntityType entitySystemType = EntityType::EntityTypeCount;
+    EntitySystemType entitySystemType = EntitySystemType::EntitySystemTypeCount;
     u16 entityIndexVersion = ~(u16(0u));
     u32 entityIndex = ~u32(0);
  };
@@ -55,8 +56,9 @@ struct EntityRWHandle
     u64 readArrays = 0;
     u64 writeArrays = 0;
     u32 syncIndexPoint = 0;
-    EntityType rwHandleTypeId = EntityType::EntityModelNone;
+    EntitySystemType rwHandleTypeId = EntitySystemType::EntitySystemTypeCount;
 };
+
 enum class FieldType
 {
     IntType,
