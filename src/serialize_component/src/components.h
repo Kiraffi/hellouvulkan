@@ -18,7 +18,7 @@ enum class ComponentType : u32
 {
     ComponentTypeNone = 0,
     TransformComponent,
-
+    Mat3x4Component,
 
 
 
@@ -32,7 +32,12 @@ enum class ComponentType : u32
 enum class EntityType : u16
 {
     EntityModelNone = 0,
-    StaticModelEntityType,
+    GameEntityType,
+
+
+
+
+    StaticModelEntityType = 1'000,
     OtherTestEntityType,
 
     EntityTypeCount
@@ -45,12 +50,12 @@ struct EntitySystemHandle
     u32 entityIndex = ~u32(0);
  };
 
-struct EntityReadWriteHandle
+struct EntityRWHandle
 {
     u64 readArrays = 0;
     u64 writeArrays = 0;
     u32 syncIndexPoint = 0;
-    EntityType readWriteHandleTypeId = EntityType::EntityModelNone;
+    EntityType rwHandleTypeId = EntityType::EntityModelNone;
 };
 enum class FieldType
 {

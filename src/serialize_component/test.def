@@ -5,7 +5,10 @@ TransformComponent ComponentType::TransformComponent 1
     scale ? Vector4 = {1, 1, 1, 1}
 ComponentEnd
 
-
+ComponentBegin
+Mat4Component ComponentType::Mat3x4Component 1
+    mat ? Mat3x4 = {}
+ComponentEnd
 
 
 
@@ -30,6 +33,12 @@ Heritaged2 ComponentType::HeritagedType2 1
     tempMat3x4 ? Mat3x4 = {}
     tempMatrix ? Matrix = {}
 ComponentEnd
+
+EntityTypeBegin
+GameEntitySystem EntityType::GameEntityType 1
+    TransformComponent
+    Mat4Component
+EntityTypeEnd
 
 EntityTypeBegin
 StaticModelEntity EntityType::StaticModelEntityType 1

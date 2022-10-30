@@ -67,6 +67,7 @@ foreach(DEF_ROW ${DEF_LIST})
 struct ${ENTITY_NAME}
 {
     ~${ENTITY_NAME}();
+
     struct ${ENTITY_NAME}ComponentArrayHandleBuilder
     {
         ${ENTITY_NAME}ComponentArrayHandleBuilder& addComponent(ComponentType componentType);
@@ -96,10 +97,11 @@ struct ${ENTITY_NAME}
 
     bool hasComponent(u32 entityIndex, ComponentType componentType) const;
     bool hasComponents(u32 entityIndex, const ${ENTITY_NAME}ComponentArrayHandleBuilder& componentArrayHandle) const;
+    bool hasComponents(u32 entityIndex, const EntityRWHandle &rwHandle) const;
 
     // Different handle types for getting array... These are needed to set atomic locks...
     static constexpr ${ENTITY_NAME}ComponentArrayHandleBuilder getComponentArrayHandleBuilder() { return ${ENTITY_NAME}ComponentArrayHandleBuilder(); }
-    const EntityReadWriteHandle getReadWriteHandle(
+    const EntityRWHandle getRWHandle(
         const ${ENTITY_NAME}ComponentArrayHandleBuilder& readBuilder,
         const ${ENTITY_NAME}ComponentArrayHandleBuilder& writeBuilder);
 
@@ -118,7 +120,6 @@ ${ENTITY_ADD_COMPONENT_HEADER}
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
 
 private:${ENTITY_ARRAYS_FIELD}
-
     std::vector<u16> entityVersions;
 
     // This might be problematic if component is activated/deactived in middle of a frame
@@ -220,6 +221,21 @@ bool ${ENTITY_NAME}::hasComponents(u32 entityIndex,
     return (entityComponents[entityIndex] & compIndArr) == compIndArr;
 }
 
+bool ${ENTITY_NAME}::hasComponents(u32 entityIndex, const EntityRWHandle &rwHandle) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    if(rwHandle.rwHandleTypeId != entitySystemID || rwHandle.syncIndexPoint != currentSyncIndex)
+    {
+        ASSERT(rwHandle.rwHandleTypeId == entitySystemID);
+        ASSERT(rwHandle.syncIndexPoint == currentSyncIndex);
+        return false;
+    }
+
+    u64 compIndArr = rwHandle.readArrays | rwHandle.writeArrays;
+    return (entityComponents[entityIndex] & compIndArr) == compIndArr;
+}
 
 u32 ${ENTITY_NAME}::getComponentIndex(ComponentType componentType)
 {
@@ -232,7 +248,7 @@ u32 ${ENTITY_NAME}::getComponentIndex(ComponentType componentType)
     return ~0u;
 }
 
-const EntityReadWriteHandle ${ENTITY_NAME}::getReadWriteHandle(
+const EntityRWHandle ${ENTITY_NAME}::getRWHandle(
     const ${ENTITY_NAME}ComponentArrayHandleBuilder& readBuilder,
     const ${ENTITY_NAME}ComponentArrayHandleBuilder& writeBuilder)
 {
@@ -245,14 +261,14 @@ const EntityReadWriteHandle ${ENTITY_NAME}::getReadWriteHandle(
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
-        return EntityReadWriteHandle{
+        return EntityRWHandle{
             .readArrays = readBuilder.componentIndexArray,
             .writeArrays = writeBuilder.componentIndexArray,
             .syncIndexPoint = currentSyncIndex,
-            .readWriteHandleTypeId = entitySystemID
+            .rwHandleTypeId = entitySystemID
        };
     }
-    return EntityReadWriteHandle{};
+    return EntityRWHandle{};
 }
 
 EntitySystemHandle ${ENTITY_NAME}::getEntitySystemHandle(u32 index) const
@@ -462,38 +478,38 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
                 ${ELEM1}Array[i].serialize(json);
             }")
         string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "
-    const ${ELEM0}* get${ELEM1}ReadArray(const EntityReadWriteHandle& handle) const;
-    ${ELEM0}* get${ELEM1}WriteArray(const EntityReadWriteHandle& handle);")
+    const ${ELEM0}* get${ELEM1}ReadArray(const EntityRWHandle& handle) const;
+    ${ELEM0}* get${ELEM1}WriteArray(const EntityRWHandle& handle);")
         string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS "
-const ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}ReadArray(const EntityReadWriteHandle& handle) const
+const ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}ReadArray(const EntityRWHandle& handle) const
 {
     u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
     ASSERT(componentIndex < componentTypeCount);
 
     if(componentIndex >= componentTypeCount ||
-        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.rwHandleTypeId != entitySystemID ||
         handle.syncIndexPoint != currentSyncIndex ||
         (((handle.readArrays >> componentIndex) & 1) == 0)
         )
     {
-        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.rwHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
         ASSERT(((handle.readArrays >> componentIndex) & 1) == 1);
         return nullptr;
     }
     return ${ELEM1}Array.data();
 }
-${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray(const EntityReadWriteHandle& handle)
+${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray(const EntityRWHandle& handle)
 {
     u64 componentIndex = getComponentIndex(${ELEM0}::componentID);
     ASSERT(componentIndex < componentTypeCount);
 
     if(componentIndex >= componentTypeCount ||
-        handle.readWriteHandleTypeId != entitySystemID ||
+        handle.rwHandleTypeId != entitySystemID ||
         handle.syncIndexPoint != currentSyncIndex ||
         (((handle.writeArrays >> componentIndex) & 1) == 0))
     {
-        ASSERT(handle.readWriteHandleTypeId == entitySystemID);
+        ASSERT(handle.rwHandleTypeId == entitySystemID);
         ASSERT(handle.syncIndexPoint == currentSyncIndex);
         ASSERT(((handle.writeArrays >> componentIndex) & 1) == 1);
         return nullptr;

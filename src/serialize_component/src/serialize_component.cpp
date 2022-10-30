@@ -67,6 +67,166 @@ static FORCE_INLINE Mat3x4 getMatrixFromTransform(const TransformComponent &tran
 }
 
 
+static FORCE_INLINE void getMatrixFromTransform(const TransformComponent &trans, Mat3x4 &outMat)
+{
+    float xy2 = 2.0f * trans.rotation.v.x * trans.rotation.v.y;
+    float xz2 = 2.0f * trans.rotation.v.x * trans.rotation.v.z;
+    float yz2 = 2.0f * trans.rotation.v.y * trans.rotation.v.z;
+
+    float wx2 = 2.0f * trans.rotation.w * trans.rotation.v.x;
+    float wy2 = 2.0f * trans.rotation.w * trans.rotation.v.y;
+    float wz2 = 2.0f * trans.rotation.w * trans.rotation.v.z;
+
+    float xx2 = 2.0f * trans.rotation.v.x * trans.rotation.v.x;
+    float yy2 = 2.0f * trans.rotation.v.y * trans.rotation.v.y;
+    float zz2 = 2.0f * trans.rotation.v.z * trans.rotation.v.z;
+
+    outMat._00 = (1.0f - yy2 - zz2) * trans.scale.x;
+    outMat._01 = (xy2 - wz2) * trans.scale.x;
+    outMat._02 = (xz2 + wy2) * trans.scale.x;
+
+    outMat._10 = (xy2 + wz2) * trans.scale.y;
+    outMat._11 = (1.0f - xx2 - zz2) * trans.scale.y;
+    outMat._12 = (yz2 - wx2) * trans.scale.y;
+
+    outMat._20 = (xz2 - wy2) * trans.scale.z;
+    outMat._21 = (yz2 + wx2) * trans.scale.z;
+    outMat._22 = (1.0f - xx2 - yy2) * trans.scale.z;
+
+    outMat._03 = trans.position.x;
+    outMat._13 = trans.position.y;
+    outMat._23 = trans.position.z;
+}
+
+
+// Would be header
+struct EntitySystems;
+class TestSystem
+{
+public:
+    static bool update(EntitySystems& entitySystems, double dt);
+    static bool init(EntitySystems &entitySystems);
+    static void deinit(EntitySystems &entitySystems);
+};
+class TestSystem2
+{
+public:
+    static bool update(EntitySystems &entitySystems, double dt);
+    static bool init(EntitySystems &entitySystems);
+    static void deinit(EntitySystems &entitySystems);
+};
+// Implementation here
+struct EntitySystems
+{
+    bool syncPoints();
+    GameEntitySystem gameEntitySystem;
+};
+
+bool EntitySystems::syncPoints()
+{
+    return gameEntitySystem.syncReadWrites();
+}
+
+bool TestSystem::init(EntitySystems &entitySystems)
+{
+    GameEntitySystem &gameEnts = entitySystems.gameEntitySystem;
+    {
+        auto mtx = entitySystems.gameEntitySystem.getLockedMutexHandle();
+
+        EntitySystemHandle handle1 = gameEnts.addEntity(mtx);
+        EntitySystemHandle handle2 = gameEnts.addEntity(mtx);
+
+        gameEnts.addTransformComponentComponent(handle1, TransformComponent{.position = Vector4{1, 2, 3, 1 }});
+        gameEnts.addTransformComponentComponent(handle2, TransformComponent{.position = Vector4{4, 5, 6, 1 }});
+
+        gameEnts.addMat4ComponentComponent(handle1, {});
+        gameEnts.addMat4ComponentComponent(handle2, {});
+
+        gameEnts.releaseLockedMutexHandle(mtx);
+    }
+    gameEnts.syncReadWrites();
+
+    return true;
+}
+bool TestSystem2::init(EntitySystems &entitySystems)
+{
+    GameEntitySystem &gameEnts = entitySystems.gameEntitySystem;
+    {
+        auto mtx = entitySystems.gameEntitySystem.getLockedMutexHandle();
+
+        EntitySystemHandle handle1 = gameEnts.addEntity(mtx);
+        EntitySystemHandle handle2 = gameEnts.addEntity(mtx);
+
+        gameEnts.addTransformComponentComponent(handle1, TransformComponent{ .position = Vector4{ 10, 20, 30, 0 } });
+        //gameEnts.addTransformComponentComponent(handle2, TransformComponent{ .position = Vector4{ 40, 50, 60, 0 } });
+
+        //gameEnts.addMat4ComponentComponent(handle1, {});
+        gameEnts.addMat4ComponentComponent(handle2, {});
+
+        gameEnts.releaseLockedMutexHandle(mtx);
+    }
+    gameEnts.syncReadWrites();
+
+    return true;
+}
+
+bool TestSystem::update(EntitySystems &entitySystems, double dt)
+{
+    if(dt <= 0.0)
+        return false;
+    GameEntitySystem &gameEnts = entitySystems.gameEntitySystem;
+
+    auto gameEntsWriteComponents = gameEnts.getComponentArrayHandleBuilder()
+        .addComponent(ComponentType::TransformComponent);
+
+    const auto &gameEntsRWHandle = gameEnts.getRWHandle(gameEnts.getComponentArrayHandleBuilder(), gameEntsWriteComponents);
+    u32 gameEntCount = gameEnts.getEntityCount();
+
+    TransformComponent* transformComponents = gameEnts.getTransformComponentWriteArray(gameEntsRWHandle);
+
+    for(u32 i = 0; i < gameEntCount; ++i)
+    {
+        if(!gameEnts.hasComponents(i, gameEntsRWHandle))
+            continue;
+        transformComponents[i].position.x += 0.01f * dt;
+    }
+
+
+    return true;
+}
+
+bool TestSystem2::update(EntitySystems &entitySystems, double dt)
+{
+    if(dt <= 0.0)
+        return false;
+    GameEntitySystem &gameEnts = entitySystems.gameEntitySystem;
+
+    auto gameEntsReadComponents = gameEnts.getComponentArrayHandleBuilder()
+        .addComponent(ComponentType::TransformComponent);
+
+    auto gameEntsWriteComponents = gameEnts.getComponentArrayHandleBuilder()
+        .addComponent(ComponentType::Mat3x4Component);
+
+    const auto &gameEntsRWHandle = gameEnts.getRWHandle(gameEntsReadComponents, gameEntsWriteComponents);
+    u32 gameEntCount = gameEnts.getEntityCount();
+
+    const TransformComponent *transformComponents = gameEnts.getTransformComponentReadArray(gameEntsRWHandle);
+    Mat4Component* matComponents = gameEnts.getMat4ComponentWriteArray(gameEntsRWHandle);
+
+    for(u32 i = 0; i < gameEntCount; ++i)
+    {
+        if(!gameEnts.hasComponents(i, gameEntsRWHandle))
+            continue;
+
+        getMatrixFromTransform(transformComponents[i], matComponents[i].mat);
+    }
+
+
+    return true;
+}
+
+
+
 
 
 class SerializeComponent : public VulkanApp
@@ -90,7 +250,7 @@ private:
     String text = "Text";
 
     TransformComponent trans;
-
+    EntitySystems entitySystems;
 };
 
 
@@ -106,10 +266,10 @@ SerializeComponent::~SerializeComponent()
 }
 
 
-bool SerializeComponent::init(const char* windowStr, int screenWidth, int screenHeight,
-    const VulkanInitializationParameters& params)
+bool SerializeComponent::init(const char *windowStr, int screenWidth, int screenHeight,
+    const VulkanInitializationParameters &params)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if(!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
         return false;
 
     {
@@ -131,11 +291,11 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             EntitySystemHandle handle4 = testEntity.addEntity(mtx);
             EntitySystemHandle handle5 = testEntity.addEntity(mtx);
 
-            testEntity.addHeritaged2Component(handle1, Heritaged2{.tempFloat2 = 234234.40});
-            testEntity.addHeritaged1Component(handle1, Heritaged1{.tempInt = 78});
-            testEntity.addHeritaged2Component(handle2, Heritaged2{.tempInt2 = 1234, .tempFloat2 = 1234});
+            testEntity.addHeritaged2Component(handle1, Heritaged2{ .tempFloat2 = 234234.40 });
+            testEntity.addHeritaged1Component(handle1, Heritaged1{ .tempInt = 78 });
+            testEntity.addHeritaged2Component(handle2, Heritaged2{ .tempInt2 = 1234, .tempFloat2 = 1234 });
             //testEntity.addHeritaged2Component(handle3, Heritaged21{});
-            testEntity.addHeritaged1Component(handle4, Heritaged1{.tempFloat = 2304.04f});
+            testEntity.addHeritaged1Component(handle4, Heritaged1{ .tempFloat = 2304.04f });
             testEntity.addHeritaged2Component(handle5, Heritaged2{});
 
             testEntity.releaseLockedMutexHandle(mtx);
@@ -149,10 +309,10 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         auto testEntityWriteCompArrayHandle = testEntity.getComponentArrayHandleBuilder()
             .addComponent(ComponentType::HeritagedType2); // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
 
-        const auto &readWriteHandle1 = testEntity.getReadWriteHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
+        const auto &readWriteHandle1 = testEntity.getRWHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
         testEntity.syncReadWrites();
 
-        const auto &readWriteHandle2 = testEntity.getReadWriteHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
+        const auto &readWriteHandle2 = testEntity.getRWHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
         {
             //auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle1); // Should assert using old sync point handle
             auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle2);
@@ -190,7 +350,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             for(u32 i = 0; i < entityCount; ++i)
             {
                 LOG("Has both components: %u, 1:%u, 2:%u\n", testEntity.hasComponents(
-                        testEntity.getEntitySystemHandle(i), checkComponentsBoth),
+                    testEntity.getEntitySystemHandle(i), checkComponentsBoth),
                     testEntity.hasComponents(i, checkComponents1),
                     testEntity.hasComponents(i, checkComponents2)
                 );
@@ -220,7 +380,7 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
             testEntity2.removeEntity(entHandle, mtx);
             // testEntity2.removeEntity(entHandle, mtx); //Will assert trying to remove same entity
             EntitySystemHandle newHandle = testEntity2.addEntity(mtx);
-            testEntity2.addHeritaged1Component(newHandle, Heritaged1{.tempInt = 123});
+            testEntity2.addHeritaged1Component(newHandle, Heritaged1{ .tempInt = 123 });
 
             testEntity2.releaseLockedMutexHandle(mtx);
         }
@@ -236,6 +396,11 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
                 testEntity2.getEntitySystemHandle(1), ComponentType::HeritagedType));
             otherEntity.releaseLockedMutexHandle(mtx);
         }
+    }
+
+
+    {
+        TestSystem::init(entitySystems);
     }
 
     return resized();
@@ -270,6 +435,12 @@ bool SerializeComponent::resized()
 void SerializeComponent::logicUpdate()
 {
     VulkanApp::logicUpdate();
+    TestSystem::update(entitySystems, getDeltaTime());
+    
+    entitySystems.syncPoints();
+    
+    TestSystem2::update(entitySystems, getDeltaTime());
+    entitySystems.syncPoints();
     {
         bool textNeedsUpdate = false;
         for (int i = 0; i < bufferedPressesCount; ++i)
