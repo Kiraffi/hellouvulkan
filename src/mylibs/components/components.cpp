@@ -17,16 +17,59 @@ bool serializeField(WriteJson &writeJson,
 
     switch(fieldType)
     {
-        case FieldType::IntType:
+        case FieldType::I8Type:
+        {
+            i8 i = *((i8*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::U8Type:
+        {
+            u8 i = *((u8*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::I16Type:
+        {
+            i16 i = *((i16*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::U16Type:
+        {
+            u16 i = *((u16*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::I32Type:
         {
             int i = *((int*)fieldMemoryAddress);
             writeJson.addInteger(fieldName, i);
             break;
         }
-        case FieldType::FloatType:
+        case FieldType::U32Type:
+        {
+            u32 i = *((u32*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::U64Type:
+        case FieldType::I64Type:
+        {
+            i64 i = *((i64*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
+            break;
+        }
+        case FieldType::F32Type:
         {
             float f = *((float*)fieldMemoryAddress);
             writeJson.addNumber(fieldName, f);
+            break;
+        }
+        case FieldType::F64Type:
+        {
+            double d = *((double*)fieldMemoryAddress);
+            writeJson.addNumber(fieldName, d);
             break;
         }
         case FieldType::Vec2Type:
@@ -90,17 +133,75 @@ bool deserializeField(const JsonBlock &json,
 {
     switch(fieldType)
     {
-        case FieldType::IntType:
+        case FieldType::I8Type:
         {
-            int &i = *((int*)fieldMemoryAddress);
+            i8 &i2 = *((i8*)fieldMemoryAddress);
+            int64_t i = 0;
+            if(!json.getChild(fieldName).parseInt(i))
+                return false;
+            i2 = i8(i);
+            break;
+        }
+        case FieldType::U8Type:
+        {
+            u8 &i2 = *((u8*)fieldMemoryAddress);
+            int64_t i = 0;
+            if(!json.getChild(fieldName).parseInt(i))
+                return false;
+            i2 = u8(i);
+            break;
+        }
+        case FieldType::I16Type:
+        {
+            i16 &i2 = *((i16*)fieldMemoryAddress);
+            int64_t i = 0;
+            if(!json.getChild(fieldName).parseInt(i))
+                return false;
+            i2 = i16(i);
+            break;
+        }
+        case FieldType::U16Type:
+        {
+            u16 &i2 = *((u16*)fieldMemoryAddress);
+            int64_t i = 0;
+            if(!json.getChild(fieldName).parseInt(i))
+                return false;
+            i2 = u16(i);
+            break;
+        }
+        case FieldType::I32Type:
+        {
+            i32 &i = *((i32*)fieldMemoryAddress);
             if(!json.getChild(fieldName).parseInt(i))
                 return false;
             break;
         }
-        case FieldType::FloatType:
+        case FieldType::U32Type:
+        {
+            u32 &i = *((u32*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseUInt(i))
+                return false;
+            break;
+        }
+        case FieldType::U64Type:
+        case FieldType::I64Type:
+        {
+            i64 &i = *((i64*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseInt(i))
+                return false;
+            break;
+        }
+        case FieldType::F32Type:
         {
             float &f = *((float*)fieldMemoryAddress);
             if(!json.getChild(fieldName).parseFloat(f))
+                return false;
+            break;
+        }
+        case FieldType::F64Type:
+        {
+            double &d = *((double*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseDouble(d))
                 return false;
             break;
         }
@@ -168,14 +269,49 @@ void printFieldValue(const char* fieldName,
 
     switch(field)
     {
-        case FieldType::IntType:
+        case FieldType::I8Type:
         {
-            LOG("%s: %i\n", fieldName, *((int *)fieldMemoryAddress));
+            i32 i = *((i8 *)fieldMemoryAddress);
+            LOG("%s: %i\n", fieldName, i);
             break;
         }
-        case FieldType::FloatType:
+        case FieldType::U8Type:
         {
-            LOG("%s: %f\n", fieldName, *((float *)fieldMemoryAddress));
+            i32 i = *((u8 *)fieldMemoryAddress);
+            LOG("%s: %i\n", fieldName, i);
+            break;
+        }
+        case FieldType::I16Type:
+        {
+            i32 i = *((i16 *)fieldMemoryAddress);
+            LOG("%s: %i\n", fieldName, i);
+            break;
+        }
+        case FieldType::U16Type:
+        {
+            i32 i = *((u16 *)fieldMemoryAddress);
+            LOG("%s: %i\n", fieldName, i);
+            break;
+        }
+        case FieldType::I32Type:
+        {
+            LOG("%s: %i\n", fieldName, *((i32 *)fieldMemoryAddress));
+            break;
+        }
+        case FieldType::U32Type:
+        {
+            LOG("%s: %u\n", fieldName, *((u32 *)fieldMemoryAddress));
+            break;
+        }
+        case FieldType::F32Type:
+        {
+            LOG("%s: %f\n", fieldName, *((f32 *)fieldMemoryAddress));
+            break;
+        }
+        case FieldType::F64Type:
+        {
+            float f = f32(*((f64 *)fieldMemoryAddress));
+            LOG("%s: %f\n", fieldName, f);
             break;
         }
 

@@ -1,8 +1,40 @@
+ComponentHeaderBegin
+#include <core/camera.h>
+ComponentHeaderEnd
+
+EntityHeaderBegin
+EntityHeaderEnd
+
 ComponentBegin
 TransformComponent ComponentType::TransformComponent 1
     position ? Vector4 = {0, 0, 0, 1}
     rotation ? Quat = Quat{}
     scale ? Vector4 = {1, 1, 1, 1}
+ComponentEnd
+
+ComponentBegin
+CameraComponent ComponentType::CameraComponent 1
+    worldToViewMat ? Matrix = {};
+    viewToWorldMat  ? Matrix = {};
+
+    position ? Vector3 = {}
+    up ? Vector3 = {0, 1, 0}
+    direction ? Vector3 = {0, 0, 1}
+    right ? Vector3 = {1, 0 ,0}
+
+    fovY ? f32 = 100.0f
+
+    width ? f32 = 0.0f
+    height ? f32 = 0.0f
+
+    pitch ? f32 = 0.0f
+    yaw ? f32 = 0.0f
+    roll ? f32 = 0.0f
+
+    zNear ? f32 = 0.1f
+    zFar ? f32 = 200.0f
+
+    cameraType ? CameraType = CameraType::PERSPECTIVE
 ComponentEnd
 
 ComponentBegin
@@ -14,6 +46,7 @@ ComponentEnd
 EntityBegin
 GameEntitySystem EntitySystemType::GameEntitySystemType 1
     TransformComponent
+    CameraComponent
     Mat4Component
 EntityEnd
 

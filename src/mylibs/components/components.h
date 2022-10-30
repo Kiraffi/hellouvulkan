@@ -19,6 +19,7 @@ enum class ComponentType : u32
 {
     ComponentTypeNone = 0,
     TransformComponent,
+    CameraComponent,
     Mat3x4Component,
 
 
@@ -61,8 +62,17 @@ struct EntityRWHandle
 
 enum class FieldType
 {
-    IntType,
-    FloatType,
+    I8Type,
+    U8Type,
+    I16Type,
+    U16Type,
+    I32Type,
+    U32Type,
+    I64Type,
+    U64Type,
+
+    F32Type,
+    F64Type,
 
     Vec2Type,
     Vec3Type,
