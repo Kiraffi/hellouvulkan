@@ -125,12 +125,16 @@ bool TestSystem::update(EntitySystems &entitySystems, double dt)
     u32 gameEntCount = gameEnts.getEntityCount();
 
     TransformComponent* transformComponents = gameEnts.getTransformComponentWriteArray(gameEntsRWHandle);
-    if(transformComponents == nullptr)
+    const u64* components = gameEnts.getComponentsReadArray();
+    if(transformComponents == nullptr || components == nullptr)
         return false;
+    u64 requiredComponents = gameEntsRWHandle.readArrays | gameEntsRWHandle.writeArrays;
 
     for(u32 i = 0; i < gameEntCount; ++i)
     {
-        if(!gameEnts.hasComponents(i, gameEntsRWHandle))
+        //if(!gameEnts.hasComponents(i, gameEntsRWHandle))
+        //    continue;
+        if((components[i] & requiredComponents) != requiredComponents)
             continue;
         transformComponents[i].position.x += 0.01f * dt;
     }

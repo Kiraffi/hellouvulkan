@@ -137,8 +137,10 @@ struct ${ENTITY_NAME}
     EntitySystemHandle getEntitySystemHandle(u32 index) const;
     EntitySystemHandle addEntity(const ${ENTITY_NAME}EntityLockedMutexHandle& handle);
     bool removeEntity(EntitySystemHandle handle, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle);
-${ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS}
+
+    ${ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS}
 ${ENTITY_ADD_COMPONENT_HEADER}
+
     bool serialize(WriteJson &json) const;
     bool deserialize(const JsonBlock &json, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle);
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
@@ -458,7 +460,7 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
         set(ENTITY_ADD_COMPONENT "")
         set(ENTITY_ADD_COMPONENT_HEADER "")
         set(ENTITY_COMPONENT_TYPES_ARRAY "")
-        set(ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "")
+        set(ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "const u64* getComponentsReadArray() const;")
         set(ENTITY_COMPONENT_ARRAY_GETTERS "")
 
     elseif(READ_STATE EQUAL READ_STATE_ENTITY_BEGIN)
@@ -478,6 +480,11 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
         set(ENTITY_ID ${ELEM1})
         set(ENTITY_VERSION ${ELEM2})
 
+        set(ENTITY_COMPONENT_ARRAY_GETTERS "
+const u64* ${ENTITY_NAME}::getComponentsReadArray() const
+{
+    return entityComponents.data();
+}\n")
 
 
 
@@ -554,7 +561,7 @@ ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray(const EntityRWHandle& handle)
                     entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }")
-        string(APPEND ENTITY_ADD_COMPONENT_HEADER "\n    bool add${ELEM0}(EntitySystemHandle handle, const ${ELEM0}& component);")
+        string(APPEND ENTITY_ADD_COMPONENT_HEADER "    bool add${ELEM0}(EntitySystemHandle handle, const ${ELEM0}& component);\n")
         string(APPEND ENTITY_ADD_COMPONENT "
 bool ${ENTITY_NAME}::add${ELEM0}(EntitySystemHandle handle, const ${ELEM0}& component)
 {
