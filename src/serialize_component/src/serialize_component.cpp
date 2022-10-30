@@ -1,3 +1,9 @@
+#include "generated_components.h"
+#include "generated_systems.h"
+
+#include <components/components.h>
+#include <components/generated_components.h>
+#include <components/generated_systems.h>
 
 #include <container/podvector.h>
 #include <container/string.h>
@@ -22,13 +28,7 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <components/components.h>
 
-#include <components/generated_components.h>
-#include <components/generated_systems.h>
-
-#include "../generated_components.h"
-#include "../generated_systems.h"
 
 static constexpr int SCREEN_WIDTH = 640;
 static constexpr int SCREEN_HEIGHT = 540;
@@ -418,7 +418,7 @@ void SerializeComponent::logicUpdate()
 
     TestSystem::update(entitySystems, getDeltaTime());
     entitySystems.syncPoints();
-    
+
     TestSystem2::update(entitySystems, getDeltaTime());
     entitySystems.syncPoints();
 

@@ -9,7 +9,7 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 #include(${CMAKE_CURRENT_LIST_DIR}/testcmake2.cmake)
 
 set(DEF_FILE "${CMAKE_CURRENT_LIST_DIR}/test.def")
-set(DEF_OUT_FILE "${CMAKE_CURRENT_LIST_DIR}/generated")
+set(DEF_OUT_FILE "${CMAKE_CURRENT_LIST_DIR}/src/generated")
 set(DEF_CMAKE_FILE "${CMAKE_HOME_DIRECTORY}/cmake/generatecomponents.cmake")
 
 # Run the command whenever building
