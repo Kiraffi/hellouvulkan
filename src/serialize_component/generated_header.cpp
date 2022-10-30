@@ -195,7 +195,7 @@ const void* Heritaged2::getElementIndex(u32 index) const
 
 
 
-StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::StaticModelEntityReadWriteHandleBuilder::addArrayRead(ComponentType componentType)
+StaticModelEntity::StaticModelEntityComponentArrayHandleBuilder& StaticModelEntity::StaticModelEntityComponentArrayHandleBuilder::addComponent(ComponentType componentType)
 {
     u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
     if(componentIndex >= StaticModelEntity::componentTypeCount)
@@ -203,19 +203,7 @@ StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::S
         ASSERT(componentIndex < StaticModelEntity::componentTypeCount);
         return *this;
     }
-    readArrays |= u64(1) << u64(componentIndex);
-    return *this;
-}
-
-StaticModelEntity::StaticModelEntityReadWriteHandleBuilder& StaticModelEntity::StaticModelEntityReadWriteHandleBuilder::addArrayWrite(ComponentType componentType)
-{
-    u32 componentIndex = StaticModelEntity::getComponentIndex(componentType);
-    if(componentIndex >= StaticModelEntity::componentTypeCount)
-    {
-        ASSERT(componentIndex < StaticModelEntity::componentTypeCount);
-        return *this;
-    }
-    writeArrays |= u64(1) << u64(componentIndex);
+    componentIndexArray |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -243,6 +231,46 @@ bool StaticModelEntity::hasComponent(EntitySystemHandle handle, ComponentType co
     return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
 }
 
+bool StaticModelEntity::hasComponents(EntitySystemHandle handle,
+    const StaticModelEntityComponentArrayHandleBuilder& componentArrayHandle) const
+{
+    if(handle.entitySystemType != entitySystemID)
+        return false;
+
+    if(handle.entityIndex >= entityComponents.size())
+        return false;
+
+    if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+        return false;
+
+    auto compIndArr = componentArrayHandle.componentIndexArray;
+    return (entityComponents[handle.entityIndex] & compIndArr) == compIndArr;
+}
+
+bool StaticModelEntity::hasComponent(u32 entityIndex, ComponentType componentType) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    u64 componentIndex = getComponentIndex(componentType);
+
+    if(componentIndex >= componentTypeCount)
+        return false;
+
+    return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+}
+
+bool StaticModelEntity::hasComponents(u32 entityIndex,
+    const StaticModelEntityComponentArrayHandleBuilder& componentArrayHandle) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    auto compIndArr = componentArrayHandle.componentIndexArray;
+    return (entityComponents[entityIndex] & compIndArr) == compIndArr;
+}
+
+
 u32 StaticModelEntity::getComponentIndex(ComponentType componentType)
 {
     // Could be written with switch-cases if it comes to that. Probably no need to though
@@ -254,20 +282,22 @@ u32 StaticModelEntity::getComponentIndex(ComponentType componentType)
     return ~0u;
 }
 
-const EntityReadWriteHandle StaticModelEntity::getReadWriteHandle(const StaticModelEntityReadWriteHandleBuilder& builder)
+const EntityReadWriteHandle StaticModelEntity::getReadWriteHandle(
+    const StaticModelEntityComponentArrayHandleBuilder& readBuilder,
+    const StaticModelEntityComponentArrayHandleBuilder& writeBuilder)
 {
-    u64 writes = writeArrays.fetch_or(builder.writeArrays);
-    u64 reads = readArrays.fetch_or(builder.readArrays);
+    u64 reads = readArrays.fetch_or(readBuilder.componentIndexArray);
+    u64 writes = writeArrays.fetch_or(writeBuilder.componentIndexArray);
 
-    reads |= builder.readArrays;
-    writes |= builder.writeArrays;
+    reads |= readBuilder.componentIndexArray;
+    writes |= writeBuilder.componentIndexArray;
 
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
         return EntityReadWriteHandle{
-            .readArrays = builder.readArrays,
-            .writeArrays = builder.writeArrays,
+            .readArrays = readBuilder.componentIndexArray,
+            .writeArrays = writeBuilder.componentIndexArray,
             .syncIndexPoint = currentSyncIndex,
             .readWriteHandleTypeId = entitySystemID
        };
@@ -579,7 +609,7 @@ bool StaticModelEntity::deserialize(const JsonBlock &json, const StaticModelEnti
 
 
 
-OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTestEntityReadWriteHandleBuilder::addArrayRead(ComponentType componentType)
+OtherTestEntity::OtherTestEntityComponentArrayHandleBuilder& OtherTestEntity::OtherTestEntityComponentArrayHandleBuilder::addComponent(ComponentType componentType)
 {
     u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
     if(componentIndex >= OtherTestEntity::componentTypeCount)
@@ -587,19 +617,7 @@ OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTe
         ASSERT(componentIndex < OtherTestEntity::componentTypeCount);
         return *this;
     }
-    readArrays |= u64(1) << u64(componentIndex);
-    return *this;
-}
-
-OtherTestEntity::OtherTestEntityReadWriteHandleBuilder& OtherTestEntity::OtherTestEntityReadWriteHandleBuilder::addArrayWrite(ComponentType componentType)
-{
-    u32 componentIndex = OtherTestEntity::getComponentIndex(componentType);
-    if(componentIndex >= OtherTestEntity::componentTypeCount)
-    {
-        ASSERT(componentIndex < OtherTestEntity::componentTypeCount);
-        return *this;
-    }
-    writeArrays |= u64(1) << u64(componentIndex);
+    componentIndexArray |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -627,6 +645,46 @@ bool OtherTestEntity::hasComponent(EntitySystemHandle handle, ComponentType comp
     return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
 }
 
+bool OtherTestEntity::hasComponents(EntitySystemHandle handle,
+    const OtherTestEntityComponentArrayHandleBuilder& componentArrayHandle) const
+{
+    if(handle.entitySystemType != entitySystemID)
+        return false;
+
+    if(handle.entityIndex >= entityComponents.size())
+        return false;
+
+    if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+        return false;
+
+    auto compIndArr = componentArrayHandle.componentIndexArray;
+    return (entityComponents[handle.entityIndex] & compIndArr) == compIndArr;
+}
+
+bool OtherTestEntity::hasComponent(u32 entityIndex, ComponentType componentType) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    u64 componentIndex = getComponentIndex(componentType);
+
+    if(componentIndex >= componentTypeCount)
+        return false;
+
+    return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+}
+
+bool OtherTestEntity::hasComponents(u32 entityIndex,
+    const OtherTestEntityComponentArrayHandleBuilder& componentArrayHandle) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    auto compIndArr = componentArrayHandle.componentIndexArray;
+    return (entityComponents[entityIndex] & compIndArr) == compIndArr;
+}
+
+
 u32 OtherTestEntity::getComponentIndex(ComponentType componentType)
 {
     // Could be written with switch-cases if it comes to that. Probably no need to though
@@ -638,20 +696,22 @@ u32 OtherTestEntity::getComponentIndex(ComponentType componentType)
     return ~0u;
 }
 
-const EntityReadWriteHandle OtherTestEntity::getReadWriteHandle(const OtherTestEntityReadWriteHandleBuilder& builder)
+const EntityReadWriteHandle OtherTestEntity::getReadWriteHandle(
+    const OtherTestEntityComponentArrayHandleBuilder& readBuilder,
+    const OtherTestEntityComponentArrayHandleBuilder& writeBuilder)
 {
-    u64 writes = writeArrays.fetch_or(builder.writeArrays);
-    u64 reads = readArrays.fetch_or(builder.readArrays);
+    u64 reads = readArrays.fetch_or(readBuilder.componentIndexArray);
+    u64 writes = writeArrays.fetch_or(writeBuilder.componentIndexArray);
 
-    reads |= builder.readArrays;
-    writes |= builder.writeArrays;
+    reads |= readBuilder.componentIndexArray;
+    writes |= writeBuilder.componentIndexArray;
 
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
         return EntityReadWriteHandle{
-            .readArrays = builder.readArrays,
-            .writeArrays = builder.writeArrays,
+            .readArrays = readBuilder.componentIndexArray,
+            .writeArrays = writeBuilder.componentIndexArray,
             .syncIndexPoint = currentSyncIndex,
             .readWriteHandleTypeId = entitySystemID
        };

@@ -67,13 +67,11 @@ foreach(DEF_ROW ${DEF_LIST})
 struct ${ENTITY_NAME}
 {
     ~${ENTITY_NAME}();
-    struct ${ENTITY_NAME}ReadWriteHandleBuilder
+    struct ${ENTITY_NAME}ComponentArrayHandleBuilder
     {
-        ${ENTITY_NAME}ReadWriteHandleBuilder& addArrayRead(ComponentType componentType);
-        ${ENTITY_NAME}ReadWriteHandleBuilder& addArrayWrite(ComponentType componentType);
+        ${ENTITY_NAME}ComponentArrayHandleBuilder& addComponent(ComponentType componentType);
 
-        u64 readArrays = 0;
-        u64 writeArrays = 0;
+        u64 componentIndexArray = 0;
     };
 
     struct ${ENTITY_NAME}EntityLockedMutexHandle
@@ -91,11 +89,19 @@ struct ${ENTITY_NAME}
     static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
 
     static u32 getComponentIndex(ComponentType componentType);
+
     bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
+    bool hasComponents(EntitySystemHandle handle,
+        const ${ENTITY_NAME}ComponentArrayHandleBuilder& componentArrayHandle) const;
+
+    bool hasComponent(u32 entityIndex, ComponentType componentType) const;
+    bool hasComponents(u32 entityIndex, const ${ENTITY_NAME}ComponentArrayHandleBuilder& componentArrayHandle) const;
 
     // Different handle types for getting array... These are needed to set atomic locks...
-    static constexpr ${ENTITY_NAME}ReadWriteHandleBuilder getReadWriteHandleBuilder() { return ${ENTITY_NAME}ReadWriteHandleBuilder(); }
-    const EntityReadWriteHandle getReadWriteHandle(const ${ENTITY_NAME}ReadWriteHandleBuilder& builder);
+    static constexpr ${ENTITY_NAME}ComponentArrayHandleBuilder getComponentArrayHandleBuilder() { return ${ENTITY_NAME}ComponentArrayHandleBuilder(); }
+    const EntityReadWriteHandle getReadWriteHandle(
+        const ${ENTITY_NAME}ComponentArrayHandleBuilder& readBuilder,
+        const ${ENTITY_NAME}ComponentArrayHandleBuilder& writeBuilder);
 
     ${ENTITY_NAME}EntityLockedMutexHandle getLockedMutexHandle();
     bool releaseLockedMutexHandle(const ${ENTITY_NAME}EntityLockedMutexHandle& handle);
@@ -139,7 +145,7 @@ private:${ENTITY_ARRAYS_FIELD}
 
         file(APPEND "${FILENAME_TO_MODIFY}.cpp" "
 
-${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder::addArrayRead(ComponentType componentType)
+${ENTITY_NAME}::${ENTITY_NAME}ComponentArrayHandleBuilder& ${ENTITY_NAME}::${ENTITY_NAME}ComponentArrayHandleBuilder::addComponent(ComponentType componentType)
 {
     u32 componentIndex = ${ENTITY_NAME}::getComponentIndex(componentType);
     if(componentIndex >= ${ENTITY_NAME}::componentTypeCount)
@@ -147,19 +153,7 @@ ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_N
         ASSERT(componentIndex < ${ENTITY_NAME}::componentTypeCount);
         return *this;
     }
-    readArrays |= u64(1) << u64(componentIndex);
-    return *this;
-}
-
-${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder& ${ENTITY_NAME}::${ENTITY_NAME}ReadWriteHandleBuilder::addArrayWrite(ComponentType componentType)
-{
-    u32 componentIndex = ${ENTITY_NAME}::getComponentIndex(componentType);
-    if(componentIndex >= ${ENTITY_NAME}::componentTypeCount)
-    {
-        ASSERT(componentIndex < ${ENTITY_NAME}::componentTypeCount);
-        return *this;
-    }
-    writeArrays |= u64(1) << u64(componentIndex);
+    componentIndexArray |= u64(1) << u64(componentIndex);
     return *this;
 }
 
@@ -187,6 +181,46 @@ bool ${ENTITY_NAME}::hasComponent(EntitySystemHandle handle, ComponentType compo
     return ((entityComponents[handle.entityIndex] >> componentIndex) & 1) == 1;
 }
 
+bool ${ENTITY_NAME}::hasComponents(EntitySystemHandle handle,
+    const ${ENTITY_NAME}ComponentArrayHandleBuilder& componentArrayHandle) const
+{
+    if(handle.entitySystemType != entitySystemID)
+        return false;
+
+    if(handle.entityIndex >= entityComponents.size())
+        return false;
+
+    if(handle.entityIndexVersion != entityVersions[handle.entityIndex])
+        return false;
+
+    auto compIndArr = componentArrayHandle.componentIndexArray;
+    return (entityComponents[handle.entityIndex] & compIndArr) == compIndArr;
+}
+
+bool ${ENTITY_NAME}::hasComponent(u32 entityIndex, ComponentType componentType) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    u64 componentIndex = getComponentIndex(componentType);
+
+    if(componentIndex >= componentTypeCount)
+        return false;
+
+    return ((entityComponents[entityIndex] >> componentIndex) & 1) == 1;
+}
+
+bool ${ENTITY_NAME}::hasComponents(u32 entityIndex,
+    const ${ENTITY_NAME}ComponentArrayHandleBuilder& componentArrayHandle) const
+{
+    if(entityIndex >= entityComponents.size())
+        return false;
+
+    auto compIndArr = componentArrayHandle.componentIndexArray;
+    return (entityComponents[entityIndex] & compIndArr) == compIndArr;
+}
+
+
 u32 ${ENTITY_NAME}::getComponentIndex(ComponentType componentType)
 {
     // Could be written with switch-cases if it comes to that. Probably no need to though
@@ -198,20 +232,22 @@ u32 ${ENTITY_NAME}::getComponentIndex(ComponentType componentType)
     return ~0u;
 }
 
-const EntityReadWriteHandle ${ENTITY_NAME}::getReadWriteHandle(const ${ENTITY_NAME}ReadWriteHandleBuilder& builder)
+const EntityReadWriteHandle ${ENTITY_NAME}::getReadWriteHandle(
+    const ${ENTITY_NAME}ComponentArrayHandleBuilder& readBuilder,
+    const ${ENTITY_NAME}ComponentArrayHandleBuilder& writeBuilder)
 {
-    u64 writes = writeArrays.fetch_or(builder.writeArrays);
-    u64 reads = readArrays.fetch_or(builder.readArrays);
+    u64 reads = readArrays.fetch_or(readBuilder.componentIndexArray);
+    u64 writes = writeArrays.fetch_or(writeBuilder.componentIndexArray);
 
-    reads |= builder.readArrays;
-    writes |= builder.writeArrays;
+    reads |= readBuilder.componentIndexArray;
+    writes |= writeBuilder.componentIndexArray;
 
     ASSERT((writes & reads) == 0);
     if((writes & reads) == 0)
     {
         return EntityReadWriteHandle{
-            .readArrays = builder.readArrays,
-            .writeArrays = builder.writeArrays,
+            .readArrays = readBuilder.componentIndexArray,
+            .writeArrays = writeBuilder.componentIndexArray,
             .syncIndexPoint = currentSyncIndex,
             .readWriteHandleTypeId = entitySystemID
        };

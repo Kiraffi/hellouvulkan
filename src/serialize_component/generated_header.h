@@ -19,11 +19,11 @@ struct TransformComponent
     static constexpr u32 componentFieldAmount = 3;
 
     // Row 0, Size 16
-    Vector4 position = {};
+    Vector4 position = {0, 0, 0, 1};
     // Row 1, Size 16
     Quat rotation = Quat{};
     // Row 2, Size 16
-    Vector4 scale = {};
+    Vector4 scale = {1, 1, 1, 1};
 
     static constexpr FieldType fieldTypes[] =
     {
@@ -143,13 +143,11 @@ private:
 struct StaticModelEntity
 {
     ~StaticModelEntity();
-    struct StaticModelEntityReadWriteHandleBuilder
+    struct StaticModelEntityComponentArrayHandleBuilder
     {
-        StaticModelEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType);
-        StaticModelEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType);
+        StaticModelEntityComponentArrayHandleBuilder& addComponent(ComponentType componentType);
 
-        u64 readArrays = 0;
-        u64 writeArrays = 0;
+        u64 componentIndexArray = 0;
     };
 
     struct StaticModelEntityEntityLockedMutexHandle
@@ -169,11 +167,19 @@ struct StaticModelEntity
     static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
 
     static u32 getComponentIndex(ComponentType componentType);
+
     bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
+    bool hasComponents(EntitySystemHandle handle,
+        const StaticModelEntityComponentArrayHandleBuilder& componentArrayHandle) const;
+
+    bool hasComponent(u32 entityIndex, ComponentType componentType) const;
+    bool hasComponents(u32 entityIndex, const StaticModelEntityComponentArrayHandleBuilder& componentArrayHandle) const;
 
     // Different handle types for getting array... These are needed to set atomic locks...
-    static constexpr StaticModelEntityReadWriteHandleBuilder getReadWriteHandleBuilder() { return StaticModelEntityReadWriteHandleBuilder(); }
-    const EntityReadWriteHandle getReadWriteHandle(const StaticModelEntityReadWriteHandleBuilder& builder);
+    static constexpr StaticModelEntityComponentArrayHandleBuilder getComponentArrayHandleBuilder() { return StaticModelEntityComponentArrayHandleBuilder(); }
+    const EntityReadWriteHandle getReadWriteHandle(
+        const StaticModelEntityComponentArrayHandleBuilder& readBuilder,
+        const StaticModelEntityComponentArrayHandleBuilder& writeBuilder);
 
     StaticModelEntityEntityLockedMutexHandle getLockedMutexHandle();
     bool releaseLockedMutexHandle(const StaticModelEntityEntityLockedMutexHandle& handle);
@@ -223,13 +229,11 @@ private:
 struct OtherTestEntity
 {
     ~OtherTestEntity();
-    struct OtherTestEntityReadWriteHandleBuilder
+    struct OtherTestEntityComponentArrayHandleBuilder
     {
-        OtherTestEntityReadWriteHandleBuilder& addArrayRead(ComponentType componentType);
-        OtherTestEntityReadWriteHandleBuilder& addArrayWrite(ComponentType componentType);
+        OtherTestEntityComponentArrayHandleBuilder& addComponent(ComponentType componentType);
 
-        u64 readArrays = 0;
-        u64 writeArrays = 0;
+        u64 componentIndexArray = 0;
     };
 
     struct OtherTestEntityEntityLockedMutexHandle
@@ -248,11 +252,19 @@ struct OtherTestEntity
     static constexpr u32 componentTypeCount = sizeof(componentTypes) / sizeof(ComponentType);
 
     static u32 getComponentIndex(ComponentType componentType);
+
     bool hasComponent(EntitySystemHandle handle, ComponentType componentType) const;
+    bool hasComponents(EntitySystemHandle handle,
+        const OtherTestEntityComponentArrayHandleBuilder& componentArrayHandle) const;
+
+    bool hasComponent(u32 entityIndex, ComponentType componentType) const;
+    bool hasComponents(u32 entityIndex, const OtherTestEntityComponentArrayHandleBuilder& componentArrayHandle) const;
 
     // Different handle types for getting array... These are needed to set atomic locks...
-    static constexpr OtherTestEntityReadWriteHandleBuilder getReadWriteHandleBuilder() { return OtherTestEntityReadWriteHandleBuilder(); }
-    const EntityReadWriteHandle getReadWriteHandle(const OtherTestEntityReadWriteHandleBuilder& builder);
+    static constexpr OtherTestEntityComponentArrayHandleBuilder getComponentArrayHandleBuilder() { return OtherTestEntityComponentArrayHandleBuilder(); }
+    const EntityReadWriteHandle getReadWriteHandle(
+        const OtherTestEntityComponentArrayHandleBuilder& readBuilder,
+        const OtherTestEntityComponentArrayHandleBuilder& writeBuilder);
 
     OtherTestEntityEntityLockedMutexHandle getLockedMutexHandle();
     bool releaseLockedMutexHandle(const OtherTestEntityEntityLockedMutexHandle& handle);

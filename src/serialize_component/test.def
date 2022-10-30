@@ -1,8 +1,8 @@
 ComponentBegin
 TransformComponent ComponentType::TransformComponent 1
-    position ? Vector4 = {}
+    position ? Vector4 = {0, 0, 0, 1}
     rotation ? Quat = Quat{}
-    scale ? Vector4 = {}
+    scale ? Vector4 = {1, 1, 1, 1}
 ComponentEnd
 
 

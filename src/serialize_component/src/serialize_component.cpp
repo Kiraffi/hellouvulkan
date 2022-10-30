@@ -30,6 +30,45 @@ static constexpr int SCREEN_HEIGHT = 540;
 
 
 
+
+
+static FORCE_INLINE Mat3x4 getMatrixFromTransform(const TransformComponent &trans)
+{
+    Mat3x4 result{ Uninit };
+    float xy2 = 2.0f * trans.rotation.v.x * trans.rotation.v.y;
+    float xz2 = 2.0f * trans.rotation.v.x * trans.rotation.v.z;
+    float yz2 = 2.0f * trans.rotation.v.y * trans.rotation.v.z;
+
+    float wx2 = 2.0f * trans.rotation.w * trans.rotation.v.x;
+    float wy2 = 2.0f * trans.rotation.w * trans.rotation.v.y;
+    float wz2 = 2.0f * trans.rotation.w * trans.rotation.v.z;
+
+    float xx2 = 2.0f * trans.rotation.v.x * trans.rotation.v.x;
+    float yy2 = 2.0f * trans.rotation.v.y * trans.rotation.v.y;
+    float zz2 = 2.0f * trans.rotation.v.z * trans.rotation.v.z;
+
+    result._00 = (1.0f - yy2 - zz2) * trans.scale.x;
+    result._01 = (xy2 - wz2) * trans.scale.x;
+    result._02 = (xz2 + wy2) * trans.scale.x;
+
+    result._10 = (xy2 + wz2) * trans.scale.y;
+    result._11 = (1.0f - xx2 - zz2) * trans.scale.y;
+    result._12 = (yz2 - wx2) * trans.scale.y;
+
+    result._20 = (xz2 - wy2) * trans.scale.z;
+    result._21 = (yz2 + wx2) * trans.scale.z;
+    result._22 = (1.0f - xx2 - yy2) * trans.scale.z;
+
+    result._03 = trans.position.x;
+    result._13 = trans.position.y;
+    result._23 = trans.position.z;
+
+    return result;
+}
+
+
+
+
 class SerializeComponent : public VulkanApp
 {
 public:
@@ -49,6 +88,9 @@ private:
     Vector2 fontSize = Vector2(8.0f, 12.0f);
     Image renderColorImage;
     String text = "Text";
+
+    TransformComponent trans;
+
 };
 
 
@@ -100,19 +142,17 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
         }
         testEntity.syncReadWrites(); // Needs sync to not assert for read/write + adding
 
+        auto testEntityReadCompArrayHandle = testEntity.getComponentArrayHandleBuilder()
+            .addComponent(ComponentType::HeritagedType); // Will assert if trying to access heritaged1readarray without inserting this to read accessor
+            // .addComponent(ComponentType::HeritagedType2); // Will assert when trying to read and write to same array without syncing
 
-        const auto &readWriteHandle1 = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
-            .addArrayRead(ComponentType::HeritagedType) // Will assert if trying to access heritaged1readarray without inserting this to read accessor
-            // .addArrayRead(ComponentType::HeritagedType2) // Will assert when trying to read and write to same array without syncing
-            .addArrayWrite(ComponentType::HeritagedType2) // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
-        );
+        auto testEntityWriteCompArrayHandle = testEntity.getComponentArrayHandleBuilder()
+            .addComponent(ComponentType::HeritagedType2); // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
+
+        const auto &readWriteHandle1 = testEntity.getReadWriteHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
         testEntity.syncReadWrites();
 
-        const auto& readWriteHandle2 = testEntity.getReadWriteHandle(testEntity.getReadWriteHandleBuilder()
-            .addArrayRead(ComponentType::HeritagedType) // Will assert if trying to access heritaged1readarray without inserting this to read accessor
-            // .addArrayRead(ComponentType::HeritagedType2) // Will assert when trying to read and write to same array without syncing
-            .addArrayWrite(ComponentType::HeritagedType2) // Will assert if trying to access Heritaged2WriteArray without inserting this to write accessors
-        );
+        const auto &readWriteHandle2 = testEntity.getReadWriteHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
         {
             //auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle1); // Should assert using old sync point handle
             auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle2);
@@ -136,6 +176,24 @@ bool SerializeComponent::init(const char* windowStr, int screenWidth, int screen
                     ptrRef->componentName, ptrRef->tempInt2,
                     ptrRef->componentName, ptrRef->tempFloat2);
                 ++ptrRef;
+            }
+            auto checkComponentsBoth = testEntity.getComponentArrayHandleBuilder()
+                .addComponent(ComponentType::HeritagedType)
+                .addComponent(ComponentType::HeritagedType2);
+
+            auto checkComponents1 = testEntity.getComponentArrayHandleBuilder()
+                .addComponent(ComponentType::HeritagedType);
+
+            auto checkComponents2 = testEntity.getComponentArrayHandleBuilder()
+                .addComponent(ComponentType::HeritagedType2);
+
+            for(u32 i = 0; i < entityCount; ++i)
+            {
+                LOG("Has both components: %u, 1:%u, 2:%u\n", testEntity.hasComponents(
+                        testEntity.getEntitySystemHandle(i), checkComponentsBoth),
+                    testEntity.hasComponents(i, checkComponents1),
+                    testEntity.hasComponents(i, checkComponents2)
+                );
             }
         }
         testEntity.syncReadWrites();
@@ -212,7 +270,6 @@ bool SerializeComponent::resized()
 void SerializeComponent::logicUpdate()
 {
     VulkanApp::logicUpdate();
-
     {
         bool textNeedsUpdate = false;
         for (int i = 0; i < bufferedPressesCount; ++i)
