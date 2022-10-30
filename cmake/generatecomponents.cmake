@@ -554,9 +554,9 @@ ${ELEM0}* ${ENTITY_NAME}::get${ELEM1}WriteArray(const EntityRWHandle& handle)
                     entityComponents[addedCount] |= u64(1) << componentIndex;
                     continue;
                 }")
-        string(APPEND ENTITY_ADD_COMPONENT_HEADER "\n    bool add${ELEM0}Component(EntitySystemHandle handle, const ${ELEM0}& component);")
+        string(APPEND ENTITY_ADD_COMPONENT_HEADER "\n    bool add${ELEM0}(EntitySystemHandle handle, const ${ELEM0}& component);")
         string(APPEND ENTITY_ADD_COMPONENT "
-bool ${ENTITY_NAME}::add${ELEM0}Component(EntitySystemHandle handle, const ${ELEM0}& component)
+bool ${ENTITY_NAME}::add${ELEM0}(EntitySystemHandle handle, const ${ELEM0}& component)
 {
     // Some error if no lock
 

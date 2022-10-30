@@ -12,15 +12,15 @@ TransformComponent ComponentType::TransformComponent 1
     scale ? Vector4 = {1, 1, 1, 1}
 ComponentEnd
 
+position ? Vector3 = {}
+up ? Vector3 = {0, 1, 0}
+direction ? Vector3 = {0, 0, 1}
+right ? Vector3 = {1, 0 ,0}
+
 ComponentBegin
 CameraComponent ComponentType::CameraComponent 1
     worldToViewMat ? Matrix = {};
     viewToWorldMat  ? Matrix = {};
-
-    position ? Vector3 = {}
-    up ? Vector3 = {0, 1, 0}
-    direction ? Vector3 = {0, 0, 1}
-    right ? Vector3 = {1, 0 ,0}
 
     fovY ? f32 = 100.0f
 

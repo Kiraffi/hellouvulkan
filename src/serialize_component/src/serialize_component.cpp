@@ -76,11 +76,13 @@ bool TestSystem::init(EntitySystems &entitySystems)
         EntitySystemHandle handle1 = gameEnts.addEntity(mtx);
         EntitySystemHandle handle2 = gameEnts.addEntity(mtx);
 
-        gameEnts.addTransformComponentComponent(handle1, TransformComponent{.position = Vector4{1, 2, 3, 1 }});
-        gameEnts.addTransformComponentComponent(handle2, TransformComponent{.position = Vector4{4, 5, 6, 1 }});
+        gameEnts.addTransformComponent(handle1, TransformComponent{.position = Vector4{1, 2, 3, 1 }});
+        gameEnts.addTransformComponent(handle2, TransformComponent{.position = Vector4{4, 5, 6, 1 }});
 
-        gameEnts.addMat4ComponentComponent(handle1, {});
-        gameEnts.addMat4ComponentComponent(handle2, {});
+        gameEnts.addMat4Component(handle1, {});
+        gameEnts.addMat4Component(handle2, {});
+
+        gameEnts.addCameraComponent(handle1, {});
 
         gameEnts.releaseLockedMutexHandle(mtx);
     }
@@ -97,11 +99,11 @@ bool TestSystem2::init(EntitySystems &entitySystems)
         EntitySystemHandle handle1 = gameEnts.addEntity(mtx);
         EntitySystemHandle handle2 = gameEnts.addEntity(mtx);
 
-        gameEnts.addTransformComponentComponent(handle1, TransformComponent{ .position = Vector4{ 10, 20, 30, 0 } });
-        //gameEnts.addTransformComponentComponent(handle2, TransformComponent{ .position = Vector4{ 40, 50, 60, 0 } });
+        gameEnts.addTransformComponent(handle1, TransformComponent{ .position = Vector4{ 10, 20, 30, 0 } });
+        //gameEnts.addTransformComponent(handle2, TransformComponent{ .position = Vector4{ 40, 50, 60, 0 } });
 
-        //gameEnts.addMat4ComponentComponent(handle1, {});
-        gameEnts.addMat4ComponentComponent(handle2, {});
+        //gameEnts.addMat4Component(handle1, {});
+        gameEnts.addMat4Component(handle2, {});
 
         gameEnts.releaseLockedMutexHandle(mtx);
     }
@@ -174,20 +176,29 @@ bool TestSystem3::update(EntitySystems &entitySystems)
 
     auto gameEntsReadComponents = gameEnts.getComponentArrayHandleBuilder()
         .addComponent(ComponentType::TransformComponent)
-        .addComponent(ComponentType::Mat3x4Component);
+        .addComponent(ComponentType::Mat3x4Component)
+        .addComponent(ComponentType::CameraComponent);
 
     const auto &gameEntsRWHandle = gameEnts.getRWHandle(gameEntsReadComponents, {});
     u32 gameEntCount = gameEnts.getEntityCount();
 
     const TransformComponent *transformComponents = gameEnts.getTransformComponentReadArray(gameEntsRWHandle);
     const Mat4Component *matComponents = gameEnts.getMat4ComponentReadArray(gameEntsRWHandle);
-
+    const CameraComponent* cameraComponents = gameEnts.getCameraComponentReadArray(gameEntsRWHandle);
     if(transformComponents == nullptr || matComponents == nullptr)
         return false;
 
+    auto requiredComponents = gameEnts.getComponentArrayHandleBuilder()
+        .addComponent(ComponentType::TransformComponent)
+        .addComponent(ComponentType::Mat3x4Component);
+
+    auto camComponent = gameEnts.getComponentArrayHandleBuilder()
+        .addComponent(ComponentType::CameraComponent);
+
+
     for(u32 i = 0; i < gameEntCount; ++i)
     {
-        if(!gameEnts.hasComponents(i, gameEntsRWHandle))
+        if(!gameEnts.hasComponents(i, requiredComponents))
             continue;
         const Vector4 &pos = transformComponents[i].position;
         const Mat3x4 &m = matComponents[i].mat;
@@ -196,9 +207,17 @@ bool TestSystem3::update(EntitySystems &entitySystems)
             m[0], m[1], m[2], m[3],
             m[4], m[5], m[6], m[7],
             m[8], m[9], m[10], m[11]);
+
+        // Handle case when this object has camera component.
+        if(gameEnts.hasComponents(i, camComponent))
+        {
+            const auto& cmp = cameraComponents[i];
+            const Vec3 dirs = Vec3(cmp.pitch, cmp.yaw, cmp.roll);
+            LOG("Camera component pitch: %.2f, yaw: %.2f, roll: %.2f\n", dirs.x, dirs.y, dirs.z);
+        }
         //getMatrixFromTransform(transformComponents[i], matComponents[i].mat);
     }
-
+    LOG("\n");
     return true;
 }
 
@@ -270,12 +289,12 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
             EntitySystemHandle handle4 = testEntity.addEntity(mtx);
             EntitySystemHandle handle5 = testEntity.addEntity(mtx);
 
-            testEntity.addHeritaged2Component(handle1, Heritaged2{ .tempFloat2 = 234234.40 });
-            testEntity.addHeritaged1Component(handle1, Heritaged1{ .tempInt = 78 });
-            testEntity.addHeritaged2Component(handle2, Heritaged2{ .tempInt2 = 1234, .tempFloat2 = 1234 });
-            //testEntity.addHeritaged2Component(handle3, Heritaged21{});
-            testEntity.addHeritaged1Component(handle4, Heritaged1{ .tempFloat = 2304.04f });
-            testEntity.addHeritaged2Component(handle5, Heritaged2{});
+            testEntity.addHeritaged2Component(handle1, Heritaged2Component{ .tempFloat2 = 234234.40 });
+            testEntity.addHeritaged1Component(handle1, Heritaged1Component{ .tempInt = 78 });
+            testEntity.addHeritaged2Component(handle2, Heritaged2Component{ .tempInt2 = 1234, .tempFloat2 = 1234 });
+            //testEntity.addHeritaged2Component(handle3, {});
+            testEntity.addHeritaged1Component(handle4, Heritaged1Component{ .tempFloat = 2304.04f });
+            testEntity.addHeritaged2Component(handle5, {});
 
             testEntity.releaseLockedMutexHandle(mtx);
         }
@@ -294,7 +313,7 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
         const auto &readWriteHandle2 = testEntity.getRWHandle(testEntityReadCompArrayHandle, testEntityWriteCompArrayHandle);
         {
             //auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle1); // Should assert using old sync point handle
-            auto ptr = testEntity.getHeritaged1ReadArray(readWriteHandle2);
+            auto ptr = testEntity.getHeritaged1ComponentReadArray(readWriteHandle2);
             u32 entityCount = testEntity.getEntityCount();
             for(u32 i = 0; i < entityCount; ++i)
             {
@@ -304,7 +323,7 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
                 ++ptr;
             }
             //auto ptrRef = testEntity.getHeritaged2WriteArray(readWriteHandle1); // Should assert using old sync point handle
-            auto ptrRef = testEntity.getHeritaged2WriteArray(readWriteHandle2);
+            auto ptrRef = testEntity.getHeritaged2ComponentWriteArray(readWriteHandle2);
             for(u32 i = 0; i < entityCount; ++i)
             {
                 ptrRef->tempInt += 239 + i;
@@ -359,7 +378,7 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
             testEntity2.removeEntity(entHandle, mtx);
             // testEntity2.removeEntity(entHandle, mtx); //Will assert trying to remove same entity
             EntitySystemHandle newHandle = testEntity2.addEntity(mtx);
-            testEntity2.addHeritaged1Component(newHandle, Heritaged1{ .tempInt = 123 });
+            testEntity2.addHeritaged1Component(newHandle, Heritaged1Component{ .tempInt = 123 });
 
             testEntity2.releaseLockedMutexHandle(mtx);
         }
@@ -369,7 +388,7 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
             auto mtx = otherEntity.getLockedMutexHandle();
             EntitySystemHandle otherHandle = otherEntity.addEntity(mtx);
             {
-                otherEntity.addHeritaged1Component(otherHandle, Heritaged1{ .tempV2{ 97, 23 } });
+                otherEntity.addHeritaged1Component(otherHandle, Heritaged1Component{ .tempV2{ 97, 23 } });
             }
             LOG("has comp: %u\n", testEntity2.hasComponent(
                 testEntity2.getEntitySystemHandle(1), ComponentType::HeritagedType));
