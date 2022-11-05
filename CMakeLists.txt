@@ -152,7 +152,7 @@ ADD_DEFINITIONS(-DIMGUI_DISABLE_DEMO_WINDOWS=1)
 #ADD_DEFINITIONS(-DIMGUI_DISABLE_SSE=1)
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
-add_library(Imgui OBJECT EXCLUDE_FROM_ALL
+add_library(Imgui #OBJECT EXCLUDE_FROM_ALL
     "external/imgui/imgui.cpp"
     "external/imgui/imgui_draw.cpp"
     "external/imgui/imgui_tables.cpp"

@@ -36,6 +36,7 @@ add_dependencies(serialize_component shaders GENERATED_HEADERS)
 target_link_libraries(serialize_component PRIVATE
     MyLibraries
     #MyVulkan
-    #MyImgui
+    MyImgui
+    #Imgui
     glfw
 )

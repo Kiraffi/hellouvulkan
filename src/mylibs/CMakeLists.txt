@@ -70,7 +70,7 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "container/string.cpp"
     "container/mymemory.cpp"
     "container/stringview.cpp"
- 
+
     "components/components.cpp"
     "components/generated_components.cpp"
     "components/generated_systems.cpp"
@@ -196,6 +196,7 @@ target_link_libraries(MyLibraries PUBLIC
     Vulkan::Vulkan
     ${WINMM_LIB}
 
+    Imgui
     #meshoptimizer
     #PRIVATE MyLibraries
 

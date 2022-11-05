@@ -6,6 +6,7 @@
 #include <core/log.h>
 #include <core/writejson.h>
 
+#include <imgui.h>
 
 bool serializeField(WriteJson &writeJson,
     const char* const fieldName,
@@ -361,6 +362,115 @@ void printFieldValue(const char* fieldName,
                 m[4], m[5], m[6], m[7],
                 m[8], m[9], m[10], m[11],
                 m[12], m[13], m[14], m[15]);
+            break;
+        }
+
+        case FieldType::NumTypes:
+        {
+            break;
+        }
+    }
+}
+
+void imguiPrintField(const char* fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType field)
+{
+    if(fieldName == nullptr || fieldMemoryAddress == nullptr)
+    {
+        return;
+    }
+
+    switch(field)
+    {
+        case FieldType::I8Type:
+        {
+            i32 i = *((i8 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::U8Type:
+        {
+            i32 i = *((u8 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::I16Type:
+        {
+            i32 i = *((i16 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::U16Type:
+        {
+            i32 i = *((u16 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::I32Type:
+        {
+            i32 i = *((i32 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::U32Type:
+        {
+            u32 i = *((u32 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::F32Type:
+        {
+            f32 *f = ((f32 *)fieldMemoryAddress);
+            ImGui::InputFloat(fieldName, f);
+            break;
+        }
+        case FieldType::F64Type:
+        {
+            f32 d = *((f64 *)fieldMemoryAddress);
+            ImGui::Value(fieldName, d);
+            break;
+        }
+
+        case FieldType::Vec2Type:
+        {
+            float *v = &(((Vector2 *)fieldMemoryAddress)->x);
+            ImGui::InputFloat2(fieldName, v);
+            break;
+        }
+
+        case FieldType::Vec3Type:
+        {
+            float *v = &(((Vector3 *)fieldMemoryAddress)->x);
+            ImGui::InputFloat3(fieldName, v);
+            break;
+        }
+
+        case FieldType::Vec4Type:
+        {
+            float *v = &(((Vector4 *)fieldMemoryAddress)->x);
+            ImGui::InputFloat4(fieldName, v);
+            break;
+        }
+
+        case FieldType::QuatType:
+        {
+            float *v = &(((Quat *)fieldMemoryAddress)->v.x);
+            ImGui::InputFloat4(fieldName, v);
+            break;
+        }
+
+        case FieldType::Mat3x4Type:
+        {
+            float *v = &((*((Mat3x4 *)fieldMemoryAddress))[0]);
+            ImGui::InputFloat4(fieldName, v);
+            break;
+        }
+
+        case FieldType::Mat4Type:
+        {
+            float *v = &((*((Matrix *)fieldMemoryAddress))[0]);
+            ImGui::InputFloat4(fieldName, v);
             break;
         }
 

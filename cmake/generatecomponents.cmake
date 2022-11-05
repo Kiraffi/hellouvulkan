@@ -53,7 +53,8 @@ file(WRITE "${FILENAME_TO_MODIFY}_components.h" "${HEADER_FILE_WRITE}")
 set(CPP_FILE_WRITE "${MY_HEADER_FIRST_LINE}
 #include \"generated_components.h\"
 #include \"generated_systems.h\"
-${MY_FILE_HEADER}\n")
+${MY_FILE_HEADER}
+#include \"imgui.h\"\n")
 
 file(WRITE "${FILENAME_TO_MODIFY}_systems.cpp" "${CPP_FILE_WRITE}")
 file(WRITE "${FILENAME_TO_MODIFY}_components.cpp" "${CPP_FILE_WRITE}")
@@ -144,6 +145,8 @@ ${ENTITY_ADD_COMPONENT_HEADER}
     bool serialize(WriteJson &json) const;
     bool deserialize(const JsonBlock &json, const ${ENTITY_NAME}EntityLockedMutexHandle &mutexHandle);
     u32 getEntityCount() const { return (u32)entityComponents.size(); }
+
+    void imguiRenderEntity();
 
 private:${ENTITY_ARRAYS_FIELD}
     std::vector<u16> entityVersions;
@@ -447,6 +450,32 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
     return true;
 }
 
+void ${ENTITY_NAME}::imguiRenderEntity()
+{
+    auto builder = getComponentArrayHandleBuilder();
+    builder.componentIndexArray = (u64(1) << u64(componentTypeCount)) - 1;
+
+    auto rwhandle = getRWHandle(builder, {});
+
+${ENTITY_COMPONENT_ARRAY_GETTING_IMGUI}
+    ImGui::Begin(\"Entity\");
+    ImGui::Text(\"${ENTITY_NAME}\");
+    for(u32 i = 0; i < entityComponents.size(); ++i)
+    {
+        ImGui::Text(\"    [%i]\", i);
+        if(entityComponents[i] == 0)
+            continue;
+
+        ImGui::Begin(\"Entity2\");
+        auto handle = getEntitySystemHandle(i);
+        ${ENTITY_WRITE_IMGUI_CONTENTS}
+        ImGui::End();
+    }
+    ImGui::End();
+
+}
+
+
 ")
 
 
@@ -455,11 +484,13 @@ bool ${ENTITY_NAME}::deserialize(const JsonBlock &json, const ${ENTITY_NAME}Enti
         set(READ_STATE ${READ_STATE_ENTITY_BEGIN})
         set(ENTITY_LOAD_CONTENTS "")
         set(ENTITY_WRITE_CONTENTS "")
+        set(ENTITY_WRITE_IMGUI_CONTENTS "")
         set(ENTITY_ARRAYS_FIELD "")
         set(ENTITY_ARRAY_PUSHBACKS "")
         set(ENTITY_ADD_COMPONENT "")
         set(ENTITY_ADD_COMPONENT_HEADER "")
         set(ENTITY_COMPONENT_TYPES_ARRAY "")
+        set(ENTITY_COMPONENT_ARRAY_GETTING_IMGUI "")
         set(ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "const u64* getComponentsReadArray() const;")
         set(ENTITY_COMPONENT_ARRAY_GETTERS "")
 
@@ -508,7 +539,17 @@ const u64* ${ENTITY_NAME}::getComponentsReadArray() const
             {
                 ${ELEM1}Array[i].serialize(json);
             }")
-        string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "
+        string(APPEND ENTITY_WRITE_IMGUI_CONTENTS "
+        if(hasComponent(handle, ${ELEM0}::componentID))
+        {
+            ImGui::Text(\"        ${ELEM0}\");
+            array${ELEM0}[i].imguiRenderComponent();
+        }")
+    string(APPEND ENTITY_COMPONENT_ARRAY_GETTING_IMGUI
+"    const ${ELEM0}* array${ELEM0} = get${ELEM1}ReadArray(rwhandle);
+    if(array${ELEM0} == nullptr)
+        return;\n\n")
+    string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "
     const ${ELEM0}* get${ELEM1}ReadArray(const EntityRWHandle& handle) const;
     ${ELEM0}* get${ELEM1}WriteArray(const EntityRWHandle& handle);")
         string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS "
@@ -620,8 +661,9 @@ ${COMPONENT_VARS}
 
     bool serialize(WriteJson &json) const;
     bool deserialize(const JsonBlock &json);
+    void imguiRenderComponent() const;
 
-private:
+public:
     void* getElementIndexRef(u32 index);
     const void* getElementIndex(u32 index) const;
 };\n")
@@ -661,6 +703,18 @@ bool ${COMPONENT_NAME}::deserialize(const JsonBlock &json)
     }
     return true;
 }
+
+void ${COMPONENT_NAME}::imguiRenderComponent() const
+{
+    for(u32 i = 0; i < componentFieldAmount; ++i)
+    {
+        //char s[100] = {};
+        //Supa::strcat(s, \"            \");
+        //Supa::strcat(s, fieldNames[i]);
+        imguiPrintField(fieldNames[i], getElementIndex(i), fieldTypes[i]);
+    }
+}
+
 
 void* ${COMPONENT_NAME}::getElementIndexRef(u32 index)
 {
@@ -772,6 +826,8 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         elseif(ELEM0 STREQUAL "Matrix")
             set(COMPONENT_FIELD_ELEMENT_SIZE 64)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Mat4Type,")
+        else()
+            string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::U32Type,")
         endif()
 
         string(APPEND COMPONENT_ELEMENT_GET_FUNC "

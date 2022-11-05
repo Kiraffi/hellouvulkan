@@ -17,6 +17,11 @@ int snprintf(char *const buffer, size_t bufferCount, const char *__restrict cons
 
 namespace Supa
 {
+    char *strcat(char *__restrict__ dst, const char *__restrict__ src)
+    {
+        return ::strcat(dst, src);
+    }
+
     void *memcpy(void *destination, const void *source, size_t num)
     {
         return ::memcpy(destination, source, num);

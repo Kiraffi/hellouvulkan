@@ -98,3 +98,8 @@ bool deserializeField(const JsonBlock &json,
 void printFieldValue(const char* fieldName,
     const void* const fieldMemoryAddress,
     FieldType field);
+
+
+void imguiPrintField(const char* fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType field);
