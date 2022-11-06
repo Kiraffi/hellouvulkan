@@ -444,81 +444,64 @@ void imguiPrintField(const char* fieldName,
     {
         return;
     }
-    static constexpr u32 steps = 1;
-    static constexpr u32 fastSteps = 100;
+    static constexpr i64 steps = 1;
+    static constexpr i64 fastSteps = 100;
 
+    ImGui::PushID(fieldMemoryAddress);
     switch(field)
     {
         case FieldType::BoolType:
         {
-            ImGui::PushID(fieldMemoryAddress);
             bool &b = *((bool *)fieldMemoryAddress);
             ImGui::Checkbox(fieldName, &b);
-            ImGui::PopID();
             break;
         }
         case FieldType::I8Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%d";
             ImGui::InputScalar(fieldName, ImGuiDataType_S8, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::U8Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%d";
             ImGui::InputScalar(fieldName, ImGuiDataType_U8, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::I16Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%d";
             ImGui::InputScalar(fieldName, ImGuiDataType_S16, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::U16Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%d";
             ImGui::InputScalar(fieldName, ImGuiDataType_U16, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::I32Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%d";
             ImGui::InputScalar(fieldName, ImGuiDataType_S32, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::U32Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%u";
             ImGui::InputScalar(fieldName, ImGuiDataType_U32, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::I64Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%" PRIi64;
             ImGui::InputScalar(fieldName, ImGuiDataType_S64, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::U64Type:
         {
-            ImGui::PushID(fieldMemoryAddress);
             const char* format = "%" PRIu64;
             ImGui::InputScalar(fieldName, ImGuiDataType_U64, fieldMemoryAddress, &steps, &fastSteps, format, 0);
-            ImGui::PopID();
             break;
         }
         case FieldType::F32Type:
@@ -578,7 +561,6 @@ void imguiPrintField(const char* fieldName,
         case FieldType::EnumType:
         {
             u32 &v = *((u32 *)fieldMemoryAddress);
-            ImGui::PushID(fieldMemoryAddress);
             const char* enumName = (v >= 0 && v < enumCount) ? enumNames[v] : "Unknown";
             //ImGui::SliderInt(fieldName, &i, 0, enumCount - 1, elem_name);
             if(ImGui::BeginCombo(fieldName, enumName, 0))
@@ -598,7 +580,6 @@ void imguiPrintField(const char* fieldName,
                 }
                 ImGui::EndCombo();
             }
-            ImGui::PopID();
             break;
         }
         case FieldType::NumTypes:
@@ -606,4 +587,5 @@ void imguiPrintField(const char* fieldName,
             break;
         }
     }
+    ImGui::PopID();
 }
