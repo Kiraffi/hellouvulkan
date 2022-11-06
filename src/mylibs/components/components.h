@@ -60,6 +60,48 @@ struct EntityRWHandle
     EntitySystemType rwHandleTypeId = EntitySystemType::EntitySystemTypeCount;
 };
 
+/*
+struct EnumType
+{
+    enum : i32
+    {
+        TestType,
+        TestType2,
+
+        EnumTypeCount
+    }
+    enumValue = EnumTypeCount;
+
+    static constexpr char *const enumNames[] =
+    {
+        "TestType",
+        "TestType2",
+
+        "EnumTypeCount"
+    };
+};
+
+struct EnumType2
+{
+    enum : u32
+    {
+        TestType2,
+        TestType22,
+
+        EnumTypeCount
+    }
+    enumValue = EnumTypeCount;
+
+    static constexpr char *const enumNames[] =
+    {
+        "TestType2",
+        "TestType22",
+
+        "EnumTypeCount"
+    };
+};
+*/
+
 enum class FieldType
 {
     I8Type,
@@ -82,6 +124,8 @@ enum class FieldType
     Mat3x4Type,
     Mat4Type,
 
+    EnumType,
+
     NumTypes
 };
 
@@ -103,3 +147,8 @@ void printFieldValue(const char* fieldName,
 void imguiPrintField(const char* fieldName,
     const void* const fieldMemoryAddress,
     FieldType field);
+
+void imguiPrintField(const char* fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType field,
+    const char* const* enumNames, u32 enumCount);

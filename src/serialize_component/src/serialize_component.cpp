@@ -62,11 +62,12 @@ struct EntitySystems
 {
     bool syncPoints();
     GameEntitySystem gameEntitySystem;
+    OtherTestEntity otherEntitySystem;
 };
 
 bool EntitySystems::syncPoints()
 {
-    return gameEntitySystem.syncReadWrites();
+    return gameEntitySystem.syncReadWrites() && otherEntitySystem.syncReadWrites();
 }
 
 bool TestSystem::init(EntitySystems &entitySystems)
@@ -87,6 +88,19 @@ bool TestSystem::init(EntitySystems &entitySystems)
         gameEnts.addCameraComponent(handle1, {});
 
         gameEnts.releaseLockedMutexHandle(mtx);
+    }
+
+    OtherTestEntity &otherEnts = entitySystems.otherEntitySystem;
+    {
+        auto mtx = otherEnts.getLockedMutexHandle();
+
+        EntitySystemHandle handle1 = otherEnts.addEntity(mtx);
+        EntitySystemHandle handle2 = otherEnts.addEntity(mtx);
+
+        otherEnts.addHeritaged1Component(handle1, {});
+        otherEnts.addHeritaged1Component(handle2, {});
+        otherEnts.releaseLockedMutexHandle(mtx);
+
     }
     entitySystems.syncPoints();
 
@@ -526,10 +540,24 @@ void SerializeComponent::renderUpdate()
 
     {
         entitySystems.gameEntitySystem.imguiRenderEntity();
+        entitySystems.otherEntitySystem.imguiRenderEntity();
         entitySystems.syncPoints();
 
-        entitySystems.gameEntitySystem.imguiRenderEntity();
-        entitySystems.syncPoints();
+        //entitySystems.gameEntitySystem.imguiRenderEntity();
+        //entitySystems.syncPoints();
+
+        TestEnum t;
+        LOG("T: %u\n", t.enumValue = TestEnum::TestEnumValue2);
+
+        switch(t.enumValue)
+        {
+            case TestEnum::TestEnumValue2:
+
+            break;
+
+            case TestEnum::EnumValueCount:
+            break;
+        }
     }
 }
 

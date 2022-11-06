@@ -1,5 +1,8 @@
 #pragma once
 
+//PRIu64 and PRIi64
+#include <inttypes.h>
+
 #include <stdint.h>
 #include <stddef.h>
 

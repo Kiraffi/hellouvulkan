@@ -12,7 +12,8 @@ set(READ_STATE_ENTITY_FIELDS 11)
 #set(READ_STATE_ENTITY_END 12)
 set(READ_STATE_COMPONENT_INCLUDES 30)
 set(READ_STATE_ENTITY_INCLUDES 31)
-
+set(READ_STATE_ENUM_BEGIN 40)
+set(READ_STATE_ENUM_VALUES 41)
 
 set(COMPONENT_NAME "")
 set(COMPONENT_ID -1)
@@ -458,7 +459,8 @@ void ${ENTITY_NAME}::imguiRenderEntity()
     auto rwhandle = getRWHandle(builder, {});
 
 ${ENTITY_COMPONENT_ARRAY_GETTING_IMGUI}
-    ImGui::Begin(\"Entity\");
+    //ImGui::Begin(\"Entity\");
+    ImGui::Begin(\"${ENTITY_NAME}\");
     ImGui::Text(\"${ENTITY_NAME}\");
     for(u32 i = 0; i < entityComponents.size(); ++i)
     {
@@ -466,10 +468,10 @@ ${ENTITY_COMPONENT_ARRAY_GETTING_IMGUI}
         if(entityComponents[i] == 0)
             continue;
 
-        ImGui::Begin(\"Entity2\");
+        //ImGui::Begin(\"Entity2\");
         auto handle = getEntitySystemHandle(i);
         ${ENTITY_WRITE_IMGUI_CONTENTS}
-        ImGui::End();
+        //ImGui::End();
     }
     ImGui::End();
 
@@ -706,13 +708,7 @@ bool ${COMPONENT_NAME}::deserialize(const JsonBlock &json)
 
 void ${COMPONENT_NAME}::imguiRenderComponent() const
 {
-    for(u32 i = 0; i < componentFieldAmount; ++i)
-    {
-        //char s[100] = {};
-        //Supa::strcat(s, \"            \");
-        //Supa::strcat(s, fieldNames[i]);
-        imguiPrintField(fieldNames[i], getElementIndex(i), fieldTypes[i]);
-    }
+${COMPONENT_PRINT_IMGUI_PRINT_FIELDS}
 }
 
 
@@ -743,6 +739,7 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         set(COMPONENT_FIELD_TYPES "")
         set(COMPONENT_FIELD_NAMES "")
         set(COMPONENT_ELEMENT_GET_FUNC "")
+        set(COMPONENT_PRINT_IMGUI_PRINT_FIELDS "")
 
     elseif(READ_STATE EQUAL READ_STATE_COMPONENT_BEGIN)
         set(READ_STATE "${READ_STATE_COMPONENT_FIELDS}")
@@ -769,14 +766,15 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         list(GET LEFT_RIGHT_EQ 0 TYPE_AND_NAME) # type and name
 
         string(REPLACE "?" ";" TYPE_AND_NAME ${TYPE_AND_NAME})
-        list(GET TYPE_AND_NAME 0 ELEM1) # type
-        list(GET TYPE_AND_NAME 1 ELEM0) # fieldname
+        list(GET TYPE_AND_NAME 0 ELEM1) # fieldname
+        list(GET TYPE_AND_NAME 1 ELEM0) # type
 
         #remove leading and trailing spaces
         string(STRIP "${ELEM0}" ELEM0)
         string(STRIP "${ELEM1}" ELEM1)
         string(STRIP "${ELEM2}" ELEM2)
 
+        set(ELEM0_LEN 0)
         set(COMPONENT_FIELD_ELEMENT_SIZE "sizeof(${ELEM0})")
         if(ELEM0 STREQUAL "i8")
             set(COMPONENT_FIELD_ELEMENT_SIZE 1)
@@ -827,9 +825,29 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
             set(COMPONENT_FIELD_ELEMENT_SIZE 64)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::Mat4Type,")
         else()
-            string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::U32Type,")
-        endif()
+            #string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::U32Type,")
+            string(REPLACE "-" ";" ELEM0 ${ELEM0})
+            set(ENUM_TYPE false)
+            list(LENGTH ELEM0 ELEM0_LEN)
+            if(ELEM0_LEN EQUAL 2)
+                list(GET ELEM0 0 ELEM_TYPE) # type type
+                list(GET ELEM0 1 ELEM0) # fieldname
 
+                string(STRIP "${ELEM0}" ELEM0)
+                string(STRIP "${ELEM_TYPE}" ELEM_TYPE)
+                if(ELEM_TYPE STREQUAL "enum")
+                    string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::EnumType,")
+                endif()
+            endif()
+        endif()
+        if(ELEM0_LEN EQUAL 2)
+            string(APPEND COMPONENT_PRINT_IMGUI_PRINT_FIELDS "
+    imguiPrintField(fieldNames[${COMPONENT_FIELD_COUNT}], getElementIndex(${COMPONENT_FIELD_COUNT}), fieldTypes[${COMPONENT_FIELD_COUNT}],
+        ${ELEM0}::enumNames, ${ELEM0}::enumFieldCount);")
+        else()
+            string(APPEND COMPONENT_PRINT_IMGUI_PRINT_FIELDS "
+    imguiPrintField(fieldNames[${COMPONENT_FIELD_COUNT}], getElementIndex(${COMPONENT_FIELD_COUNT}), fieldTypes[${COMPONENT_FIELD_COUNT}]);")
+        endif()
         string(APPEND COMPONENT_ELEMENT_GET_FUNC "
             case ${COMPONENT_FIELD_COUNT}: return &${ELEM1};")
         string(APPEND COMPONENT_FIELD_NAMES "\n        \"${ELEM1}\",")
@@ -841,6 +859,54 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         # Count up the COMPONENT_FIELD_COUNT, there is probably far better way for adding...
         math(EXPR COMPONENT_FIELD_COUNT "${COMPONENT_FIELD_COUNT} + 1" OUTPUT_FORMAT DECIMAL)
 
+
+
+
+
+
+
+    elseif(DEF_ROW STREQUAL "EnumBegin" AND READ_STATE EQUAL READ_STATE_NONE)
+        set(READ_STATE ${READ_STATE_ENUM_BEGIN})
+
+    elseif(READ_STATE EQUAL READ_STATE_ENUM_BEGIN)
+        set(READ_STATE ${READ_STATE_ENUM_VALUES})
+        set(ENUM_NAME ${DEF_ROW})
+        set(ENUM_VALUES "")
+        set(ENUM_VALUES_STRING "")
+        set(ENUM_VALUE_COUNT 0)
+        set(ENUM_VALUES_STRING "")
+        set(ENUM_VALUES "")
+
+    elseif(DEF_ROW STREQUAL "EnumEnd" AND READ_STATE EQUAL READ_STATE_ENUM_VALUES)
+        set(READ_STATE ${READ_STATE_NONE})
+
+        file(APPEND "${FILENAME_TO_MODIFY}_components.h" "
+struct ${ENUM_NAME}
+{
+    enum : u32
+    {
+${ENUM_VALUES}
+        EnumValueCount
+    } enumValue;
+
+    static constexpr const char *const enumNames[] =
+    {
+${ENUM_VALUES_STRING}
+        \"EnumValueCount\"
+    };
+
+    static constexpr u32 enumFieldCount = ${ENUM_VALUE_COUNT};
+};\n")
+
+    elseif(READ_STATE EQUAL READ_STATE_ENUM_VALUES)
+
+        math(EXPR ENUM_VALUE_COUNT "${ENUM_VALUE_COUNT} + 1" OUTPUT_FORMAT DECIMAL)
+
+
+        string(APPEND ENUM_VALUES
+"        ${DEF_ROW},\n")
+        string(APPEND ENUM_VALUES_STRING
+"        \"${DEF_ROW}\",\n")
     endif()
 endforeach()
 #endfunction(PARSE_DEF_FILE)

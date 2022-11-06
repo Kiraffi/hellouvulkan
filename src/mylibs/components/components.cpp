@@ -8,6 +8,7 @@
 
 #include <imgui.h>
 
+
 bool serializeField(WriteJson &writeJson,
     const char* const fieldName,
     const void* const fieldMemoryAddress,
@@ -114,6 +115,12 @@ bool serializeField(WriteJson &writeJson,
             //writeJson.addNumberArray(fieldName, &m[0], 16);
             const float* const f = (const float* const)fieldMemoryAddress;
             writeJson.addNumberArray(fieldName, f, 16);
+            break;
+        }
+        case FieldType::EnumType:
+        {
+            u32 i = *((u32*)fieldMemoryAddress);
+            writeJson.addInteger(fieldName, i);
             break;
         }
 
@@ -250,6 +257,13 @@ bool deserializeField(const JsonBlock &json,
                 return false;
             break;
         }
+        case FieldType::EnumType:
+        {
+            u32 &i = *((u32*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseUInt(i))
+                return false;
+            break;
+        }
 
         case FieldType::NumTypes:
         {
@@ -302,6 +316,16 @@ void printFieldValue(const char* fieldName,
         case FieldType::U32Type:
         {
             LOG("%s: %u\n", fieldName, *((u32 *)fieldMemoryAddress));
+            break;
+        }
+        case FieldType::I64Type:
+        {
+            LOG("%s: %" PRIi64 "\n", fieldName, *((i64 *)fieldMemoryAddress));
+            break;
+        }
+        case FieldType::U64Type:
+        {
+            LOG("%s: %" PRIu64 "\n", fieldName, *((u64 *)fieldMemoryAddress));
             break;
         }
         case FieldType::F32Type:
@@ -364,7 +388,11 @@ void printFieldValue(const char* fieldName,
                 m[12], m[13], m[14], m[15]);
             break;
         }
+        case FieldType::EnumType:
+        {
 
+            break;
+        }
         case FieldType::NumTypes:
         {
             break;
@@ -376,11 +404,24 @@ void imguiPrintField(const char* fieldName,
     const void* const fieldMemoryAddress,
     FieldType field)
 {
+    ASSERT(field != FieldType::EnumType);
+    imguiPrintField(fieldName, fieldMemoryAddress, field, nullptr, 0);
+}
+void imguiPrintField(const char* fieldName,
+    const void* const fieldMemoryAddress,
+    FieldType field,
+    const char* const* enumNames, u32 enumCount)
+{
+    ASSERT((field != FieldType::EnumType) ||
+        (field == FieldType::EnumType && (enumCount == 0 || enumNames != nullptr)));
     if(fieldName == nullptr || fieldMemoryAddress == nullptr)
     {
         return;
     }
-
+    if(field == FieldType::EnumType && enumNames == nullptr)
+    {
+        return;
+    }
     switch(field)
     {
         case FieldType::I8Type:
@@ -417,6 +458,20 @@ void imguiPrintField(const char* fieldName,
         {
             u32 i = *((u32 *)fieldMemoryAddress);
             ImGui::Value(fieldName, i);
+            break;
+        }
+        case FieldType::I64Type:
+        {
+            i64 i = *((i64 *)fieldMemoryAddress);
+            i32 ii = i;
+            ImGui::Value(fieldName, ii);
+            break;
+        }
+        case FieldType::U64Type:
+        {
+            u64 i = *((u64 *)fieldMemoryAddress);
+            u32 ii = i;
+            ImGui::Value(fieldName, ii);
             break;
         }
         case FieldType::F32Type:
@@ -473,7 +528,31 @@ void imguiPrintField(const char* fieldName,
             ImGui::InputFloat4(fieldName, v);
             break;
         }
+        case FieldType::EnumType:
+        {
+            u32 &v = *((u32 *)fieldMemoryAddress);
+            const char* enumName = (v >= 0 && v < enumCount) ? enumNames[v] : "Unknown";
+            //ImGui::SliderInt(fieldName, &i, 0, enumCount - 1, elem_name);
 
+            if(ImGui::BeginCombo("EntityType", enumName, 0))
+            {
+                for(u32 i = 0; i <= enumCount; ++i)
+                {
+                    bool isSelected = i == v;
+                    if(ImGui::Selectable(enumNames[i], isSelected))
+                    {
+                        isSelected  = true;
+                        v = i;
+                    }
+
+                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                    if(isSelected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            break;
+        }
         case FieldType::NumTypes:
         {
             break;

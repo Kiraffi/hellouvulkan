@@ -7,6 +7,14 @@ EntityHeaderBegin
 #include <math/vector3.h>
 EntityHeaderEnd
 
+
+EnumBegin
+TestEnum
+TestEnumValue1
+TestEnumValue2
+EnumEnd
+
+
 ComponentBegin
 Heritaged1Component ComponentType::HeritagedType 1
     tempInt ? int = 10
@@ -15,6 +23,7 @@ Heritaged1Component ComponentType::HeritagedType 1
     tempV3 ? Vector3 = {10, 20, 30}
     tempV4 ? Vector4 = {7, 8, -30, 10}
     tempQuat ? Quat = {}
+    testEnum ? enum - TestEnum = TestEnum{TestEnum::TestEnumValue2}
 ComponentEnd
 
 ComponentBegin
