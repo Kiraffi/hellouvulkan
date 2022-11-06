@@ -138,6 +138,20 @@ void VulkanFontRender::renderUpdate()
 
 void VulkanFontRender::renderDraw()
 {
+    VkImageSubresourceRange range;
+    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    range.baseMipLevel = 0;
+    range.levelCount = 1;
+    range.baseArrayLayer = 0;
+    range.layerCount = 1;
+
+    const VkClearColorValue color{0.0f, 0.0f, 0.0f, 1.0f};
+    vulk->imageMemoryGraphicsBarriers.pushBack(imageBarrier(renderColorImage,
+        VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
+    flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);//VK_PIPELINE_STAGE_TRANSFER_BIT);
+    vkCmdClearColorImage(vulk->commandBuffer, renderColorImage.image, renderColorImage.layout,
+        &color, 1, &range);
+
     prepareToGraphicsSampleWrite(renderColorImage);
     fontSystem.render();
 
