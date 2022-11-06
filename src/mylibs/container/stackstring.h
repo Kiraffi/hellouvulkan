@@ -109,7 +109,7 @@ public:
     void add(int64_t i)
     {
         char c[32];
-        snprintf(c, 32, "%lli", i);
+        snprintf(c, 32, "%" PRIi64, i);
         uint32_t size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
@@ -123,7 +123,7 @@ public:
     void add(uint64_t u)
     {
         char c[32];
-        snprintf(c, 32, "%llu", u);
+        snprintf(c, 32, "%" PRIu64, u);
         uint32_t size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
