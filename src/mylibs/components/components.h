@@ -104,6 +104,10 @@ struct EnumType2
 
 enum class FieldType
 {
+    EnumType,
+
+    BoolType,
+
     I8Type,
     U8Type,
     I16Type,
@@ -123,8 +127,6 @@ enum class FieldType
 
     Mat3x4Type,
     Mat4Type,
-
-    EnumType,
 
     NumTypes
 };

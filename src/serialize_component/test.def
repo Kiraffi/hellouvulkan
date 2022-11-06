@@ -33,7 +33,7 @@ Heritaged1Component ComponentType::HeritagedType 1
     tu32 ? u32 = 34534;
     ti64 ? i64 = -3453453543434534;
     tu64 ? u64 = 3453450923890823049;
-
+    tb ? bool = true;
 ComponentEnd
 
 ComponentBegin

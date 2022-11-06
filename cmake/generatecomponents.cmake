@@ -775,7 +775,10 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
 
         set(ELEM0_LEN 0)
         set(COMPONENT_FIELD_ELEMENT_SIZE "sizeof(${ELEM0})")
-        if(ELEM0 STREQUAL "i8")
+        if(ELEM0 STREQUAL "bool")
+            set(COMPONENT_FIELD_ELEMENT_SIZE 1)
+            string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::BoolType,")
+        elseif(ELEM0 STREQUAL "i8")
             set(COMPONENT_FIELD_ELEMENT_SIZE 1)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::I8Type,")
         elseif(ELEM0 STREQUAL "u8")

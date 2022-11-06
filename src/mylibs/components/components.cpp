@@ -19,6 +19,13 @@ bool serializeField(WriteJson &writeJson,
 
     switch(fieldType)
     {
+        case FieldType::BoolType:
+        {
+            bool b = *((bool*)fieldMemoryAddress);
+            writeJson.addBool(fieldName, b);
+            break;
+        }
+
         case FieldType::I8Type:
         {
             i8 i = *((i8*)fieldMemoryAddress);
@@ -141,6 +148,14 @@ bool deserializeField(const JsonBlock &json,
 {
     switch(fieldType)
     {
+        case FieldType::BoolType:
+        {
+            bool &b = *((bool*)fieldMemoryAddress);
+            if(!json.getChild(fieldName).parseBool(b))
+                return false;
+            break;
+        }
+
         case FieldType::I8Type:
         {
             i8 &i2 = *((i8*)fieldMemoryAddress);
@@ -284,6 +299,13 @@ void printFieldValue(const char* fieldName,
 
     switch(field)
     {
+        case FieldType::BoolType:
+        {
+            bool b = *((bool *)fieldMemoryAddress);
+
+            LOG("%s: %s\n", fieldName, b ? "true" : "false");
+            break;
+        }
         case FieldType::I8Type:
         {
             i32 i = *((i8 *)fieldMemoryAddress);
@@ -427,6 +449,14 @@ void imguiPrintField(const char* fieldName,
 
     switch(field)
     {
+        case FieldType::BoolType:
+        {
+            ImGui::PushID(fieldMemoryAddress);
+            bool &b = *((bool *)fieldMemoryAddress);
+            ImGui::Checkbox(fieldName, &b);
+            ImGui::PopID();
+            break;
+        }
         case FieldType::I8Type:
         {
             ImGui::PushID(fieldMemoryAddress);
