@@ -145,10 +145,10 @@ void printFieldValue(const char* fieldName,
 
 
 void imguiPrintField(const char* fieldName,
-    const void* const fieldMemoryAddress,
+    void* fieldMemoryAddress,
     FieldType field);
 
 void imguiPrintField(const char* fieldName,
-    const void* const fieldMemoryAddress,
+    void* fieldMemoryAddress,
     FieldType field,
     const char* const* enumNames, u32 enumCount);

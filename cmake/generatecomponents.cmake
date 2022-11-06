@@ -456,7 +456,7 @@ void ${ENTITY_NAME}::imguiRenderEntity()
     auto builder = getComponentArrayHandleBuilder();
     builder.componentIndexArray = (u64(1) << u64(componentTypeCount)) - 1;
 
-    auto rwhandle = getRWHandle(builder, {});
+    auto rwhandle = getRWHandle({}, builder);
 
 ${ENTITY_COMPONENT_ARRAY_GETTING_IMGUI}
     //ImGui::Begin(\"Entity\");
@@ -548,7 +548,7 @@ const u64* ${ENTITY_NAME}::getComponentsReadArray() const
             array${ELEM0}[i].imguiRenderComponent();
         }")
     string(APPEND ENTITY_COMPONENT_ARRAY_GETTING_IMGUI
-"    const ${ELEM0}* array${ELEM0} = get${ELEM1}ReadArray(rwhandle);
+"    ${ELEM0}* array${ELEM0} = get${ELEM1}WriteArray(rwhandle);
     if(array${ELEM0} == nullptr)
         return;\n\n")
     string(APPEND ENTITY_COMPONENT_ARRAY_GETTERS_HEADERS "
@@ -663,7 +663,7 @@ ${COMPONENT_VARS}
 
     bool serialize(WriteJson &json) const;
     bool deserialize(const JsonBlock &json);
-    void imguiRenderComponent() const;
+    void imguiRenderComponent();
 
 public:
     void* getElementIndexRef(u32 index);
@@ -706,9 +706,8 @@ bool ${COMPONENT_NAME}::deserialize(const JsonBlock &json)
     return true;
 }
 
-void ${COMPONENT_NAME}::imguiRenderComponent() const
-{
-${COMPONENT_PRINT_IMGUI_PRINT_FIELDS}
+void ${COMPONENT_NAME}::imguiRenderComponent()
+{${COMPONENT_PRINT_IMGUI_PRINT_FIELDS}
 }
 
 
@@ -782,7 +781,7 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         elseif(ELEM0 STREQUAL "u8")
             set(COMPONENT_FIELD_ELEMENT_SIZE 1)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::U8Type,")
-        elseif(ELEM0 STREQUAL "u16")
+        elseif(ELEM0 STREQUAL "i16")
             set(COMPONENT_FIELD_ELEMENT_SIZE 2)
             string(APPEND COMPONENT_FIELD_TYPES "\n        FieldType::I16Type,")
         elseif(ELEM0 STREQUAL "u16")
@@ -842,11 +841,11 @@ const void* ${COMPONENT_NAME}::getElementIndex(u32 index) const
         endif()
         if(ELEM0_LEN EQUAL 2)
             string(APPEND COMPONENT_PRINT_IMGUI_PRINT_FIELDS "
-    imguiPrintField(fieldNames[${COMPONENT_FIELD_COUNT}], getElementIndex(${COMPONENT_FIELD_COUNT}), fieldTypes[${COMPONENT_FIELD_COUNT}],
+    imguiPrintField(fieldNames[${COMPONENT_FIELD_COUNT}], getElementIndexRef(${COMPONENT_FIELD_COUNT}), fieldTypes[${COMPONENT_FIELD_COUNT}],
         ${ELEM0}::enumNames, ${ELEM0}::enumFieldCount);")
         else()
             string(APPEND COMPONENT_PRINT_IMGUI_PRINT_FIELDS "
-    imguiPrintField(fieldNames[${COMPONENT_FIELD_COUNT}], getElementIndex(${COMPONENT_FIELD_COUNT}), fieldTypes[${COMPONENT_FIELD_COUNT}]);")
+    imguiPrintField(fieldNames[${COMPONENT_FIELD_COUNT}], getElementIndexRef(${COMPONENT_FIELD_COUNT}), fieldTypes[${COMPONENT_FIELD_COUNT}]);")
         endif()
         string(APPEND COMPONENT_ELEMENT_GET_FUNC "
             case ${COMPONENT_FIELD_COUNT}: return &${ELEM1};")

@@ -401,14 +401,14 @@ void printFieldValue(const char* fieldName,
 }
 
 void imguiPrintField(const char* fieldName,
-    const void* const fieldMemoryAddress,
+    void* fieldMemoryAddress,
     FieldType field)
 {
     ASSERT(field != FieldType::EnumType);
     imguiPrintField(fieldName, fieldMemoryAddress, field, nullptr, 0);
 }
 void imguiPrintField(const char* fieldName,
-    const void* const fieldMemoryAddress,
+    void* fieldMemoryAddress,
     FieldType field,
     const char* const* enumNames, u32 enumCount)
 {
@@ -422,56 +422,73 @@ void imguiPrintField(const char* fieldName,
     {
         return;
     }
+    static constexpr u32 steps = 1;
+    static constexpr u32 fastSteps = 100;
+
     switch(field)
     {
         case FieldType::I8Type:
         {
-            i32 i = *((i8 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, i);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%d";
+            ImGui::InputScalar(fieldName, ImGuiDataType_S8, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::U8Type:
         {
-            i32 i = *((u8 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, i);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%d";
+            ImGui::InputScalar(fieldName, ImGuiDataType_U8, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::I16Type:
         {
-            i32 i = *((i16 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, i);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%d";
+            ImGui::InputScalar(fieldName, ImGuiDataType_S16, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::U16Type:
         {
-            i32 i = *((u16 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, i);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%d";
+            ImGui::InputScalar(fieldName, ImGuiDataType_U16, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::I32Type:
         {
-            i32 i = *((i32 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, i);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%d";
+            ImGui::InputScalar(fieldName, ImGuiDataType_S32, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::U32Type:
         {
-            u32 i = *((u32 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, i);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%u";
+            ImGui::InputScalar(fieldName, ImGuiDataType_U32, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::I64Type:
         {
-            i64 i = *((i64 *)fieldMemoryAddress);
-            i32 ii = i;
-            ImGui::Value(fieldName, ii);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%" PRIi64;
+            ImGui::InputScalar(fieldName, ImGuiDataType_S64, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::U64Type:
         {
-            u64 i = *((u64 *)fieldMemoryAddress);
-            u32 ii = i;
-            ImGui::Value(fieldName, ii);
+            ImGui::PushID(fieldMemoryAddress);
+            const char* format = "%" PRIu64;
+            ImGui::InputScalar(fieldName, ImGuiDataType_U64, fieldMemoryAddress, &steps, &fastSteps, format, 0);
+            ImGui::PopID();
             break;
         }
         case FieldType::F32Type:
@@ -482,8 +499,8 @@ void imguiPrintField(const char* fieldName,
         }
         case FieldType::F64Type:
         {
-            f32 d = *((f64 *)fieldMemoryAddress);
-            ImGui::Value(fieldName, d);
+            f64 *d = ((f64 *)fieldMemoryAddress);
+            ImGui::InputDouble(fieldName, d);
             break;
         }
 
@@ -531,10 +548,10 @@ void imguiPrintField(const char* fieldName,
         case FieldType::EnumType:
         {
             u32 &v = *((u32 *)fieldMemoryAddress);
+            ImGui::PushID(fieldMemoryAddress);
             const char* enumName = (v >= 0 && v < enumCount) ? enumNames[v] : "Unknown";
             //ImGui::SliderInt(fieldName, &i, 0, enumCount - 1, elem_name);
-
-            if(ImGui::BeginCombo("EntityType", enumName, 0))
+            if(ImGui::BeginCombo(fieldName, enumName, 0))
             {
                 for(u32 i = 0; i < enumCount; ++i)
                 {
@@ -551,6 +568,7 @@ void imguiPrintField(const char* fieldName,
                 }
                 ImGui::EndCombo();
             }
+            ImGui::PopID();
             break;
         }
         case FieldType::NumTypes:

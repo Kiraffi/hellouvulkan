@@ -551,6 +551,7 @@ void SerializeComponent::renderUpdate()
 
         switch(t.enumValue)
         {
+            case TestEnum::TestEnumValue1:
             case TestEnum::TestEnumValue2:
 
             break;
