@@ -536,7 +536,7 @@ void imguiPrintField(const char* fieldName,
 
             if(ImGui::BeginCombo("EntityType", enumName, 0))
             {
-                for(u32 i = 0; i <= enumCount; ++i)
+                for(u32 i = 0; i < enumCount; ++i)
                 {
                     bool isSelected = i == v;
                     if(ImGui::Selectable(enumNames[i], isSelected))
