@@ -4,8 +4,8 @@
 
 namespace Supa
 {
-    char *strcat(char *__restrict__ dst, const char *__restrict__ src);
-    void *memcpy(void *destination, const void *source, size_t num);
+    char *strcat(char*__restrict dst, const char*__restrict src);
+    void *memcpy(void* destination, const void *source, size_t num);
     void *memmove(void *destination, const void *source, size_t num);
 
     void *memset(void *destination, int value, size_t num);
