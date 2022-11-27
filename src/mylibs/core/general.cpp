@@ -17,7 +17,7 @@ int snprintf(char *const buffer, size_t bufferCount, const char *__restrict cons
 
 namespace Supa
 {
-    char *strcat(char *__restrict__ dst, const char *__restrict__ src)
+    char *strcat(char *RESTRICT dst, const char *RESTRICT src)
     {
         return ::strcat(dst, src);
     }
