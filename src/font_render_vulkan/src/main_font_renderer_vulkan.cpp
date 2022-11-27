@@ -17,6 +17,7 @@
 #include <math/vector3.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/vulkaninitparameters.h>
 #include <myvulkan/vulkanresources.h>
 
 static constexpr int SCREEN_WIDTH = 640;
@@ -28,8 +29,7 @@ public:
     VulkanFontRender() {}
     virtual ~VulkanFontRender() override;
 
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters& params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -55,10 +55,9 @@ VulkanFontRender::~VulkanFontRender()
     destroyImage(renderColorImage);
 }
 
-bool VulkanFontRender::init(const char* windowStr, int screenWidth, int screenHeight,
-    const VulkanInitializationParameters& params)
+bool VulkanFontRender::init(const char* windowStr, int screenWidth, int screenHeight)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
 
     return resized();
@@ -163,15 +162,9 @@ int main(int argCount, char **argv)
     initMemory();
     {
         VulkanFontRender app;
-        if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = true,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = false,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        auto &vulkanInitParams = VulkanInitializationParameters::getRef();
+        vulkanInitParams.useIntegratedGpu = true;
+        if(app.init("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }
