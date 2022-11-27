@@ -5,7 +5,6 @@
 #include <container/podvectorsbase.h>
 #include <container/vectorsbase.h>
 #include <core/mytypes.h>
-#include <myvulkan/vulkaninitparameters.h>
 #include <myvulkan/uniformbuffermanager.h>
 
 #include <vulkan/vulkan_core.h>
@@ -98,7 +97,7 @@ struct VulkanGlobal
     static constexpr uint32_t FramesInFlight = 2;
     static constexpr uint32_t VulkanMaxScratchBufferFrameSize = 32u * 1024u * 1024u;
     static constexpr uint32_t VulkanMaxScratchBufferSize = VulkanMaxScratchBufferFrameSize * FramesInFlight;
-    VulkanInitializationParameters initParams;
+
     QueueFamilyIndices queueFamilyIndices;
 
     VkDebugUtilsMessengerEXT debugCallBack = VK_NULL_HANDLE;

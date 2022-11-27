@@ -131,6 +131,8 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 
     "myvulkan/myvma.cpp"
     "myvulkan/myvulkan.cpp"
+    "myvulkan/vulkaninitparameters.h"
+    "myvulkan/vulkaninitparameters.cpp"
     "myvulkan/vulkanresources.cpp"
     "myvulkan/shader.cpp"
 

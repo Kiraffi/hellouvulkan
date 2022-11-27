@@ -60,8 +60,7 @@ class VulkanDrawStuff : public VulkanApp
 public:
     VulkanDrawStuff() : scene(meshRenderSystem) { }
     virtual ~VulkanDrawStuff() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters& params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -103,9 +102,9 @@ VulkanDrawStuff::~VulkanDrawStuff()
 
 
 
-bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHeight)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
@@ -428,15 +427,7 @@ int main(int argCount, char **argv)
     initMemory();
     {
         VulkanDrawStuff app;
-        if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = false,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = true,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }

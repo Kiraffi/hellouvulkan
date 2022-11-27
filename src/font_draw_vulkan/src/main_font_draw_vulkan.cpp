@@ -61,8 +61,7 @@ class VulkanFontDraw : public VulkanApp
 public:
     virtual ~VulkanFontDraw() override;
     //bool initApp(const String &fontFilename);
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters &params) override;
+    virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
 
     bool initRun();
     virtual void logicUpdate() override;
@@ -114,9 +113,9 @@ VulkanFontDraw::~VulkanFontDraw()
 
 }
 
-bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters &params)
+bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
     for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
@@ -490,15 +489,7 @@ int main(int argCount, char **argv)
         }
         VulkanFontDraw app;
         app.fontFilename = filename;
-        if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = true,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = false,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }

@@ -130,7 +130,8 @@ static PodVector<const char*> getRequiredInstanceExtensions()
     extensions.pushBack(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 #if NDEBUG
 #else
-    if (vulk->initParams.useValidationLayers)
+    auto &initParams = VulkanInitializationParameters::get();
+    if (initParams.useValidationLayers)
     {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         //extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -151,7 +152,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
     bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0 ||
         (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
 
-    if(!vulk->initParams.showInfoMessages && !errorMsg && !warningMsg)
+    auto &initParams = VulkanInitializationParameters::get();
+
+    if(!initParams.showInfoMessages && !errorMsg && !warningMsg)
         return VK_FALSE;
 
     const char *type = errorMsg ? "Error" : (warningMsg  ? "Warning" : "Info");
@@ -169,7 +172,9 @@ static VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
 #if NDEBUG
     return VK_NULL_HANDLE;
 #else
-    if (!vulk->initParams.useValidationLayers)
+    auto &initParams = VulkanInitializationParameters::get();
+
+    if (!initParams.useValidationLayers)
         return VK_NULL_HANDLE;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -204,11 +209,12 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
     VulkanDeviceOptionals result;
+    auto &initParams = VulkanInitializationParameters::get();
 
     for (const auto& extension : availableExtensions)
     {
         //printf("%s\n", extension.extensionName);
-        if(vulk->initParams.useVulkanDebugMarkersRenderDoc && Supa::strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
+        if(initParams.useVulkanDebugMarkersRenderDoc && Supa::strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
             result.canUseVulkanRenderdocExtensionMarker = true;
     }
 
@@ -466,7 +472,9 @@ static bool createInstance()
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 #if NDEBUG
 #else
-    if (vulk->initParams.useValidationLayers)
+    auto &initParams = VulkanInitializationParameters::get();
+
+    if (initParams.useValidationLayers)
     {
         createInfo.ppEnabledLayerNames = validationLayers;
         createInfo.enabledLayerCount = ARRAYSIZES(validationLayers);
@@ -737,7 +745,9 @@ static bool createDeviceWithQueues()
 
 #if NDEBUG
 #else
-        if (vulk->initParams.useValidationLayers)
+        auto &initParams = VulkanInitializationParameters::get();
+
+        if (initParams.useValidationLayers)
         {
             createInfo.enabledLayerCount = ARRAYSIZES(validationLayers);
             createInfo.ppEnabledLayerNames = validationLayers;
@@ -877,11 +887,11 @@ static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader>
 
 
 
-bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParameters)
+bool initVulkan(VulkanApp &app)
 {
+    auto &initParams = VulkanInitializationParameters::get();
     vulk = new VulkanGlobal();
     vulk->vulkanApp = &app;
-    vulk->initParams = initParameters;
     ASSERT(app.window);
     if(!app.window)
     {
@@ -905,7 +915,7 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
         return false;
     }
 
-    if(!createPhysicalDevice(vulk->initParams.useIntegratedGpu ?
+    if(!createPhysicalDevice(initParams.useIntegratedGpu ?
         VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))
     {
         printf("Failed to create vulkan physical device!\n");
@@ -941,7 +951,7 @@ bool initVulkan(VulkanApp &app, const VulkanInitializationParameters &initParame
 
     }
 
-    bool scSuccess = createSwapchain(vulk->initParams.vsync);
+    bool scSuccess = createSwapchain(initParams.vsync);
     ASSERT(scSuccess);
     if(!scSuccess)
     {
@@ -1086,7 +1096,8 @@ void deinitVulkan()
     vkDestroySurfaceKHR(vulk->instance, vulk->surface, nullptr);
 #if NDEBUG
 #else
-    if (vulk->initParams.useValidationLayers)
+    auto &initParams = VulkanInitializationParameters::get();
+    if (initParams.useValidationLayers)
     {
         auto dest = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulk->instance, "vkDestroyDebugUtilsMessengerEXT");
         dest(vulk->instance, vulk->debugCallBack, nullptr);
@@ -1185,7 +1196,8 @@ bool resizeSwapchain()
     }
 
     SwapChain oldSwapchain = vulk->swapchain;
-    createSwapchain(vulk->initParams.vsync);
+    auto &initParams = VulkanInitializationParameters::get();
+    createSwapchain(initParams.vsync);
 
     destroySwapchain(oldSwapchain);
 

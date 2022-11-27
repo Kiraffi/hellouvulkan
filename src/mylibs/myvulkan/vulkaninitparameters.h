@@ -9,6 +9,9 @@ enum class VSyncType : unsigned char
 
 struct VulkanInitializationParameters
 {
+    static const VulkanInitializationParameters& get();
+    static VulkanInitializationParameters& getRef();
+
     bool showInfoMessages = false;
     bool useHDR = false;
     bool useIntegratedGpu = false;

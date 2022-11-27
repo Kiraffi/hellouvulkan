@@ -312,8 +312,7 @@ public:
     SoundTest() : scene(meshRenderSystem), editorSystem(scene, lineRenderSystem, SCREEN_WIDTH, SCREEN_HEIGHT) { }
 
     virtual ~SoundTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters& params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -387,6 +386,7 @@ static void resetNote(NoteFromMainToThread &note)
     for(uint32_t i = 0; i < SAMPLE_POINTS; ++i)
     {
         note.amplitudes[i] = 0.125 * 0.25;
+
         if(i < 4)
             note.amplitudes[i] *= i * 4 / double(SAMPLE_POINTS);
         if(i > 12)
@@ -405,12 +405,12 @@ static uint32_t addNewChannel(Song &song)
     return song.songChannels.size() - 1;
 }
 
-bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight)
 {
     for(uint32_t i = 0; i < ARRAYSIZES(notes); ++i)
         resetNote(notes[i]);
 
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
@@ -954,15 +954,7 @@ int main(int argCount, char **argv)
     if(initMyGui())
     {
         SoundTest app;
-        if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = false,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = true,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        if (app.init("Sound test", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }

@@ -36,8 +36,7 @@ class VulkanComputeTest : public VulkanApp
 public:
     VulkanComputeTest() : scene(meshRenderSystem) { }
     virtual ~VulkanComputeTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters& params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -85,9 +84,9 @@ VulkanComputeTest::~VulkanComputeTest()
 
 
 
-bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenHeight)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
 
 
@@ -329,15 +328,9 @@ int main(int argCount, char **argv)
     initMemory();
     {
         VulkanComputeTest app;
-        if (app.init("Vulkan, compute test", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = true,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = false,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        auto &vulkanInitParams = VulkanInitializationParameters::getRef();
+
+        if (app.init("Vulkan, compute test", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }

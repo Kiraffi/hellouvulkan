@@ -253,8 +253,7 @@ public:
     SerializeComponent() {}
     virtual ~SerializeComponent() override;
 
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters& params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -287,10 +286,9 @@ SerializeComponent::~SerializeComponent()
 }
 
 
-bool SerializeComponent::init(const char *windowStr, int screenWidth, int screenHeight,
-    const VulkanInitializationParameters &params)
+bool SerializeComponent::init(const char *windowStr, int screenWidth, int screenHeight)
 {
-    if(!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if(!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
 
     if (!imgui.init(window))
@@ -589,15 +587,7 @@ int main(int argCount, char **argv)
     initMemory();
     {
         SerializeComponent app;
-        if(app.init("Serialize component test", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = true,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = false,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        if(app.init("Serialize component test", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }

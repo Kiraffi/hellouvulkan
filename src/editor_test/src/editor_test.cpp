@@ -62,8 +62,7 @@ class EditorTest : public VulkanApp
 public:
     EditorTest() : scene(meshRenderSystem), editorSystem(scene, lineRenderSystem, SCREEN_WIDTH, SCREEN_HEIGHT) { }
     virtual ~EditorTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
-        const VulkanInitializationParameters& params) override;
+    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -106,9 +105,9 @@ EditorTest::~EditorTest()
 
 
 
-bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+bool EditorTest::init(const char* windowStr, int screenWidth, int screenHeight)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight, params))
+    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
     // TEMPORARY!
     //setWindowPosition(2000, 100);
@@ -339,15 +338,7 @@ int main(int argCount, char **argv)
     initMemory();
     {
         EditorTest app;
-        if (app.init("Editor", SCREEN_WIDTH, SCREEN_HEIGHT,
-            {
-                .showInfoMessages = false,
-                .useHDR = false,
-                .useIntegratedGpu = true,
-                .useValidationLayers = true,
-                .useVulkanDebugMarkersRenderDoc = true,
-                .vsync = VSyncType::IMMEDIATE_NO_VSYNC
-            }))
+        if (app.init("Editor", SCREEN_WIDTH, SCREEN_HEIGHT))
         {
             app.run();
         }

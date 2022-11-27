@@ -18,6 +18,7 @@
 #include <math/vector3_inline_functions.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/vulkaninitparameters.h>
 
 #include <resources/globalresources.h>
 
@@ -87,8 +88,7 @@ static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, i
 
 
 
-bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
-    const VulkanInitializationParameters &initParameters)
+bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
 {
     if(!initGlobalResources())
         return false;
@@ -117,12 +117,12 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight,
     glfwGetFramebufferSize(window, &w, &h);
     resizeWindow(w, h);
 
-    if(!initVulkan(*this, initParameters))
+    if(!initVulkan(*this))
     {
         printf("Failed to initialize vulkan\n");
         return false;
     }
-    setVsync(initParameters.vsync);
+    setVsync(VulkanInitializationParameters::get().vsync);
     if (!fontSystem.init("assets/font/new_font.dat"))
 
     {
@@ -173,7 +173,8 @@ void VulkanApp::setVsync(VSyncType vSyncType)
         return;
 
     vSync = vSyncType;
-    vulk->initParams.vsync = vSync;
+    auto &initParams = VulkanInitializationParameters::getRef();
+    initParams.vsync = vSync;
     vulk->needToResize = true;
 }
 
