@@ -125,8 +125,11 @@ bool FontRenderSystem::init(const char *fontFilename)
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
         pipeline.renderPass = createRenderPass(
-                { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD } },
-                {});
+            {
+                RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD }
+            },
+            {}
+        );
         ASSERT(pipeline.renderPass);
         if(!pipeline.renderPass)
             return false;

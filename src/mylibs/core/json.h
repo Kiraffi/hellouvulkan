@@ -17,24 +17,24 @@ class JsonBlock
 public:
     enum ValueTypes : int32_t
     {
-        VALID_TYPE = 1 << 0,
-        ARRAY_TYPE = 1 << 1,
+        VALID_TYPE =  1 << 0,
+        ARRAY_TYPE =  1 << 1,
         OBJECT_TYPE = 1 << 2,
         STRING_TYPE = 1 << 3,
-        INT_TYPE = 1 << 4,
+        INT_TYPE =    1 << 4,
         DOUBLE_TYPE = 1 << 5,
-        BOOL_TYPE = 1 << 6
+        BOOL_TYPE =   1 << 6
     };
 
     bool parseJson(const StringView &data);
 
-    bool isValid() const { return ( jType & VALID_TYPE ) == VALID_TYPE; }
-    bool isArray() const { return jType == (VALID_TYPE | ARRAY_TYPE); }
-    bool isObject() const { return jType == (VALID_TYPE | OBJECT_TYPE); }
-    bool isString() const { return jType == (VALID_TYPE | STRING_TYPE); }
-    bool isInt() const { return jType == (VALID_TYPE | INT_TYPE); }
-    bool isDouble() const { return jType == (VALID_TYPE | DOUBLE_TYPE); }
-    bool isBool() const { return jType == (VALID_TYPE | BOOL_TYPE); }
+    bool isValid()  const { return ( jType & VALID_TYPE ) == VALID_TYPE; }
+    bool isArray()  const { return jType == (VALID_TYPE | ARRAY_TYPE);   }
+    bool isObject() const { return jType == (VALID_TYPE | OBJECT_TYPE);  }
+    bool isString() const { return jType == (VALID_TYPE | STRING_TYPE);  }
+    bool isInt()    const { return jType == (VALID_TYPE | INT_TYPE);     }
+    bool isDouble() const { return jType == (VALID_TYPE | DOUBLE_TYPE);  }
+    bool isBool()   const { return jType == (VALID_TYPE | BOOL_TYPE);    }
 
     bool parseString(StringView &outString) const;
     bool parseDouble(double &outDouble) const;
