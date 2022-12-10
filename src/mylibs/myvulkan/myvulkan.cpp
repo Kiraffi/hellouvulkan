@@ -54,6 +54,8 @@ struct SwapChainSupportDetails
 };
 
 
+void (*sVulkanFrameResizedCBFunc)(i32 width, i32 height) = nullptr;
+
 // Intel?
 //const VkFormat defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
@@ -1115,6 +1117,10 @@ void MyVulkan::deinit()
 }
 
 
+void MyVulkan::setVulkanFrameResizedCBFunc(void (*fn)(i32 width, i32 height))
+{
+    sVulkanFrameResizedCBFunc = fn;
+}
 
 
 VkRenderPass MyVulkan::createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat)
@@ -1201,6 +1207,10 @@ bool MyVulkan::resizeSwapchain()
         && vulk->swapchain.width == newWidth
         && vulk->swapchain.height == newHeight)
     {
+        if(sVulkanFrameResizedCBFunc)
+        {
+            sVulkanFrameResizedCBFunc(newWidth, newHeight);
+        }
         return true;
     }
 
@@ -1211,6 +1221,11 @@ bool MyVulkan::resizeSwapchain()
     sDestroySwapchain(oldSwapchain);
 
     vulk->needToResize = false;
+    if(sVulkanFrameResizedCBFunc)
+    {
+        sVulkanFrameResizedCBFunc(newWidth, newHeight);
+    }
+
     return true;
 }
 

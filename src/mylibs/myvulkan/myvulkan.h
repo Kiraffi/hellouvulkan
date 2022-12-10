@@ -42,6 +42,8 @@ public:
     static bool init();
     static void deinit();
 
+    static void setVulkanFrameResizedCBFunc(void (*fn)(i32 width, i32 height));
+
     static bool resizeSwapchain();
     static bool frameStart();
     static void present(Image &imageToPresent);

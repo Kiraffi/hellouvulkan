@@ -66,6 +66,11 @@ static bool sResize()
     FontRenderSystem::setRenderTarget(sFontRenderData->renderColorImage);
     return true;
 }
+static void sResized(int width, int height)
+{
+    sResize();
+}
+
 
 static void sHandleInput()
 {
@@ -149,6 +154,7 @@ bool init()
     }
 
     sResize();
+    MyVulkan::setVulkanFrameResizedCBFunc(sResized);
     return true;
 }
 
@@ -230,9 +236,7 @@ void runApp()
     {
         sHandleInput();
 
-        bool resizeHappen = !MyVulkan::frameStart();
-
-        if (!resizeHappen)
+        if (MyVulkan::frameStart())
         {
             //updateStats(*this);
             vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -241,26 +245,12 @@ void runApp()
             //renderDraw();
             //printStats(*this);
         }
-        else
-        {
-            sResize();
-        }
+
         defragMemory();
-
         VulkanApp::frameEnd();
-
-        // needed cos of resize?
-        //if(resizeHappen)
-        //    VK_CHECK(vkDeviceWaitIdle(vulk->device));
-
     }
     VK_CHECK(vkDeviceWaitIdle(vulk->device));
-
-
-
-
 }
-    //VulkanApp::renderUpdate();
 
 i32 main(i32 argCount, char **argv)
 {
