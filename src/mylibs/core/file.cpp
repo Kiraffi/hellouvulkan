@@ -30,7 +30,7 @@ bool loadBytes(const char *filename, ByteBuffer &dataOut)
     if(fileExists(filename))
     {
         //std::filesystem::path p(filename);
-        //uint32_t t = uint32_t(std::filesystem::file_size(p));
+        //u32 t = u32(std::filesystem::file_size(p));
         #if WIN32
             FILE *fp = nullptr;
             fopen_s(&fp, filename, "rb");
@@ -40,15 +40,15 @@ bool loadBytes(const char *filename, ByteBuffer &dataOut)
         #endif
         if(!fp)
             return false;
-        uint32_t s = 0;
+        u32 s = 0;
 
         while(fgetc(fp) != EOF)
             ++s;
         rewind(fp);
         dataOut.resize(s);
 
-        uint8_t *ptr = dataOut.getBegin();
-        int c;
+        u8 *ptr = dataOut.getBegin();
+        i32 c;
         while((c = fgetc(fp)) != EOF)
             *ptr++ = c;
         fclose(fp);
@@ -80,7 +80,7 @@ bool writeBytes(const char *filename, const ByteBuffer &data)
         #endif
         if(!fp)
             return false;
-        uint32_t dataSize = data.getSize();
+        u32 dataSize = data.getSize();
         size_t bytesWritten = fwrite(data.getBegin(), 1, dataSize, fp);
         bool success = bytesWritten == dataSize;
         fclose(fp);

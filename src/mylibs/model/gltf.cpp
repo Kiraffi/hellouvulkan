@@ -17,11 +17,11 @@
 
 struct GltfData;
 
-static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
-        uint32_t writeStartOffsetInBytes, ArraySliceViewBytesMutable memoryRange);
+static bool gltfReadIntoBuffer(const GltfData &data, u32 index,
+        u32 writeStartOffsetInBytes, ArraySliceViewBytesMutable memoryRange);
 
-static uint32_t findAccessorIndexAndParseTimeStamps(
-    const GltfData &data, uint32_t samplerIndex,
+static u32 findAccessorIndexAndParseTimeStamps(
+    const GltfData &data, u32 samplerIndex,
     PodVector<float> &inOutTimestamps);
 
 
@@ -71,55 +71,55 @@ struct GltfSceneNode
     Quat rot;
     Vec3 trans;
     Vec3 scale{1.0f, 1.0f, 1.0f};
-    uint32_t meshIndex = ~0u;
-    uint32_t skinIndex = ~0u;
-    PodVector<uint32_t> childNodeIndices;
+    u32 meshIndex = ~0u;
+    u32 skinIndex = ~0u;
+    PodVector<u32> childNodeIndices;
 };
 
 struct GltfMeshNode
 {
     StringView name;
-    uint32_t positionIndex = ~0u;
-    uint32_t normalIndex = ~0u;
-    uint32_t uvIndex = ~0u;
-    uint32_t colorIndex = ~0u;
-    uint32_t indicesIndex = ~0u;
-    uint32_t materialIndex = ~0u;
-    uint32_t jointsIndex = ~0u;
-    uint32_t weightIndex = ~0u;
+    u32 positionIndex = ~0u;
+    u32 normalIndex = ~0u;
+    u32 uvIndex = ~0u;
+    u32 colorIndex = ~0u;
+    u32 indicesIndex = ~0u;
+    u32 materialIndex = ~0u;
+    u32 jointsIndex = ~0u;
+    u32 weightIndex = ~0u;
 };
 
 struct GltfSkinNode
 {
     StringView name;
-    PodVector<uint32_t> joints;
-    uint32_t inverseMatricesIndex = ~0u;
+    PodVector<u32> joints;
+    u32 inverseMatricesIndex = ~0u;
 };
 
 struct GltfAnimationNode
 {
     struct Channel
     {
-        enum class ChannelPath : uint8_t
+        enum class ChannelPath : u8
         {
             NONE,
             TRANSLATION,
             ROTAION,
             SCALE,
         };
-        uint32_t samplerIndex = ~0u;
-        uint32_t nodeIndex = ~0u;
+        u32 samplerIndex = ~0u;
+        u32 nodeIndex = ~0u;
         ChannelPath channelType = ChannelPath::NONE;
     };
     struct Sampler
     {
-        enum class Interpolation : uint8_t
+        enum class Interpolation : u8
         {
             NONE,
             LINEAR,
         };
-        uint32_t inputIndex = ~0u;
-        uint32_t outputIndex = ~0u;
+        u32 inputIndex = ~0u;
+        u32 outputIndex = ~0u;
         Interpolation interpolationType = Interpolation::NONE;
 
     };
@@ -130,15 +130,15 @@ struct GltfAnimationNode
 
 struct GltfBufferView
 {
-    uint32_t bufferIndex = ~0u;
-    uint32_t bufferStartOffset = 0u;
-    uint32_t bufferLength = 0u;
+    u32 bufferIndex = ~0u;
+    u32 bufferStartOffset = 0u;
+    u32 bufferLength = 0u;
 };
 
 struct GltfBufferAccessor
 {
-    uint32_t bufferViewIndex = ~0u;
-    uint32_t count = 0u;
+    u32 bufferViewIndex = ~0u;
+    u32 count = 0u;
     GltfBufferComponentCountType countType;
     GltfBufferComponentType componentType;
     PodVector<double> mins;
@@ -156,13 +156,13 @@ struct GltfData
     Vector<GltfBufferAccessor> accessors;
     PodVector<GltfBufferView> bufferViews;
 
-    Vector<PodVector<uint8_t>> buffers;
+    Vector<PodVector<u8>> buffers;
 };
 
 
 
 
-static uint32_t getSamplerIndex(const GltfData &data, uint32_t animationIndex, uint32_t nodeIndex,
+static u32 getSamplerIndex(const GltfData &data, u32 animationIndex, u32 nodeIndex,
     GltfAnimationNode::Channel::ChannelPath channelType)
 {
     ASSERT(animationIndex < data.animationNodes.size());
@@ -178,15 +178,15 @@ static uint32_t getSamplerIndex(const GltfData &data, uint32_t animationIndex, u
 }
 
 template <typename T>
-static bool parseAnimationChannel(const GltfData &data, uint32_t animationIndex,
-    uint32_t samplerIndex, GltfBufferComponentCountType assumedCountType,
+static bool parseAnimationChannel(const GltfData &data, u32 animationIndex,
+    u32 samplerIndex, GltfBufferComponentCountType assumedCountType,
     PodVector<T> &outVector)
 {
     if(samplerIndex == ~0u || animationIndex >= data.animationNodes.size())
         return false;
 
-    uint32_t animationValueOffset = offsetof(T, value);
-    uint32_t timeStampOffset = offsetof(T, timeStamp);
+    u32 animationValueOffset = offsetof(T, value);
+    u32 timeStampOffset = offsetof(T, timeStamp);
 
     const GltfAnimationNode& node = data.animationNodes[animationIndex];
 
@@ -234,8 +234,8 @@ static bool parseAnimationChannel(const GltfData &data, uint32_t animationIndex,
 }
 
 
-static uint32_t findAccessorIndexAndParseTimeStamps(
-    const GltfData &data, uint32_t samplerIndex,
+static u32 findAccessorIndexAndParseTimeStamps(
+    const GltfData &data, u32 samplerIndex,
     PodVector<float> &inOutTimestamps)
 {
     if(samplerIndex == ~0u)
@@ -269,8 +269,8 @@ static uint32_t findAccessorIndexAndParseTimeStamps(
             inOutTimestamps = timeStamps;
         else if(timeStamps.size() >= 0u)
         {
-            uint32_t newTimeStampIndex = 0u;
-            uint32_t inOutTimeStampIndex = 0u;
+            u32 newTimeStampIndex = 0u;
+            u32 inOutTimeStampIndex = 0u;
 
             if(inOutTimestamps.size() == 0 ||
                 timeStamps.back() > inOutTimestamps.back())
@@ -309,8 +309,8 @@ static uint32_t findAccessorIndexAndParseTimeStamps(
 // Reads f32, float normalized u16 and normalized u8 into float,
 // Reads u32, from u8, u16, u32
 // doesnt handle i8, i16 nor i32 reading, should probably just read them into i32.
-static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
-        uint32_t writeStartOffsetInBytes, ArraySliceViewBytesMutable memoryRange)
+static bool gltfReadIntoBuffer(const GltfData &data, u32 index,
+        u32 writeStartOffsetInBytes, ArraySliceViewBytesMutable memoryRange)
 {
     if(index >= data.accessors.size())
         return false;
@@ -323,10 +323,10 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
     if(bufferView.bufferIndex >= data.buffers.size())
         return false;
 
-    uint8_t *ptr = &data.buffers [bufferView.bufferIndex] [0] + bufferView.bufferStartOffset;
-    const uint8_t *endPtr = ptr + bufferView.bufferLength;
+    u8 *ptr = &data.buffers [bufferView.bufferIndex] [0] + bufferView.bufferStartOffset;
+    const u8 *endPtr = ptr + bufferView.bufferLength;
 
-    uint32_t componentCount = ~0u;
+    u32 componentCount = ~0u;
 
     //"SCALAR"     1
     //"VEC2"     2
@@ -346,7 +346,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
         case GltfBufferComponentCountType::MAT4: componentCount = 16; break;
         case GltfBufferComponentCountType::NONE: return false;
     }
-    uint32_t componentTypeBitCount = ~0u;
+    u32 componentTypeBitCount = ~0u;
     switch(accessor.componentType)
     {
         case GltfBufferComponentType::FLOAT_32:
@@ -367,14 +367,14 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
             return false;
     }
 
-    uint8_t *bufferOut = memoryRange.begin() + writeStartOffsetInBytes;
+    u8 *bufferOut = memoryRange.begin() + writeStartOffsetInBytes;
     if(accessor.count == 0u)
         return false;
 
-    // Since we write either float or uint32_t size of them is 4, check if we would write out of
+    // Since we write either float or u32 size of them is 4, check if we would write out of
     // buffer.
-    uint8_t *countedLast = bufferOut + ( accessor.count - 1 ) * memoryRange.dataTypeSize +
-        sizeof(uint32_t) * componentCount;
+    u8 *countedLast = bufferOut + ( accessor.count - 1 ) * memoryRange.dataTypeSize +
+        sizeof(u32) * componentCount;
     if(countedLast > memoryRange.end())
         return false;
 
@@ -383,10 +383,10 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
         ( accessor.componentType == GltfBufferComponentType::UINT_16 && accessor.normalized ) ||
         ( accessor.componentType == GltfBufferComponentType::UINT_8 && accessor.normalized ))
     {
-        for(uint32_t i = 0; i < accessor.count; ++i)
+        for(u32 i = 0; i < accessor.count; ++i)
         {
             float *writeValue = ( float * )bufferOut;
-            for(uint32_t j = 0; j < componentCount; ++j)
+            for(u32 j = 0; j < componentCount; ++j)
             {
                 if(ptr + componentTypeBitCount > endPtr)
                 {
@@ -406,13 +406,13 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
                 }
                 else if(accessor.componentType == GltfBufferComponentType::UINT_16 && accessor.normalized)
                 {
-                    uint16_t tmp = 0;
+                    u16 tmp = 0;
                     Supa::memcpy(&tmp, ptr, componentTypeBitCount);
                     *writeValue = ( float )tmp / 65535.0f;
                 }
                 else if(accessor.componentType == GltfBufferComponentType::UINT_8 && accessor.normalized)
                 {
-                    uint8_t tmp = 0;
+                    u8 tmp = 0;
                     Supa::memcpy(&tmp, ptr, componentTypeBitCount);
                     *writeValue = ( float )tmp / 255.0f;
                 }
@@ -423,7 +423,7 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
             bufferOut += memoryRange.dataTypeSize;
         }
     }
-    // i8, u8, i16, u16, i32, u32. as uint32_t
+    // i8, u8, i16, u16, i32, u32. as u32
     else if(!accessor.normalized && (
         accessor.componentType == GltfBufferComponentType::UINT_8 ||
         accessor.componentType == GltfBufferComponentType::UINT_16 ||
@@ -432,14 +432,14 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
         //accessor.componentType == GltfBufferComponentType::INT_16 ||
         //accessor.componentType == GltfBufferComponentType::INT_32 ))
     {
-        for(uint32_t i = 0; i < accessor.count; ++i)
+        for(u32 i = 0; i < accessor.count; ++i)
         {
-            uint32_t *writeValue = ( uint32_t * )bufferOut;
-            for(uint32_t j = 0; j < componentCount; ++j)
+            u32 *writeValue = ( u32 * )bufferOut;
+            for(u32 j = 0; j < componentCount; ++j)
             {
                 if(ptr + componentTypeBitCount > endPtr)
                     return false;
-                // uint32_t* ptr + 1 adds 4
+                // u32* ptr + 1 adds 4
                 if(writeValue + 1 > (void *)memoryRange.end())
                     return false;
 
@@ -449,13 +449,13 @@ static bool gltfReadIntoBuffer(const GltfData &data, uint32_t index,
                 }
                 else if(componentTypeBitCount == 2)
                 {
-                    uint16_t tmp = 0;
+                    u16 tmp = 0;
                     Supa::memcpy(&tmp, ptr, componentTypeBitCount);
                     *writeValue = tmp;
                 }
                 else if(componentTypeBitCount == 1)
                 {
-                    uint8_t tmp = *ptr;
+                    u8 tmp = *ptr;
                     *writeValue = tmp;
                 }
 
@@ -484,12 +484,12 @@ static bool parseMeshes(const JsonBlock &mainBlock, GltfData &data, GltfModel &o
     if(!meshBlock.isValid() || meshBlock.getChildCount() < 1)
         return false;
 
-    uint32_t meshCount = meshBlock.getChildCount();
+    u32 meshCount = meshBlock.getChildCount();
     data.meshes.resize(meshCount, GltfMeshNode());
 
     outModel.modelMeshes.resize(meshCount);
 
-    for(int i = 0; i < meshCount; ++i)
+    for(i32 i = 0; i < meshCount; ++i)
     {
         const JsonBlock &child = meshBlock.children[i];
         GltfMeshNode &node = data.meshes[i];
@@ -530,7 +530,7 @@ static bool parseNodes(const JsonBlock &mainBlock, GltfData &data, GltfModel &ou
         return false;
 
     data.nodes.resize(nodeBlock.getChildCount());
-    for(int i = 0; i < nodeBlock.getChildCount(); ++i)
+    for(i32 i = 0; i < nodeBlock.getChildCount(); ++i)
     {
         const JsonBlock &child = nodeBlock.children[i];
         GltfSceneNode &node = data.nodes[i];
@@ -552,7 +552,7 @@ static bool parseNodes(const JsonBlock &mainBlock, GltfData &data, GltfModel &ou
         node.childNodeIndices.reserve(childrenBlock.children.size());
         for(const auto &childBlock : childrenBlock.children)
         {
-            uint32_t tmpIndex = ~0u;
+            u32 tmpIndex = ~0u;
             if(!childBlock.parseUInt(tmpIndex))
                 return false;
             node.childNodeIndices.push_back(tmpIndex);
@@ -571,7 +571,7 @@ static bool parseSkins(const JsonBlock &mainBlock, GltfData &data, GltfModel &ou
         ASSERT(skinBlock.getChildCount() == 1);
         data.skins.resize(skinBlock.getChildCount());
 
-        for(int i = 0; i < skinBlock.getChildCount(); ++i)
+        for(i32 i = 0; i < skinBlock.getChildCount(); ++i)
         {
             GltfSkinNode &node = data.skins[i];
             const JsonBlock &child = skinBlock.children[i];
@@ -586,9 +586,9 @@ static bool parseSkins(const JsonBlock &mainBlock, GltfData &data, GltfModel &ou
             if(!jointsBlock.isValid() || jointsBlock.getChildCount() < 1)
                 return false;
             node.joints.reserve(jointsBlock.getChildCount());
-            for(int j = 0; j < jointsBlock.getChildCount(); ++j)
+            for(i32 j = 0; j < jointsBlock.getChildCount(); ++j)
             {
-                uint32_t tmpInt = ~0u;
+                u32 tmpInt = ~0u;
                 if(!jointsBlock.getChild(j).parseUInt(tmpInt))
                     return false;
 
@@ -610,12 +610,12 @@ static bool parseBuffers(const JsonBlock &mainBlock, GltfData &data, GltfModel &
 
     data.buffers.resize(bufferBlock.getChildCount());
 
-    for(int i = 0; i < bufferBlock.getChildCount(); ++i)
+    for(i32 i = 0; i < bufferBlock.getChildCount(); ++i)
     {
         const JsonBlock &child = bufferBlock.children[i];
-        PodVector<uint8_t> &buffer = data.buffers[i];
+        PodVector<u8> &buffer = data.buffers[i];
 
-        uint32_t bufLen = 0u;
+        u32 bufLen = 0u;
         if(!child.getChild("byteLength").parseUInt(bufLen))
             return false;
 
@@ -636,11 +636,11 @@ static bool parseAnimations(const JsonBlock &mainBlock, GltfData &data, GltfMode
     const JsonBlock &animationBlocks = mainBlock.getChild("animations");
     if(animationBlocks.isValid() && animationBlocks.getChildCount() > 0)
     {
-        uint32_t animationCount = animationBlocks.getChildCount();
+        u32 animationCount = animationBlocks.getChildCount();
         outModel.animNames.resize(animationCount);
 
         data.animationNodes.resize(animationCount);
-        for(uint32_t animIndex = 0u; animIndex < animationCount; ++animIndex)
+        for(u32 animIndex = 0u; animIndex < animationCount; ++animIndex)
         {
             const JsonBlock &animationBlock = animationBlocks.getChild(animIndex);
             if(!animationBlock.isValid())
@@ -659,7 +659,7 @@ static bool parseAnimations(const JsonBlock &mainBlock, GltfData &data, GltfMode
             animationNode.channels.resize(channelsBlock.getChildCount());
             animationNode.samplers.resize(samplersBlock.getChildCount());
 
-            for(uint32_t i = 0; i < channelsBlock.getChildCount(); ++i)
+            for(u32 i = 0; i < channelsBlock.getChildCount(); ++i)
             {
                 const JsonBlock &channelBlock = channelsBlock.getChild(i);
                 GltfAnimationNode::Channel &channel = animationNode.channels[i];
@@ -686,7 +686,7 @@ static bool parseAnimations(const JsonBlock &mainBlock, GltfData &data, GltfMode
                 }
             }
 
-            for(uint32_t i = 0; i < samplersBlock.getChildCount(); ++i)
+            for(u32 i = 0; i < samplersBlock.getChildCount(); ++i)
             {
                 const JsonBlock &samplerBlock = samplersBlock.getChild(i);
                 GltfAnimationNode::Sampler &sampler = animationNode.samplers[i];
@@ -726,7 +726,7 @@ static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &d
     data.accessors.resize(accessorBlocks.getChildCount());
     data.bufferViews.resize(bufferViewBlocks.getChildCount());
 
-    for(uint32_t index = 0u; index < bufferViewBlocks.getChildCount(); ++index)
+    for(u32 index = 0u; index < bufferViewBlocks.getChildCount(); ++index)
     {
         GltfBufferView &bufferView = data.bufferViews[index];
         const JsonBlock &bufferViewBlock = bufferViewBlocks.getChild(index);
@@ -744,14 +744,14 @@ static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &d
     }
 
 
-    for(uint32_t index = 0u; index < accessorBlocks.getChildCount(); ++index)
+    for(u32 index = 0u; index < accessorBlocks.getChildCount(); ++index)
     {
         GltfBufferAccessor &accessor = data.accessors[index];
         const JsonBlock &accessorBlock = accessorBlocks.getChild(index);
         if(!accessorBlock.isValid())
             return false;
 
-        uint32_t componentType = ~0u;
+        u32 componentType = ~0u;
         StringView s;
         if(!accessorBlock.getChild("bufferView").parseUInt(accessor.bufferViewIndex)
             || !accessorBlock.getChild("componentType").parseUInt(componentType)
@@ -769,7 +769,7 @@ static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &d
         if(accessorBlock.getChild("min").isValid())
         {
             accessor.mins.resize(accessorBlock.getChild("min").getChildCount());
-            for(uint32_t minIndex = 0u; minIndex < accessor.mins.size(); ++minIndex)
+            for(u32 minIndex = 0u; minIndex < accessor.mins.size(); ++minIndex)
             {
                 double value = 0.0;
                 if(!accessorBlock.getChild("min").getChild(minIndex).parseNumber(value))
@@ -780,7 +780,7 @@ static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &d
         if(accessorBlock.getChild("max").isValid())
         {
             accessor.maxs.resize(accessorBlock.getChild("max").getChildCount());
-            for(uint32_t maxIndex = 0u; maxIndex < accessor.maxs.size(); ++maxIndex)
+            for(u32 maxIndex = 0u; maxIndex < accessor.maxs.size(); ++maxIndex)
             {
                 double value = 0.0;
                 if(!accessorBlock.getChild("max").getChild(maxIndex).parseNumber(value))
@@ -834,7 +834,7 @@ static bool parseAccessorsAndBufferViews(const JsonBlock &mainBlock, GltfData &d
 
 static bool parseMeshData(GltfData &data, GltfModel &outModel)
 {
-    for(uint32_t i = 0; i < data.meshes.size(); ++i)
+    for(u32 i = 0; i < data.meshes.size(); ++i)
     {
         GltfModel::ModelMesh &modelMesh = outModel.modelMeshes[i];
 
@@ -845,13 +845,13 @@ static bool parseMeshData(GltfData &data, GltfModel &outModel)
         {
             return false;
         }
-        uint32_t vertexCount = data.accessors[node.positionIndex].count;
+        u32 vertexCount = data.accessors[node.positionIndex].count;
         if(vertexCount == ~0u || vertexCount == 0u ||
             vertexCount != data.accessors[node.normalIndex].count)
         {
             return false;
         }
-        uint32_t indicesCount = data.accessors[node.indicesIndex].count;
+        u32 indicesCount = data.accessors[node.indicesIndex].count;
         if(indicesCount == ~0u || indicesCount == 0u)
             return false;
 
@@ -971,7 +971,7 @@ static bool parseMeshData(GltfData &data, GltfModel &outModel)
 
 static bool parseSkinData(GltfData &data, GltfModel &outModel)
 {
-    for(uint32_t i = 0; i < data.skins.size(); ++i)
+    for(u32 i = 0; i < data.skins.size(); ++i)
     {
         GltfSkinNode &skinNode = data.skins[i];
 
@@ -982,13 +982,13 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
             return false;
 
         PodVector<Matrix> inverseMatrices;
-        uint32_t inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
+        u32 inverseMatricesCount = data.accessors[skinNode.inverseMatricesIndex].count;
         inverseMatrices.resize(inverseMatricesCount);
         outModel.inverseNormalMatrices.resize(inverseMatricesCount);
         outModel.inverseMatrices.resize(inverseMatricesCount);
 
         auto calculateInverseMatrices =
-            [&](auto &f, const Mat3x4 &parent, const Mat3x4 &parentNormal, uint32_t nodeIndex)
+            [&](auto &f, const Mat3x4 &parent, const Mat3x4 &parentNormal, u32 nodeIndex)
         {
             if(nodeIndex >= data.nodes.size())
                 return;
@@ -998,7 +998,7 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
             const auto &rot = childNode.rot;
             const auto &scale = childNode.scale;
 
-            uint32_t boneIndex = 0u;
+            u32 boneIndex = 0u;
             for(; boneIndex < skinNode.joints.size(); ++boneIndex)
             {
                 if(skinNode.joints[boneIndex] == nodeIndex)
@@ -1021,24 +1021,24 @@ static bool parseSkinData(GltfData &data, GltfModel &outModel)
             outModel.inverseMatrices[boneIndex] = newParent;
             outModel.inverseNormalMatrices[boneIndex] = newParentNormal;
 
-            for(uint32_t childNodeIndex : childNode.childNodeIndices)
+            for(u32 childNodeIndex : childNode.childNodeIndices)
             {
                 f(f, newParent, newParentNormal, childNodeIndex);
             }
         };
-        for(uint32_t jointIndex : skinNode.joints)
+        for(u32 jointIndex : skinNode.joints)
             calculateInverseMatrices(calculateInverseMatrices, Mat3x4(), Mat3x4(), jointIndex);
 
         if(!gltfReadIntoBuffer(data, skinNode.inverseMatricesIndex,
             0, sliceFromPodVectorBytesMutable(inverseMatrices)))
             return false;
         //printf("\n\n");
-        for(uint32_t i = 0; i < inverseMatrices.size(); ++i)
+        for(u32 i = 0; i < inverseMatrices.size(); ++i)
         {
             inverseMatrices[i] = transpose(inverseMatrices[i]);;
             outModel.inverseMatrices[i] = inverseMatrices[i];
             /*
-            uint32_t nodeJointIndex = skinNode.joints[i];
+            u32 nodeJointIndex = skinNode.joints[i];
             const auto &node = data.nodes[nodeJointIndex];
             printf("Index: %u, joint: %u, name: %s\n", i, nodeJointIndex, String(node.name).getStr());
             printVector3(node.trans, "Pos");
@@ -1063,29 +1063,29 @@ static bool parseAnimationData(GltfData &data, GltfModel &outModel)
     if(data.skins.getSize() == 1 && data.skins[0].joints.size() > 0)
     {
         const auto &joints = data.skins[0].joints;
-        uint32_t jointCount = joints.size();
+        u32 jointCount = joints.size();
 
         outModel.animationIndices.resize(data.animationNodes.size());
         outModel.animStartTimes.resize(data.animationNodes.size());
         outModel.animEndTimes.resize(data.animationNodes.size());
 
-        for(uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
+        for(u32 animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
         {
             outModel.animationIndices[animationIndex].resize(jointCount);
-            for(uint32_t jointIndex = 0u; jointIndex < jointCount; ++jointIndex)
+            for(u32 jointIndex = 0u; jointIndex < jointCount; ++jointIndex)
             {
-                uint32_t nodeIndex = joints[jointIndex];
+                u32 nodeIndex = joints[jointIndex];
                 ASSERT(nodeIndex < data.nodes.size());
                 if(nodeIndex >= data.nodes.size())
                     return false;
 
                 auto &animationBoneIndices = outModel.animationIndices[animationIndex][jointIndex];
 
-                uint32_t positionSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
+                u32 positionSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
                     GltfAnimationNode::Channel::ChannelPath::TRANSLATION);
-                uint32_t rotationSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
+                u32 rotationSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
                     GltfAnimationNode::Channel::ChannelPath::ROTAION);
-                uint32_t scaleSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
+                u32 scaleSamplerIndex = getSamplerIndex(data, animationIndex, nodeIndex,
                     GltfAnimationNode::Channel::ChannelPath::SCALE);
 
                 // parse positions
@@ -1161,11 +1161,11 @@ static bool parseAnimationData(GltfData &data, GltfModel &outModel)
                 {
                     const auto &childNodes = data.nodes[nodeIndex].childNodeIndices;
                     animationBoneIndices.childStartIndex = outModel.childrenJointIndices.size();
-                    uint32_t count = 0u;
-                    for(uint32_t childNodeIndex : childNodes)
+                    u32 count = 0u;
+                    for(u32 childNodeIndex : childNodes)
                     {
                         bool found = false;
-                        for(uint32_t childJointIndex = 0u; childJointIndex < joints.size(); ++childJointIndex)
+                        for(u32 childJointIndex = 0u; childJointIndex < joints.size(); ++childJointIndex)
                         {
                             if(joints[childJointIndex] == childNodeIndex)
                             {
@@ -1184,7 +1184,7 @@ static bool parseAnimationData(GltfData &data, GltfModel &outModel)
             }
         }
 
-        for(uint32_t animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
+        for(u32 animationIndex = 0; animationIndex < data.animationNodes.getSize(); ++animationIndex)
         {
             float animStartTime = 1e10;
             float animEndTime = -1e10;
@@ -1195,19 +1195,19 @@ static bool parseAnimationData(GltfData &data, GltfModel &outModel)
             const auto &animationVector = outModel.animationIndices[animationIndex];
             for(const auto &animNode : animationVector)
             {
-                for(uint32_t ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
+                for(u32 ind = animNode.posStartIndex; ind < animNode.posStartIndex + animNode.posIndexCount; ++ind)
                 {
                     animStartTime = Supa::minf(animStartTime, outModel.animationPosData[ind].timeStamp);
                     animEndTime = Supa::maxf(animEndTime, outModel.animationPosData[ind].timeStamp);
                 }
 
-                for(uint32_t ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
+                for(u32 ind = animNode.rotStartIndex; ind < animNode.rotStartIndex + animNode.rotIndexCount; ++ind)
                 {
                     animStartTime = Supa::minf(animStartTime, outModel.animationRotData[ind].timeStamp);
                     animEndTime = Supa::maxf(animEndTime, outModel.animationRotData[ind].timeStamp);
                 }
 
-                for(uint32_t ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
+                for(u32 ind = animNode.scaleStartIndex; ind < animNode.scaleStartIndex + animNode.scaleIndexCount; ++ind)
                 {
                     animStartTime = Supa::minf(animStartTime, outModel.animationScaleData[ind].timeStamp);
                     animEndTime = Supa::maxf(animEndTime, outModel.animationScaleData[ind].timeStamp);
@@ -1279,7 +1279,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 
 /*
     const ArraySliceView<GltfModel::Vertex> vertices(&outModel.vertices[0], outModel.vertices.size());
-    for(uint32_t i = 0; i < vertices.size(); ++i)
+    for(u32 i = 0; i < vertices.size(); ++i)
     {
         printf("pos vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].pos.x, vertices[i].pos.y, vertices[i].pos.z);
         printf("nor vert: %i:   x: %f, y: %f, z: %f\n", i, vertices[i].norm.x, vertices[i].norm.y, vertices[i].norm.z);
@@ -1288,7 +1288,7 @@ bool readGLTF(const char *filename, GltfModel &outModel)
 
     const ArraySliceView<GltfModel::AnimationVertex> animationVertices(
         &outModel.animationVertices[0], outModel.animationVertices.size());
-    for(uint32_t i = 0; i < animationVertices.size(); ++i)
+    for(u32 i = 0; i < animationVertices.size(); ++i)
     {
         printf("vert: %i, bone0: %u, bone1: %u, bone2: %u, bone3: %u\n", i,
             animationVertices[i].boneIndices[0],
@@ -1303,17 +1303,17 @@ bool readGLTF(const char *filename, GltfModel &outModel)
             animationVertices[i].weights.w);
     }
 
-    const ArraySliceView<uint32_t> indices(&outModel.indices[0], outModel.indices.size());
-    for(uint32_t i = 0; i < indices.size(); ++i)
+    const ArraySliceView<u32> indices(&outModel.indices[0], outModel.indices.size());
+    for(u32 i = 0; i < indices.size(); ++i)
     {
         printf("i: %i, index: %u\n", i, indices[i]);
     }
 
-    for(uint32_t i = 0; i < data.skins.size(); ++i)
+    for(u32 i = 0; i < data.skins.size(); ++i)
     {
         const GltfSkinNode &skin = data.skins[i];
         printf("Skin node: %u\n", i);
-        for(uint32_t j = 0; j < skin.inverseMatrices.size(); ++j)
+        for(u32 j = 0; j < skin.inverseMatrices.size(); ++j)
         {
             printf("Matrix: %i\n", j);
             printMatrix(skin.inverseMatrices[j], "");
@@ -1327,7 +1327,7 @@ struct EvaluateBoneParams
 {
     const ArraySliceView< GltfModel::AnimationIndexData > animationData;
     //const ArraySliceView < float > times;
-    const ArraySliceView< uint32_t > childIndices;
+    const ArraySliceView< u32 > childIndices;
     const ArraySliceView< GltfModel::AnimPos > posses;
     const ArraySliceView< GltfModel::AnimRot > rots;
     const ArraySliceView< GltfModel::AnimScale > scales;
@@ -1335,7 +1335,7 @@ struct EvaluateBoneParams
     const ArraySliceView< Mat3x4> inverseNormalMatrices;
 };
 
-static bool interpolateBetweenPoses(const EvaluateBoneParams &params, uint32_t jointIndex, float weight, float time,
+static bool interpolateBetweenPoses(const EvaluateBoneParams &params, u32 jointIndex, float weight, float time,
     Transform &inOutTransform)
 {
     if(jointIndex >= params.animationData.size())
@@ -1439,7 +1439,7 @@ static bool interpolateBetweenPoses(const EvaluateBoneParams &params, uint32_t j
     return true;
 }
 
-static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex,
+static bool evaluateBone(const EvaluateBoneParams &params, u32 jointIndex,
     const Mat3x4 &parentMatrix, const Mat3x4 &parentNormalMatrix,
     ArraySliceView<Transform> transforms, ArraySliceViewMutable<Mat3x4> outMatrices)
 {
@@ -1456,9 +1456,9 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex,
     Mat3x4 newParentNormal = parentNormalMatrix * getModelNormalMatrix(transforms[jointIndex]);
     outMatrices[jointIndex * 2] =  newParent * params.inverseMatrices[jointIndex];
     outMatrices[jointIndex * 2 + 1] = newParentNormal * params.inverseMatrices[jointIndex];// params.inverseNormalMatrices[jointIndex];
-    const ArraySliceView< uint32_t > childIndices(
+    const ArraySliceView< u32 > childIndices(
         params.childIndices, animData.childStartIndex, animData.childIndexCount);
-    for(uint32_t childIndex : childIndices)
+    for(u32 childIndex : childIndices)
     {
         bool success = evaluateBone(params, childIndex, newParent, newParentNormal, transforms, outMatrices);
         if(!success)
@@ -1467,7 +1467,7 @@ static bool evaluateBone(const EvaluateBoneParams &params, uint32_t jointIndex,
     return true;
 }
 
-bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
+bool evaluateAnimation(const GltfModel &model, u32 animationIndex, float time,
     PodVector<Mat3x4> &outMatrices)
 {
     AnimationState state;
@@ -1493,18 +1493,18 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
     PodVector<Transform> transforms;
     transforms.uninitializedResize(model.inverseMatrices.getSize());
     auto mutableTransforms = sliceFromPodVectorMutable(transforms);
-    for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
+    for(u32 index = 0; index < mutableTransforms.size(); ++index)
     {
         auto &t = mutableTransforms[index];
         Supa::memset(&t, 0, sizeof(Transform));
     }
     float totalWeight = 0.0f;
-    for(uint32_t i = 0; i < AnimationState::AMOUNT; ++i)
+    for(u32 i = 0; i < AnimationState::AMOUNT; ++i)
     {
         if(((animationState.activeIndices >> i) & 1) != 1)
             continue;
 
-        uint32_t animationIndex = animationState.animationIndices[i];
+        u32 animationIndex = animationState.animationIndices[i];
         float time = animationState.time[i];
         float weight = animationState.blendValues[i];
         if(weight == 0.0f)
@@ -1529,7 +1529,7 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
         float duration = animEndTime - animStartTime;
         ASSERT(duration != 0.0f);
         float div = duration > 0.0 ? time / duration : 0.0;
-        time -= int64_t(div) * duration;
+        time -= i64(div) * duration;
         while(time < animStartTime)
             time += duration;
         while(time > animEndTime)
@@ -1537,7 +1537,7 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
 
         totalWeight += weight;
 
-        for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
+        for(u32 index = 0; index < mutableTransforms.size(); ++index)
         {
             auto &t = mutableTransforms[index];
             if(!interpolateBetweenPoses(params, index, weight, time, t))
@@ -1545,7 +1545,7 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
         }
     }
 
-    for(uint32_t index = 0; index < mutableTransforms.size(); ++index)
+    for(u32 index = 0; index < mutableTransforms.size(); ++index)
     {
         auto &t = mutableTransforms[index];
         if(totalWeight == 0.0f)
@@ -1566,12 +1566,12 @@ bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,
     }
 
 
-    for(uint32_t i = 0; i < AnimationState::AMOUNT; ++i)
+    for(u32 i = 0; i < AnimationState::AMOUNT; ++i)
     {
         if(((animationState.activeIndices >> i) & 1) != 1)
             continue;
 
-        uint32_t animationIndex = animationState.animationIndices[i];
+        u32 animationIndex = animationState.animationIndices[i];
         float time = animationState.time[i];
         float weight = animationState.blendValues[i];
 

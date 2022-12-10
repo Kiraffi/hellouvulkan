@@ -9,11 +9,11 @@
 #include <core/camera.h>
 #include <core/file.h>
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 #include <core/writejson.h>
 
 #include <container/arraysliceview.h>
@@ -59,11 +59,11 @@
 //#include <string.h>
 
 
-static constexpr int SCREEN_WIDTH = 1024;
-static constexpr int SCREEN_HEIGHT = 768;
+static constexpr i32 SCREEN_WIDTH = 1024;
+static constexpr i32 SCREEN_HEIGHT = 768;
 
-static constexpr int SHADOW_WIDTH = 2048;
-static constexpr int SHADOW_HEIGHT = 2048;
+static constexpr i32 SHADOW_WIDTH = 2048;
+static constexpr i32 SHADOW_HEIGHT = 2048;
 
 static AtomicType Keys [NOTE_COUNT] =
 {
@@ -103,7 +103,7 @@ static AtomicType Keys [NOTE_COUNT] =
     GLFW_KEY_O,
     GLFW_KEY_P,
 };
-static double getFreq(uint32_t index)
+static double getFreq(u32 index)
 {
     return Supa::powd(2, double(index) / 12.0);
 }
@@ -124,7 +124,7 @@ static double FreqTable[]
     getFreq(11),
 };
 
-static const uint32_t GlobalKeyMap[NOTE_COUNT] =
+static const u32 GlobalKeyMap[NOTE_COUNT] =
 {
     0,
     1,
@@ -170,16 +170,16 @@ static Vec3 getSunDirection(const Camera &camera)
 
     return -sundir[2];
 }
-static uint32_t SoundsMagicNumber = 3495835844;
-static uint32_t SoundsVersionNumber = 1;
+static u32 SoundsMagicNumber = 3495835844;
+static u32 SoundsVersionNumber = 1;
 
 
-static float getFreqHz(uint32_t noteIndex)
+static float getFreqHz(u32 noteIndex)
 {
     return 27.5f * float(1u << (noteIndex / 12)) * FreqTable[noteIndex % 12];
 }
 
-static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_t noteLen)
+static bool loadNotes(const char *filename, NoteFromMainToThread *notes, u32 noteLen)
 {
     if(!filename || !notes || noteLen == 0)
         return false;
@@ -208,7 +208,7 @@ static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_
     if(!json.getChild("magicNumber").equals(SoundsMagicNumber))
         return false;
 
-    uint32_t versionNumber;
+    u32 versionNumber;
     if(!json.getChild("versionNumber").parseUInt(SoundsVersionNumber))
         return false;
 
@@ -218,7 +218,7 @@ static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_
     if(json.getChild("sounds").getChildCount() > noteLen)
         return false;
 
-    uint32_t i = 0;
+    u32 i = 0;
     for(const auto &obj : json.getChild("sounds"))
     {
         auto &note = notes[i++];
@@ -248,19 +248,19 @@ static bool loadNotes(const char *filename, NoteFromMainToThread *notes, uint32_
 
 
 
-static bool saveNotes(const char *filename, NoteFromMainToThread *notes, uint32_t noteLen)
+static bool saveNotes(const char *filename, NoteFromMainToThread *notes, u32 noteLen)
 {
     if(!filename || !notes || noteLen == 0)
         return false;
 
     WriteJson writeJson(SoundsMagicNumber, SoundsVersionNumber);
     writeJson.addArray("sounds");
-    for(uint32_t i = 0; i < noteLen; ++i)
+    for(u32 i = 0; i < noteLen; ++i)
     {
         writeJson.addObject();
         const auto &note = notes[i];
-        writeJson.addNumberArray("amplitudes", note.amplitudes, uint32_t(ARRAYSIZES(note.amplitudes)));
-        writeJson.addIntegerArray("tunes", note.tuning, uint32_t(ARRAYSIZES(note.amplitudes)));
+        writeJson.addNumberArray("amplitudes", note.amplitudes, u32(ARRAYSIZES(note.amplitudes)));
+        writeJson.addIntegerArray("tunes", note.tuning, u32(ARRAYSIZES(note.amplitudes)));
 
         writeJson.addNumber("AttackAmplitude", note.attackAmplitude);
         writeJson.addNumber("SustainAmplitude", note.sustainAmplitude);
@@ -287,22 +287,22 @@ static bool saveNotes(const char *filename, NoteFromMainToThread *notes, uint32_
 
 struct SongChannel
 {
-    PodVector<uint32_t> notes;
+    PodVector<u32> notes;
 };
 
 struct SongPattern
 {
-    PodVector<uint32_t> songPatternChannels;
+    PodVector<u32> songPatternChannels;
 };
 
 struct Song
 {
     Vector<SongPattern> songPatterns;
     Vector<SongChannel> songChannels;
-    uint32_t bpm = 120;
-    uint32_t beatsPerNote = 4;
-    uint32_t notesPerPattern = 64;
-    uint32_t channelsPerPattern = 4;
+    u32 bpm = 120;
+    u32 beatsPerNote = 4;
+    u32 notesPerPattern = 64;
+    u32 channelsPerPattern = 4;
 };
 
 class SoundTest : public VulkanApp
@@ -312,7 +312,7 @@ public:
     SoundTest() : scene(meshRenderSystem), editorSystem(scene, lineRenderSystem, SCREEN_WIDTH, SCREEN_HEIGHT) { }
 
     virtual ~SoundTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -338,21 +338,21 @@ public:
 
     NoteFromMainToThread notes[32];
 
-    uint32_t currentNoteIndex = 0;
-    int32_t currentOctave = 4;
+    u32 currentNoteIndex = 0;
+    i32 currentOctave = 4;
 
     Viewport viewport;
 
     Song song;
-    int32_t currentPatternIndex = 0;
-    int32_t currentRowIndex = 0;
-    int32_t currentColumnIndex = 0;
+    i32 currentPatternIndex = 0;
+    i32 currentRowIndex = 0;
+    i32 currentColumnIndex = 0;
 
-    uint32_t playingNoteChannels[NOTE_COUNT];
+    u32 playingNoteChannels[NOTE_COUNT];
 
-    PodVector<uint32_t> playingMusicChannelNotes;
+    PodVector<u32> playingMusicChannelNotes;
 
-    uint32_t jumpRowAmount = 1u;
+    u32 jumpRowAmount = 1u;
     bool editMode = false;
     bool playMode = false;
     double playStartTime = 0.0;
@@ -383,7 +383,7 @@ static void resetNote(NoteFromMainToThread &note)
     note.decayDuration = 0.05f;
     note.releaseDuration = 0.2f;
 
-    for(uint32_t i = 0; i < SAMPLE_POINTS; ++i)
+    for(u32 i = 0; i < SAMPLE_POINTS; ++i)
     {
         note.amplitudes[i] = 0.125 * 0.25;
 
@@ -397,7 +397,7 @@ static void resetNote(NoteFromMainToThread &note)
     }
 }
 
-static uint32_t addNewChannel(Song &song)
+static u32 addNewChannel(Song &song)
 {
     song.songChannels.pushBack(SongChannel());
     SongChannel &channel = song.songChannels.back();
@@ -405,9 +405,9 @@ static uint32_t addNewChannel(Song &song)
     return song.songChannels.size() - 1;
 }
 
-bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight)
+bool SoundTest::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
-    for(uint32_t i = 0; i < ARRAYSIZES(notes); ++i)
+    for(u32 i = 0; i < ARRAYSIZES(notes); ++i)
         resetNote(notes[i]);
 
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
@@ -445,7 +445,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight)
     // init song
     {
         song.bpm = 120;
-        for(uint32_t i = 0; i < 4; ++i)
+        for(u32 i = 0; i < 4; ++i)
             addNewChannel(song);
         song.songPatterns = { SongPattern {.songPatternChannels {0, 1, 2, 3}}};
     }
@@ -471,11 +471,11 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight)
 
 bool SoundTest::resized()
 {
-    uint32_t wholeWidth = vulk->swapchain.width;
-    uint32_t wholeHeight = vulk->swapchain.height;
+    u32 wholeWidth = vulk->swapchain.width;
+    u32 wholeHeight = vulk->swapchain.height;
     viewport = editorSystem.getEditorWindowViewport();
-    windowWidth = uint32_t(viewport.size.x);
-    windowHeight = uint32_t(viewport.size.y);
+    windowWidth = u32(viewport.size.x);
+    windowHeight = u32(viewport.size.y);
 
     if(!meshRenderTargets.resizeMeshTargets(windowWidth, windowHeight))
         return false;
@@ -554,7 +554,7 @@ void SoundTest::logicUpdate()
     {
         playMode = false;
         editMode = !editMode;
-        for(uint32_t i = 0; i < playingMusicChannelNotes.size(); ++i)
+        for(u32 i = 0; i < playingMusicChannelNotes.size(); ++i)
         {
             releaseChannel(playingMusicChannelNotes[i]);
             playingMusicChannelNotes[i] = ~0u;
@@ -593,21 +593,21 @@ void SoundTest::logicUpdate()
 
     if(playMode)
     {
-        uint32_t prevPos = currentRowIndex;
+        u32 prevPos = currentRowIndex;
         currentRowIndex = (currTime - playStartTime) * song.bpm / song.beatsPerNote;
         currentRowIndex %= song.notesPerPattern;
         if(prevPos != currentRowIndex || currTime == playStartTime)
         {
             auto &pattern = song.songPatterns[currentPatternIndex];
-            for(uint32_t columnIndex = 0; columnIndex < song.channelsPerPattern; ++columnIndex)
+            for(u32 columnIndex = 0; columnIndex < song.channelsPerPattern; ++columnIndex)
             {
                 auto &channel = song.songChannels[pattern.songPatternChannels[columnIndex]];
                 auto &note = channel.notes[currentRowIndex];
 
                 if(note != 0)
                 {
-                    uint32_t noteIndex = note >> 7u;
-                    uint32_t freqIndex = (note - 1) & 127;
+                    u32 noteIndex = note >> 7u;
+                    u32 freqIndex = (note - 1) & 127;
                     releaseChannel(playingMusicChannelNotes[columnIndex]);
                     playingMusicChannelNotes[columnIndex] = ~0u;
 
@@ -632,14 +632,14 @@ void SoundTest::logicUpdate()
 
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
     {
-        uint32_t note = currentOctave * 12 + GlobalKeyMap[index] + 1 + (currentNoteIndex << 7u);
+        u32 note = currentOctave * 12 + GlobalKeyMap[index] + 1 + (currentNoteIndex << 7u);
         if(((keysUp >> index) & 1) == 1)
             releaseChannel(playingNoteChannels[index]);
     }
 
     for(AtomicType index = 0; index < NOTE_COUNT; ++index)
     {
-        uint32_t note = currentOctave * 12 + GlobalKeyMap[index];
+        u32 note = currentOctave * 12 + GlobalKeyMap[index];
         if(((keysDown >> index) & 1) == 1)
             playingNoteChannels[index] =
                 addNote(getFreqHz(note), notes[currentNoteIndex]);
@@ -704,7 +704,7 @@ void SoundTest::logicUpdate()
     meshRenderSystem.clear();
 }
 
-static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t currentOctave, uint32_t noteIndex)
+static void drawSoundGui(NoteFromMainToThread &currentNote, u32 currentOctave, u32 noteIndex)
 {
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sound");
@@ -722,7 +722,7 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t currentOcta
     ImGui::DragFloat("Sustain amplitude", &currentNote.sustainAmplitude, 0.01f, 0.0f, 2.0f);
 
     ImGui::PushID("set1");
-    for(int i = 0; i < SAMPLE_POINTS; i++)
+    for(i32 i = 0; i < SAMPLE_POINTS; i++)
     {
         if(i > 0) ImGui::SameLine();
         ImGui::PushID(i);
@@ -740,7 +740,7 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t currentOcta
 
 
     ImGui::PushID("set2");
-    for(int i = 0; i < SAMPLE_POINTS; i++)
+    for(i32 i = 0; i < SAMPLE_POINTS; i++)
     {
         if(i > 0) ImGui::SameLine();
         ImGui::PushID(i);
@@ -757,8 +757,8 @@ static void drawSoundGui(NoteFromMainToThread &currentNote, uint32_t currentOcta
     return;
 }
 
-static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t currentRowIndex,
-    uint32_t currentColumnIndex, bool editMode)
+static void drawSongGui(Song &song, u32 currentPatternIndex, u32 currentRowIndex,
+    u32 currentColumnIndex, bool editMode)
 {
     ASSERT(song.songPatterns.size() > 0);
     currentPatternIndex = Supa::maxu32(currentPatternIndex, song.songPatterns.size() - 1);
@@ -766,31 +766,31 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
     ImGui::Begin("Song");
 
     Vector<String> lines;
-    uint32_t startRowIndex = Supa::maxu32(currentRowIndex, 16) - 16;
-    uint32_t endRowIndex = Supa::minu32(startRowIndex + 33, song.notesPerPattern);
+    u32 startRowIndex = Supa::maxu32(currentRowIndex, 16) - 16;
+    u32 endRowIndex = Supa::minu32(startRowIndex + 33, song.notesPerPattern);
     startRowIndex = endRowIndex - 33;
-    uint32_t rowAmount = endRowIndex - startRowIndex;
+    u32 rowAmount = endRowIndex - startRowIndex;
     lines.resize(rowAmount);
 
     currentRowIndex -= startRowIndex;
 
-    for(uint32_t rowIndex = 0; rowIndex < rowAmount; ++rowIndex)
+    for(u32 rowIndex = 0; rowIndex < rowAmount; ++rowIndex)
     {
         auto &line = lines[rowIndex];
-        uint32_t lineIndex = rowIndex + startRowIndex;
+        u32 lineIndex = rowIndex + startRowIndex;
         if(lineIndex < 10)
             line.append("0");
         line.append(lineIndex);
         line.append(" | ");
     }
 
-    for(uint32_t channelIndex = 0; channelIndex < song.channelsPerPattern; ++channelIndex)
+    for(u32 channelIndex = 0; channelIndex < song.channelsPerPattern; ++channelIndex)
     {
         if(channelIndex >= song.songChannels.size())
             continue;
 
         auto &channel = song.songChannels[channelIndex];
-        for(uint32_t rowIndex = 0; rowIndex < rowAmount; ++rowIndex)
+        for(u32 rowIndex = 0; rowIndex < rowAmount; ++rowIndex)
         {
             auto &note = channel.notes[rowIndex + startRowIndex];
             auto &line = lines[rowIndex];
@@ -802,9 +802,9 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
             else
             {
                 // cos note == 0 cannot exist...
-                uint32_t octave = ((note + 9 - 1) & 127) / 12;
-                uint32_t notenote = ((note - 1) & 127) % 12;
-                uint32_t instrumentIndex = note >> 7;
+                u32 octave = ((note + 9 - 1) & 127) / 12;
+                u32 notenote = ((note - 1) & 127) % 12;
+                u32 instrumentIndex = note >> 7;
 
                 switch(notenote)
                 {
@@ -837,11 +837,11 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
         }
     }
 
-    for(uint32_t i = 0; i < lines.size(); ++i)
+    for(u32 i = 0; i < lines.size(); ++i)
     {
         String s(lines[i].getStr(), 3);
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", s.getStr());
-        for(uint32_t j = 0; j < song.channelsPerPattern; ++j)
+        for(u32 j = 0; j < song.channelsPerPattern; ++j)
         {
             s = String(lines[i].getStr() + 3 + (j * 10), 9);
             ImGui::SameLine();
@@ -863,8 +863,8 @@ static void drawSongGui(Song &song, uint32_t currentPatternIndex, uint32_t curre
 
 void SoundTest::renderUpdate()
 {
-    windowWidth = uint32_t(viewport.size.x);
-    windowHeight = uint32_t(viewport.size.y);
+    windowWidth = u32(viewport.size.x);
+    windowHeight = u32(viewport.size.y);
 
     VulkanApp::renderUpdate();
 
@@ -948,7 +948,7 @@ void SoundTest::renderDraw()
     present(finalImage);
 }
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     if(initMyGui())

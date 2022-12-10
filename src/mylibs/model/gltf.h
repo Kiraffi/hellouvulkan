@@ -22,7 +22,7 @@ struct GltfModel
     struct AnimationVertex
     {
         Vec4 weights;
-        uint32_t boneIndices[4];
+        u32 boneIndices[4];
     };
 
     struct AnimPos
@@ -45,16 +45,16 @@ struct GltfModel
     struct AnimationIndexData
     {
         // which is the start index for example animation 1, animation samples
-        uint32_t posStartIndex;
-        uint32_t posIndexCount;
-        uint32_t rotStartIndex;
-        uint32_t rotIndexCount;
-        uint32_t scaleStartIndex;
-        uint32_t scaleIndexCount;
+        u32 posStartIndex;
+        u32 posIndexCount;
+        u32 rotStartIndex;
+        u32 rotIndexCount;
+        u32 scaleStartIndex;
+        u32 scaleIndexCount;
 
         // For a node of a bone, the children indices
-        uint32_t childStartIndex;
-        uint32_t childIndexCount;
+        u32 childStartIndex;
+        u32 childIndexCount;
     };
 
     struct ModelMesh
@@ -66,7 +66,7 @@ struct GltfModel
         PodVector<Vec4> vertexColors;
         PodVector<Vec2> vertexUvs;
         PodVector<AnimationVertex> animationVertices;
-        PodVector<uint32_t> indices;
+        PodVector<u32> indices;
         SmallStackString meshName;
     };
 
@@ -82,14 +82,14 @@ struct GltfModel
     PodVector<AnimPos> animationPosData;
     PodVector<AnimRot> animationRotData;
     PodVector<AnimScale> animationScaleData;
-    PodVector<uint32_t> childrenJointIndices;
+    PodVector<u32> childrenJointIndices;
 
     PodVector<float> animStartTimes;
     PodVector<float> animEndTimes;
     PodVector<SmallStackString> animNames;
 };
 
-bool evaluateAnimation(const GltfModel &model, uint32_t animationIndex, float time,
+bool evaluateAnimation(const GltfModel &model, u32 animationIndex, float time,
     PodVector<Mat3x4> &outMatrices);
 
 bool evaluateAnimation(const GltfModel &model, AnimationState &animationState,

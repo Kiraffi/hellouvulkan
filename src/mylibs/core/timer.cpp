@@ -11,7 +11,7 @@
 #include <thread>
 //#include <__msvc_chrono.hpp>
 
-static std::chrono::high_resolution_clock::time_point getTimepointFromChrono(uint64_t t)
+static std::chrono::high_resolution_clock::time_point getTimepointFromChrono(u64 t)
 {
     std::chrono::high_resolution_clock::time_point tp{ std::chrono::nanoseconds{ t } };
     return tp;
@@ -21,11 +21,11 @@ static std::chrono::high_resolution_clock::time_point getTimepointFromChrono(uin
 Timer::TimePoint Timer::getTime(ClockType clockType)
 {
     #if USE_UNIX_CLOCK_COARSE
-        int timerType = int(clockType);
+        i32 timerType = int(clockType);
         TimePoint newTime;
         clock_gettime(timerType, &newTime);
     #elif USE_QUERY_PERFORMANCE
-        uint64_t newTime;
+        u64 newTime;
         LARGE_INTEGER stamp;
         QueryPerformanceCounter(&stamp);
         newTime = stamp.QuadPart;
@@ -42,12 +42,12 @@ double Timer::getTimeDifferenceInNanos(const TimePoint &fromTime, const TimePoin
         double dur = double(toTime.tv_sec - fromTime.tv_sec) +
             double(toTime.tv_nsec - fromTime.tv_nsec) * 1.0e-9;
     #elif USE_CHRONO_TIMER
-        
+
         double dur = (toTime - fromTime) * 1.0e-9;
     #elif USE_QUERY_PERFORMANCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
-    
+
     double dur = ((toTime - fromTime) * 1.0) / double(freq.QuadPart);
     #endif
     return dur;

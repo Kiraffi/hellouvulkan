@@ -4,10 +4,10 @@
 
 MeshRenderTargets::~MeshRenderTargets()
 {
-    destroyImage(albedoImage);
-    destroyImage(depthImage);
-    destroyImage(normalMapImage);
-    destroyImage(shadowDepthImage);
+    VulkanResources::destroyImage(albedoImage);
+    VulkanResources::destroyImage(depthImage);
+    VulkanResources::destroyImage(normalMapImage);
+    VulkanResources::destroyImage(shadowDepthImage);
 }
 
 bool MeshRenderTargets::resizeMeshTargets()
@@ -20,7 +20,7 @@ bool MeshRenderTargets::resizeMeshTargets()
 bool MeshRenderTargets::resizeMeshTargets(uint32_t width, uint32_t height)
 {
     // create color and depth images
-    if (!createRenderTargetImage(width, height, vulk->defaultColorFormat,
+    if (!VulkanResources::createRenderTargetImage(width, height, vulk->defaultColorFormat,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         "Albedo target image", albedoImage))
     {
@@ -28,7 +28,7 @@ bool MeshRenderTargets::resizeMeshTargets(uint32_t width, uint32_t height)
         return false;
     }
 
-    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SNORM,
+    if (!VulkanResources::createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SNORM,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, //VK_IMAGE_USAGE_STORAGE_BIT,
         "Normal map target image", normalMapImage))
     {
@@ -36,7 +36,7 @@ bool MeshRenderTargets::resizeMeshTargets(uint32_t width, uint32_t height)
         return false;
     }
 
-    if (!createRenderTargetImage(width, height, vulk->depthFormat,
+    if (!VulkanResources::createRenderTargetImage(width, height, vulk->depthFormat,
         VK_IMAGE_USAGE_SAMPLED_BIT,
         "Depth target image", depthImage))
     {
@@ -49,7 +49,7 @@ bool MeshRenderTargets::resizeMeshTargets(uint32_t width, uint32_t height)
 
 bool MeshRenderTargets::resizeShadowTarget(int width, int height)
 {
-    if (!createRenderTargetImage(width, height, vulk->depthFormat,
+    if (!VulkanResources::createRenderTargetImage(width, height, vulk->depthFormat,
         VK_IMAGE_USAGE_SAMPLED_BIT,
         "Main shadow target", shadowDepthImage))
     {
@@ -62,22 +62,21 @@ bool MeshRenderTargets::resizeShadowTarget(int width, int height)
 
 void MeshRenderTargets::prepareTargetsForMeshRendering()
 {
-    prepareToGraphicsSampleWrite(albedoImage);
-    prepareToGraphicsSampleWrite(normalMapImage);
-    prepareToGraphicsSampleWrite(depthImage);
+    VulkanResources::prepareToGraphicsSampleWrite(albedoImage);
+    VulkanResources::prepareToGraphicsSampleWrite(normalMapImage);
+    VulkanResources::prepareToGraphicsSampleWrite(depthImage);
 }
 
 void MeshRenderTargets::prepareTargetsForShadowRendering()
 {
-    prepareToGraphicsSampleWrite(shadowDepthImage);
+    VulkanResources::prepareToGraphicsSampleWrite(shadowDepthImage);
 }
 
 
 void MeshRenderTargets::prepareTargetsForLightingComputeSampling()
 {
-    prepareToComputeSampleRead(albedoImage);
-    prepareToComputeSampleRead(normalMapImage);
-    prepareToComputeSampleRead(depthImage);
-    prepareToComputeSampleRead(shadowDepthImage);
-
+    VulkanResources::prepareToComputeSampleRead(albedoImage);
+    VulkanResources::prepareToComputeSampleRead(normalMapImage);
+    VulkanResources::prepareToComputeSampleRead(depthImage);
+    VulkanResources::prepareToComputeSampleRead(shadowDepthImage);
 }

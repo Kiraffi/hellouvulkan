@@ -18,10 +18,10 @@ struct GuiObject
     Vec2 pos;
     Vec2 size;
     Vec4 uv;
-    uint32_t col;
-    uint32_t textureIndex;
+    u32 col;
+    u32 textureIndex;
     GuiObjectType guiObjectType;
-    uint32_t padding;
+    u32 padding;
 };
 
 struct GuiWindow
@@ -108,7 +108,7 @@ void guiText(const Vec2 &pos, const Vec2 &fontSize, const Vec4 &color, const cha
     if(globalGuiState->currentWindows == nullptr)
         return;
 
-    uint32_t i = 0;
+    u32 i = 0;
     Vec2 renderPos = pos;
     while(txt[i++])
     {

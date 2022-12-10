@@ -9,7 +9,7 @@
 
 TonemapRenderSystem::~TonemapRenderSystem()
 {
-    destroyPipeline(tonemapPipeline);
+    MyVulkan::destroyPipeline(tonemapPipeline);
 }
 
 bool TonemapRenderSystem::init()
@@ -17,7 +17,9 @@ bool TonemapRenderSystem::init()
     auto& pipeline = tonemapPipeline;
     pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
-    if (!createComputePipeline(getShader(ShaderType::TonemapShader), pipeline, "Tonemap system compute"))
+    if (!MyVulkan::createComputePipeline(
+            VulkanShader::getShader(ShaderType::TonemapShader),
+            pipeline, "Tonemap system compute"))
     {
         printf("Failed to create compute pipeline!\n");
         return false;
@@ -31,7 +33,7 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
 
     auto& pipeline = tonemapPipeline;
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
         pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
             DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -45,16 +47,16 @@ bool TonemapRenderSystem::updateReadTargets(const Image& hdrTexIn, const Image& 
         };
     }
 
-    if (!updateBindDescriptorSet(pipeline))
+    if (!VulkanShader::updateBindDescriptorSet(pipeline))
         return false;
 
     return true;
 }
 
-void TonemapRenderSystem::render(uint32_t width, uint32_t height)
+void TonemapRenderSystem::render(u32 width, u32 height)
 {
-    beginDebugRegion("Tonemap", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    dispatchCompute(tonemapPipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
-    endDebugRegion();
-    writeStamp();
+    MyVulkan::beginDebugRegion("Tonemap", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    MyVulkan::dispatchCompute(tonemapPipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
+    MyVulkan::endDebugRegion();
+    MyVulkan::writeStamp();
 }

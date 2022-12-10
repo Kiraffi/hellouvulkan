@@ -7,12 +7,10 @@
 #include <math/vector3.h>
 #include <myvulkan/vulkanglobal.h>
 
-static constexpr uint32_t QUERY_COUNT = 128u;
-static constexpr uint32_t VulkanApiVersion = VK_API_VERSION_1_1;
+static constexpr u32 QUERY_COUNT = 128u;
+static constexpr u32 VulkanApiVersion = VK_API_VERSION_1_1;
 
-class VulkanApp;
 struct Shader;
-struct GLFWwindow;
 
 struct RenderTarget
 {
@@ -38,47 +36,63 @@ struct RenderImage
     VkClearValue clearValue{};
 };
 
+class MyVulkan
+{
+public:
+    static bool init();
+    static void deinit();
 
+    static bool resizeSwapchain();
+    static bool frameStart();
+    static void present(Image &imageToPresent);
 
-bool initVulkan(VulkanApp &app);
-void deinitVulkan();
-VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat);
-bool resizeSwapchain();
-bool startRender();
-void present(Image &imageToPresent);
+    static void setObjectName(u64 object,
+        VkDebugReportObjectTypeEXT objectType,
+        const char *name);
+    static void setObjectTag(u64 object,
+        VkDebugReportObjectTypeEXT objectType,
+        u64 name,
+        size_t tagSize,
+        const void* tag);
+    static void beginDebugRegion(const char *pMarkerName, Vec4 color);
+    static void insertDebugRegion(const char *markerName, Vec4 color);
+    static void endDebugRegion();
 
+    static void beginSingleTimeCommands();
+    static void endSingleTimeCommands();
 
-void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name);
-void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
-void beginDebugRegion(const char *pMarkerName, Vec4 color);
-void insertDebugRegion(const char *markerName, Vec4 color);
-void endDebugRegion();
+    static VkRenderPass createRenderPass(
+        const PodVector<RenderTarget>& colorTargets,
+        const RenderTarget& depthFormat);
 
-void beginSingleTimeCommands();
-void endSingleTimeCommands();
+    static void beginRenderPass(
+        const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues);
+    static void beginRendering(
+        const PodVector<RenderImage>& renderColorImages, RenderImage depthImage);
+    static void dispatchCompute(
+        const Pipeline& pipeline, u32 bindSetIndex,
+        u32 globalXSize, u32 globalYSize, u32 globalZSize,
+        u32 localXSize, u32 localYSize, u32 localZSize);
 
-void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues);
-void beginRendering(const PodVector<RenderImage>& renderColorImages, RenderImage depthImage);
-void dispatchCompute(const Pipeline& pipeline, uint32_t bindSetIndex, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
-    uint32_t localXSize, uint32_t localYSize, uint32_t localZSize);
+    static bool createGraphicsPipeline(
+        const Shader& vertShader, const Shader& fragShader,
+        const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels,
+        const DepthTest &depthTest,
+        Pipeline &outPipeline, const char *pipelineName,
+        VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-bool createGraphicsPipeline(const Shader& vertShader, const Shader& fragShader,
-    const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels, const DepthTest &depthTest,
-    Pipeline &outPipeline, const char *pipelineName,
-    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    static bool createComputePipeline(const Shader& csShader,
+        Pipeline& outPipeline, const char *pipelineName);
 
-bool createComputePipeline(const Shader& csShader, Pipeline& outPipeline, const char *pipelineName);
+    static bool createPipelineLayout(Pipeline &pipelineWithDescriptors, VkShaderStageFlags stage);
 
+    static void destroyPipeline(Pipeline& pipelineWithDescriptors);
+    static void destroyDescriptor(Descriptor &descriptor);
 
+    static void bindComputePipelineWithDecriptors(
+        const Pipeline &pipelineWithDescriptor, u32 index);
+    static void bindGraphicsPipelineWithDecriptors(
+        const Pipeline &pipelineWithDescriptor, u32 index);
 
-bool createPipelineLayout(Pipeline &pipelineWithDescriptors, VkShaderStageFlags stage);
-
-
-void destroyPipeline(Pipeline& pipelineWithDescriptors);
-void destroyDescriptor(Descriptor &descriptor);
-
-
-void bindComputePipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index);
-void bindGraphicsPipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index);
-
-void writeStamp();
+    static void writeStamp();
+};

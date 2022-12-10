@@ -5,10 +5,10 @@
 #include <container/vector.h>
 
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/mytypes.h>
 #include <core/timer.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <math/general_math.h>
 #include <math/matrix.h>
@@ -24,8 +24,8 @@
 
 #include <math.h> // rand and RAND_MAX
 
-static constexpr int SCREEN_WIDTH = 800;
-static constexpr int SCREEN_HEIGHT = 600;
+static constexpr i32 SCREEN_WIDTH = 800;
+static constexpr i32 SCREEN_HEIGHT = 600;
 
 static constexpr float POSITION_SCALER = 32768.0f;
 
@@ -33,13 +33,13 @@ static constexpr double SHOT_INTERVAL = 0.1;
 static constexpr double BULLET_ALIVE_TIME = 1.0;
 static constexpr double ASTEROID_SPAWN_INTERVAL = 5.0;
 
-static constexpr uint32_t AsteroidMaxTypes = 10u;
+static constexpr u32 AsteroidMaxTypes = 10u;
 
-static constexpr uint32_t AsteroidCorners = 9u;
-static constexpr uint32_t BulletCorners = 16u;
+static constexpr u32 AsteroidCorners = 9u;
+static constexpr u32 BulletCorners = 16u;
 
 
-enum class EntityModelType : uint32_t
+enum class EntityModelType : u32
 {
     ASTEROID,
     SHIP,
@@ -48,10 +48,10 @@ enum class EntityModelType : uint32_t
 
 struct EntityModel
 {
-    uint32_t startVertex;
+    u32 startVertex;
     EntityModelType entityModelType;
 
-    PodVector< uint32_t > modelIndices;
+    PodVector< u32 > modelIndices;
 };
 
 
@@ -66,19 +66,19 @@ struct Entity
     float speedX;
     float speedY;
     float size;
-    uint32_t entityModelIndex;
+    u32 entityModelIndex;
 
     double spawnTime;
-    uint32_t color;
-    uint32_t pad3;
+    u32 color;
+    u32 pad3;
 };
 
 struct GpuModelInstance
 {
-    uint32_t pos;
-    uint32_t sinCosRotSize;
-    uint32_t color;
-    uint32_t modelVertexStartIndex;
+    u32 pos;
+    u32 sinCosRotSize;
+    u32 color;
+    u32 modelVertexStartIndex;
 };
 
 struct GpuModelVertex
@@ -94,7 +94,7 @@ public:
     SpaceShooter() {}
     virtual ~SpaceShooter() override;
 
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -123,7 +123,7 @@ public:
     PodVector< GpuModelVertex > vertices;
     Vector< EntityModel > entityModels;
 
-    PodVector< uint32_t > gpuModelIndices;
+    PodVector< u32 > gpuModelIndices;
 
     const char *text = "Space shooter!";
 
@@ -152,7 +152,7 @@ SpaceShooter::~SpaceShooter()
     destroyImage(renderColorImage);
 }
 
-bool SpaceShooter::init(const char* windowStr, int screenWidth, int screenHeight)
+bool SpaceShooter::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
@@ -172,7 +172,7 @@ bool SpaceShooter::init(const char* windowStr, int screenWidth, int screenHeight
 
     // Random tag data
     //struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
-    //setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
+    //setObjectTag(device, (u64)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
     return createPipelines() && initRun();
 }
 
@@ -203,7 +203,7 @@ bool SpaceShooter::createPipelines()
             printf("failed to create pipeline\n");
             return false;
         }
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -236,31 +236,31 @@ bool SpaceShooter::resized()
     return true;
 }
 
-static uint32_t getPackedPosition(float x, float y)
+static u32 getPackedPosition(float x, float y)
 {
-    uint32_t result = uint32_t(( x / POSITION_SCALER ) * 65535.0f);
-    result += uint32_t(( y / POSITION_SCALER ) * 65535.0f) << 16u;
+    u32 result = u32(( x / POSITION_SCALER ) * 65535.0f);
+    result += u32(( y / POSITION_SCALER ) * 65535.0f) << 16u;
 
     return result;
 }
 
-static uint32_t getPackedSizeRot(float sz, float rotInRad)
+static u32 getPackedSizeRot(float sz, float rotInRad)
 {
-    uint32_t result = uint32_t(( sz / 64.0f ) * 1023.0f);
+    u32 result = u32(( sz / 64.0f ) * 1023.0f);
     float sinv = Supa::sinf(rotInRad);
     float cosv = Supa::cosf(rotInRad);
-    result += uint32_t(( sinv * 0.5f + 0.5f ) * 1023.0f) << 10u;
-    result += uint32_t(( cosv * 0.5f + 0.5f ) * 1023.0f) << 20u;
+    result += u32(( sinv * 0.5f + 0.5f ) * 1023.0f) << 10u;
+    result += u32(( cosv * 0.5f + 0.5f ) * 1023.0f) << 20u;
 
     return result;
 }
 
 
 static void updateGpuEntity(const Entity &ent, const Vector<EntityModel> &entityModels,
-    PodVector< GpuModelInstance > &gpuModelInstances, PodVector< uint32_t > &gpuModelIndices)
+    PodVector< GpuModelInstance > &gpuModelInstances, PodVector< u32 > &gpuModelIndices)
 {
     const EntityModel &model = entityModels[ ent.entityModelIndex ];
-    uint32_t entityIndex = uint32_t(gpuModelInstances.size());
+    u32 entityIndex = u32(gpuModelInstances.size());
 
     // Notice this quantatization doesnt work too well with high high resolutions....
     gpuModelInstances.emplace_back(GpuModelInstance{ .pos = getPackedPosition(ent.posX, ent.posY),
@@ -269,18 +269,18 @@ static void updateGpuEntity(const Entity &ent, const Vector<EntityModel> &entity
         .modelVertexStartIndex = model.startVertex });
 
 
-    for (uint32_t indice = 0u; indice < uint32_t(model.modelIndices.size()); ++indice)
+    for (u32 indice = 0u; indice < u32(model.modelIndices.size()); ++indice)
     {
-        uint32_t ind = model.modelIndices[ indice ];
+        u32 ind = model.modelIndices[ indice ];
         ind = ind + ( entityIndex << 16u );
         gpuModelIndices.push_back(ind);
     }
 }
 
 static void updateGpuEntities(const PodVector<Entity> &entities, const Vector<EntityModel> &entityModels,
-    PodVector< GpuModelInstance > &gpuModelInstances, PodVector< uint32_t > &gpuModelIndices)
+    PodVector< GpuModelInstance > &gpuModelInstances, PodVector< u32 > &gpuModelIndices)
 {
-    for (uint32_t entityIndex = 0u; entityIndex < entities.size(); ++entityIndex)
+    for (u32 entityIndex = 0u; entityIndex < entities.size(); ++entityIndex)
     {
         updateGpuEntity(entities[entityIndex], entityModels, gpuModelInstances, gpuModelIndices);
     }
@@ -292,7 +292,7 @@ static Entity spawnAsteroidEntity(double spawnTime)
     float yPos = float(rand()) / float(RAND_MAX) * 2048.0f;
     float size = 5.0f + 20.0f * float(rand()) / float(RAND_MAX);
 
-    uint32_t modelIndex = (abs(rand()) % AsteroidMaxTypes ) + 1u;
+    u32 modelIndex = (abs(rand()) % AsteroidMaxTypes ) + 1u;
 
     return Entity{
         .posX = xPos, .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
@@ -311,7 +311,7 @@ bool SpaceShooter::initRun()
     {
         // Building ship model
         {
-            uint32_t startVertex = uint32_t(vertices.size());
+            u32 startVertex = u32(vertices.size());
             entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
             EntityModel& model = entityModels.back();
 
@@ -324,15 +324,15 @@ bool SpaceShooter::initRun()
         }
 
         // Asteroid models
-        for (uint32_t asteroidTypes = 0u; asteroidTypes < AsteroidMaxTypes; ++asteroidTypes)
+        for (u32 asteroidTypes = 0u; asteroidTypes < AsteroidMaxTypes; ++asteroidTypes)
         {
 
-            uint32_t startVertex = uint32_t(vertices.size());
+            u32 startVertex = u32(vertices.size());
             entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
             EntityModel& model = entityModels.back();
 
             vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 0.0f });
-            for (uint32_t i = 0; i < AsteroidCorners; ++i)
+            for (u32 i = 0; i < AsteroidCorners; ++i)
             {
                 float angle = -float(i) * float(2.0f * PI) / float(AsteroidCorners);
                 float x = Supa::cosf(angle);
@@ -350,12 +350,12 @@ bool SpaceShooter::initRun()
         // Bullets
         {
 
-            uint32_t startVertex = uint32_t(vertices.size());
+            u32 startVertex = u32(vertices.size());
             entityModels.emplace_back(EntityModel{ .startVertex = startVertex, .entityModelType = EntityModelType::SHIP });
             EntityModel& model = entityModels.back();
 
             vertices.emplace_back(GpuModelVertex{ .posX = 0.0f, .posY = 0.0f });
-            for (uint32_t i = 0; i < BulletCorners; ++i)
+            for (u32 i = 0; i < BulletCorners; ++i)
             {
                 float angle = -float(i) * float(2.0f * PI) / float(BulletCorners);
                 float x = Supa::cosf(angle);
@@ -371,7 +371,7 @@ bool SpaceShooter::initRun()
         }
 
 
-        uint32_t offset = 0u;
+        u32 offset = 0u;
         offset = uploadToScratchbuffer((void*)vertices.data(), size_t(sizeof(GpuModelVertex) * vertices.size()), offset);
         uploadScratchBufferToGpuBuffer(modelVerticesBuffer, offset);
 
@@ -386,7 +386,7 @@ bool SpaceShooter::initRun()
             float xPos = 200.0f;
             float yPos = 200.0f;
             float size = 10.0f;
-            uint32_t modelIndex = 0u;
+            u32 modelIndex = 0u;
 
             playerEntity = (Entity{
                 .posX = xPos,  .posY = yPos, .posZ = 0.5f, .rotation = 0.0f,
@@ -395,7 +395,7 @@ bool SpaceShooter::initRun()
                 .color = getColor(1.0, 1.0, 0.0, 1.0f) });
         }
         // Asteroid instances.
-        for (uint32_t asteroidInstances = 0u; asteroidInstances < 256; ++asteroidInstances)
+        for (u32 asteroidInstances = 0u; asteroidInstances < 256; ++asteroidInstances)
         {
             asteroidEntities.emplace_back(spawnAsteroidEntity(spawnTime));
         }
@@ -476,7 +476,7 @@ void SpaceShooter::logicUpdate()
 
 
         // Threading for updating bullets and asteroids?
-        for (int32_t bullInd = bulletEntities.size(); bullInd > 0; --bullInd)
+        for (i32 bullInd = bulletEntities.size(); bullInd > 0; --bullInd)
         {
             Entity& ent = bulletEntities[bullInd - 1];
             ent.posX += ent.speedX * dddt;
@@ -492,7 +492,7 @@ void SpaceShooter::logicUpdate()
 
             else
             {
-                for (int32_t astInd = asteroidEntities.size(); astInd > 0; --astInd)
+                for (i32 astInd = asteroidEntities.size(); astInd > 0; --astInd)
                 {
                     Entity& asteroidEnt = asteroidEntities[astInd - 1];
 
@@ -539,7 +539,7 @@ void SpaceShooter::logicUpdate()
     if (currentTime - lastAsteroidSpawn > ASTEROID_SPAWN_INTERVAL)
     {
         lastAsteroidSpawn = currentTime;
-        uint32_t spawnAmount = 256u - asteroidEntities.size();
+        u32 spawnAmount = 256u - asteroidEntities.size();
         spawnAmount = spawnAmount > 10u ? 10u : spawnAmount;
         for (; spawnAmount > 0; --spawnAmount)
         {
@@ -587,7 +587,7 @@ void SpaceShooter::renderDraw()
         {
             bindGraphicsPipelineWithDecriptors(graphicsPipeline, vulk->frameIndex);
             vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBufferModels.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk->commandBuffer, uint32_t(gpuModelIndices.size()), 1, 0, 0, 0);
+            vkCmdDrawIndexed(vulk->commandBuffer, u32(gpuModelIndices.size()), 1, 0, 0, 0);
 
         }
         vkCmdEndRenderPass(vulk->commandBuffer);
@@ -603,7 +603,7 @@ void SpaceShooter::renderDraw()
 
 
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

@@ -9,7 +9,7 @@
 
 ConvertRenderTarget::~ConvertRenderTarget()
 {
-    destroyPipeline(computePipeline);
+    MyVulkan::destroyPipeline(computePipeline);
 }
 
 bool ConvertRenderTarget::init(ShaderType shapeType)
@@ -21,8 +21,9 @@ bool ConvertRenderTarget::init(ShaderType shapeType)
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
         String name = "Convert pipeline - ";
-        name.append(uint32_t(shapeType));
-        if (!createComputePipeline(getShader(shapeType), pipeline, name.getStr()))
+        name.append(u32(shapeType));
+        if (!MyVulkan::createComputePipeline(
+            VulkanShader::getShader(shapeType), pipeline, name.getStr()))
         {
             printf("Failed to create compute pipeline!\n");
             return false;
@@ -43,7 +44,7 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
     auto& pipeline = computePipeline;
 
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
         pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo> {
             DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -53,16 +54,16 @@ bool ConvertRenderTarget::updateSourceImages(const Image& srcImage, const Image&
         };
     }
 
-    if(!updateBindDescriptorSet(pipeline))
+    if(!VulkanShader::updateBindDescriptorSet(pipeline))
         return false;
 
     return true;
 }
 
-void ConvertRenderTarget::render(uint32_t width, uint32_t height)
+void ConvertRenderTarget::render(u32 width, u32 height)
 {
-    beginDebugRegion("Convert S16ToColor", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    dispatchCompute(computePipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
-    endDebugRegion();
-    writeStamp();
+    MyVulkan::beginDebugRegion("Convert S16ToColor", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    MyVulkan::dispatchCompute(computePipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
+    MyVulkan::endDebugRegion();
+    MyVulkan::writeStamp();
 }

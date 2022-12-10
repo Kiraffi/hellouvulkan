@@ -15,7 +15,7 @@ class PodVector;
 class JsonBlock
 {
 public:
-    enum ValueTypes : int32_t
+    enum ValueTypes : i32
     {
         VALID_TYPE =  1 << 0,
         ARRAY_TYPE =  1 << 1,
@@ -39,33 +39,33 @@ public:
     bool parseString(StringView &outString) const;
     bool parseDouble(double &outDouble) const;
     bool parseFloat(float &outFloat) const;
-    bool parseInt(int64_t &outInt) const;
-    bool parseInt(int &outInt) const;
-    bool parseUInt(uint32_t &outInt) const;
+    bool parseInt(i64 &outInt) const;
+    bool parseInt(i32 &outInt) const;
+    bool parseUInt(u32 &outInt) const;
 
     bool parseNumber(double& outDouble) const;
     bool parseNumber(float& outFloat) const;
 
     bool parseBool(bool &outBool) const;
-    bool parseBuffer(PodVector<uint8_t> &outBuffer) const;
+    bool parseBuffer(PodVector<u8> &outBuffer) const;
 
     bool parseVec2(Vector2 &v) const;
     bool parseVec3(Vector3 &v) const;
     bool parseVec4(Vector4 &v) const;
     bool parseQuat(Quaternion &q) const;
 
-    bool parseNumberArray(double *arr, uint32_t arrayLen) const;
-    bool parseNumberArray(float *arr, uint32_t arrayLen) const;
-    bool parseIntegerArray(int64_t *arr, uint32_t arrayLen) const;
-    bool parseIntegerArray(int32_t *arr, uint32_t arrayLen) const;
+    bool parseNumberArray(double *arr, u32 arrayLen) const;
+    bool parseNumberArray(float *arr, u32 arrayLen) const;
+    bool parseIntegerArray(i64 *arr, u32 arrayLen) const;
+    bool parseIntegerArray(i32 *arr, u32 arrayLen) const;
 
-    bool equals(uint32_t value) const;
+    bool equals(u32 value) const;
     bool equals(StringView str) const;
 
     bool hasChild(StringView childName) const;
 
-    int getChildCount() const { return ( int )children.size(); }
-    const JsonBlock &getChild(int index) const;
+    i32 getChildCount() const { return ( i32 )children.size(); }
+    const JsonBlock &getChild(i32 index) const;
     const JsonBlock &getChild(StringView childName) const;
 
     const JsonBlock *const begin() const;
@@ -81,9 +81,9 @@ public:
     bool valueBool = false;
     StringView valueStr;
     double valueDbl = -1.0;
-    int64_t valueInt = -1;
+    i64 valueInt = -1;
 
-    int jType = 0;
+    i32 jType = 0;
 
     static const JsonBlock emptyBlock;
 };

@@ -2,10 +2,10 @@
 
 #include "core/mytypes.h"
 
-using AtomicType = uint64_t;
+using AtomicType = u64;
 
 static constexpr AtomicType NOTE_COUNT = 32;
-static constexpr int SAMPLE_POINTS = 16;
+static constexpr i32 SAMPLE_POINTS = 16;
 
 enum class NotePlayPhase
 {
@@ -20,9 +20,9 @@ enum class NotePlayPhase
 struct NoteFromMainToThread
 {
     float amplitudes[SAMPLE_POINTS];
-    int tuning[SAMPLE_POINTS];
-    int oscType;
-    int oscLFOType;
+    i32 tuning[SAMPLE_POINTS];
+    i32 oscType;
+    i32 oscLFOType;
     float oscLFOHz;
 
     float freqHz;
@@ -46,7 +46,7 @@ struct NoteThread
 bool initAudio();
 void deinitAudio();
 
-double evaluateSound(double time, double freq, int instrument);
+double evaluateSound(double time, double freq, i32 instrument);
 
 AtomicType getRunningNotes();
 AtomicType getReleasedNotes();

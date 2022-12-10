@@ -40,9 +40,9 @@ public:
         ClockCoarseId = 6,
     };
     #if USE_QUERY_PERFORMANCE
-        using TimePoint = uint64_t;
+        using TimePoint = u64;
     #elif USE_CHRONO_TIMER
-        using TimePoint = uint64_t;//std::chrono::high_resolution_clock::time_point;
+        using TimePoint = u64;//std::chrono::high_resolution_clock::time_point;
     #endif
 #endif
 

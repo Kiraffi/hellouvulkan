@@ -8,11 +8,11 @@
 
 #include <core/camera.h>
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <container/arraysliceview.h>
 
@@ -57,21 +57,21 @@
 #include <atomic>
 #include <string.h>
 
-using AtomicType = uint64_t;
+using AtomicType = u64;
 
-static constexpr int SCREEN_WIDTH = 1024;
-static constexpr int SCREEN_HEIGHT = 768;
+static constexpr i32 SCREEN_WIDTH = 1024;
+static constexpr i32 SCREEN_HEIGHT = 768;
 
-static constexpr int SHADOW_WIDTH = 2048;
-static constexpr int SHADOW_HEIGHT = 2048;
+static constexpr i32 SHADOW_WIDTH = 2048;
+static constexpr i32 SHADOW_HEIGHT = 2048;
 
 static constexpr ma_format DEVICE_FORMAT = ma_format_f32;
-static constexpr int DEVICE_CHANNELS = 2;
-static constexpr int DEVICE_SAMPLE_RATE = 48000;
+static constexpr i32 DEVICE_CHANNELS = 2;
+static constexpr i32 DEVICE_SAMPLE_RATE = 48000;
 
 static constexpr AtomicType NOTE_COUNT = 32;
 
-static constexpr int SAMPLE_POINTS = 16;
+static constexpr i32 SAMPLE_POINTS = 16;
 
 #include <dsound.h>
 #include <windows.h>
@@ -303,9 +303,9 @@ struct NoteFromMainToThread
 {
     AtomicType note;
     float amplitudes[SAMPLE_POINTS];
-    int tuning[SAMPLE_POINTS];
-    int oscType;
-    int oscLFOType;
+    i32 tuning[SAMPLE_POINTS];
+    i32 oscType;
+    i32 oscLFOType;
     float oscLFOHz;
 
     float attackAmplitude;
@@ -378,7 +378,7 @@ static void addNotes(AtomicType channel, AtomicType running, AtomicType released
     return;
 }
 
-double evaluateSound(double time, double freq, int instrument)
+double evaluateSound(double time, double freq, i32 instrument)
 {
     double fqSampPoint = freq * time;
     double samp = fqSampPoint * 2.0 * Pi;
@@ -449,7 +449,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
     //std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
     //printf("time: %f, frames: %u\n", (chTime - tp).count() / 100000.0f, frameCount);
     //tp = chTime;
-    static uint64_t threadFrameCounter = 0;
+    static u64 threadFrameCounter = 0;
     double offset = *( double * )pDevice->pUserData;
     AtomicType threadNotesRunning = notesRunning.load();
     AtomicType threadNotesReleased = notesReleased.load();
@@ -475,7 +475,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
     }
 
     float *f32Out = (float *)pOutput;
-    for(uint32_t i = 0; i < frameCount; ++i)
+    for(u32 i = 0; i < frameCount; ++i)
     {
         double frameValue = 0.0;
         time = dur * threadFrameCounter;
@@ -553,8 +553,8 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                 double freq = Freqs[noteMain.note];
                 double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
                 value *= double(SAMPLE_POINTS);
-                int iValue = int(value) % SAMPLE_POINTS;
-                int iValue2 = (iValue + 1) % SAMPLE_POINTS;
+                i32 iValue = int(value) % SAMPLE_POINTS;
+                i32 iValue2 = (iValue + 1) % SAMPLE_POINTS;
                 float lerping = value - iValue;
                 value = noteMain.tuning[iValue] * (1.0f - lerping) + noteMain.tuning[iValue2] * lerping;
 
@@ -602,7 +602,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
             }
         }
         frameValue = ffclampd(-1.0, 1.0, frameValue);
-        for(uint32_t j = 0; j < DEVICE_CHANNELS; ++j)
+        for(u32 j = 0; j < DEVICE_CHANNELS; ++j)
             f32Out[i * DEVICE_CHANNELS + j] = frameValue;
 
         ++threadFrameCounter;
@@ -632,7 +632,7 @@ public:
     SoundTest() : scene(meshRenderSystem), editorSystem(scene, lineRenderSystem, SCREEN_WIDTH, SCREEN_HEIGHT) { }
 
     virtual ~SoundTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight,
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight,
         const VulkanInitializationParameters& params) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
@@ -692,7 +692,7 @@ SoundTest::~SoundTest()
 
 
 
-bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, const VulkanInitializationParameters& params)
+bool SoundTest::init(const char* windowStr, i32 screenWidth, i32 screenHeight, const VulkanInitializationParameters& params)
 {
     currentNote.note = 0;
     currentNote.oscType = 0;
@@ -706,7 +706,7 @@ bool SoundTest::init(const char* windowStr, int screenWidth, int screenHeight, c
     currentNote.decayDuration = 0.05f;
     currentNote.releaseDuration = 0.2f;
 
-    for(uint32_t i = 0; i < SAMPLE_POINTS; ++i)
+    for(u32 i = 0; i < SAMPLE_POINTS; ++i)
     {
         currentNote.amplitudes[i] = 0.125 * 0.25;
         if(i < 4)
@@ -932,7 +932,7 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
     ImGui::DragFloat("Sustain amplitude", &currentNote.sustainAmplitude, 0.01f, 0.0f, 2.0f);
 
     ImGui::PushID("set1");
-    for(int i = 0; i < SAMPLE_POINTS; i++)
+    for(i32 i = 0; i < SAMPLE_POINTS; i++)
     {
         if(i > 0) ImGui::SameLine();
         ImGui::PushID(i);
@@ -950,7 +950,7 @@ static void drawSoundGui(NoteFromMainToThread &currentNote)
 
 
     ImGui::PushID("set2");
-    for(int i = 0; i < SAMPLE_POINTS; i++)
+    for(i32 i = 0; i < SAMPLE_POINTS; i++)
     {
         ImGui::PushID(i);
         char btText[16];
@@ -1054,7 +1054,7 @@ void SoundTest::renderDraw()
     present(finalImage);
 }
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

@@ -18,14 +18,14 @@ struct SceneData
 
     PodVector<AnimationState> animationStates;
     PodVector<GameEntity> entities;
-    PodVector<uint32_t> freeEnityIndices;
+    PodVector<u32> freeEnityIndices;
 };
 
 class Scene
 {
 public:
-    static constexpr uint32_t MagicNumber = 1385621965u;
-    static constexpr uint32_t VersionNumber = 1u;
+    static constexpr u32 MagicNumber = 1385621965u;
+    static constexpr u32 VersionNumber = 1u;
 
     Scene(MeshRenderSystem& meshRenderSystem) : sceneData(SceneData{ .meshRenderSystem = meshRenderSystem } ) {}
 
@@ -33,20 +33,20 @@ public:
     bool init();
     bool update(double deltaTime);
 
-    uint32_t castRay(const Ray &ray, HitPoint &hitpoint);
+    u32 castRay(const Ray &ray, HitPoint &hitpoint);
 
-    uint32_t addGameEntity(const GameEntity& entity, const SmallStackString &str = "");
-    GameEntity &getEntity(uint32_t index) const;
-    Bounds getBounds(uint32_t entityIndex) const;
+    u32 addGameEntity(const GameEntity& entity, const SmallStackString &str = "");
+    GameEntity &getEntity(u32 index) const;
+    Bounds getBounds(u32 entityIndex) const;
 
     const PodVector<GameEntity> &getEntities() const { return sceneData.entities; }
     PodVector<GameEntity> &getEntities() { return sceneData.entities; }
-    
+
     // TODO should think where this code should live.
-    uint32_t addAnimation(uint32_t entityIndex, const char *animName, PlayMode playMode);
-    uint32_t addAnimation(uint32_t entityIndex, uint32_t animationIndex, PlayMode playMode);
-    uint32_t replaceAnimation(uint32_t entityIndex, uint32_t animationIndex, uint32_t playingAnimatinIndex);
-    uint32_t replaceAnimation(uint32_t entityIndex, const char *animName, uint32_t playingAnimatinIndex);
+    u32 addAnimation(u32 entityIndex, const char *animName, PlayMode playMode);
+    u32 addAnimation(u32 entityIndex, u32 animationIndex, PlayMode playMode);
+    u32 replaceAnimation(u32 entityIndex, u32 animationIndex, u32 playingAnimatinIndex);
+    u32 replaceAnimation(u32 entityIndex, const char *animName, u32 playingAnimatinIndex);
 
     bool readLevel(const char *levelName);
     bool writeLevel(const char *filename) const;

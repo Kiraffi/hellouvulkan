@@ -8,17 +8,17 @@ namespace Supa
     void *memcpy(void* destination, const void *source, size_t num);
     void *memmove(void *destination, const void *source, size_t num);
 
-    void *memset(void *destination, int value, size_t num);
-    int memcmp(const void *const ptr1, const void *const ptr2, size_t num );
-    int strcmp(const char *const str1, const char *const str2);
-    int strncmp(const char *const str1, const char *const str2, size_t num);
-    int snprintf(char *buffer, size_t bufferCount, const char *format, ...);
-    int strlen(const char *const str);
+    void *memset(void *destination, i32 value, size_t num);
+    i32 memcmp(const void *const ptr1, const void *const ptr2, size_t num );
+    i32 strcmp(const char *const str1, const char *const str2);
+    i32 strncmp(const char *const str1, const char *const str2, size_t num);
+    i32 snprintf(char *buffer, size_t bufferCount, const char *format, ...);
+    i32 strlen(const char *const str);
 
-    int absi(int v);
+    i32 absi(i32 v);
 
-    uint32_t minu32(uint32_t a, uint32_t b);
-    uint32_t maxu32(uint32_t a, uint32_t b);
+    u32 minu32(u32 a, u32 b);
+    u32 maxu32(u32 a, u32 b);
 
     float atan2f(float a, float b);
     float tanf(float a);

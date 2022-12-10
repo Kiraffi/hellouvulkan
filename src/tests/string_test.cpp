@@ -4,7 +4,7 @@
 
 static void testStringValidness(const String &s, const char *str)
 {
-    uint32_t len = Supa::strlen(str);
+    u32 len = Supa::strlen(str);
     ASSERT(s.length() == len);
     ASSERT(s.getStr() != nullptr);
     ASSERT(Supa::memcmp(s.getStr(), str, len + 1) == 0);
@@ -12,10 +12,10 @@ static void testStringValidness(const String &s, const char *str)
 
 static void testStringValidnessFloat(const String &s, const char *str)
 {
-    uint32_t len = Supa::strlen(str);
-    uint32_t len2 = s.length();
+    u32 len = Supa::strlen(str);
+    u32 len2 = s.length();
     ASSERT(len <= len2);
-    uint32_t i = 0;
+    u32 i = 0;
     for(; i < len; ++i)
     {
         ASSERT(s[i] == str[i]);
@@ -98,7 +98,7 @@ static void testStringOther()
     ASSERT(s1[3] == 'A');
     ASSERT(s1[0] == 'a');
     {
-        uint32_t ind = 0;
+        u32 ind = 0;
         for(const auto c : s1)
             ASSERT(c == str[ind++]);
     }

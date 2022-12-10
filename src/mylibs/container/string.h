@@ -9,7 +9,7 @@ public:
     String();
     virtual ~String() { buffer.~ByteBuffer(); }
     String(const char *s);
-    String(const char *s, uint32_t len);
+    String(const char *s, u32 len);
     String(const String &s);
     String &operator =(const String &s);
 
@@ -18,15 +18,15 @@ public:
 
     String &append(const String &s);
     String &append(const char *s);
-    String &append(const char *s, uint32_t charas);
+    String &append(const char *s, u32 charas);
     String &append(char c);
-    String &append(int64_t i);
-    String &append(uint64_t u);
-    String &append(int32_t i);
-    String &append(uint32_t u);
+    String &append(i64 i);
+    String &append(u64 u);
+    String &append(i32 i);
+    String &append(u32 u);
     String &append(float f);
     String &append(double d);
-    String &append(uint32_t amount, char c);
+    String &append(u32 amount, char c);
 
     const char* begin() const { return (const char *)(buffer.getBegin()); }
     const char* data() const  { return (const char *)(buffer.getBegin()); }
@@ -37,17 +37,17 @@ public:
     char* end()   { return begin() + getSize(); }
 
 
-    char &operator[] (uint32_t index) const;
+    char &operator[] (u32 index) const;
     void clear();
-    void erase(uint32_t index) { buffer.removeIndex(index); }
+    void erase(u32 index) { buffer.removeIndex(index); }
     bool empty() const { return buffer.getSize() == 0; }
 
-    void reserve(uint32_t amount) { buffer.reserve(amount); }
-    void resize(uint32_t amount);
+    void reserve(u32 amount) { buffer.reserve(amount); }
+    void resize(u32 amount);
     const char *getStr() const { return (const char *)buffer.getBegin(); }
-    uint32_t getSize() const { return buffer.getSize() - 1; }
-    uint32_t length() const { return buffer.getSize() - 1; }
-    uint32_t size() const { return buffer.getSize() - 1; }
+    u32 getSize() const { return buffer.getSize() - 1; }
+    u32 length() const { return buffer.getSize() - 1; }
+    u32 size() const { return buffer.getSize() - 1; }
 
     ByteBuffer &getBuffer() { return buffer; }
     const ByteBuffer &getBuffer() const { return buffer; }

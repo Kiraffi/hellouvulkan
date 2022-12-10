@@ -1,7 +1,7 @@
 #include "myaudio.h"
 
-#include "core/general.h"
-#include "core/glfw_keys.h"
+#include <app/glfw_keys.h>
+#include <core/general.h>
 
 #include <extras/miniaudio_split/miniaudio.h>
 
@@ -9,8 +9,8 @@
 #include <math.h>
 
 static constexpr ma_format DEVICE_FORMAT = ma_format_f32;
-static constexpr int DEVICE_CHANNELS = 2;
-static constexpr int DEVICE_SAMPLE_RATE = 48000;
+static constexpr i32 DEVICE_CHANNELS = 2;
+static constexpr i32 DEVICE_SAMPLE_RATE = 48000;
 
 
 
@@ -62,7 +62,7 @@ AtomicType addNote(float playFreqHz, const NoteFromMainToThread &currentNote)
     return ~AtomicType(0);
 }
 
-double evaluateSound(double time, double freq, int instrument)
+double evaluateSound(double time, double freq, i32 instrument)
 {
     double fqSampPoint = freq * time;
     double samp = fqSampPoint * 2.0 * PI;
@@ -127,14 +127,14 @@ double evaluateSound(double time, double freq, int instrument)
 }
 
 //#include <chrono>
-//std::chrono::high_resolution_clock::time_point tp;
+//std::chrono::high_resolution_clock::time_poi32 tp;
 static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
-//    static std::chrono::high_resolution_clock::time_point chTimePrevious = std::chrono::high_resolution_clock::now();
-//    std::chrono::high_resolution_clock::time_point chTime = std::chrono::high_resolution_clock::now();
+//    static std::chrono::high_resolution_clock::time_poi32 chTimePrevious = std::chrono::high_resolution_clock::now();
+//    std::chrono::high_resolution_clock::time_poi32 chTime = std::chrono::high_resolution_clock::now();
     //printf("time: %f, frames: %u\n", (chTime - tp).count() / 100000.0f, frameCount);
     //tp = chTime;
-    static uint64_t threadFrameCounter = 0;
+    static u64 threadFrameCounter = 0;
     //double offset = *( double * )pDevice->pUserData;
 
     AtomicType threadNotesRunning = notesRunning.load();
@@ -161,7 +161,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
     }
 
     float *f32Out = (float *)pOutput;
-    for(uint32_t i = 0; i < frameCount; ++i)
+    for(u32 i = 0; i < frameCount; ++i)
     {
         double frameValue = 0.0;
         time = dur * threadFrameCounter;
@@ -239,8 +239,8 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                 double freq = noteMain.freqHz;
                 double value =  timePoint * noteMain.oscLFOHz; //timePoint / duration;
                 value *= double(SAMPLE_POINTS);
-                int iValue = int(value) % SAMPLE_POINTS;
-                int iValue2 = (iValue + 1) % SAMPLE_POINTS;
+                i32 iValue = int(value) % SAMPLE_POINTS;
+                i32 iValue2 = (iValue + 1) % SAMPLE_POINTS;
                 float lerping = value - iValue;
                 value = noteMain.tuning[iValue] * (1.0f - lerping) + noteMain.tuning[iValue2] * lerping;
 
@@ -272,7 +272,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
                 tmpValue = evaluateSound(timePoint, freq, noteMain.oscType)  * tmpValue;
 */
                 //tmpValue = evaluateSound(timePoint, freq * tmpValue, 1);
-                //tmpValue *= evaluateSound(timePoint + 0.0, 220.0, 2);
+                //tmpValue *= evaluateSound(timePoi32 + 0.0, 220.0, 2);
             }
             frameValue += tmpValue * amplitude;
 
@@ -288,7 +288,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
             }
         }
         frameValue = Supa::clampd(-1.0, 1.0, frameValue);
-        for(uint32_t j = 0; j < DEVICE_CHANNELS; ++j)
+        for(u32 j = 0; j < DEVICE_CHANNELS; ++j)
             f32Out[i * DEVICE_CHANNELS + j] = frameValue;
 
         ++threadFrameCounter;
@@ -301,7 +301,7 @@ static void soundCallback(ma_device* pDevice, void* pOutput, const void* pInput,
         std::atomic_fetch_and(&notesReleased, newThreadsFinished);
     }
 /*
-    std::chrono::high_resolution_clock::time_point endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_poi32 endTime = std::chrono::high_resolution_clock::now();
 
     printf("Interval: %f, duration:%f in seconds\n",
         (chTime - chTimePrevious).count() * 1.0e-9f,

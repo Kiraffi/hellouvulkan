@@ -4,7 +4,7 @@
 #include <core/mytypes.h>
 #include <core/general.h>
 
-template<uint32_t N>
+template<u32 N>
 class StackString
 {
 public:
@@ -17,7 +17,7 @@ public:
         }
         str[size] = '\0';
     }
-    StackString(const char *s, uint32_t len)
+    StackString(const char *s, u32 len)
     {
         while(s && *s && size < MaxSize && size < len)
         {
@@ -26,7 +26,7 @@ public:
         str[size] = '\0';
     }
 
-    template<uint32_t U>
+    template<u32 U>
     StackString(const StackString<U> &s)
     {
         const char *s2 = s.getStr();
@@ -39,7 +39,7 @@ public:
         str[size] = '\0';
     }
 
-    template<uint32_t U>
+    template<u32 U>
     void add(const StackString<U> &s)
     {
         const char *s2 = s.getStr();
@@ -50,7 +50,7 @@ public:
         str[size] = '\0';
     }
 
-    template<uint32_t U>
+    template<u32 U>
     bool operator == (const StackString<U> &s) const
     {
         if(s.size != size)
@@ -64,7 +64,7 @@ public:
         if(!s)
             return false;
 
-        for(uint32_t i = 0; i < size; ++i)
+        for(u32 i = 0; i < size; ++i)
         {
             if(s[i] != str[i])
                 return false;
@@ -74,9 +74,9 @@ public:
 
 
     // buff len must include space for 0 character terminator
-    void copyToCharStr(char *outStr, uint32_t buffLenWithZeroTerminator)
+    void copyToCharStr(char *outStr, u32 buffLenWithZeroTerminator)
     {
-        uint32_t charCount = size < buffLenWithZeroTerminator - 1 ? size : buffLenWithZeroTerminator - 1;
+        u32 charCount = size < buffLenWithZeroTerminator - 1 ? size : buffLenWithZeroTerminator - 1;
         if(charCount > 0)
         {
             Supa::memcpy(outStr, str, charCount);
@@ -93,9 +93,9 @@ public:
         str[size] = '\0';
     }
 
-    void add(const char *s, uint32_t charas)
+    void add(const char *s, u32 charas)
     {
-        uint32_t addedCharacters = 0u;
+        u32 addedCharacters = 0u;
         while (s && *s && size < MaxSize && addedCharacters < charas)
         {
             str[size] = (*s++);
@@ -106,11 +106,11 @@ public:
     }
 
 
-    void add(int64_t i)
+    void add(i64 i)
     {
         char c[32];
         snprintf(c, 32, "%" PRIi64, i);
-        uint32_t size2 = 0u;
+        u32 size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
             str[size] = c[size2];
@@ -120,11 +120,11 @@ public:
         str[size] = '\0';
     }
 
-    void add(uint64_t u)
+    void add(u64 u)
     {
         char c[32];
         snprintf(c, 32, "%" PRIu64, u);
-        uint32_t size2 = 0u;
+        u32 size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
             str[size] = c[size2];
@@ -134,11 +134,11 @@ public:
         str[size] = '\0';
     }
 
-    void add(int32_t i)
+    void add(i32 i)
     {
         char c[32];
         snprintf(c, 32, "%i", i);
-        uint32_t size2 = 0u;
+        u32 size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
             str[size] = c[size2];
@@ -148,11 +148,11 @@ public:
         str[size] = '\0';
     }
 
-    void add(uint32_t u)
+    void add(u32 u)
     {
         char c[32];
         snprintf(c, 32, "%u", u);
-        uint32_t size2 = 0u;
+        u32 size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
             str[size] = c[size2];
@@ -166,7 +166,7 @@ public:
     {
         char c[32];
         snprintf(c, 32, "%f", f);
-        uint32_t size2 = 0u;
+        u32 size2 = 0u;
         while (size2 < 32 && c[size2] && size < MaxSize)
         {
             str[size] = c[size2];
@@ -175,7 +175,7 @@ public:
         }
         str[size] = '\0';
     }
-    char &operator[] (uint32_t index) const
+    char &operator[] (u32 index) const
     {
         ASSERT(index < size);
         if(index > size)
@@ -191,12 +191,12 @@ public:
 
     bool empty() const { return size == 0; }
     const char *getStr() const { return str; }
-    uint32_t getSize() const { return size; }
-    uint32_t length() const { return size; }
+    u32 getSize() const { return size; }
+    u32 length() const { return size; }
 private:
     char str[N + 1] = {};
-    static constexpr uint32_t MaxSize = N;
-    uint16_t size = 0u;
+    static constexpr u32 MaxSize = N;
+    u16 size = 0u;
 };
 
 using TinyStackString = StackString<21>;    // 24 bytes

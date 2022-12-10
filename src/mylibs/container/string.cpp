@@ -6,7 +6,7 @@
 
 static void stringPushbackChar(ByteBuffer &buffer, char c)
 {
-    buffer.insertIndex(buffer.getSize(), (uint8_t *)(&c));
+    buffer.insertIndex(buffer.getSize(), (u8 *)(&c));
 }
 
 String::String() : buffer(1, BufferType::STRING)
@@ -24,9 +24,9 @@ String::String(const char *s) : buffer(1, BufferType::STRING)
     stringPushbackChar(buffer, '\0');
 }
 
-String::String(const char *s, uint32_t len) : buffer(1, BufferType::STRING)
+String::String(const char *s, u32 len) : buffer(1, BufferType::STRING)
 {
-    uint32_t l = 0;
+    u32 l = 0;
     while (s && *s && l < len)
     {
         stringPushbackChar(buffer, *s++);
@@ -73,7 +73,7 @@ String &String::append(const String &s)
     buffer.reserve(buffer.getSize() + s.getSize());
     buffer.removeIndex(getSize());
     const char *s2 = s.getStr();
-    uint32_t addedSize = s.getSize();
+    u32 addedSize = s.getSize();
     while (addedSize > 0)
     {
         stringPushbackChar(buffer, *s2++);
@@ -94,7 +94,7 @@ String &String::append(const char *s)
     return *this;
 }
 
-String &String::append(const char *s, uint32_t charas)
+String &String::append(const char *s, u32 charas)
 {
     buffer.removeIndex(getSize());
     while (s && *s && charas > 0)
@@ -114,7 +114,7 @@ String &String::append(char c)
     return *this;
 }
 
-String &String::append(int64_t i)
+String &String::append(i64 i)
 {
     char c[32] = {};
 #if WIN32
@@ -126,7 +126,7 @@ String &String::append(int64_t i)
     return *this;
 }
 
-String &String::append(uint64_t u)
+String &String::append(u64 u)
 {
     char c[32] = {};
 #if WIN32
@@ -138,7 +138,7 @@ String &String::append(uint64_t u)
     return *this;
 }
 
-String &String::append(int32_t i)
+String &String::append(i32 i)
 {
     char c[32] = {};
     snprintf(c, 32, "%i", i);
@@ -146,7 +146,7 @@ String &String::append(int32_t i)
     return *this;
 }
 
-String &String::append(uint32_t u)
+String &String::append(u32 u)
 {
     char c[32] = {};
     snprintf(c, 32, "%u", u);
@@ -170,7 +170,7 @@ String &String::append(double d)
     return *this;
 }
 
-String &String::append(uint32_t amount, char c)
+String &String::append(u32 amount, char c)
 {
     ASSERT(amount < 32);
     char arr[32] = {};
@@ -180,7 +180,7 @@ String &String::append(uint32_t amount, char c)
     return *this;
 }
 
-char &String::operator[] (uint32_t index) const
+char &String::operator[] (u32 index) const
 {
     ASSERT(index < getSize() + 1);
     if(index > getSize())
@@ -194,7 +194,7 @@ void String::clear()
     stringPushbackChar(buffer, '\0');
 }
 
-void String::resize(uint32_t amount)
+void String::resize(u32 amount)
 {
     buffer.resize(amount + 1);
     buffer.getBegin()[amount] = '\0';

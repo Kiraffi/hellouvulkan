@@ -2,7 +2,9 @@
 
 #include "mymemory.h"
 
-enum BufferType : uint16_t
+#include <core/mytypes.h>
+
+enum BufferType : u16
 {
     PODVECTOR,
     VECTOR,
@@ -12,10 +14,10 @@ enum BufferType : uint16_t
 
 struct ByteBufferData
 {
-    uint32_t size = 0;
-    uint32_t capasity = 0;
+    u32 size = 0;
+    u32 capasity = 0;
     Memory memory {};
-    uint16_t dataTypeSize = 0;
+    u16 dataTypeSize = 0;
     BufferType dataBufferType = BufferType::UNKNOWN;
 };
 
@@ -23,28 +25,28 @@ class ByteBuffer
 {
 public:
 
-    ByteBuffer(uint32_t dataTypeSize, BufferType bufferType);
+    ByteBuffer(u32 dataTypeSize, BufferType bufferType);
     ~ByteBuffer();
     // just sets size to 0
     void clear();
     // actually deallocate and return to initial state.
     void reset();
     void copyFrom(const ByteBuffer &other);
-    void copyFromArray(uint8_t *arr, uint32_t count);
-    void reserve(uint32_t indices);
-    void resize(uint32_t dstIndiceCount);
-    void resize(uint32_t newSize, uint8_t *defaultValue);
-    void insertIndex(uint32_t index, const uint8_t *obj);
-    void insertIndex(uint32_t index);
+    void copyFromArray(u8 *arr, u32 count);
+    void reserve(u32 indices);
+    void resize(u32 dstIndiceCount);
+    void resize(u32 newSize, u8 *defaultValue);
+    void insertIndex(u32 index, const u8 *obj);
+    void insertIndex(u32 index);
 
-    void removeIndex(uint32_t index);
-    uint8_t *getDataIndex(uint32_t index) const;
-    uint8_t *getBegin() const;
-    uint8_t *getEnd() const;
+    void removeIndex(u32 index);
+    u8 *getDataIndex(u32 index) const;
+    u8 *getBegin() const;
+    u8 *getEnd() const;
 
-    uint32_t getSize() const { return bufferData.size; }
-    uint32_t getCapasity() const { return bufferData.capasity; }
-    uint32_t getDataSize() const { return bufferData.dataTypeSize; }
+    u32 getSize() const { return bufferData.size; }
+    u32 getCapasity() const { return bufferData.capasity; }
+    u32 getDataSize() const { return bufferData.dataTypeSize; }
 
     BufferType getBufferType() const { return bufferData.dataBufferType; }
 

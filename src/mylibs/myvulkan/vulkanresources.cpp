@@ -11,34 +11,43 @@
 //#include <algorithm>
 #include <vector>
 
-static std::vector<Image*> globalImages;
+static std::vector<Image*> sRenderTargetImages;
 
-static VkImageAspectFlags getAspectMaskFromFormat(VkFormat format)
+static VkImageAspectFlags sGetAspectMaskFromFormat(VkFormat format)
 {
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    if (format == VK_FORMAT_D32_SFLOAT ||
-        format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-        format == VK_FORMAT_D24_UNORM_S8_UINT ||
-        format == VK_FORMAT_X8_D24_UNORM_PACK32 ||
-        format == VK_FORMAT_D16_UNORM ||
-        format == VK_FORMAT_D16_UNORM_S8_UINT ||
-        format == VK_FORMAT_S8_UINT
-        )
+    switch(format)
     {
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    }
-    else if (format == VK_FORMAT_UNDEFINED)
-    {
-        ASSERT(!"Undefined format");
-        return VK_IMAGE_ASPECT_NONE_KHR;
+        case VK_FORMAT_D32_SFLOAT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_X8_D24_UNORM_PACK32:
+        case VK_FORMAT_D16_UNORM:
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_S8_UINT:
+        {
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            break;
+        }
+
+        case VK_FORMAT_UNDEFINED:
+        {
+            ASSERT(!"Undefined format");
+            aspectMask = VK_IMAGE_ASPECT_NONE_KHR;
+        }
+
+        default:
+        {
+            break;
+        }
     }
     return aspectMask;
 }
 
-static VkImageView createImageView(VkImage image, VkFormat format)
+static VkImageView sCreateImageView(VkImage image, VkFormat format)
 {
-    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(format);
+    VkImageAspectFlags aspectMask = sGetAspectMaskFromFormat(format);
 
     VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     createInfo.image = image;
@@ -68,7 +77,7 @@ static VkImageView createImageView(VkImage image, VkFormat format)
     return view;
 }
 
-bool initVulkanResources()
+bool VulkanResources::init()
 {
     // init VMA
     {
@@ -92,7 +101,7 @@ bool initVulkanResources()
     return true;
 }
 
-bool deinitVulkanResources()
+bool VulkanResources::deinit()
 {
     if (vulk->device)
     {
@@ -103,21 +112,21 @@ bool deinitVulkanResources()
     return true;
 }
 
-void vulkanResourceFrameUpdate()
+void VulkanResources::update()
 {
-    for (auto& image : globalImages)
+    for (auto& image : sRenderTargetImages)
     {
         image->accessMask = 0u;
         image->layout = VK_IMAGE_LAYOUT_UNDEFINED;
     }
 }
 
-bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDepthImages)
+bool VulkanResources::createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDepthImages)
 {
     destroyFramebuffer(pipeline.framebuffer);
     ASSERT(pipeline.renderPass);
-    uint32_t width = 0u;
-    uint32_t height = 0u;
+    u32 width = 0u;
+    u32 height = 0u;
     PodVector<VkImageView> views;
     for (const auto& image : colorsAndDepthImages)
     {
@@ -159,13 +168,13 @@ bool createFramebuffer(Pipeline &pipeline, const PodVector<Image>& colorsAndDept
     return framebuffer != VK_NULL_HANDLE;
 }
 
-void destroyFramebuffer(VkFramebuffer framebuffer)
+void VulkanResources::destroyFramebuffer(VkFramebuffer framebuffer)
 {
     if (framebuffer)
         vkDestroyFramebuffer(vulk->device, framebuffer, nullptr);
 }
 
-bool createImage(uint32_t width, uint32_t height, VkFormat format,
+bool VulkanResources::createImage(u32 width, u32 height, VkFormat format,
     VkImageUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* imageName, Image &outImage)
 {
     if (outImage.image)
@@ -193,12 +202,12 @@ bool createImage(uint32_t width, uint32_t height, VkFormat format,
     if (!outImage.image || !outImage.allocation)
         return false;
 
-    outImage.imageView = createImageView(outImage.image, format);
+    outImage.imageView = sCreateImageView(outImage.image, format);
     ASSERT(outImage.imageView);
     if (!outImage.imageView)
         return false;
 
-    setObjectName((uint64_t)outImage.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, imageName);
+    MyVulkan::setObjectName((u64)outImage.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, imageName);
     outImage.imageName = imageName;
     outImage.width = width;
     outImage.height = height;
@@ -207,13 +216,14 @@ bool createImage(uint32_t width, uint32_t height, VkFormat format,
     return true;
 }
 
-bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage,
+bool VulkanResources::createRenderTargetImage(
+    u32 width, u32 height, VkFormat format, VkImageUsageFlags usage,
     const char* imageName, Image& outImage)
 {
     outImage.imageName = imageName;
     if(width == outImage.width && height == outImage.height && format == outImage.format)
         return true;
-    VkImageAspectFlags aspect = getAspectMaskFromFormat(format);
+    VkImageAspectFlags aspect = sGetAspectMaskFromFormat(format);
 
     if (aspect == VK_IMAGE_ASPECT_COLOR_BIT)
         usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -233,16 +243,16 @@ bool createRenderTargetImage(uint32_t width, uint32_t height, VkFormat format, V
         printf("Failed to create render target image: %s\n", imageName);
         return false;
     }
-
-    if(std::find(globalImages.begin(), globalImages.end(), &outImage) == globalImages.end())
-        globalImages.push_back(&outImage);
+    auto iter = std::find(sRenderTargetImages.begin(), sRenderTargetImages.end(), &outImage);
+    if(iter == sRenderTargetImages.end())
+        sRenderTargetImages.push_back(&outImage);
 
     outImage.imageName = imageName;
     return success;
 }
 
 
-Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* bufferName)
+Buffer VulkanResources::createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* bufferName)
 {
     Buffer result;
 
@@ -272,7 +282,7 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
     }
     result.data = data;
 
-    setObjectName((uint64_t)result.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, bufferName);
+    MyVulkan::setObjectName((u64)result.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, bufferName);
 
     result.allocation = allocation;
     result.bufferName = bufferName;
@@ -281,9 +291,9 @@ Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags
 }
 
 
-void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
+void VulkanResources::updateImageWithData(u32 width, u32 height, u32 pixelSize,
     Image& targetImage,
-    uint32_t dataSize, void* data)
+    u32 dataSize, void* data)
 {
 
     ASSERT(data != nullptr || dataSize > 0u);
@@ -293,9 +303,9 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
     ASSERT(size >= width * height * pixelSize);
     ASSERT(targetImage.image);
 
-    uint32_t offset = 0u;
+    u32 offset = 0u;
     offset = uploadToScratchbuffer(data, dataSize, offset);
-    beginSingleTimeCommands();
+    MyVulkan::beginSingleTimeCommands();
     {
         VkImageMemoryBarrier imageBarriers[] =
         {
@@ -330,21 +340,21 @@ void updateImageWithData(uint32_t width, uint32_t height, uint32_t pixelSize,
         vkCmdPipelineBarrier(vulk->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, ARRAYSIZES(imageBarriers), imageBarriers);
     }
-    endSingleTimeCommands();
+    MyVulkan::endSingleTimeCommands();
 
     return;
 }
 
 
 
-VkSampler createSampler(const VkSamplerCreateInfo& info)
+VkSampler VulkanResources::createSampler(const VkSamplerCreateInfo& info)
 {
     VkSampler sampler = VK_NULL_HANDLE;
     VK_CHECK(vkCreateSampler(vulk->device, &info, nullptr, &sampler));
     return sampler;
 }
 
-void destroyImage(Image& image)
+void VulkanResources::destroyImage(Image& image)
 {
     if(image.imageView)
         vkDestroyImageView(vulk->device, image.imageView, nullptr);
@@ -354,7 +364,7 @@ void destroyImage(Image& image)
 }
 
 
-void destroySampler(VkSampler sampler)
+void VulkanResources::destroySampler(VkSampler sampler)
 {
     if(sampler)
         vkDestroySampler(vulk->device, sampler, nullptr);
@@ -362,7 +372,7 @@ void destroySampler(VkSampler sampler)
 
 
 
-size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
+size_t VulkanResources::uploadToScratchbuffer(void* data, size_t size, size_t offset)
 {
     ASSERT(vulk->scratchBuffer.data);
     ASSERT(size);
@@ -380,13 +390,13 @@ size_t uploadToScratchbuffer(void* data, size_t size, size_t offset)
 }
 
 
-void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
+void VulkanResources::uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
 {
     ASSERT(vulk->scratchBuffer.data);
     ASSERT(vulk->scratchBuffer.size >= size);
     ASSERT(gpuBuffer.size >= size);
 
-    beginSingleTimeCommands();
+    MyVulkan::beginSingleTimeCommands();
 
     VkBufferCopy region = { 0, 0, VkDeviceSize(size) };
     vkCmdCopyBuffer(vulk->commandBuffer, vulk->scratchBuffer.buffer, gpuBuffer.buffer, 1, &region);
@@ -395,11 +405,11 @@ void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t size)
     vkCmdPipelineBarrier(vulk->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyBarrier, 0, nullptr);
 
-    endSingleTimeCommands();
+    MyVulkan::endSingleTimeCommands();
 
 }
 
-void destroyBuffer(Buffer& buffer)
+void VulkanResources::destroyBuffer(Buffer& buffer)
 {
     if(!vulk)
         return;
@@ -416,10 +426,10 @@ void destroyBuffer(Buffer& buffer)
 
 
 
-VkImageMemoryBarrier imageBarrier(Image& image,
+VkImageMemoryBarrier VulkanResources::imageBarrier(Image& image,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout)
 {
-    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
+    VkImageAspectFlags aspectMask = sGetAspectMaskFromFormat(image.format);
     VkImageMemoryBarrier barrier =
         imageBarrier(image.image, image.accessMask, image.layout, dstAccessMask, newLayout, aspectMask);
     image.accessMask = dstAccessMask;
@@ -427,11 +437,11 @@ VkImageMemoryBarrier imageBarrier(Image& image,
     return barrier;
 }
 
-VkImageMemoryBarrier imageBarrier(Image& image,
+VkImageMemoryBarrier VulkanResources::imageBarrier(Image& image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout)
 {
-    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
+    VkImageAspectFlags aspectMask = sGetAspectMaskFromFormat(image.format);
     VkImageMemoryBarrier barrier =
         imageBarrier(image.image, srcAccessMask, oldLayout, dstAccessMask, newLayout, aspectMask);
     image.accessMask = dstAccessMask;
@@ -439,7 +449,7 @@ VkImageMemoryBarrier imageBarrier(Image& image,
     return barrier;
 }
 
-VkImageMemoryBarrier imageBarrier(VkImage image,
+VkImageMemoryBarrier VulkanResources::imageBarrier(VkImage image,
     VkAccessFlags srcAccessMask, VkImageLayout oldLayout,
     VkAccessFlags dstAccessMask, VkImageLayout newLayout,
     VkImageAspectFlags aspectMask)
@@ -466,7 +476,7 @@ VkImageMemoryBarrier imageBarrier(VkImage image,
     return barrier;
 }
 
-VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size, size_t offset)
+VkBufferMemoryBarrier VulkanResources::bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, size_t size, size_t offset)
 {
     ASSERT(size > 0);
     VkBufferMemoryBarrier copyBarrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
@@ -480,22 +490,22 @@ VkBufferMemoryBarrier bufferBarrier(VkBuffer buffer, VkAccessFlags srcAccessMask
     return copyBarrier;
 }
 
-VkBufferMemoryBarrier bufferBarrier(const Buffer& buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask)
+VkBufferMemoryBarrier VulkanResources::bufferBarrier(const Buffer& buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask)
 {
     return bufferBarrier(buffer.buffer, srcAccessMask, dstAccessMask, buffer.size);
 }
 
-bool addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
+bool VulkanResources::addToCopylist(const ArraySliceViewBytes objectToCopy, VkBuffer targetBuffer, VkDeviceSize targetOffset)
 {
     ASSERT(objectToCopy.isValid());
     if (!objectToCopy.isValid())
         return false;
 
-    uint32_t objectSize = VkDeviceSize(objectToCopy.dataTypeSize) * objectToCopy.size();
+    u32 objectSize = VkDeviceSize(objectToCopy.dataTypeSize) * objectToCopy.size();
     return addToCopylist(objectToCopy.data(), objectSize, targetBuffer, targetOffset);
 }
 
-bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle)
+bool VulkanResources::addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle handle)
 {
     Buffer *targetBuffer = handle.manager->buffer;
     if(targetBuffer)
@@ -504,9 +514,9 @@ bool addToCopylist(const ArraySliceViewBytes objectToCopy, UniformBufferHandle h
     return false;
 }
 
-bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer& targetBuffer, VkDeviceSize targetOffset)
+bool VulkanResources::addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer& targetBuffer, VkDeviceSize targetOffset)
 {
-    uint32_t objectSize = VkDeviceSize(objectToCopy.dataTypeSize) * objectToCopy.size();
+    u32 objectSize = VkDeviceSize(objectToCopy.dataTypeSize) * objectToCopy.size();
     ASSERT(targetOffset + objectSize <= targetBuffer.size);
     if(targetOffset + objectSize <= targetBuffer.size)
         return addToCopylist(objectToCopy, targetBuffer.buffer, targetOffset);
@@ -514,7 +524,7 @@ bool addToCopylist(const ArraySliceViewBytes objectToCopy, Buffer& targetBuffer,
 }
 
 
-bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset)
+bool VulkanResources::addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer targetBuffer, VkDeviceSize targetOffset)
 {
     ASSERT(objectToCopy);
     ASSERT(objectSize);
@@ -525,9 +535,9 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
         return false;
 
     if (vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
-        beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
+        MyVulkan::beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
 
-    Supa::memcpy(((uint8_t*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
+    Supa::memcpy(((u8*)vulk->scratchBuffer.data) + vulk->scratchBufferOffset, objectToCopy, objectSize);
 
     VkBufferCopy region = { vulk->scratchBufferOffset, targetOffset, objectSize };
 
@@ -538,36 +548,36 @@ bool addToCopylist(const void* objectToCopy, VkDeviceSize objectSize, VkBuffer t
     return true;
 }
 
-bool addImageGraphicsBarrier(VkImageMemoryBarrier barrier)
+bool VulkanResources::addImageGraphicsBarrier(VkImageMemoryBarrier barrier)
 {
     if (barrier.sType != VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
         return false;
     if(vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() && vulk->bufferMemoryBarriers.size() == 0)
-        beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
+        MyVulkan::beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
 
     vulk->imageMemoryGraphicsBarriers.pushBack(barrier);
     return true;
 }
 
-bool addImageComputeBarrier(VkImageMemoryBarrier barrier)
+bool VulkanResources::addImageComputeBarrier(VkImageMemoryBarrier barrier)
 {
     if (barrier.sType != VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
         return false;
     if (vulk->imageMemoryGraphicsBarriers.size() == 0 && vulk->imageMemoryComputeBarriers.size() == 0 && vulk->bufferMemoryBarriers.size() == 0)
-        beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
+        MyVulkan::beginDebugRegion("Barriers and copies", { 1.0f, 0.0f, 1.0f, 1.0f });
 
     vulk->imageMemoryComputeBarriers.pushBack(barrier);
     return true;
 }
 
 
-bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
+bool VulkanResources::flushBarriers(VkPipelineStageFlagBits dstStageMask)
 {
     bool isGraphics = dstStageMask == VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     bool isCompute = dstStageMask == VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
     const VkImageMemoryBarrier* imageBarrier = nullptr;
-    uint32_t imageBarrierCount = 0u;
+    u32 imageBarrierCount = 0u;
     if (isGraphics)
     {
         imageBarrierCount = vulk->imageMemoryGraphicsBarriers.size();
@@ -590,7 +600,7 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
 
     VK_CHECK(vmaFlushAllocation(vulk->allocator, vulk->scratchBuffer.allocation, vulk->scratchBufferLastFlush, size));
     // set the scratchBufferLastFlush to be divisable by 256 and round it down
-    vulk->scratchBufferLastFlush = vulk->scratchBufferOffset & (~uint32_t(255));
+    vulk->scratchBufferLastFlush = vulk->scratchBufferOffset & (~u32(255));
 
     for (const auto& barrier : vulk->bufferMemoryBarriers)
     {
@@ -616,15 +626,15 @@ bool flushBarriers(VkPipelineStageFlagBits dstStageMask)
         vulk->imageMemoryGraphicsBarriers.clear();
     if (isCompute)
         vulk->imageMemoryComputeBarriers.clear();
-    endDebugRegion();
+    MyVulkan::endDebugRegion();
 
     vulk->currentStage = dstStageMask;
     return true;
 }
 
-bool prepareToGraphicsSampleWrite(Image& image)
+bool VulkanResources::prepareToGraphicsSampleWrite(Image& image)
 {
-    VkImageAspectFlags aspectMask = getAspectMaskFromFormat(image.format);
+    VkImageAspectFlags aspectMask = sGetAspectMaskFromFormat(image.format);
     if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
     {
         return addImageGraphicsBarrier(imageBarrier(image,
@@ -643,31 +653,31 @@ bool prepareToGraphicsSampleWrite(Image& image)
     return true;
 }
 
-bool prepareToGraphicsSampleRead(Image& image)
+bool VulkanResources::prepareToGraphicsSampleRead(Image& image)
 {
     return addImageGraphicsBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 }
 
-bool prepareToGraphicsImageRead(Image& image)
+bool VulkanResources::prepareToGraphicsImageRead(Image& image)
 {
     return addImageGraphicsBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 }
 
-bool prepareToComputeImageWrite(Image& image)
+bool VulkanResources::prepareToComputeImageWrite(Image& image)
 {
     return addImageComputeBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_GENERAL));
 }
 
-bool prepareToComputeImageRead(Image& image)
+bool VulkanResources::prepareToComputeImageRead(Image& image)
 {
     return addImageComputeBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL));
 }
 
-bool prepareToComputeSampleRead(Image& image)
+bool VulkanResources::prepareToComputeSampleRead(Image& image)
 {
     return addImageComputeBarrier(imageBarrier(image,
         VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));

@@ -4,16 +4,18 @@
 
 #include "myvulkan.h"
 
+#include <app/vulkan_app.h>
+
 #include <container/podvector.h>
 #include <container/podvectortypedefine.h>
 #include <container/string.h>
 #include <container/stringview.h>
 
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
 
 #include <math/vector3.h>
 
+#include <myvulkan/vulkaninitparameters.h>
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
@@ -23,7 +25,7 @@
 //#include <string>
 //#include <string.h>
 
-static constexpr uint32_t FormatFlagBits =
+static constexpr u32 FormatFlagBits =
     VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
     VK_FORMAT_FEATURE_BLIT_SRC_BIT |
     VK_FORMAT_FEATURE_BLIT_DST_BIT |
@@ -79,7 +81,7 @@ struct VulkanDeviceOptionals
     bool canUseVulkanRenderdocExtensionMarker = false;
 };
 
-static const VkValidationFeatureEnableEXT enabledValidationFeatures[] =
+static const VkValidationFeatureEnableEXT sEnabledValidationFeatures[] =
 {
     //VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
     //VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
@@ -87,7 +89,7 @@ static const VkValidationFeatureEnableEXT enabledValidationFeatures[] =
     //VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
     VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
 };
-static const char *validationLayers[] =
+static const char* sValidationLayers[] =
 {
     "VK_LAYER_KHRONOS_validation",
     "VK_LAYER_LUNARG_monitor",
@@ -103,7 +105,7 @@ static const char *validationLayers[] =
 };
 
 
-static const char * deviceExtensions[] =
+static const char* sDeviceExtensions[] =
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     // VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
@@ -111,7 +113,7 @@ static const char * deviceExtensions[] =
     // VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
 
-static const char* addCheckDeviceExtensions[] =
+static const char* sAddCheckDeviceExtensions[] =
 {
     "",
     // if this extension is put into device extensions, it throws some validation errors,
@@ -119,9 +121,9 @@ static const char* addCheckDeviceExtensions[] =
     //VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 };
 
-static PodVector<const char*> getRequiredInstanceExtensions()
+static PodVector<const char*> sGetRequiredInstanceExtensions()
 {
-    uint32_t glfwExtensionCount = 0u;
+    u32 glfwExtensionCount = 0u;
     const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
@@ -141,16 +143,16 @@ static PodVector<const char*> getRequiredInstanceExtensions()
 }
 
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
+static VKAPI_ATTR VkBool32 VKAPI_CALL sDebugReportCB(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
-    bool errorMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0 ||
-        (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0;
-    bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0 ||
-        (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
+    bool errorMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0
+        || (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0;
+    bool warningMsg = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0
+        || (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0;
 
     auto &initParams = VulkanInitializationParameters::get();
 
@@ -167,7 +169,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
     return VK_FALSE;
 }
 
-static VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
+static VkDebugUtilsMessengerEXT sRegisterDebugCB()
 {
 #if NDEBUG
     return VK_NULL_HANDLE;
@@ -177,31 +179,30 @@ static VkDebugUtilsMessengerEXT registerDebugCallback(VkInstance instance)
     if (!initParams.useValidationLayers)
         return VK_NULL_HANDLE;
 
-    VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    createInfo.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = debugReportCallback;
+    VkDebugUtilsMessengerCreateInfoEXT createInfo =
+        { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.pfnUserCallback = sDebugReportCB;
 
     VkDebugUtilsMessengerEXT debugMessenger = 0;
 
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+        vulk->instance, "vkCreateDebugUtilsMessengerEXT");
     ASSERT(func);
 
-    VK_CHECK(func(instance, &createInfo, nullptr, &debugMessenger));
-
+    VK_CHECK(func(vulk->instance, &createInfo, nullptr, &debugMessenger));
     return debugMessenger;
 #endif
 }
 
-static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
+static VulkanDeviceOptionals sGetDeviceOptionals(VkPhysicalDevice physicalDevice)
 {
-    uint32_t extensionCount;
+    u32 extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
     PodVector<VkExtensionProperties> availableExtensions;
@@ -224,7 +225,7 @@ static VulkanDeviceOptionals getDeviceOptionals(VkPhysicalDevice physicalDevice)
 
 
 
-static void acquireDeviceDebugRenderdocFunctions(VkDevice device)
+static void sAcquireDeviceDebugRenderdocFunctions(VkDevice device)
 {
     pfnDebugMarkerSetObjectTag = (PFN_vkDebugMarkerSetObjectTagEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectTagEXT");
     pfnDebugMarkerSetObjectName = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectNameEXT");
@@ -238,22 +239,22 @@ static void acquireDeviceDebugRenderdocFunctions(VkDevice device)
 
 
 
-static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+static QueueFamilyIndices sFindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;
 
-    uint32_t queueFamilyCount = 0;
+    u32 queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
     PodVector<VkQueueFamilyProperties> queueFamilies;
     queueFamilies.resize(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
-    int i = -1;
+    i32 i = -1;
     for (const auto& queueFamily : queueFamilies)
     {
         ++i;
-        uint32_t queueBits = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
+        u32 queueBits = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
 
         // make everything into same queue
         if ((queueFamily.queueFlags & queueBits) != queueBits)
@@ -277,20 +278,20 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkS
 
 
 
-static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+static SwapChainSupportDetails sQuerySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     SwapChainSupportDetails details;
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
 
-    uint32_t formatCount;
+    u32 formatCount;
     vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
     ASSERT(formatCount > 0);
 
     details.formats.resize(formatCount);
     vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data());
 
-    uint32_t presentModeCount;
+    u32 presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
     ASSERT(presentModeCount > 0);
 
@@ -303,7 +304,7 @@ static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDe
 
 
 
-static void destroySwapchain(SwapChain &swapchain)
+static void sDestroySwapchain(SwapChain &swapchain)
 {
     swapchain.images.clear();
     swapchain.swapchainCount = 0u;
@@ -317,7 +318,7 @@ static void destroySwapchain(SwapChain &swapchain)
 
 
 
-static bool createSwapchain(VSyncType vsyncMode)
+static bool sCreateSwapchain(VSyncType vsyncMode)
 {
     VkPresentModeKHR findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
     switch (vsyncMode)
@@ -327,7 +328,7 @@ static bool createSwapchain(VSyncType vsyncMode)
         case VSyncType::MAILBOX_VSYNC: findPresentMode = VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR; break;
     }
     {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulk->physicalDevice, vulk->surface);
+        SwapChainSupportDetails swapChainSupport = sQuerySwapChainSupport(vulk->physicalDevice, vulk->surface);
         ASSERT(swapChainSupport.formats.size() > 0);
         VkSurfaceFormatKHR surfaceFormat = swapChainSupport.formats[0];
         bool found = false;
@@ -361,11 +362,11 @@ static bool createSwapchain(VSyncType vsyncMode)
         VkExtent2D extent = swapChainSupport.capabilities.currentExtent;
         if (swapChainSupport.capabilities.currentExtent.width == UINT32_MAX)
         {
-            int width, height;
-            glfwGetFramebufferSize(vulk->vulkanApp->window, &width, &height);
+            i32 width, height;
+            glfwGetFramebufferSize(VulkanApp::getWindowRef(), &width, &height);
 
-            extent.width = uint32_t(width);
-            extent.height = uint32_t(height);
+            extent.width = u32(width);
+            extent.height = u32(height);
 
             extent.width = Supa::maxu32(swapChainSupport.capabilities.minImageExtent.width,
                 Supa::minu32(swapChainSupport.capabilities.maxImageExtent.width, extent.width));
@@ -373,7 +374,7 @@ static bool createSwapchain(VSyncType vsyncMode)
                 Supa::minu32(swapChainSupport.capabilities.maxImageExtent.height, extent.height));
         }
 
-        uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+        u32 imageCount = swapChainSupport.capabilities.minImageCount + 1;
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
         {
             imageCount = swapChainSupport.capabilities.maxImageCount;
@@ -389,8 +390,8 @@ static bool createSwapchain(VSyncType vsyncMode)
         createInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;// | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         createInfo.oldSwapchain = vulk->swapchain.swapchain;
 
-        QueueFamilyIndices indices = findQueueFamilies(vulk->physicalDevice, vulk->surface);
-        uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
+        QueueFamilyIndices indices = sFindQueueFamilies(vulk->physicalDevice, vulk->surface);
+        u32 queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
         if (indices.graphicsFamily != indices.presentFamily)
         {
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -430,7 +431,7 @@ static bool createSwapchain(VSyncType vsyncMode)
 
 
 
-    uint32_t swapchainCount = 0;
+    u32 swapchainCount = 0;
     VK_CHECK(vkGetSwapchainImagesKHR(vulk->device, vulk->swapchain.swapchain, &swapchainCount, nullptr));
 
     vulk->swapchain.swapchainCount = swapchainCount;
@@ -449,7 +450,7 @@ static bool createSwapchain(VSyncType vsyncMode)
 
 
 
-static bool createInstance()
+static bool sCreateInstance()
 {
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.apiVersion = VulkanApiVersion;
@@ -459,10 +460,10 @@ static bool createInstance()
     VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     createInfo.pApplicationInfo = &appInfo;
 
-    PodVector<const char*> extensions = getRequiredInstanceExtensions();
+    PodVector<const char*> extensions = sGetRequiredInstanceExtensions();
 
     createInfo.ppEnabledExtensionNames = extensions.data();
-    createInfo.enabledExtensionCount = (uint32_t)extensions.size();
+    createInfo.enabledExtensionCount = (u32)extensions.size();
 
     for(auto ext : extensions)
     {
@@ -476,17 +477,17 @@ static bool createInstance()
 
     if (initParams.useValidationLayers)
     {
-        createInfo.ppEnabledLayerNames = validationLayers;
-        createInfo.enabledLayerCount = ARRAYSIZES(validationLayers);
+        createInfo.ppEnabledLayerNames = sValidationLayers;
+        createInfo.enabledLayerCount = ARRAYSIZES(sValidationLayers);
 
         debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        debugCreateInfo.pfnUserCallback = debugReportCallback;
+        debugCreateInfo.pfnUserCallback = sDebugReportCB;
 
 
         VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
-        validationFeatures.enabledValidationFeatureCount = ARRAYSIZES(enabledValidationFeatures);
-        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures;
+        validationFeatures.enabledValidationFeatureCount = ARRAYSIZES(sEnabledValidationFeatures);
+        validationFeatures.pEnabledValidationFeatures = sEnabledValidationFeatures;
 
         debugCreateInfo.pNext = &validationFeatures;
 
@@ -505,10 +506,10 @@ static bool createInstance()
 }
 
 
-static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
+static bool sCreatePhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 {
     VkPhysicalDevice devices[32] = {};
-    uint32_t count = ARRAYSIZES(devices);
+    u32 count = ARRAYSIZES(devices);
 
     VK_CHECK(vkEnumeratePhysicalDevices(vulk->instance, &count, devices));
 
@@ -517,17 +518,17 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 
 
     PodVector<const char*> requiredExtensions;
-    for(const char *str : deviceExtensions)
+    for(const char *str : sDeviceExtensions)
         if(!requiredExtensions.find(str))
             requiredExtensions.pushBack(str);
-    for(const char *str : addCheckDeviceExtensions)
+    for(const char *str : sAddCheckDeviceExtensions)
     {
         if(Supa::strcmp(str, "") != 0)
             if(!requiredExtensions.find(str))
                 requiredExtensions.pushBack(str);
     }
 
-    for(uint32_t i = 0; i < count; ++i)
+    for(u32 i = 0; i < count; ++i)
     {
         VkPhysicalDeviceProperties prop;
         VkPhysicalDevice physicalDevice = devices[i];
@@ -543,16 +544,16 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             printf("No timestamp and queries for %s\n", prop.deviceName);
             continue;
         }
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, vulk->surface);
+        SwapChainSupportDetails swapChainSupport = sQuerySwapChainSupport(physicalDevice, vulk->surface);
         bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         if(!swapChainAdequate)
         {
             printf("No swapchain for: %s\n", prop.deviceName);
             continue;
         }
-        uint32_t formatIndex = ~0u;
+        u32 formatIndex = ~0u;
 
-        for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
+        for (u32 j = 0; j < ARRAYSIZES(defaultFormats); ++j)
         {
             VkFormatProperties formatProperties;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, defaultFormats[j].format, &formatProperties);
@@ -571,7 +572,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             continue;
         }
         ASSERT(formatIndex != ~0u);
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice, vulk->surface);
+        QueueFamilyIndices indices = sFindQueueFamilies(physicalDevice, vulk->surface);
         if(!indices.isValid())
         {
             printf("No required queue indices found or they are not all possible to be in same queue: %s\n", prop.deviceName);
@@ -579,7 +580,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
         }
         bool extensionsSupported = false;
         {
-            uint32_t extensionCount;
+            u32 extensionCount;
             vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
             PodVector<VkExtensionProperties> availableExtensions;
@@ -591,7 +592,7 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
             for (const auto& extension : availableExtensions)
             {
                 //printf("available extension: %s\n", extension.extensionName);
-                for(uint32_t i = 0; i < requiredExtensionsTemp.size(); ++i)
+                for(u32 i = 0; i < requiredExtensionsTemp.size(); ++i)
                 {
                     if(Supa::strcmp(requiredExtensionsTemp[i], extension.extensionName) == 0)
                         requiredExtensionsTemp.removeIndex(i);
@@ -637,12 +638,12 @@ static bool createPhysicalDevice(VkPhysicalDeviceType wantedDeviceType)
 
 
 
-static bool createDeviceWithQueues()
+static bool sCreateDeviceWithQueues()
 {
-    vulk->queueFamilyIndices = findQueueFamilies(vulk->physicalDevice, vulk->surface);
+    vulk->queueFamilyIndices = sFindQueueFamilies(vulk->physicalDevice, vulk->surface);
     ASSERT(vulk->queueFamilyIndices.isValid());
 
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulk->physicalDevice, vulk->surface);
+    SwapChainSupportDetails swapChainSupport = sQuerySwapChainSupport(vulk->physicalDevice, vulk->surface);
     bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     if(!swapChainAdequate)
         return false;
@@ -652,10 +653,10 @@ static bool createDeviceWithQueues()
     vulk->colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     vulk->defaultColorFormat = VK_FORMAT_UNDEFINED;
 
-    for(uint32_t i = 0; i < swapChainSupport.formats.size() && vulk->presentColorFormat == VK_FORMAT_UNDEFINED; ++i)
+    for(u32 i = 0; i < swapChainSupport.formats.size() && vulk->presentColorFormat == VK_FORMAT_UNDEFINED; ++i)
     {
 
-        for (uint32_t j = 0; j < ARRAYSIZES(defaultPresent); ++j)
+        for (u32 j = 0; j < ARRAYSIZES(defaultPresent); ++j)
         {
             if(swapChainSupport.formats[i].colorSpace != defaultPresent[j].colorSpace)
                 continue;
@@ -676,7 +677,7 @@ static bool createDeviceWithQueues()
     }
     ASSERT(vulk->presentColorFormat != VK_FORMAT_UNDEFINED);
 
-    for (uint32_t j = 0; j < ARRAYSIZES(defaultFormats); ++j)
+    for (u32 j = 0; j < ARRAYSIZES(defaultFormats); ++j)
     {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(vulk->physicalDevice, defaultFormats[j].format, &formatProperties);
@@ -690,13 +691,13 @@ static bool createDeviceWithQueues()
     ASSERT(vulk->defaultColorFormat != VK_FORMAT_UNDEFINED);
 
     PodVector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    PodVector<uint32_t> uniqueQueueFamilies;
+    PodVector<u32> uniqueQueueFamilies;
     uniqueQueueFamilies.pushBack(vulk->queueFamilyIndices.graphicsFamily);
     if(vulk->queueFamilyIndices.graphicsFamily != vulk->queueFamilyIndices.presentFamily)
         uniqueQueueFamilies.pushBack(vulk->queueFamilyIndices.presentFamily);
 
     float queuePriority = 1.0f;
-    for (uint32_t queueFamily : uniqueQueueFamilies)
+    for (u32 queueFamily : uniqueQueueFamilies)
     {
         VkDeviceQueueCreateInfo queueCreateInfo = {};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -706,7 +707,7 @@ static bool createDeviceWithQueues()
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    VulkanDeviceOptionals optionals = getDeviceOptionals(vulk->physicalDevice);
+    VulkanDeviceOptionals optionals = sGetDeviceOptionals(vulk->physicalDevice);
     // createdeviceinfo
     {
         static constexpr VkPhysicalDeviceFeatures deviceFeatures = {
@@ -728,19 +729,21 @@ static bool createDeviceWithQueues()
         VkDeviceCreateInfo createInfo = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
         createInfo.pNext = &physicalDeviceFeatures2;
 
-        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+        createInfo.queueCreateInfoCount = static_cast<u32>(queueCreateInfos.size());
         createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
 
 
         createInfo.pEnabledFeatures = nullptr;
 
-        PodVector<const char*> deviceExts(deviceExtensions, deviceExtensions + ARRAYSIZES(deviceExtensions));
+        PodVector<const char*> deviceExts(
+            sDeviceExtensions,
+            sDeviceExtensions + ARRAYSIZES(sDeviceExtensions));
         if (optionals.canUseVulkanRenderdocExtensionMarker)
         {
             deviceExts.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         }
-        createInfo.enabledExtensionCount = uint32_t(deviceExts.size());
+        createInfo.enabledExtensionCount = u32(deviceExts.size());
         createInfo.ppEnabledExtensionNames = deviceExts.data();
 
 #if NDEBUG
@@ -749,8 +752,8 @@ static bool createDeviceWithQueues()
 
         if (initParams.useValidationLayers)
         {
-            createInfo.enabledLayerCount = ARRAYSIZES(validationLayers);
-            createInfo.ppEnabledLayerNames = validationLayers;
+            createInfo.enabledLayerCount = ARRAYSIZES(sValidationLayers);
+            createInfo.ppEnabledLayerNames = sValidationLayers;
         }
         else
 #endif
@@ -777,7 +780,7 @@ static bool createDeviceWithQueues()
 
 
     if(optionals.canUseVulkanRenderdocExtensionMarker)
-        acquireDeviceDebugRenderdocFunctions(vulk->device);
+        sAcquireDeviceDebugRenderdocFunctions(vulk->device);
     return true;
 }
 
@@ -787,15 +790,15 @@ static bool createDeviceWithQueues()
 
 
 
-static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout>& descriptors, VkShaderStageFlags stage)
+static VkDescriptorSetLayout sCreateSetLayout(const PodVector<DescriptorSetLayout>& descriptors, VkShaderStageFlags stage)
 {
     ASSERT(descriptors.size() > 0);
     PodVector<VkDescriptorSetLayoutBinding> setBindings;
     setBindings.resize(descriptors.size());
-    for (uint32_t i = 0; i < uint32_t(descriptors.size()); ++i)
+    for (u32 i = 0; i < u32(descriptors.size()); ++i)
     {
         setBindings[i] = VkDescriptorSetLayoutBinding {
-            .binding = uint32_t(descriptors[i].bindingIndex),
+            .binding = u32(descriptors[i].bindingIndex),
             .descriptorType = descriptors[i].descriptorType,
             .descriptorCount = 1,
             .stageFlags = stage, // VK_SHADER_STAGE_VERTEX_BIT;
@@ -804,7 +807,7 @@ static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout
 
     VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     //    createInfo.flags =  VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-    createInfo.bindingCount = uint32_t(setBindings.size());
+    createInfo.bindingCount = u32(setBindings.size());
     createInfo.pBindings = setBindings.data();
 
     VkDescriptorSetLayout setLayout = 0;
@@ -815,7 +818,7 @@ static VkDescriptorSetLayout createSetLayout(const PodVector<DescriptorSetLayout
 }
 
 
-static VkSemaphore createSemaphore()
+static VkSemaphore sCreateSemaphore()
 {
     VkSemaphore semaphore = 0;
     VkSemaphoreCreateInfo semaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
@@ -824,9 +827,9 @@ static VkSemaphore createSemaphore()
     return semaphore;
 }
 
-static VkCommandPool createCommandPool()
+static VkCommandPool sCreateCommandPool()
 {
-    uint32_t familyIndex = vulk->queueFamilyIndices.graphicsFamily;
+    u32 familyIndex = vulk->queueFamilyIndices.graphicsFamily;
     VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolCreateInfo.queueFamilyIndex = familyIndex;
@@ -839,7 +842,7 @@ static VkCommandPool createCommandPool()
 
 
 
-static VkQueryPool createQueryPool(uint32_t queryCount)
+static VkQueryPool sCreateQueryPool(u32 queryCount)
 {
     VkQueryPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
 
@@ -854,7 +857,7 @@ static VkQueryPool createQueryPool(uint32_t queryCount)
 }
 
 
-static VkFence createFence()
+static VkFence sCreateFence()
 {
     VkFenceCreateInfo createInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -867,16 +870,16 @@ static VkFence createFence()
 
 
 
-static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader> &shaders)
+static PodVector<DescriptorSetLayout> sParseShaderLayouts(const PodVector<Shader> &shaders)
 {
     PodVector< DescriptorSetLayout > result;
 
-    for (uint32_t shaderIndex = 0; shaderIndex < shaders.size(); ++shaderIndex)
+    for (u32 shaderIndex = 0; shaderIndex < shaders.size(); ++shaderIndex)
     {
         const Shader& shader = shaders[shaderIndex];
-        for (uint32_t maskIndex = 0u; maskIndex < 64; ++maskIndex)
+        for (u32 maskIndex = 0u; maskIndex < 64; ++maskIndex)
         {
-            if ((shader.resourceMask & (uint64_t(1) << uint64_t(maskIndex))) == 0)
+            if ((shader.resourceMask & (u64(1) << u64(maskIndex))) == 0)
                 continue;
             result.push_back(DescriptorSetLayout{ .descriptorType = shader.resourceTypes[maskIndex], .bindingIndex = maskIndex });
         }
@@ -887,27 +890,30 @@ static PodVector<DescriptorSetLayout> parseShaderLayouts(const PodVector<Shader>
 
 
 
-bool initVulkan(VulkanApp &app)
+bool MyVulkan::init()
 {
     auto &initParams = VulkanInitializationParameters::get();
     vulk = new VulkanGlobal();
-    vulk->vulkanApp = &app;
-    ASSERT(app.window);
-    if(!app.window)
+
+    GLFWwindow* window = VulkanApp::getWindowRef();
+
+    ASSERT(VulkanApp::getWindowApp().inited);
+    ASSERT(VulkanApp::getWindow());
+    if(window == nullptr)
     {
         printf("Empty window!\n");
         return false;
     }
 
-    if(!createInstance())
+    if(!sCreateInstance())
     {
         printf("Failed to create vulkan instance!\n");
         return false;
     }
 
-    vulk->debugCallBack = registerDebugCallback(vulk->instance);
+    vulk->debugCallBack = sRegisterDebugCB();
 
-    VK_CHECK(glfwCreateWindowSurface(vulk->instance, app.window, nullptr, &vulk->surface));
+    VK_CHECK(glfwCreateWindowSurface(vulk->instance, window, nullptr, &vulk->surface));
     ASSERT(vulk->surface);
     if(!vulk->surface)
     {
@@ -915,7 +921,7 @@ bool initVulkan(VulkanApp &app)
         return false;
     }
 
-    if(!createPhysicalDevice(initParams.useIntegratedGpu ?
+    if(!sCreatePhysicalDevice(initParams.useIntegratedGpu ?
         VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))
     {
         printf("Failed to create vulkan physical device!\n");
@@ -923,13 +929,13 @@ bool initVulkan(VulkanApp &app)
     }
     ASSERT(vulk->physicalDevice);
 
-    if (!createDeviceWithQueues())
+    if (!sCreateDeviceWithQueues())
     {
         printf("Failed to create vulkan device!\n");
         return false;
     }
 
-    if (!initVulkanResources())
+    if (!VulkanResources::init())
     {
         printf("Failed to initialize VMA!\n");
         return false;
@@ -951,7 +957,7 @@ bool initVulkan(VulkanApp &app)
 
     }
 
-    bool scSuccess = createSwapchain(initParams.vsync);
+    bool scSuccess = sCreateSwapchain(initParams.vsync);
     ASSERT(scSuccess);
     if(!scSuccess)
     {
@@ -959,9 +965,9 @@ bool initVulkan(VulkanApp &app)
         return false;
     }
 
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
-        vulk->queryPools[i] = createQueryPool(QUERY_COUNT);
+        vulk->queryPools[i] = sCreateQueryPool(QUERY_COUNT);
         ASSERT(vulk->queryPools[i]);
         if(!vulk->queryPools[i])
         {
@@ -971,9 +977,9 @@ bool initVulkan(VulkanApp &app)
     }
 
 
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
-        vulk->acquireSemaphores[i] = createSemaphore();
+        vulk->acquireSemaphores[i] = sCreateSemaphore();
         ASSERT(vulk->acquireSemaphores[i]);
         if(!vulk->acquireSemaphores[i])
         {
@@ -981,7 +987,7 @@ bool initVulkan(VulkanApp &app)
             return false;
         }
 
-        vulk->releaseSemaphores[i] = createSemaphore();
+        vulk->releaseSemaphores[i] = sCreateSemaphore();
         ASSERT(vulk->releaseSemaphores[i]);
         if(!vulk->releaseSemaphores[i])
         {
@@ -989,7 +995,7 @@ bool initVulkan(VulkanApp &app)
             return false;
         }
 
-        vulk->fences[i] = createFence();
+        vulk->fences[i] = sCreateFence();
         ASSERT(vulk->fences[i]);
         if(!vulk->fences[i])
         {
@@ -997,7 +1003,7 @@ bool initVulkan(VulkanApp &app)
             return false;
         }
     }
-    vulk->commandPool = createCommandPool();
+    vulk->commandPool = sCreateCommandPool();
     ASSERT(vulk->commandPool);
     if(!vulk->commandPool)
     {
@@ -1012,7 +1018,7 @@ bool initVulkan(VulkanApp &app)
 
     {
         VK_CHECK(vkAllocateCommandBuffers(vulk->device, &allocateInfo, vulk->commandBuffers));
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             if(!vulk->commandBuffers[i])
             {
@@ -1021,35 +1027,35 @@ bool initVulkan(VulkanApp &app)
             }
             String s = "Main command buffer";
             s.append(i);
-            setObjectName((uint64_t)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s.getStr());
+            setObjectName((u64)vulk->commandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, s.getStr());
         }
     }
     vulk->commandBuffer = vulk->commandBuffers[0];
 
 
     {
-        vulk->scratchBuffer = createBuffer(VulkanGlobal::VulkanMaxScratchBufferSize,
+        vulk->scratchBuffer = VulkanResources::createBuffer(VulkanGlobal::VulkanMaxScratchBufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "Scratch buffer");
             //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Scratch buffer");
 
-        vulk->uniformBuffer = createBuffer(64u * 1024u * 1024u,
+        vulk->uniformBuffer = VulkanResources::createBuffer(64u * 1024u * 1024u,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Frame render uniform buffer");
 
         vulk->uniformBufferManager.init(vulk->uniformBuffer);
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
             vulk->renderFrameBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
     }
 
-    if(!loadShaders())
+    if(!VulkanShader::loadShaders())
     {
         printf("Failed to load shaders\n");
         return false;
     }
     {
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        vulk->globalTextureSampler = createSampler(samplerInfo);
+        vulk->globalTextureSampler = VulkanResources::createSampler(samplerInfo);
         if (!vulk->globalTextureSampler)
         {
             printf("Failed to create global texture sampler");
@@ -1063,34 +1069,34 @@ bool initVulkan(VulkanApp &app)
 
 
 
-void deinitVulkan()
+void MyVulkan::deinit()
 {
     if(!vulk)
         return;
     if (vulk->device)
     {
         VK_CHECK(vkDeviceWaitIdle(vulk->device));
-        destroySampler(vulk->globalTextureSampler);
+        VulkanResources::destroySampler(vulk->globalTextureSampler);
         vulk->globalTextureSampler = VK_NULL_HANDLE;
-        destroyBuffer(vulk->scratchBuffer);
-        destroyBuffer(vulk->uniformBuffer);
+        VulkanResources::destroyBuffer(vulk->scratchBuffer);
+        VulkanResources::destroyBuffer(vulk->uniformBuffer);
 
         vkDestroyCommandPool(vulk->device, vulk->commandPool, nullptr);
 
 
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
             vkDestroyQueryPool(vulk->device, vulk->queryPools[i], nullptr);
 
-        destroySwapchain(vulk->swapchain);
+        sDestroySwapchain(vulk->swapchain);
 
-        deleteLoadedShaders();
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        VulkanShader::deleteLoadedShaders();
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             vkDestroyFence(vulk->device, vulk->fences[i], nullptr);
             vkDestroySemaphore(vulk->device, vulk->acquireSemaphores[i], nullptr);
             vkDestroySemaphore(vulk->device, vulk->releaseSemaphores[i], nullptr);
         }
-        deinitVulkanResources();
+        VulkanResources::deinit();
         vkDestroyDevice(vulk->device, nullptr);
     }
     vkDestroySurfaceKHR(vulk->instance, vulk->surface, nullptr);
@@ -1111,7 +1117,7 @@ void deinitVulkan()
 
 
 
-VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat)
+VkRenderPass MyVulkan::createRenderPass(const PodVector<RenderTarget>& colorTargets, const RenderTarget& depthFormat)
 {
     bool hasDepthFormat = depthFormat.format != VK_FORMAT_UNDEFINED;
     PodVector< VkAttachmentDescription> attachments;
@@ -1170,51 +1176,53 @@ VkRenderPass createRenderPass(const PodVector<RenderTarget>& colorTargets, const
 
 
 
-bool resizeSwapchain()
+bool MyVulkan::resizeSwapchain()
 {
-    int width = 0;
-    int height = 0;
-    glfwGetFramebufferSize(vulk->vulkanApp->window, &width, &height);
+    GLFWwindow* window = VulkanApp::getWindowRef();
+    ASSERT(window);
+    i32 width = 0;
+    i32 height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
     bool wasInMinimized = false;
     while (width == 0 || height == 0)
     {
         glfwWaitEvents();
-        glfwGetFramebufferSize(vulk->vulkanApp->window, &width, &height);
+        glfwGetFramebufferSize(window, &width, &height);
         wasInMinimized = true;
     }
 
-    uint32_t newWidth = uint32_t(width);
-    uint32_t newHeight = uint32_t(height);
+    u32 newWidth = u32(width);
+    u32 newHeight = u32(height);
 
     VK_CHECK(vkDeviceWaitIdle(vulk->device));
 
     // There definitely is better way to handle editor window resize....
-    if(!wasInMinimized && vulk->swapchain.width == newWidth && vulk->swapchain.height == newHeight)
+    if(!wasInMinimized
+        && vulk->swapchain.width == newWidth
+        && vulk->swapchain.height == newHeight)
     {
-        vulk->vulkanApp->resized();
         return true;
     }
 
     SwapChain oldSwapchain = vulk->swapchain;
     auto &initParams = VulkanInitializationParameters::get();
-    createSwapchain(initParams.vsync);
+    sCreateSwapchain(initParams.vsync);
 
-    destroySwapchain(oldSwapchain);
+    sDestroySwapchain(oldSwapchain);
 
-    vulk->vulkanApp->resized();
     vulk->needToResize = false;
     return true;
 }
 
 
 
-bool createPipelineLayout(Pipeline& pipelineWithDescriptors, VkShaderStageFlags stage)
+bool MyVulkan::createPipelineLayout(Pipeline& pipelineWithDescriptors, VkShaderStageFlags stage)
 {
     VkDescriptorSetLayout setLayout = 0;
     VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     if(pipelineWithDescriptors.descriptorSetLayouts.size() > 0)
-        setLayout = createSetLayout(pipelineWithDescriptors.descriptorSetLayouts, stage);
+        setLayout = sCreateSetLayout(pipelineWithDescriptors.descriptorSetLayouts, stage);
 
 
     createInfo.setLayoutCount = setLayout ? 1 : 0;
@@ -1250,7 +1258,7 @@ bool createPipelineLayout(Pipeline& pipelineWithDescriptors, VkShaderStageFlags 
 
 
 
-void beginSingleTimeCommands()
+void MyVulkan::beginSingleTimeCommands()
 {
     VK_CHECK(vkResetCommandPool(vulk->device, vulk->commandPool, 0));
 
@@ -1262,7 +1270,7 @@ void beginSingleTimeCommands()
     return;
 }
 
-void endSingleTimeCommands()
+void MyVulkan::endSingleTimeCommands()
 {
     VK_CHECK(vkEndCommandBuffer(vulk->commandBuffer));
 
@@ -1276,9 +1284,9 @@ void endSingleTimeCommands()
     VK_CHECK(vkQueueWaitIdle(queue));
 }
 
-void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues)
+void MyVulkan::beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& clearValues)
 {
-    flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    VulkanResources::flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
     VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     passBeginInfo.renderPass = pipeline.renderPass;
@@ -1297,12 +1305,12 @@ void beginRenderPass(const Pipeline& pipeline, const PodVector< VkClearValue >& 
     vkCmdSetScissor(vulk->commandBuffer, 0, 1, &scissors);
 }
 
-void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage depthImage)
+void MyVulkan::beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage depthImage)
 {
-    flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    VulkanResources::flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
-    uint32_t width = 0u;
-    uint32_t height = 0u;
+    u32 width = 0u;
+    u32 height = 0u;
     PodVector< VkRenderingAttachmentInfo> colorAttachments;
     for (const auto& renderImage : renderColorImages)
     {
@@ -1369,11 +1377,11 @@ void beginRendering(const PodVector<RenderImage> &renderColorImages, RenderImage
 }
 
 
-void dispatchCompute(const Pipeline &pipeline, uint32_t bindSetIndex, uint32_t globalXSize, uint32_t globalYSize, uint32_t globalZSize,
-    uint32_t localXSize, uint32_t localYSize, uint32_t localZSize)
+void MyVulkan::dispatchCompute(const Pipeline &pipeline, u32 bindSetIndex, u32 globalXSize, u32 globalYSize, u32 globalZSize,
+    u32 localXSize, u32 localYSize, u32 localZSize)
 {
     ASSERT(globalXSize && globalYSize && globalZSize && localXSize && localYSize && localZSize);
-    flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    VulkanResources::flushBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     bindComputePipelineWithDecriptors(pipeline, bindSetIndex);
     vkCmdDispatch(vulk->commandBuffer,
         (globalXSize + localXSize - 1) / localXSize,
@@ -1383,7 +1391,7 @@ void dispatchCompute(const Pipeline &pipeline, uint32_t bindSetIndex, uint32_t g
 }
 
 
-bool startRender()
+bool MyVulkan::frameStart()
 {
     vulk->frameIndex = (vulk->frameIndex + 1) % VulkanGlobal::FramesInFlight;
     vulk->commandBuffer = vulk->commandBuffers[vulk->frameIndex];
@@ -1393,7 +1401,9 @@ bool startRender()
         VK_CHECK(vkWaitForFences(vulk->device, 1, &vulk->fences[vulk->frameIndex], VK_TRUE, UINT64_MAX));
     }
     if (vulk->acquireSemaphores[vulk->frameIndex] == VK_NULL_HANDLE)
+    {
         return false;
+    }
     VkResult res = ( vkAcquireNextImageKHR(vulk->device, vulk->swapchain.swapchain, UINT64_MAX,
         vulk->acquireSemaphores[vulk->frameIndex], VK_NULL_HANDLE, &vulk->imageIndex));
 
@@ -1414,11 +1424,10 @@ bool startRender()
         return false;
     }
 
-
     return true;
 }
 
-void present(Image & imageToPresent)
+void MyVulkan::present(Image & imageToPresent)
 {
     // Copy final image to swap chain target
     {
@@ -1426,10 +1435,10 @@ void present(Image & imageToPresent)
 
         VkImageMemoryBarrier copyBeginBarriers[] =
         {
-            imageBarrier(imageToPresent,
+            VulkanResources::imageBarrier(imageToPresent,
                 VK_ACCESS_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL),
 
-            imageBarrier(vulk->swapchain.images[ vulk->imageIndex ],
+            VulkanResources::imageBarrier(vulk->swapchain.images[ vulk->imageIndex ],
                 0, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         };
@@ -1446,9 +1455,9 @@ void present(Image & imageToPresent)
         imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageBlitRegion.dstSubresource.layerCount = 1;
         imageBlitRegion.srcOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( int32_t ) imageToPresent.width, ( int32_t )imageToPresent.height, 1 };
+        imageBlitRegion.srcOffsets[ 1 ] = VkOffset3D{ ( i32 ) imageToPresent.width, ( i32 )imageToPresent.height, 1 };
         imageBlitRegion.dstOffsets[ 0 ] = VkOffset3D{ 0, 0, 0 };
-        imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( int32_t ) vulk->swapchain.width, ( int32_t ) vulk->swapchain.height, 1 };
+        imageBlitRegion.dstOffsets[ 1 ] = VkOffset3D{ ( i32 ) vulk->swapchain.width, ( i32 ) vulk->swapchain.height, 1 };
 
 
         vkCmdBlitImage(vulk->commandBuffer,
@@ -1459,7 +1468,7 @@ void present(Image & imageToPresent)
     // Prepare image for presenting.
 
         VkImageMemoryBarrier presentBarrier =
-            imageBarrier(vulk->swapchain.images[ vulk->imageIndex ],
+            VulkanResources::imageBarrier(vulk->swapchain.images[ vulk->imageIndex ],
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
@@ -1500,6 +1509,7 @@ void present(Image & imageToPresent)
         {
             resizeSwapchain();
             vulk->needToResize = false;
+            VK_CHECK(vkDeviceWaitIdle(vulk->device));
         }
         else
         {
@@ -1534,7 +1544,7 @@ void present(Image & imageToPresent)
 
 
 
-bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
+bool MyVulkan::createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     const PodVector< VkPipelineColorBlendAttachmentState > &blendChannels, const DepthTest &depthTest,
     Pipeline &outPipeline, const char *pipelineName, VkPrimitiveTopology topology)
 {
@@ -1549,7 +1559,7 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
     else
         shaders = { vertShader };
 
-    outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
+    outPipeline.descriptorSetLayouts = sParseShaderLayouts(shaders);
     if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_ALL_GRAPHICS))
     {
         printf("Failed to create graphics pipelinelayout!\n");
@@ -1657,23 +1667,23 @@ bool createGraphicsPipeline(const Shader &vertShader, const Shader &fragShader,
 
     outPipeline.pipeline = pipeline;
 
-    if (!createDescriptor(outPipeline))
+    if (!VulkanShader::createDescriptor(outPipeline))
     {
         printf("Failed to create graphics pipeline descriptor\n");
         return false;
     }
-    setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
+    setObjectName((u64)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
 
     return pipeline != VK_NULL_HANDLE;
 }
 
 
-bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, const char *pipelineName)
+bool MyVulkan::createComputePipeline(const Shader &csShader, Pipeline &outPipeline, const char *pipelineName)
 {
     //destroyPipeline(outPipeline);
 
     PodVector<Shader> shaders = { csShader };
-    outPipeline.descriptorSetLayouts = parseShaderLayouts(shaders);
+    outPipeline.descriptorSetLayouts = sParseShaderLayouts(shaders);
     if (!createPipelineLayout(outPipeline, VK_SHADER_STAGE_COMPUTE_BIT))
     {
         printf("Failed to create graphics pipelinelayout!\n");
@@ -1695,21 +1705,21 @@ bool createComputePipeline(const Shader &csShader, Pipeline &outPipeline, const 
 
     outPipeline.pipeline = pipeline;
 
-    if (!createDescriptor(outPipeline))
+    if (!VulkanShader::createDescriptor(outPipeline))
     {
         printf("Failed to create compute pipeline descriptor\n");
         return false;
     }
 
-    setObjectName((uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
+    setObjectName((u64)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pipelineName);
     return pipeline != VK_NULL_HANDLE;
 }
 
 
-void destroyPipeline(Pipeline &pipeline)
+void MyVulkan::destroyPipeline(Pipeline &pipeline)
 {
     destroyDescriptor(pipeline.descriptor);
-    destroyFramebuffer(pipeline.framebuffer);
+    VulkanResources::destroyFramebuffer(pipeline.framebuffer);
 
     if (pipeline.renderPass)
         vkDestroyRenderPass(vulk->device, pipeline.renderPass, nullptr);
@@ -1728,7 +1738,7 @@ void destroyPipeline(Pipeline &pipeline)
     pipeline.framebuffer = VK_NULL_HANDLE;
 }
 
-void destroyDescriptor(Descriptor& descriptor)
+void MyVulkan::destroyDescriptor(Descriptor& descriptor)
 {
     if (descriptor.pool)
     {
@@ -1761,7 +1771,7 @@ void destroyDescriptor(Descriptor& descriptor)
 
 
 // From sasha wilems debugmarker
-void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name)
+void MyVulkan::setObjectName(u64 object, VkDebugReportObjectTypeEXT objectType, const char *name)
 {
     // Check for a valid function pointer
     if (pfnDebugMarkerSetObjectName)
@@ -1775,7 +1785,7 @@ void setObjectName(uint64_t object, VkDebugReportObjectTypeEXT objectType, const
     }
 }
 
-void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag)
+void MyVulkan::setObjectTag(u64 object, VkDebugReportObjectTypeEXT objectType, u64 name, size_t tagSize, const void* tag)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
     if (pfnDebugMarkerSetObjectName)
@@ -1792,7 +1802,7 @@ void setObjectTag(uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64
 }
 
 // Start a new debug marker region
-void beginDebugRegion(const char *pMarkerName, Vec4 color)
+void MyVulkan::beginDebugRegion(const char *pMarkerName, Vec4 color)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
     if (pfnCmdDebugMarkerBegin)
@@ -1806,7 +1816,7 @@ void beginDebugRegion(const char *pMarkerName, Vec4 color)
 }
 
 // Insert a new debug marker into the command buffer
-void insertDebugRegion(const char *markerName, Vec4 color)
+void MyVulkan::insertDebugRegion(const char *markerName, Vec4 color)
 {
     // Check for valid function pointer (may not be present if not running in a debugging application)
     if (pfnCmdDebugMarkerInsert)
@@ -1820,7 +1830,7 @@ void insertDebugRegion(const char *markerName, Vec4 color)
 }
 
 // End the current debug marker region
-void endDebugRegion()
+void MyVulkan::endDebugRegion()
 {
     // Check for valid function (may not be present if not runnin in a debugging application)
     if (pfnCmdDebugMarkerEnd)
@@ -1830,7 +1840,7 @@ void endDebugRegion()
 }
 
 
-void bindGraphicsPipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index)
+void MyVulkan::bindGraphicsPipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, u32 index)
 {
     VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     vkCmdBindPipeline(vulk->commandBuffer, bindPoint, pipelineWithDescriptor.pipeline);
@@ -1838,7 +1848,7 @@ void bindGraphicsPipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, 
         0, 1, &pipelineWithDescriptor.descriptor.descriptorSets[index], 0, NULL);
 }
 
-void bindComputePipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, uint32_t index)
+void MyVulkan::bindComputePipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, u32 index)
 {
     VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
     vkCmdBindPipeline(vulk->commandBuffer, bindPoint, pipelineWithDescriptor.pipeline);
@@ -1847,7 +1857,7 @@ void bindComputePipelineWithDecriptors(const Pipeline &pipelineWithDescriptor, u
 }
 
 
-void writeStamp()
+void MyVulkan::writeStamp()
 {
     VkQueryPool queryPool = vulk->queryPools[vulk->frameIndex];
     vkCmdWriteTimestamp(vulk->commandBuffer, vulk->currentStage, queryPool, vulk->queryPoolIndexCounts[vulk->frameIndex]);

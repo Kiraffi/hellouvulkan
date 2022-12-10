@@ -5,7 +5,7 @@
 #include <ctype.h>
 //#include <string.h>
 
-WriteJson::WriteJson(uint32_t magicNumber, uint32_t versionNumber) : indentAmount(INDENT_INSPACES), valid(true)
+WriteJson::WriteJson(u32 magicNumber, u32 versionNumber) : indentAmount(INDENT_INSPACES), valid(true)
 {
     writtenJson.append("{\n");
     addMagicNumberAndVersion(magicNumber, versionNumber);
@@ -29,7 +29,7 @@ bool WriteJson::addString(StringView name, StringView value, bool addQuotes)
     return valid;
 }
 
-bool WriteJson::addInteger(StringView name, int64_t number)
+bool WriteJson::addInteger(StringView name, i64 number)
 {
     String s;
     s.append(number);
@@ -43,7 +43,7 @@ bool WriteJson::addNumber(StringView name, double number)
     return addString(name, s.getStr(), false);
 }
 
-bool WriteJson::addTypeArray(StringView name, const void *number, uint32_t bits, uint32_t numberCount,
+bool WriteJson::addTypeArray(StringView name, const void *number, u32 bits, u32 numberCount,
     void (*f) (String &writtenJson, void *writePlace))
 {
     if(!valid || f == nullptr)
@@ -53,11 +53,11 @@ bool WriteJson::addTypeArray(StringView name, const void *number, uint32_t bits,
 
     addIndentSpaces();
 
-    for(uint32_t i = 0; i < numberCount; ++i)
+    for(u32 i = 0; i < numberCount; ++i)
     {
         if(i > 0)
             writtenJson.append(", ");
-        f(writtenJson, ((uint8_t *)number) + bits * i);
+        f(writtenJson, ((u8 *)number) + bits * i);
         if(!isValid())
             return false;
     }
@@ -67,7 +67,7 @@ bool WriteJson::addTypeArray(StringView name, const void *number, uint32_t bits,
 }
 
 
-bool WriteJson::addNumberArray(StringView name, const double *number, uint32_t numberCount)
+bool WriteJson::addNumberArray(StringView name, const double *number, u32 numberCount)
 {
     return addTypeArray(name, number, sizeof(double), numberCount,
         [](String &writtenJson, void *writePlace)
@@ -82,7 +82,7 @@ bool WriteJson::addNumberArray(StringView name, const double *number, uint32_t n
 
     addIndentSpaces();
 
-    for(uint32_t i = 0; i < numberCount; ++i)
+    for(u32 i = 0; i < numberCount; ++i)
     {
         if(i > 0)
             writtenJson.append(", ");
@@ -93,7 +93,7 @@ bool WriteJson::addNumberArray(StringView name, const double *number, uint32_t n
     */
 }
 
-bool WriteJson::addNumberArray(StringView name, const float *number, uint32_t numberCount)
+bool WriteJson::addNumberArray(StringView name, const float *number, u32 numberCount)
 {
     return addTypeArray(name, number, sizeof(float), numberCount,
         [](String &writtenJson, void *writePlace)
@@ -109,7 +109,7 @@ bool WriteJson::addNumberArray(StringView name, const float *number, uint32_t nu
 
     addIndentSpaces();
 
-    for(uint32_t i = 0; i < numberCount; ++i)
+    for(u32 i = 0; i < numberCount; ++i)
     {
         if(i > 0)
             writtenJson.append(", ");
@@ -120,12 +120,12 @@ bool WriteJson::addNumberArray(StringView name, const float *number, uint32_t nu
     */
 }
 
-bool WriteJson::addIntegerArray(StringView name, const int64_t *number, uint32_t numberCount)
+bool WriteJson::addIntegerArray(StringView name, const i64 *number, u32 numberCount)
 {
-    return addTypeArray(name, number, sizeof(int64_t), numberCount,
+    return addTypeArray(name, number, sizeof(i64), numberCount,
         [](String &writtenJson, void *writePlace)
     {
-        writtenJson.append(*((int64_t *)writePlace));
+        writtenJson.append(*((i64 *)writePlace));
     });
 /*
     if(!valid)
@@ -135,7 +135,7 @@ bool WriteJson::addIntegerArray(StringView name, const int64_t *number, uint32_t
 
     addIndentSpaces();
 
-    for(uint32_t i = 0; i < numberCount; ++i)
+    for(u32 i = 0; i < numberCount; ++i)
     {
         if(i > 0)
             writtenJson.append(", ");
@@ -146,12 +146,12 @@ bool WriteJson::addIntegerArray(StringView name, const int64_t *number, uint32_t
     */
 }
 
-bool WriteJson::addIntegerArray(StringView name, const int32_t *number, uint32_t numberCount)
+bool WriteJson::addIntegerArray(StringView name, const i32 *number, u32 numberCount)
 {
-    return addTypeArray(name, number, sizeof(int32_t), numberCount,
+    return addTypeArray(name, number, sizeof(i32), numberCount,
         [](String &writtenJson, void *writePlace)
     {
-        writtenJson.append(*((int32_t *)writePlace));
+        writtenJson.append(*((i32 *)writePlace));
     });
 /*
     if(!valid)
@@ -161,7 +161,7 @@ bool WriteJson::addIntegerArray(StringView name, const int32_t *number, uint32_t
 
     addIndentSpaces();
 
-    for(uint32_t i = 0; i < numberCount; ++i)
+    for(u32 i = 0; i < numberCount; ++i)
     {
         if(i > 0)
             writtenJson.append(", ");
@@ -178,7 +178,7 @@ bool WriteJson::addBool(StringView name, bool b)
     return addString(name, b ? "true" : "false", false);
 }
 
-bool WriteJson::addMagicNumberAndVersion(uint32_t magicNumber, uint32_t versionNumber)
+bool WriteJson::addMagicNumberAndVersion(u32 magicNumber, u32 versionNumber)
 {
     if(!valid)
         return false;
@@ -285,7 +285,7 @@ bool WriteJson::addObject()
     return valid;
 }
 
-bool WriteJson::addObject(uint32_t magicNumber, uint32_t versionNumber)
+bool WriteJson::addObject(u32 magicNumber, u32 versionNumber)
 {
     addObject();
     addMagicNumberAndVersion(magicNumber, versionNumber);

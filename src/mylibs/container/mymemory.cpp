@@ -13,7 +13,7 @@
 // What to initialize originally the memory, probably not really useful, since
 // it would have to initialize that during freeing.
 #define USE_DEBUGVALUE 0
-static constexpr uint8_t DebugValue = 0xabu;
+static constexpr u8 DebugValue = 0xabu;
 
 #define USE_PRINTING 0
 #define PRINT_ALLOCATION_ADDRESS 0
@@ -34,28 +34,28 @@ struct MemoryArea
 {
     #if PRINT_ALLOCATION_ADDRESS
         void* ptrOfAddress = nullptr;
-        uint64_t allocationNumber = ~uint64_t(0);
+        u64 allocationNumber = ~u64(0);
     #endif // PRINT_ALLOCATION_ADDRESS
-    uint32_t startLocation = 0;
-    uint32_t size = 0;
+    u32 startLocation = 0;
+    u32 size = 0;
 };
 
 
 ///// THIS WILL NOT TO WORK WITH MULTIPLE THREADS!
-static constexpr uint32_t MaxAllocations = 65536u;
-static constexpr uint32_t MaxMemorySize = 64u * 1024u * 1024u;
-static constexpr uint32_t AllocatedSize = MaxMemorySize + 65536u +
-    (sizeof(MemoryArea) + sizeof(uint32_t) * 3) * MaxAllocations;
+static constexpr u32 MaxAllocations = 65536u;
+static constexpr u32 MaxMemorySize = 64u * 1024u * 1024u;
+static constexpr u32 AllocatedSize = MaxMemorySize + 65536u +
+    (sizeof(MemoryArea) + sizeof(u32) * 3) * MaxAllocations;
 
 // Also alignment!!!
-static constexpr uint32_t MinimumMemoryChunkSize = 256u;
-static constexpr uint32_t MemoryAlignment = 4096u;
+static constexpr u32 MinimumMemoryChunkSize = 256u;
+static constexpr u32 MemoryAlignment = 4096u;
 
 struct AllMemory;
 static AllMemory *allMemory = nullptr;
 
 #if PRINT_ALLOCATION_ADDRESS
-    static uint64_t AllocationNumber = 0;
+    static u64 AllocationNumber = 0;
 #endif
 struct AllMemory
 {
@@ -66,7 +66,7 @@ struct AllMemory
         {
             printf("Allocations alive: %u\n", allocationCount);
             #if PRINT_ALLOCATION_ADDRESS
-            for (int i = 0; i < allocationCount; ++i)
+            for (i32 i = 0; i < allocationCount; ++i)
             {
                 printf("Index: %i, Allocation pointer: %p, numb: %u\n",
                     i, memoryAreas[i].ptrOfAddress, memoryAreas[i].allocationNumber);
@@ -81,41 +81,41 @@ struct AllMemory
         allMemory = nullptr;
     }
 
-    uint8_t *memoryAll = nullptr;
-    uint8_t *memoryAligned = nullptr;
+    u8 *memoryAll = nullptr;
+    u8 *memoryAligned = nullptr;
 
     MemoryArea *memoryAreas = nullptr; //[MaxAllocations] = {};
-    uint32_t *freedAllocationIndices = nullptr; //[MaxAllocations] = {};
-    uint32_t *usedAllocationIndices = nullptr; //[MaxAllocations] = {};
+    u32 *freedAllocationIndices = nullptr; //[MaxAllocations] = {};
+    u32 *usedAllocationIndices = nullptr; //[MaxAllocations] = {};
 
-    uint32_t *handleIterations = nullptr; //[MaxAllocations] = {};
+    u32 *handleIterations = nullptr; //[MaxAllocations] = {};
 
 
     //MemoryArea memoryAreas[MaxAllocations] = {};
-    //uint32_t freedAllocationIndices[MaxAllocations] = {};
-    //uint32_t usedAllocationIndices[MaxAllocations] = {};
+    //u32 freedAllocationIndices[MaxAllocations] = {};
+    //u32 usedAllocationIndices[MaxAllocations] = {};
 
-    //uint32_t handleIterations[MaxAllocations] = {};
+    //u32 handleIterations[MaxAllocations] = {};
 
 
-    uint32_t freedAllocationCount = 0;
-    uint32_t allocationCount = 0;
+    u32 freedAllocationCount = 0;
+    u32 allocationCount = 0;
 
-    uint32_t memoryUsed = 0;
-    uint32_t maxUsed = 0u;
+    u32 memoryUsed = 0;
+    u32 maxUsed = 0u;
     bool inited = false;
     bool needsDefrag = false;
 };
 
 
-static uint32_t getHandleIndex(Memory memory)
+static u32 getHandleIndex(Memory memory)
 {
-    uint32_t handleIndex = memory.handle.value & 0x00ff'ffffu;
+    u32 handleIndex = memory.handle.value & 0x00ff'ffffu;
     return handleIndex;
 }
-static uint32_t getHandleIteration(Memory memory)
+static u32 getHandleIteration(Memory memory)
 {
-    uint32_t iteration = (memory.handle.value >> 24u) & 0xffu;
+    u32 iteration = (memory.handle.value >> 24u) & 0xffu;
     return iteration;
 }
 
@@ -128,33 +128,33 @@ static void initMemoryReal()
     allMemory = new AllMemory();
 
     uintptr_t startOffset = 0;
-    allMemory->memoryAll = new uint8_t[AllocatedSize];
+    allMemory->memoryAll = new u8[AllocatedSize];
 
     allMemory->memoryAreas = (MemoryArea *)allMemory->memoryAll;
     startOffset += MaxAllocations * sizeof(MemoryArea);
 
-    allMemory->freedAllocationIndices = (uint32_t *)(allMemory->memoryAll + startOffset);
-    startOffset += MaxAllocations * sizeof(uint32_t);
+    allMemory->freedAllocationIndices = (u32 *)(allMemory->memoryAll + startOffset);
+    startOffset += MaxAllocations * sizeof(u32);
 
-    allMemory->usedAllocationIndices = (uint32_t *)(allMemory->memoryAll + startOffset);
-    startOffset += MaxAllocations * sizeof(uint32_t);
+    allMemory->usedAllocationIndices = (u32 *)(allMemory->memoryAll + startOffset);
+    startOffset += MaxAllocations * sizeof(u32);
 
-    allMemory->handleIterations = (uint32_t *)(allMemory->memoryAll + startOffset);
-    startOffset += MaxAllocations * sizeof(uint32_t);
+    allMemory->handleIterations = (u32 *)(allMemory->memoryAll + startOffset);
+    startOffset += MaxAllocations * sizeof(u32);
 
     startOffset += MemoryAlignment;
 
-    uint8_t *newAlignedData =
-        (uint8_t *)((((uintptr_t)allMemory->memoryAll + startOffset) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
+    u8 *newAlignedData =
+        (u8 *)((((uintptr_t)allMemory->memoryAll + startOffset) + MemoryAlignment - 1u) & ~(((uintptr_t)MemoryAlignment) - 1u));
 
     allMemory->memoryAligned = newAlignedData;
     allMemory->inited = true;
 
     #if USE_DEBUGVALUE
     {
-        uint8_t *ptr = allMemory->memory;
+        u8 *ptr = allMemory->memory;
 
-        for(uint32_t ind = 0u; ind < AllocatedSize; ++ind)
+        for(u32 ind = 0u; ind < AllocatedSize; ++ind)
         {
             *ptr++ = DebugValue;
         }
@@ -162,7 +162,7 @@ static void initMemoryReal()
     #endif
     // Initialize freedallocations
     {
-        for(uint32_t i = 0; i < MaxAllocations; ++i)
+        for(u32 i = 0; i < MaxAllocations; ++i)
         {
             allMemory->freedAllocationIndices[MaxAllocations - i - 1] = i;
             allMemory->usedAllocationIndices[i] = ~0u;
@@ -182,7 +182,7 @@ void initMemory()
     initMemoryReal();
 }
 
-Memory allocateMemoryBytes(uint32_t size)
+Memory allocateMemoryBytes(u32 size)
 {
     #if PRINT_ALLOCATION_ADDRESS
         void* pvAddressOfReturnAddress = returnAddress;
@@ -212,7 +212,7 @@ Memory allocateMemoryBytes(uint32_t size)
         ASSERT(MaxMemorySize - allMemory->memoryUsed >= size);
         //exit(1);
     }
-    uint32_t index = ~0u;
+    u32 index = ~0u;
     if(allMemory->freedAllocationCount > 0)
     {
         index = allMemory->freedAllocationIndices[allMemory->freedAllocationCount - 1];
@@ -274,7 +274,7 @@ bool deAllocateMemory(Memory memory)
     if(!isValidMemory(memory))
         return false;
 
-    uint32_t handleIndex = getHandleIndex(memory);
+    u32 handleIndex = getHandleIndex(memory);
 
     // If the memory is last allocated memory, it should be last in memory, so it can be
     // just freed into stack.
@@ -287,9 +287,9 @@ bool deAllocateMemory(Memory memory)
     }
     else
     {
-        uint32_t allocs = allMemory->allocationCount;
+        u32 allocs = allMemory->allocationCount;
         bool found = false;
-        uint32_t i = 0;
+        u32 i = 0;
         for(;i < allocs; ++i)
         {
             if(handleIndex == allMemory->usedAllocationIndices[i])
@@ -328,7 +328,7 @@ bool deAllocateMemory(Memory memory)
     return true;
 }
 
-Memory resizeMemory(Memory memory, uint32_t size)
+Memory resizeMemory(Memory memory, u32 size)
 {
     #if USE_PRINTING
         printf("Reallocating!\n");
@@ -346,7 +346,7 @@ Memory resizeMemory(Memory memory, uint32_t size)
     {
         return allocateMemoryBytes(size);
     }
-    uint32_t handleIndex = getHandleIndex(memory);
+    u32 handleIndex = getHandleIndex(memory);
     MemoryArea &oldArea = allMemory->memoryAreas[handleIndex];
     if(oldArea.size > size)
     {
@@ -374,7 +374,7 @@ Memory resizeMemory(Memory memory, uint32_t size)
             ASSERT(false);
             //exit(1);
         }
-        uint32_t newHandle = getHandleIndex(newMemory);
+        u32 newHandle = getHandleIndex(newMemory);
         MemoryArea &newArea = allMemory->memoryAreas[newHandle];
         Supa::memmove(allMemory->memoryAligned + newArea.startLocation,
             allMemory->memoryAligned + oldArea.startLocation, oldArea.size);
@@ -397,10 +397,10 @@ void defragMemory()
         printf("Defrag memory\n");
     #endif
 
-    uint32_t memoryCount = 0u;
-    for(uint32_t i = 0; i < allMemory->allocationCount; ++i)
+    u32 memoryCount = 0u;
+    for(u32 i = 0; i < allMemory->allocationCount; ++i)
     {
-        uint32_t index = allMemory->usedAllocationIndices[i];
+        u32 index = allMemory->usedAllocationIndices[i];
         MemoryArea &area = allMemory->memoryAreas[index];
         ASSERT(memoryCount <= area.startLocation);
         if(memoryCount < area.startLocation)
@@ -426,20 +426,20 @@ bool isValidMemory(Memory memory)
 {
     if (!allMemory || allMemory->memoryAll == nullptr || allMemory->memoryAligned == nullptr)
         return false;
-    uint32_t handleIndex = getHandleIndex(memory);
-    uint32_t iteration = getHandleIteration(memory);
+    u32 handleIndex = getHandleIndex(memory);
+    u32 iteration = getHandleIteration(memory);
     if(handleIndex >= MaxAllocations)
         return false;
     return allMemory->handleIterations[handleIndex] == iteration;
 }
 
-uint8_t *getMemoryBegin(Memory memory)
+u8 *getMemoryBegin(Memory memory)
 {
     bool validMemory = isValidMemory(memory);
     if(!validMemory)
         return nullptr;
     ASSERT(validMemory);
-    uint32_t handleIndex = getHandleIndex(memory);
+    u32 handleIndex = getHandleIndex(memory);
     bool isValidHandle = handleIndex < MaxAllocations;
     ASSERT(isValidHandle);
     if(!validMemory || !isValidHandle)
@@ -448,13 +448,13 @@ uint8_t *getMemoryBegin(Memory memory)
     return allMemory->memoryAligned + area.startLocation;
 }
 
-uint8_t *getMemoryEnd(Memory memory)
+u8 *getMemoryEnd(Memory memory)
 {
     bool validMemory = isValidMemory(memory);
     if(!validMemory)
         return nullptr;
     ASSERT(validMemory);
-    uint32_t handleIndex = getHandleIndex(memory);
+    u32 handleIndex = getHandleIndex(memory);
     bool isValidHandle = handleIndex < MaxAllocations;
     ASSERT(isValidHandle);
     if(!validMemory || !isValidHandle)

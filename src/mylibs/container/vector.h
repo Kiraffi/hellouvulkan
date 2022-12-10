@@ -18,7 +18,7 @@ Vector<T>::Vector() : VectorBase(sizeof(T), BufferType::VECTOR)
 
 /*
 template <typename T>
-Vector<T>::Vector(uint32_t size) : VectorBase(sizeof(T), BufferType::VECTOR)
+Vector<T>::Vector(u32 size) : VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
     resize(size);
@@ -32,7 +32,7 @@ Vector<T>::Vector(const T *b, const T* e) : VectorBase(sizeof(T), BufferType::VE
     CHECK_NO_POD_MACRO();
     if(b >= e)
         return;
-    uint32_t reserveSize = (intptr_t(e) - intptr_t(b)) / sizeof(T);
+    u32 reserveSize = (intptr_t(e) - intptr_t(b)) / sizeof(T);
     this->buffer.resize(reserveSize);
     T *ptr = &begin();
     while(b < e)
@@ -66,7 +66,7 @@ Vector<T>::Vector(const std::initializer_list<T> &initializerList) :
     VectorBase(sizeof(T), BufferType::VECTOR)
 {
     CHECK_NO_POD_MACRO();
-    uint32_t size = initializerList.size();
+    u32 size = initializerList.size();
     this->buffer.resize(size);
 
     T* ptr = (T *)buffer.getDataIndex(0);
@@ -106,18 +106,18 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &vec)
 
 
 template <typename T>
-void Vector<T>::resize(uint32_t newSize)
+void Vector<T>::resize(u32 newSize)
 {
     resize(newSize, T());
 }
 
 template <typename T>
-void Vector<T>::resize(uint32_t newSize, const T &defaultValue)
+void Vector<T>::resize(u32 newSize, const T &defaultValue)
 {
-    uint32_t currSize = getSize();
+    u32 currSize = getSize();
     if (newSize < currSize)
     {
-        uint32_t tmpPos = newSize;
+        u32 tmpPos = newSize;
         T* ptr = (T*)buffer.getDataIndex(tmpPos);
         while (tmpPos < currSize)
         {
@@ -155,7 +155,7 @@ void Vector<T>::pushBack(const T &obj)
 
 
 template <typename T>
-void Vector<T>::insertIndex(uint32_t index, const T &obj)
+void Vector<T>::insertIndex(u32 index, const T &obj)
 {
     ASSERT(index < getSize());
     this->buffer.insertIndex(index);
@@ -163,7 +163,7 @@ void Vector<T>::insertIndex(uint32_t index, const T &obj)
 }
 
 template <typename T>
-void Vector<T>::removeIndex(uint32_t index)
+void Vector<T>::removeIndex(u32 index)
 {
     ASSERT(index < getSize());
     T *t = (T *)buffer.getDataIndex(index);

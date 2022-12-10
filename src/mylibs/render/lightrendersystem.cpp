@@ -17,19 +17,20 @@ struct LightBuffer
 
 LightRenderSystem::~LightRenderSystem()
 {
-    destroyPipeline(lightComputePipeline);
-    destroySampler(shadowTextureSampler);
+    MyVulkan::destroyPipeline(lightComputePipeline);
+    VulkanResources::destroySampler(shadowTextureSampler);
 }
 
 bool LightRenderSystem::init()
 {
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         lightBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
 
     auto& pipeline = lightComputePipeline;
     pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
-    if (!createComputePipeline(getShader(ShaderType::LightingShader), pipeline, "Light system compute"))
+    if (!MyVulkan::createComputePipeline(
+        VulkanShader::getShader(ShaderType::LightingShader), pipeline, "Light system compute"))
     {
         printf("Failed to create compute pipeline!\n");
         return false;
@@ -47,7 +48,7 @@ bool LightRenderSystem::init()
         samplerInfo.compareEnable = VK_TRUE;
         samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_LESS;
 
-        shadowTextureSampler = createSampler(samplerInfo);
+        shadowTextureSampler = VulkanResources::createSampler(samplerInfo);
         if (!shadowTextureSampler)
         {
             printf("Failed to create sampler for font rendering");
@@ -70,7 +71,7 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
 
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
         pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
             DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -88,7 +89,7 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
         };
     }
-    if(!updateBindDescriptorSet(pipeline))
+    if(!VulkanShader::updateBindDescriptorSet(pipeline))
         return false;
 
     return true;
@@ -99,19 +100,19 @@ void LightRenderSystem::update()
 {
     if (lightBufferHandle[vulk->frameIndex].isValid())
     {
-        LightBuffer buffer;
-        buffer.sunDir = sunDir;
+        ::LightBuffer lightBuffer;
+        lightBuffer.sunDir = sunDir;
 
-        addToCopylist(buffer, lightBufferHandle[vulk->frameIndex]);
+        VulkanResources::addToCopylist(lightBuffer, lightBufferHandle[vulk->frameIndex]);
     }
 }
 
-void LightRenderSystem::render(uint32_t width, uint32_t height)
+void LightRenderSystem::render(u32 width, u32 height)
 {
-    beginDebugRegion("Lighting compute", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    dispatchCompute(lightComputePipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
-    endDebugRegion();
-    writeStamp();
+    MyVulkan::beginDebugRegion("Lighting compute", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    MyVulkan::dispatchCompute(lightComputePipeline, vulk->frameIndex, width, height, 1, 8, 8, 1);
+    MyVulkan::endDebugRegion();
+    MyVulkan::writeStamp();
 }
 
 void LightRenderSystem::setSunDirection(const Vec3& sunDir)

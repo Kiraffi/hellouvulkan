@@ -20,7 +20,7 @@ StringView::StringView(const char *s)
     }
 }
 
-StringView::StringView(const char *s, uint32_t len)
+StringView::StringView(const char *s, u32 len)
 {
     if(!s)
     {
@@ -42,7 +42,7 @@ StringView::StringView(const String &s)
 }
 
 
-const char &StringView::operator[] (uint32_t index) const
+const char &StringView::operator[] (u32 index) const
 {
     ASSERT(index < length);
     ASSERT(ptr);
@@ -54,7 +54,7 @@ bool StringView::operator==(const char *s) const
     if(!s)
         return false;
     const char *p = ptr;
-    for(uint32_t i = 0; i < length; ++i)
+    for(u32 i = 0; i < length; ++i)
     {
         if(*s++ != *p++)
             return false;

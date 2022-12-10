@@ -5,11 +5,11 @@
 
 #include <core/camera.h>
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <gui/componentviews.h>
 
@@ -41,11 +41,11 @@
 
 #include <scene/scene.h>
 
-static constexpr int SCREEN_WIDTH = 1024;
-static constexpr int SCREEN_HEIGHT = 768;
+static constexpr i32 SCREEN_WIDTH = 1024;
+static constexpr i32 SCREEN_HEIGHT = 768;
 
-static constexpr int SHADOW_WIDTH = 2048;
-static constexpr int SHADOW_HEIGHT = 2048;
+static constexpr i32 SHADOW_WIDTH = 2048;
+static constexpr i32 SHADOW_HEIGHT = 2048;
 
 static Vec3 getSunDirection(const Camera &camera)
 {
@@ -60,7 +60,7 @@ class GameApp : public VulkanApp
 public:
     GameApp() : scene(meshRenderSystem) { }
     virtual ~GameApp() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -79,7 +79,7 @@ public:
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
-    uint32_t selectedEntityIndex = ~0u;
+    u32 selectedEntityIndex = ~0u;
 
     bool showNormalMap = false;
 
@@ -87,10 +87,10 @@ public:
     Vec3 lineTo;
 
 
-    uint32_t characterEntityIndex = ~0u;
-    uint32_t characterEntityIndex2 = ~0u;
+    u32 characterEntityIndex = ~0u;
+    u32 characterEntityIndex2 = ~0u;
 
-    uint32_t moveAnimationIndex = ~0u;
+    u32 moveAnimationIndex = ~0u;
     float angle = 0.0f;
 };
 
@@ -107,7 +107,7 @@ GameApp::~GameApp()
 
 
 
-bool GameApp::init(const char* windowStr, int screenWidth, int screenHeight)
+bool GameApp::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
@@ -196,7 +196,7 @@ void GameApp::logicUpdate()
     float moveSpeed = dt * 5.0f;
     Vec3 dir;
 
-    uint32_t animIndex = 0u;
+    u32 animIndex = 0u;
 
     if(isDown(GLFW_KEY_W))
     {
@@ -305,7 +305,7 @@ void GameApp::logicUpdate()
         else
             ray = camera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
 
-        HitPoint hitpoint{ Uninit };
+        HitPoi32 hitpoint{ Uninit };
         selectedEntityIndex = scene.castRay(ray, hitpoint);
         if(selectedEntityIndex != ~0u)
         {
@@ -384,7 +384,7 @@ void GameApp::renderDraw()
     present(meshRenderTargets.albedoImage);
 }
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

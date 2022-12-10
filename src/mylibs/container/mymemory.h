@@ -1,25 +1,25 @@
 #pragma once
 
-#include <stdint.h>
+#include <core/mytypes.h>
 
 struct Memory;
 
 void initMemory();
 void deinitMemory();
 
-[[nodiscard]] Memory allocateMemoryBytes(uint32_t size);
+[[nodiscard]] Memory allocateMemoryBytes(u32 size);
 bool deAllocateMemory(Memory memory);
-[[nodiscard]] Memory resizeMemory(Memory memory, uint32_t size);
+[[nodiscard]] Memory resizeMemory(Memory memory, u32 size);
 
 void defragMemory();
 
 [[nodiscard]] bool isValidMemory(Memory memory);
-[[nodiscard]] uint8_t *getMemoryBegin(Memory memory);
-[[nodiscard]] uint8_t *getMemoryEnd(Memory memory);
+[[nodiscard]] u8 *getMemoryBegin(Memory memory);
+[[nodiscard]] u8 *getMemoryEnd(Memory memory);
 
 struct MemoryHandle
 {
-    uint32_t value = ~0u;
+    u32 value = ~0u;
 };
 
 struct Memory
@@ -54,9 +54,9 @@ struct MemoryAutoReleaseType
 };
 
 template<class T>
-MemoryType<T> allocateMemory(uint32_t count)
+MemoryType<T> allocateMemory(u32 count)
 {
-    uint32_t size = sizeof(T);
+    u32 size = sizeof(T);
     return allocateMemoryBytes(size * count);
 }
 */

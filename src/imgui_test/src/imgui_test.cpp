@@ -2,11 +2,11 @@
 
 #include <core/camera.h>
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <container/podvector.h>
 
@@ -35,11 +35,11 @@
 
 #include <scene/scene.h>
 
-static constexpr int SCREEN_WIDTH = 800;
-static constexpr int SCREEN_HEIGHT = 600;
+static constexpr i32 SCREEN_WIDTH = 800;
+static constexpr i32 SCREEN_HEIGHT = 600;
 
-static constexpr int SHADOW_WIDTH = 2048;
-static constexpr int SHADOW_HEIGHT = 2048;
+static constexpr i32 SHADOW_WIDTH = 2048;
+static constexpr i32 SHADOW_HEIGHT = 2048;
 
 static Vec3 getSunDirection(const Camera &camera)
 {
@@ -54,7 +54,7 @@ class ImguiTest : public VulkanApp
 public:
     ImguiTest() : scene(meshRenderSystem) { }
     virtual ~ImguiTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -93,7 +93,7 @@ ImguiTest::~ImguiTest()
 
 
 
-bool ImguiTest::init(const char* windowStr, int screenWidth, int screenHeight)
+bool ImguiTest::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
@@ -291,7 +291,7 @@ void ImguiTest::renderDraw()
     present(meshRenderTargets.albedoImage);
 }
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

@@ -21,7 +21,7 @@ struct Image;
 class EditorSystem
 {
 public:
-    EditorSystem(Scene &scene, LineRenderSystem &lineRenderSystem, uint32_t windowWidth, uint32_t windowHeight)
+    EditorSystem(Scene &scene, LineRenderSystem &lineRenderSystem, u32 windowWidth, u32 windowHeight)
         : scene(scene), lineRenderSystem(lineRenderSystem), editorWindowViewport{ { 0.0f, 0.0f }, { Vec2(windowWidth, windowHeight) } } {}
 
     ~EditorSystem();
@@ -59,7 +59,7 @@ private:
     //Vec3 lineFrom;
     //Vec3 lineTo;
 
-    uint32_t selectedEntityIndex = ~0u;
+    u32 selectedEntityIndex = ~0u;
 
     bool showSaveDialog = false;
     bool focusOnViewport = false;

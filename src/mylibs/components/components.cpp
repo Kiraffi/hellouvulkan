@@ -52,7 +52,7 @@ bool serializeField(WriteJson &writeJson,
         }
         case FieldType::I32Type:
         {
-            int i = *((int*)fieldMemoryAddress);
+            i32 i = *((int*)fieldMemoryAddress);
             writeJson.addInteger(fieldName, i);
             break;
         }
@@ -159,7 +159,7 @@ bool deserializeField(const JsonBlock &json,
         case FieldType::I8Type:
         {
             i8 &i2 = *((i8*)fieldMemoryAddress);
-            int64_t i = 0;
+            i64 i = 0;
             if(!json.getChild(fieldName).parseInt(i))
                 return false;
             i2 = i8(i);
@@ -168,7 +168,7 @@ bool deserializeField(const JsonBlock &json,
         case FieldType::U8Type:
         {
             u8 &i2 = *((u8*)fieldMemoryAddress);
-            int64_t i = 0;
+            i64 i = 0;
             if(!json.getChild(fieldName).parseInt(i))
                 return false;
             i2 = u8(i);
@@ -177,7 +177,7 @@ bool deserializeField(const JsonBlock &json,
         case FieldType::I16Type:
         {
             i16 &i2 = *((i16*)fieldMemoryAddress);
-            int64_t i = 0;
+            i64 i = 0;
             if(!json.getChild(fieldName).parseInt(i))
                 return false;
             i2 = i16(i);
@@ -186,7 +186,7 @@ bool deserializeField(const JsonBlock &json,
         case FieldType::U16Type:
         {
             u16 &i2 = *((u16*)fieldMemoryAddress);
-            int64_t i = 0;
+            i64 i = 0;
             if(!json.getChild(fieldName).parseInt(i))
                 return false;
             i2 = u16(i);

@@ -15,7 +15,7 @@ class Vector : public VectorBase
 public:
     Vector();
     virtual ~Vector();
-    //Vector(uint32_t size);
+    //Vector(u32 size);
 
     Vector(const T *b, const T* e);
     Vector(const Vector<T> &vec);
@@ -25,16 +25,16 @@ public:
 
     Vector& operator=(const Vector<T> &vec);
 
-    T &operator[] (uint32_t index) const;
+    T &operator[] (u32 index) const;
 
     void pushBack(const T &obj);
     void push_back(const T &obj) { pushBack(obj); }
     void emplace_back(const T &obj) { pushBack(obj); }
-    void insertIndex(uint32_t index, const T &obj);
-    void removeIndex(uint32_t index);
+    void insertIndex(u32 index, const T &obj);
+    void removeIndex(u32 index);
 
-    void resize(uint32_t newSize);
-    void resize(uint32_t newSize, const T &defaultValue);
+    void resize(u32 newSize);
+    void resize(u32 newSize, const T &defaultValue);
 
     void clear();
 
@@ -57,10 +57,10 @@ Vector<T>::~Vector()
 }
 
 template <typename T>
-T & Vector<T>::operator[] (uint32_t index) const
+T & Vector<T>::operator[] (u32 index) const
 {
     ASSERT(index < getSize());
-    uint8_t *ptr = this->buffer.getDataIndex(index);
+    u8 *ptr = this->buffer.getDataIndex(index);
     return (T &)(*ptr);
 }
 

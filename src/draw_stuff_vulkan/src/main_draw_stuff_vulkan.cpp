@@ -5,11 +5,11 @@
 
 #include <core/camera.h>
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <gui/componentviews.h>
 
@@ -41,11 +41,11 @@
 
 #include <scene/scene.h>
 
-static constexpr int SCREEN_WIDTH = 1024;
-static constexpr int SCREEN_HEIGHT = 768;
+static constexpr i32 SCREEN_WIDTH = 1024;
+static constexpr i32 SCREEN_HEIGHT = 768;
 
-static constexpr int SHADOW_WIDTH = 2048;
-static constexpr int SHADOW_HEIGHT = 2048;
+static constexpr i32 SHADOW_WIDTH = 2048;
+static constexpr i32 SHADOW_HEIGHT = 2048;
 
 static Vec3 getSunDirection(const Camera &camera)
 {
@@ -60,7 +60,7 @@ class VulkanDrawStuff : public VulkanApp
 public:
     VulkanDrawStuff() : scene(meshRenderSystem) { }
     virtual ~VulkanDrawStuff() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -79,7 +79,7 @@ public:
     ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 fontSize{ 8.0f, 12.0f };
 
-    uint32_t selectedEntityIndex = ~0u;
+    u32 selectedEntityIndex = ~0u;
     float rotationAmount = 0.0f;
 
     bool showNormalMap = false;
@@ -102,7 +102,7 @@ VulkanDrawStuff::~VulkanDrawStuff()
 
 
 
-bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHeight)
+bool VulkanDrawStuff::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
@@ -141,9 +141,9 @@ bool VulkanDrawStuff::init(const char* windowStr, int screenWidth, int screenHei
     scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
     scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
 
-    for(int y = -10; y < 10; ++y)
+    for(i32 y = -10; y < 10; ++y)
     {
-        for(int x = -150; x < 150; ++x)
+        for(i32 x = -150; x < 150; ++x)
         {
             Vec3 pos(x, 0.0f, -50.0f + y);
             pos.x += 0.5f;
@@ -198,7 +198,7 @@ bool VulkanDrawStuff::resized()
 void VulkanDrawStuff::logicUpdate()
 {
     VulkanApp::logicUpdate();
-    static uint32_t counter = 0;
+    static u32 counter = 0;
     if(counter++ >= 100)
     {
         //printf("Matrix time: %f\n", float(getMatrixTime() / counter));
@@ -274,7 +274,7 @@ void VulkanDrawStuff::logicUpdate()
         else
             ray = camera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
 
-        HitPoint hitpoint{ Uninit };
+        HitPoi32 hitpoint{ Uninit };
         selectedEntityIndex = scene.castRay(ray, hitpoint);
         if(selectedEntityIndex != ~0u)
         {
@@ -290,18 +290,18 @@ void VulkanDrawStuff::renderUpdate()
 {
     VulkanApp::renderUpdate();
 
-    uint32_t grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
-    uint32_t selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
+    u32 grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
+    u32 selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
 
 
-    uint32_t unSelectedRedColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    uint32_t unSelectedGreenColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    uint32_t unSelectedBlueColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    u32 unSelectedRedColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    u32 unSelectedGreenColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    u32 unSelectedBlueColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
 
-    uint32_t selectedRedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    uint32_t selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    uint32_t selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    u32 selectedRedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    u32 selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    u32 selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
 
     for (auto &entity : scene.getEntities())
@@ -323,11 +323,11 @@ void VulkanDrawStuff::renderUpdate()
         linePoints4[6] = mul(m, Vec4(bmin.x, bmax.y, bmax.z, 1.0f));
         linePoints4[7] = mul(m, Vec4(bmax.x, bmax.y, bmax.z, 1.0f));
 
-        for(uint32_t i = 0; i < 8; ++i)
+        for(u32 i = 0; i < 8; ++i)
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
-        uint32_t drawColor = selectedEntityIndex == entity.index ? selectedColor : grayColor;
+        u32 drawColor = selectedEntityIndex == entity.index ? selectedColor : grayColor;
         lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
         lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
         lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
@@ -338,9 +338,9 @@ void VulkanDrawStuff::renderUpdate()
         lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
         lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
 
-        uint32_t redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
-        uint32_t greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
-        uint32_t blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
+        u32 redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
+        u32 greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
+        u32 blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
 
         lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
         lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);
@@ -422,7 +422,7 @@ void VulkanDrawStuff::renderDraw()
     present(meshRenderTargets.albedoImage);
 }
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

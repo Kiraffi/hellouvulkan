@@ -13,7 +13,7 @@ public:
     ~LineRenderSystem();
 
     bool init();
-    void addLine(const Vec3 &posStart, const Vec3 &posEnd, uint32_t color);
+    void addLine(const Vec3 &posStart, const Vec3 &posEnd, u32 color);
 
 
     void clear();
@@ -26,9 +26,9 @@ private:
     struct Line
     {
         Vec3 start;
-        uint32_t colorStart;
+        u32 colorStart;
         Vec3 end;
-        uint32_t colorEnd;
+        u32 colorEnd;
     };
 
     Buffer vertexBuffer[VulkanGlobal::FramesInFlight];

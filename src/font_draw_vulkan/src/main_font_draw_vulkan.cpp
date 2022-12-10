@@ -5,11 +5,11 @@
 #include <container/vector.h>
 
 #include <core/file.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/general.h>
 #include <core/mytypes.h>
 #include <core/timer.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <math/general_math.h>
 #include <math/matrix.h>
@@ -22,8 +22,8 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-static constexpr int SCREEN_WIDTH  = 640;
-static constexpr int SCREEN_HEIGHT = 540;
+static constexpr i32 SCREEN_WIDTH  = 640;
+static constexpr i32 SCREEN_HEIGHT = 540;
 
 static constexpr VkDeviceSize QuadBufferSize = 8 * 1024 * 1024u;
 
@@ -31,12 +31,12 @@ static constexpr float buttonSize = 20.0f;
 static constexpr float smallButtonSize = 2.0f;
 static constexpr float borderSizes = 2.0f;
 
-static constexpr uint32_t  LetterStartIndex = 32;
-static constexpr uint32_t  LetterEndIndex = 128;
-static constexpr uint32_t LetterCount =  LetterEndIndex -  LetterStartIndex;
+static constexpr u32  LetterStartIndex = 32;
+static constexpr u32  LetterEndIndex = 128;
+static constexpr u32 LetterCount =  LetterEndIndex -  LetterStartIndex;
 
-static constexpr uint32_t LetterWidth = 8;
-static constexpr uint32_t LetterHeight = 12;
+static constexpr u32 LetterWidth = 8;
+static constexpr u32 LetterHeight = 12;
 
 static constexpr float LetterPanelOffsetX = 10.0f;
 static constexpr float LetterPanelOffsetY = 10.0f;
@@ -45,9 +45,9 @@ struct GPUVertexData
 {
     float posX;
     float posY;
-    uint16_t pixelSizeX;
-    uint16_t pixelSizeY;
-    uint32_t color;
+    u16 pixelSizeX;
+    u16 pixelSizeY;
+    u32 color;
 };
 
 struct Box
@@ -61,7 +61,7 @@ class VulkanFontDraw : public VulkanApp
 public:
     virtual ~VulkanFontDraw() override;
     //bool initApp(const String &fontFilename);
-    virtual bool init(const char *windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char *windowStr, i32 screenWidth, i32 screenHeight) override;
 
     bool initRun();
     virtual void logicUpdate() override;
@@ -70,7 +70,7 @@ public:
     virtual bool resized() override;
 
 public:
-    void updateCharacterImageData(uint32_t characterIndex);
+    void updateCharacterImageData(u32 characterIndex);
     void updateDrawAreaData();
     Vec2 getDrawAreaStartPos() const;
 
@@ -83,12 +83,12 @@ public:
 
     String fontFilename;
 
-    uint8_t buffData[12] = {};
-    int32_t chosenLetter = 'a';
+    u8 buffData[12] = {};
+    i32 chosenLetter = 'a';
 
     // index 0 = selected box, 1..letters * lettersize = letter pixels, after that drawing area
     PodVector<GPUVertexData> vertData;
-    PodVector<uint8_t> characterData;
+    PodVector<u8> characterData;
 
     PodVector<Box> charactersInScreen;
 
@@ -107,17 +107,17 @@ VulkanFontDraw::~VulkanFontDraw()
     destroyPipeline(graphicsPipeline);
 
     destroyImage(renderColorImage);
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         destroyBuffer(quadBuffer[i]);
     destroyBuffer(indexDataBuffer);
 
 }
 
-bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanFontDraw::init(const char *windowStr, i32 screenWidth, i32 screenHeight)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
-    for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
         quadBuffer[i] = createBuffer(QuadBufferSize,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -129,14 +129,14 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
 
     // Random tag data
     //struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
-    //setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
+    //setObjectTag(device, (u64)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
 
 
     {
-        uint32_t offset = 0;
-        PodVector<uint32_t> indices;
+        u32 offset = 0;
+        PodVector<u32> indices;
         indices.resize(6 * 10240);
-        for (int i = 0; i < 10240; ++i)
+        for (i32 i = 0; i < 10240; ++i)
         {
             indices[ size_t(i) * 6 + 0 ] = i * 4 + 1;
             indices[ size_t(i) * 6 + 1 ] = i * 4 + 0;
@@ -175,7 +175,7 @@ bool VulkanFontDraw::init(const char *windowStr, int screenWidth, int screenHeig
             return false;
         }
 
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -212,8 +212,8 @@ bool VulkanFontDraw::initRun()
 
         GPUVertexData& vdata = vertData[0];
         vdata.color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
-        vdata.pixelSizeX = uint16_t(smallButtonSize) * LetterWidth + 4;
-        vdata.pixelSizeY = uint16_t(smallButtonSize) * LetterHeight + 4;
+        vdata.pixelSizeX = u16(smallButtonSize) * LetterWidth + 4;
+        vdata.pixelSizeY = u16(smallButtonSize) * LetterHeight + 4;
         vdata.posX = offX;
         vdata.posY = offY;
     }
@@ -222,10 +222,10 @@ bool VulkanFontDraw::initRun()
     {
         updateDrawAreaData();
     }
-    for (int k = 0; k < LetterCount; ++k)
+    for (i32 k = 0; k < LetterCount; ++k)
     {
-        int x = k % LetterWidth;
-        int y = k / LetterWidth;
+        i32 x = k % LetterWidth;
+        i32 y = k / LetterWidth;
         float smallOffX =
             LetterPanelOffsetX + float(x * LetterWidth) * smallButtonSize + x * 2;
         float smallOffY =
@@ -260,7 +260,7 @@ bool VulkanFontDraw::resized()
     return true;
 }
 
-void VulkanFontDraw::updateCharacterImageData(uint32_t characterIndex)
+void VulkanFontDraw::updateCharacterImageData(u32 characterIndex)
 {
     ASSERT(characterIndex >=  LetterStartIndex && characterIndex <  LetterEndIndex);
     characterIndex -=  LetterStartIndex;
@@ -268,24 +268,24 @@ void VulkanFontDraw::updateCharacterImageData(uint32_t characterIndex)
     const Vec2 startOffset = charactersInScreen[characterIndex].pos;
     const Vec2 size = charactersInScreen[characterIndex].size / Vec2(LetterWidth, LetterHeight);
 
-    uint32_t startIndex = characterIndex * LetterHeight;
-    uint8_t *visibility = (uint8_t *)&characterData[startIndex];
+    u32 startIndex = characterIndex * LetterHeight;
+    u8 *visibility = (u8 *)&characterData[startIndex];
 
     // first LetterWidth * LetterHeight is reserved for the drawing middle.
     GPUVertexData *vertDataPtr = &vertData[(characterIndex + 1) * LetterWidth * LetterHeight + 1];
 
-    for (uint32_t j = 0; j < LetterHeight; ++j)
+    for (u32 j = 0; j < LetterHeight; ++j)
     {
-        uint8_t rowVisibility = visibility[j];
-        for (uint32_t i = 0; i < LetterWidth; ++i)
+        u8 rowVisibility = visibility[j];
+        for (u32 i = 0; i < LetterWidth; ++i)
         {
             bool isVisible = ((rowVisibility >> i) & 1) == 1;
 
             vertDataPtr->color = isVisible ? ~0u : 0u;
-            vertDataPtr->posX = uint16_t(startOffset.x + i * smallButtonSize);
-            vertDataPtr->posY = uint16_t(startOffset.y + j * smallButtonSize);
-            vertDataPtr->pixelSizeX = uint16_t(size.x);
-            vertDataPtr->pixelSizeY = uint16_t(size.y);
+            vertDataPtr->posX = u16(startOffset.x + i * smallButtonSize);
+            vertDataPtr->posY = u16(startOffset.y + j * smallButtonSize);
+            vertDataPtr->pixelSizeX = u16(size.x);
+            vertDataPtr->pixelSizeY = u16(size.y);
             ++vertDataPtr;
         }
 
@@ -296,15 +296,15 @@ void VulkanFontDraw::updateCharacterImageData(uint32_t characterIndex)
 void VulkanFontDraw::updateDrawAreaData()
 {
     ASSERT(chosenLetter >=  LetterStartIndex && chosenLetter <  LetterEndIndex);
-    uint32_t startIndex = (chosenLetter -  LetterStartIndex) * LetterHeight;
-    uint8_t *visibility = (uint8_t *)&characterData[startIndex];
+    u32 startIndex = (chosenLetter -  LetterStartIndex) * LetterHeight;
+    u8 *visibility = (u8 *)&characterData[startIndex];
 
         // Draw area boxes
     Vec2 drawStart = getDrawAreaStartPos();
-    for (int j = 0; j < LetterHeight; ++j)
+    for (i32 j = 0; j < LetterHeight; ++j)
     {
-        uint8_t visibilityBits = visibility[j];
-        for (int i = 0; i < LetterWidth; ++i)
+        u8 visibilityBits = visibility[j];
+        for (i32 i = 0; i < LetterWidth; ++i)
         {
             Vec2 pos = drawStart + Vec2(i, j) * (borderSizes + buttonSize);
             GPUVertexData& vdata = vertData[i + size_t(j) * LetterWidth + 1];
@@ -344,7 +344,7 @@ void VulkanFontDraw::logicUpdate()
 
         bool isControlDown = keyDowns[GLFW_KEY_LEFT_CONTROL].isDown || keyDowns[GLFW_KEY_RIGHT_CONTROL].isDown;
 
-        for (int i = 0; i < bufferedPressesCount; ++i)
+        for (i32 i = 0; i < bufferedPressesCount; ++i)
         {
             if (!isControlDown && bufferedPresses[i] >=  LetterStartIndex && bufferedPresses[i] <  LetterEndIndex)
             {
@@ -364,15 +364,15 @@ void VulkanFontDraw::logicUpdate()
         if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
         {
             loadBytes(fontFilename.getStr(), characterData.getBuffer());
-            for(uint32_t i  = 0; i < LetterCount; ++i)
+            for(u32 i  = 0; i < LetterCount; ++i)
                 updateCharacterImageData(i +  LetterStartIndex);
         }
 
         if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
         {
-            uint32_t ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
-            uint8_t *ptr = &characterData[ind];
-            for (int i = 0; i < LetterHeight; ++i)
+            u32 ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
+            u8 *ptr = &characterData[ind];
+            for (i32 i = 0; i < LetterHeight; ++i)
             {
                 buffData[i] = ptr[i];
             }
@@ -380,9 +380,9 @@ void VulkanFontDraw::logicUpdate()
 
         if (keyDowns[GLFW_KEY_V].isDown && keyDowns[GLFW_KEY_V].pressCount > 0u && isControlDown)
         {
-            uint32_t ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
-            uint8_t *ptr = &characterData[ind];
-            for (int i = 0; i < LetterHeight; ++i)
+            u32 ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
+            u8 *ptr = &characterData[ind];
+            for (i32 i = 0; i < LetterHeight; ++i)
             {
                 ptr[i] = buffData[i];
             }
@@ -390,7 +390,7 @@ void VulkanFontDraw::logicUpdate()
         // check if we click any of the characters?
         if(mouseState.leftButtonDown)
         {
-            for(uint32_t i = 0; i < charactersInScreen.size(); ++i)
+            for(u32 i = 0; i < charactersInScreen.size(); ++i)
             {
                 const auto &box = charactersInScreen[i];
                 if(mouseState.x >= box.pos.x && mouseState.x <= box.pos.x + box.size.x &&
@@ -406,15 +406,15 @@ void VulkanFontDraw::logicUpdate()
         {
             Vec2 drawBox = Vec2(mouseState.x, mouseState.y) - getDrawAreaStartPos();
 
-            int foundI = drawBox.x / ((borderSizes + buttonSize));
-            int foundJ = drawBox.y / ((borderSizes + buttonSize));
+            i32 foundI = drawBox.x / ((borderSizes + buttonSize));
+            i32 foundJ = drawBox.y / ((borderSizes + buttonSize));
             // -0.1 / 1 = 0... so cannot check if foundI >= 0
             if(drawBox.x >= 0.0f && foundI < LetterWidth
                 && drawBox.y >= 0.0f && foundJ < LetterHeight)
             {
-                uint8_t *visiblePtr = &characterData[(chosenLetter -  LetterStartIndex) * LetterHeight];
-                uint8_t &visibleRow = visiblePtr[foundJ];
-                uint8_t bit = (1 << foundI);
+                u8 *visiblePtr = &characterData[(chosenLetter -  LetterStartIndex) * LetterHeight];
+                u8 &visibleRow = visiblePtr[foundJ];
+                u8 bit = (1 << foundI);
                 // set bit
                 if (mouseState.leftButtonDown)
                     visibleRow |= bit;
@@ -426,8 +426,8 @@ void VulkanFontDraw::logicUpdate()
         updateCharacterImageData(chosenLetter);
         updateDrawAreaData();
 
-        uint32_t xOff = ((chosenLetter -  LetterStartIndex) % LetterWidth);
-        uint32_t yOff = ((chosenLetter -  LetterStartIndex) / LetterWidth);
+        u32 xOff = ((chosenLetter -  LetterStartIndex) % LetterWidth);
+        u32 yOff = ((chosenLetter -  LetterStartIndex) / LetterWidth);
 
         vertData[0].posX = LetterPanelOffsetX + (xOff * LetterWidth ) * smallButtonSize + xOff * 2 - 2;
         vertData[0].posY = LetterPanelOffsetY + (yOff * LetterHeight) * smallButtonSize + yOff * 2 - 2;
@@ -457,7 +457,7 @@ void VulkanFontDraw::renderDraw()
         {
             bindGraphicsPipelineWithDecriptors(graphicsPipeline, vulk->frameIndex);
             vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk->commandBuffer, uint32_t(vertData.size() * 6), 1, 0, 0, 0);
+            vkCmdDrawIndexed(vulk->commandBuffer, u32(vertData.size() * 6), 1, 0, 0, 0);
 
         }
         vkCmdEndRenderPass(vulk->commandBuffer);
@@ -474,7 +474,7 @@ void VulkanFontDraw::renderDraw()
 
 
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

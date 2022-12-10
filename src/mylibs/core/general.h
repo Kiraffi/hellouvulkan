@@ -24,11 +24,11 @@
 
 void myPrint(const char *ptr, ...);
 
-extern "C" int printf(const char *__restrict __format, ...);
+extern "C" i32 printf(const char *__restrict __format, ...);
 #if WIN32
-    extern "C"  __declspec(dllexport) int snprintf(char *buffer, size_t bufferCount, const char *__format, ...);
+    extern "C"  __declspec(dllexport) i32 snprintf(char *buffer, size_t bufferCount, const char *__format, ...);
 #else
-extern "C" int snprintf (char *__restrict __s, size_t __maxlen, const char *__restrict __format, ...)
+extern "C" i32 snprintf (char *__restrict __s, size_t __maxlen, const char *__restrict __format, ...)
     __THROWNL __attribute__ ((__format__ (__printf__, 3, 4)));
 #endif
 
@@ -48,5 +48,5 @@ static constexpr float PI = 3.14159265358979323846264338f;
 // color values r,g,h,a between [0..1]
 
 struct Vector4;
-uint32_t getColor(float r, float g, float b, float a);
-uint32_t getColor(const Vector4 &col);
+u32 getColor(float r, float g, float b, float a);
+u32 getColor(const Vector4 &col);

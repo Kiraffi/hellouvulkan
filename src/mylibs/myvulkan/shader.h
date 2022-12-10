@@ -10,10 +10,10 @@ struct Shader
 
     VkShaderStageFlags stage;
     VkDescriptorType resourceTypes[64] = {};
-    uint64_t resourceMask = 0;
+    u64 resourceMask = 0;
 };
 
-enum class ShaderType : uint8_t
+enum class ShaderType : u8
 {
     Basic3DFrag,
     Basic3DVert,
@@ -39,16 +39,19 @@ enum class ShaderType : uint8_t
     NumShaders,
 };
 
+class VulkanShader
+{
+public:
 
-const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex = 0u);
-bool loadShaders();
-void deleteLoadedShaders();
+    static const Shader& getShader(ShaderType shaderType, u32 permutationIndex = 0u);
+    static bool loadShaders();
+    static void deleteLoadedShaders();
 
-bool loadShader(const char *filename, Shader& outShader);
-void destroyShader(Shader& shaderModule);
+    static bool createDescriptor(Pipeline &pipeline);
+    static bool updateBindDescriptorSet(const Pipeline &pipeline);
+    static bool updateBindDescriptorSet(
+        const PodVector<DescriptorSetLayout> &descriptors,
+        const Vector<PodVector<DescriptorInfo>>& descriptorInfos,
+        const PodVector<VkDescriptorSet> &descriptorSet);
 
-bool createDescriptor(Pipeline &pipeline);
-bool updateBindDescriptorSet(const Pipeline &pipeline);
-bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout> &descriptors,
-    const Vector<PodVector<DescriptorInfo>>& descriptorInfos, const PodVector<VkDescriptorSet> &descriptorSet);
-
+};

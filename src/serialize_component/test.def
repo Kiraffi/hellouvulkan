@@ -17,7 +17,7 @@ EnumEnd
 
 ComponentBegin
 Heritaged1Component ComponentType::HeritagedType 1
-    tempInt ? int = 10
+    tempi32 ? i32 = 10
     tempFloat ? float = 20.0f
     tempV2 ? Vector2 = {41, 520}
     tempV3 ? Vector3 = {10, 20, 30}
@@ -39,9 +39,9 @@ ComponentEnd
 ComponentBegin
 Heritaged2Component ComponentType::HeritagedType2 1
 
-    tempInt ? int = 98756
-    tempInt2 ? int = 10
-    tempInt3 ? int = 10
+    tempi32 ? i32 = 98756
+    tempInt2 ? i32 = 10
+    tempInt3 ? i32 = 10
 
     tempFloat2 ? float = 20.0f
     tempMat3x4 ? Mat3x4 = {}

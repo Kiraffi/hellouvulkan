@@ -32,8 +32,8 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
     if (info.codeSize == 0 || info.pCode == nullptr)
         return false;
 
-    const uint32_t* code = info.pCode;
-    uint32_t codeSize = info.codeSize / sizeof(uint32_t);
+    const u32* code = info.pCode;
+    u32 codeSize = info.codeSize / sizeof(u32);
 
     ASSERT(code[0] == SpvMagicNumber);
     if (code[0] != SpvMagicNumber)
@@ -41,25 +41,25 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
 
     struct Ops
     {
-        uint32_t opCode;
-        uint32_t typeId;
-        uint32_t storageClass;
-        uint32_t binding;
-        uint32_t set;
+        u32 opCode;
+        u32 typeId;
+        u32 storageClass;
+        u32 binding;
+        u32 set;
     };
-    uint32_t bounds = code[3];
+    u32 bounds = code[3];
     PodVector<Ops> ops;
     ops.resize(bounds, Ops{});
 
-    uint32_t lineNumber = 0u;
-    const uint32_t* codePtr = code + 5;
-    PodVector<const uint32_t*> codeStarts;
+    u32 lineNumber = 0u;
+    const u32* codePtr = code + 5;
+    PodVector<const u32*> codeStarts;
 
     while (codePtr < code + codeSize)
     {
         codeStarts.push_back(codePtr);
-        uint16_t words = uint16_t(*codePtr >> 16);
-        uint16_t opCode = uint16_t(*codePtr & 0xffff);
+        u16 words = u16(*codePtr >> 16);
+        u16 opCode = u16(*codePtr & 0xffff);
         ASSERT(words);
         ASSERT(codePtr + words - 1 < code + codeSize);
 
@@ -89,7 +89,7 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
             {
                 ASSERT(words >= 3);
 
-                uint32_t id = codePtr[1];
+                u32 id = codePtr[1];
                 ASSERT(id < bounds);
 
                 switch (codePtr[2])
@@ -112,7 +112,7 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
             {
                 ASSERT(words >= 2);
 
-                uint32_t id = codePtr[1];
+                u32 id = codePtr[1];
                 ASSERT(id < bounds);
 
                 ASSERT(ops[id].opCode == 0);
@@ -124,7 +124,7 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
             {
                 ASSERT(words == 4);
 
-                uint32_t id = codePtr[1];
+                u32 id = codePtr[1];
                 ASSERT(id < bounds);
 
                 ASSERT(ops[id].opCode == 0);
@@ -138,7 +138,7 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
             {
                 ASSERT(words >= 4);
 
-                uint32_t id = codePtr[2];
+                u32 id = codePtr[2];
                 ASSERT(id < bounds);
 
                 ASSERT(ops[id].opCode == 0);
@@ -169,7 +169,7 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
 
                 ASSERT((inOutShader.resourceMask & (1 << op.binding)) == 0);
 
-                uint32_t typeKind = ops[ops[op.typeId].typeId].opCode;
+                u32 typeKind = ops[ops[op.typeId].typeId].opCode;
                 switch (typeKind)
                 {
                     case SpvOpTypeStruct:
@@ -200,12 +200,12 @@ static bool parseShaderCode(const VkShaderModuleCreateInfo &info, StringView fil
     return true;
 }
 
-bool loadShader(const char *filename, ShaderType shaderType)
+static bool sLoadShader(const char *filename, ShaderType shaderType)
 {
-    if (uint32_t(shaderType) >= uint32_t(ShaderType::NumShaders))
+    if (u32(shaderType) >= u32(ShaderType::NumShaders))
         return false;
-    uint32_t permutationIndex = 0;
-    PodVector<uint8_t> buffer;
+    u32 permutationIndex = 0;
+    PodVector<u8> buffer;
 
     while(true)
     {
@@ -229,7 +229,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
 
         VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         createInfo.codeSize = buffer.size();
-        createInfo.pCode = reinterpret_cast<uint32_t*>(buffer.data());
+        createInfo.pCode = reinterpret_cast<u32*>(buffer.data());
         VK_CHECK(vkCreateShaderModule(vulk->device, &createInfo, nullptr, &shader.module));
         ASSERT(shader.module);
         if (!shader.module)
@@ -241,7 +241,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
         if (!parseSuccess)
             return false;
 
-        globalShaders->shaders[uint32_t(shaderType)].push_back(shader);
+        globalShaders->shaders[u32(shaderType)].push_back(shader);
 
         ++permutationIndex;
     }
@@ -253,8 +253,7 @@ bool loadShader(const char *filename, ShaderType shaderType)
     return loadSuccess;
 }
 
-
-void destroyShader(Shader& shader)
+void sDestroyShader(Shader& shader)
 {
     if (shader.module)
         vkDestroyShaderModule(vulk->device, shader.module, nullptr);
@@ -262,57 +261,57 @@ void destroyShader(Shader& shader)
 }
 
 
-const Shader& getShader(ShaderType shaderType, uint32_t permutationIndex)
+const Shader& VulkanShader::getShader(ShaderType shaderType, u32 permutationIndex)
 {
-    ASSERT(uint32_t(shaderType) < uint32_t(ShaderType::NumShaders));
-    ASSERT(uint32_t(shaderType) < globalShaders->shaders.size());
-    ASSERT(permutationIndex < globalShaders->shaders[uint32_t(shaderType)].size());
-    return globalShaders->shaders[uint32_t(shaderType)][permutationIndex];
+    ASSERT(u32(shaderType) < u32(ShaderType::NumShaders));
+    ASSERT(u32(shaderType) < globalShaders->shaders.size());
+    ASSERT(permutationIndex < globalShaders->shaders[u32(shaderType)].size());
+    return globalShaders->shaders[u32(shaderType)][permutationIndex];
 }
 
-bool loadShaders()
+bool VulkanShader::loadShaders()
 {
     ASSERT(globalShaders == nullptr);
     globalShaders = new GlobalShaders();
-    globalShaders->shaders.resize(uint8_t(ShaderType::NumShaders));
-    if (!loadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
-    if (!loadShader("basic3d.vert", ShaderType::Basic3DVert)) return false;
+    globalShaders->shaders.resize(u8(ShaderType::NumShaders));
+    if (!sLoadShader("basic3d.frag", ShaderType::Basic3DFrag)) return false;
+    if (!sLoadShader("basic3d.vert", ShaderType::Basic3DVert)) return false;
 
-    if (!loadShader("line.vert", ShaderType::LineVert)) return false;
+    if (!sLoadShader("line.vert", ShaderType::LineVert)) return false;
 
-    if (!loadShader("coloredquad.frag", ShaderType::ColoredQuadFrag)) return false;
-    if (!loadShader("coloredquad.vert", ShaderType::ColoredQuadVert)) return false;
+    if (!sLoadShader("coloredquad.frag", ShaderType::ColoredQuadFrag)) return false;
+    if (!sLoadShader("coloredquad.vert", ShaderType::ColoredQuadVert)) return false;
 
-    if (!loadShader("space_ship_2d_model.frag", ShaderType::SpaceShip2DModelFrag)) return false;
-    if (!loadShader("space_ship_2d_model.vert", ShaderType::SpaceShip2DModelVert)) return false;
+    if (!sLoadShader("space_ship_2d_model.frag", ShaderType::SpaceShip2DModelFrag)) return false;
+    if (!sLoadShader("space_ship_2d_model.vert", ShaderType::SpaceShip2DModelVert)) return false;
 
-    if (!loadShader("texturedquad.frag", ShaderType::TexturedQuadFrag)) return false;
-    if (!loadShader("texturedquad.vert", ShaderType::TexturedQuadVert)) return false;
-
-
-
-    if (!loadShader("compute_test.comp", ShaderType::ComputeTestComp)) return false;
-
-
-    if (!loadShader("lighting.comp", ShaderType::LightingShader)) return false;
-    if (!loadShader("tonemap.comp", ShaderType::TonemapShader)) return false;
+    if (!sLoadShader("texturedquad.frag", ShaderType::TexturedQuadFrag)) return false;
+    if (!sLoadShader("texturedquad.vert", ShaderType::TexturedQuadVert)) return false;
 
 
 
+    if (!sLoadShader("compute_test.comp", ShaderType::ComputeTestComp)) return false;
 
-    if (!loadShader("convertrgbas16.comp", ShaderType::ConvertFromRGBAS16)) return false;
+
+    if (!sLoadShader("lighting.comp", ShaderType::LightingShader)) return false;
+    if (!sLoadShader("tonemap.comp", ShaderType::TonemapShader)) return false;
+
+
+
+
+    if (!sLoadShader("convertrgbas16.comp", ShaderType::ConvertFromRGBAS16)) return false;
 
 
 
     return true;
 }
 
-void deleteLoadedShaders()
+void VulkanShader::deleteLoadedShaders()
 {
     for (auto &shaderPermutations : globalShaders->shaders)
     {
         for (auto& shaderModule : shaderPermutations)
-            destroyShader(shaderModule);
+            sDestroyShader(shaderModule);
     }
 
     globalShaders->shaders.clear();
@@ -322,18 +321,18 @@ void deleteLoadedShaders()
 
 
 
-bool createDescriptor(Pipeline &pipeline)
+bool VulkanShader::createDescriptor(Pipeline &pipeline)
 {
-    destroyDescriptor(pipeline.descriptor);
+    MyVulkan::destroyDescriptor(pipeline.descriptor);
 
     if (pipeline.descriptorSetLayouts.size() == 0)
         return true;
 
     //... So the poolsizes needs to count maximum amount of resource per resource type...
     PodVector<VkDescriptorPoolSize> poolSizes;
-    for(uint32_t j = 0; j < pipeline.descriptor.descriptorSets.size(); ++j)
+    for(u32 j = 0; j < pipeline.descriptor.descriptorSets.size(); ++j)
     {
-        for(uint32_t i = 0; i < pipeline.descriptorSetLayouts.size(); ++i)
+        for(u32 i = 0; i < pipeline.descriptorSetLayouts.size(); ++i)
         {
             VkDescriptorPoolSize *found = nullptr;
             for(auto &desc : poolSizes)
@@ -355,7 +354,7 @@ bool createDescriptor(Pipeline &pipeline)
     }
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = uint32_t(poolSizes.size());
+    poolInfo.poolSizeCount = u32(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = pipeline.descriptor.descriptorSets.size();
     ASSERT(poolInfo.maxSets);
@@ -369,7 +368,7 @@ bool createDescriptor(Pipeline &pipeline)
     allocInfo.descriptorSetCount = 1u;
     allocInfo.pSetLayouts = &pipeline.descriptorSetLayout;
 
-    for(uint32_t i = 0; i < pipeline.descriptor.descriptorSets.size(); ++i)
+    for(u32 i = 0; i < pipeline.descriptor.descriptorSets.size(); ++i)
     {
         VkDescriptorSet descriptorSet = 0;
         VK_CHECK(vkAllocateDescriptorSets(vulk->device, &allocInfo, &descriptorSet));
@@ -381,7 +380,7 @@ bool createDescriptor(Pipeline &pipeline)
     return true;
 }
 
-bool updateBindDescriptorSet(const Pipeline &pipeline)
+bool VulkanShader::updateBindDescriptorSet(const Pipeline &pipeline)
 {
     bool success = updateBindDescriptorSet(
         pipeline.descriptorSetLayouts, pipeline.descriptorSetBinds, pipeline.descriptor.descriptorSets);
@@ -390,7 +389,7 @@ bool updateBindDescriptorSet(const Pipeline &pipeline)
 }
 
 
-bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
+bool VulkanShader::updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
     const Vector<PodVector<DescriptorInfo>>& descriptorSetInfos, const PodVector<VkDescriptorSet> &descriptorSets)
 {
     if(descriptorSetInfos.size() == 0 || descriptorSets.size() != descriptorSetInfos.size())
@@ -401,11 +400,11 @@ bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
     }
 
 
-    for(uint32_t setIndex = 0; setIndex < descriptorSets.size(); ++setIndex)
+    for(u32 setIndex = 0; setIndex < descriptorSets.size(); ++setIndex)
     {
         const auto &descriptorInfos = descriptorSetInfos[setIndex];
         const auto &descriptorSet = descriptorSets[setIndex];
-        uint32_t writeDescriptorCount = (uint32_t)descriptorInfos.size();
+        u32 writeDescriptorCount = (u32)descriptorInfos.size();
         if(writeDescriptorCount < 1u)
         {
             ASSERT(false && "Descriptorbinds failed");
@@ -428,10 +427,10 @@ bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
         PodVector<VkDescriptorImageInfo> imageInfos;
         imageInfos.resize(writeDescriptorCount);
 
-        uint32_t writeIndex = 0u;
-        uint32_t bufferCount = 0u;
-        uint32_t imageCount = 0u;
-        for(uint32_t i = 0; i < descriptorInfos.size(); ++i)
+        u32 writeIndex = 0u;
+        u32 bufferCount = 0u;
+        u32 imageCount = 0u;
+        for(u32 i = 0; i < descriptorInfos.size(); ++i)
         {
             if(descriptorInfos[i].type == DescriptorInfo::DescriptorType::BUFFER)
             {
@@ -485,7 +484,7 @@ bool updateBindDescriptorSet(const PodVector<DescriptorSetLayout>& descriptors,
 
         if(writeDescriptorSets.size() > 0)
         {
-            vkUpdateDescriptorSets(vulk->device, uint32_t(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+            vkUpdateDescriptorSets(vulk->device, u32(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
         }
     }
     return true;

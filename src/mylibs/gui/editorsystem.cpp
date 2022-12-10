@@ -2,8 +2,8 @@
 
 #include <components/transform_functions.h>
 
-#include <core/glfw_keys.h>
-#include <core/vulkan_app.h>
+#include <app/glfw_keys.h>
+#include <app/vulkan_app.h>
 
 #include <gui/componentviews.h>
 #include <gui/guiutil.h>
@@ -145,7 +145,7 @@ static bool drawDockspace(ImTextureID viewportImage, Viewport &outViewport, bool
 
 
 
-static bool drawEntities(ArraySliceView<GameEntity> gameEntitites, uint32_t &inOutSelectedEntityIndex)
+static bool drawEntities(ArraySliceView<GameEntity> gameEntitites, u32 &inOutSelectedEntityIndex)
 {
     ImGui::Begin("Entities");
     if(ImGui::BeginListBox("Entities", ImVec2(-FLT_MIN, 0.0f)))
@@ -189,9 +189,9 @@ static bool drawEntityContents(GameEntity &entity)
     const auto *typeName = getStringFromEntityType(entity.entityType);
     if(ImGui::BeginCombo("EntityType", typeName, 0))
     {
-        for(uint32_t i = 0; i <= uint32_t(EntityType::NUM_OF_ENTITY_TYPES); ++i)
+        for(u32 i = 0; i <= u32(EntityType::NUM_OF_ENTITY_TYPES); ++i)
         {
-            bool isSelected = i == uint32_t(entity.entityType);
+            bool isSelected = i == u32(entity.entityType);
             if(ImGui::Selectable(getStringFromEntityType(EntityType(i)), isSelected))
                 entity.entityType = EntityType(i);
 
@@ -202,15 +202,15 @@ static bool drawEntityContents(GameEntity &entity)
         ImGui::EndCombo();
     }
 
-    if(globalResources && uint32_t(entity.entityType) <= globalResources->models.size())
+    if(globalResources && u32(entity.entityType) <= globalResources->models.size())
     {
-        const auto &model = globalResources->models[uint32_t(entity.entityType)];
+        const auto &model = globalResources->models[u32(entity.entityType)];
         SmallStackString meshName = "";
         if(entity.meshIndex < model.modelMeshes.size())
             meshName = model.modelMeshes[entity.meshIndex].meshName;
         if(ImGui::BeginCombo("Mesh", meshName.getStr(), 0))
         {
-            for(uint32_t i = 0; i < model.modelMeshes.size(); ++i)
+            for(u32 i = 0; i < model.modelMeshes.size(); ++i)
             {
                 bool isSelected = i == entity.meshIndex;
                 if(ImGui::Selectable(model.modelMeshes[i].meshName.getStr()))
@@ -228,7 +228,7 @@ static bool drawEntityContents(GameEntity &entity)
             animName = model.animNames[entity.animationIndex];
         if(entity.animationIndex < model.animNames.size() && ImGui::BeginCombo("Animation", animName.getStr(), 0))
         {
-            for(uint32_t i = 0; i < model.animNames.size(); ++i)
+            for(u32 i = 0; i < model.animNames.size(); ++i)
             {
                 bool isSelected = i == entity.meshIndex;
                 if(ImGui::Selectable(model.animNames[i].getStr()))
@@ -335,16 +335,16 @@ bool EditorSystem::logicUpdate(const VulkanApp &app)
 
 bool EditorSystem::renderUpdateViewport()
 {
-    static const uint32_t grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
-    static const uint32_t selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
+    static const u32 grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
+    static const u32 selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
 
-    static const uint32_t unSelectedRedColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    static const uint32_t unSelectedGreenColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    static const uint32_t unSelectedBlueColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    static const u32 unSelectedRedColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    static const u32 unSelectedGreenColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    static const u32 unSelectedBlueColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
-    static const uint32_t selectedRedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    static const uint32_t selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    static const uint32_t selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    static const u32 selectedRedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    static const u32 selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    static const u32 selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
 
     for(const auto &entity : scene.getEntities())
@@ -365,11 +365,11 @@ bool EditorSystem::renderUpdateViewport()
         linePoints4[6] = mul(m, Vec4(bmin.x, bmax.y, bmax.z, 1.0f));
         linePoints4[7] = mul(m, Vec4(bmax.x, bmax.y, bmax.z, 1.0f));
 
-        for(uint32_t i = 0; i < 8; ++i)
+        for(u32 i = 0; i < 8; ++i)
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
-        uint32_t drawColor = selectedEntityIndex == entity.index ? selectedColor : grayColor;
+        u32 drawColor = selectedEntityIndex == entity.index ? selectedColor : grayColor;
         lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
         lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
         lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
@@ -380,9 +380,9 @@ bool EditorSystem::renderUpdateViewport()
         lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
         lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
 
-        uint32_t redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
-        uint32_t greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
-        uint32_t blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
+        u32 redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
+        u32 greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
+        u32 blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
 
         lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
         lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);

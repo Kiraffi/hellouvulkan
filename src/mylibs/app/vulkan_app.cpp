@@ -1,5 +1,10 @@
 #include "vulkan_app.h"
 
+#include <app/inputapp.h>
+
+#include <core/assert.h>
+#include <core/mytypes.h>
+
 #if WIN32
     #include <Windows.h> // begintimeperiod
     #include <timeapi.h>
@@ -7,94 +12,195 @@
     #include <unistd.h>
 #endif
 
+#include <resources/globalresources.h>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <core/camera.h>
-#include <core/timer.h>
-#include <core/mytypes.h>
+static WindowApp sWindowApp;
+static GLFWwindow* sWindow = nullptr;
 
-#include <math/quaternion_inline_functions.h>
-#include <math/vector3_inline_functions.h>
+static void sResizeWindow(i32 width, i32 height);
 
-#include <myvulkan/myvulkan.h>
-#include <myvulkan/vulkaninitparameters.h>
-
-#include <resources/globalresources.h>
-
-//#include <thread>
-
-
-static double timer_frequency = 0.0;
-static void printStats(VulkanApp& app);
-static void updateStats(VulkanApp &app);
-
-static void error_callback(int error, const char* description)
+static void sErrorCB(i32 error, const char* description)
 {
     printf("Error: %s\n", description);
 }
 
-
-
-
-static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
+static void sFrameBufCB(GLFWwindow* window, i32 width, i32 height)
 {
-    VulkanApp *data = reinterpret_cast<VulkanApp *>(glfwGetWindowUserPointer(window));
-    if(data)
-    {
-        data->resizeWindow(width, height);
-        data->needToResize = true;
-    }
+    sResizeWindow(width, height);
 }
 
-static void keyboardHandlerCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+static void sResizeWindow(i32 width, i32 height)
 {
-    VulkanApp *data = reinterpret_cast<VulkanApp *>(glfwGetWindowUserPointer(window));
-    if(!data)
-        return;
-
-    if(action == GLFW_PRESS)
+    if(width != sWindowApp.windowWidth || height != sWindowApp.windowHeight)
     {
-        /*
-        if(key == GLFW_KEY_ESCAPE)
-            glfwSetWindowShouldClose( window, 1 );
-        */
-        if (key >= 0 && key < 512)
+        sWindowApp.resized = true;
+    }
+    sWindowApp.viewportWidth = width;
+    sWindowApp.viewportHeight = height;
+    sWindowApp.windowWidth = width;
+    sWindowApp.windowHeight = height;
+}
+
+bool VulkanApp::initApp(const char *windowStr, i32 screenWidth, i32 screenHeight)
+{
+    //if (!initGlobalResources())
+    //{
+    //    return false;
+    //}
+
+    sWindowApp.windowWidth = screenWidth;
+    sWindowApp.windowHeight = screenHeight;
+
+    glfwSetErrorCallback(sErrorCB);
+    i32 rc = glfwInit();
+    ASSERT(rc);
+    if (!rc)
+    {
+        printf("Couldn't initialize GLFW\n");
+        return false;
+    }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+    sWindowApp.inited = true;
+
+    sWindow = glfwCreateWindow(screenWidth, screenHeight, windowStr, NULL, NULL);
+    ASSERT(sWindow);
+    if (!sWindow)
+    {
+        printf("Couldn't create glfw window\n");
+        return false;
+    }
+
+    i32 w, h;
+    glfwGetFramebufferSize(sWindow, &w, &h);
+
+    sResizeWindow(w, h);
+    glfwSetFramebufferSizeCallback(sWindow, sFrameBufCB);
+
+    return true;
+}
+
+void VulkanApp::deinitApp()
+{
+    //deinitGlobalResources();
+    if(sWindow)
+        glfwDestroyWindow(sWindow);
+    if(sWindowApp.inited)
+        glfwTerminate();
+    sWindow = nullptr;
+}
+
+const WindowApp& VulkanApp::getWindowApp()
+{
+    return sWindowApp;
+}
+
+const GLFWwindow* VulkanApp::getWindow()
+{
+    return sWindow;
+}
+
+GLFWwindow* VulkanApp::getWindowRef()
+{
+    return sWindow;
+}
+
+void VulkanApp::setTitle(const char *str)
+{
+    ASSERT(sWindow);
+    glfwSetWindowTitle(sWindow, str);
+}
+
+void VulkanApp::setWindowPosition(u32 x, u32 y)
+{
+    ASSERT(sWindow);
+    glfwSetWindowPos(sWindow, x, y);
+}
+
+bool VulkanApp::updateApp()
+{
+    if(glfwWindowShouldClose(sWindow))
+    {
+        return false;
+    }
+    InputApp::reset();
+    glfwPollEvents();
+
+    return true;
+}
+
+void VulkanApp::frameEnd()
+{
+    static constexpr u32 SleepDuration = 5;
+    #if WIN32
+        timeBeginPeriod(1);
+        Sleep(SleepDuration);
+    #else
+        usleep(SleepDuration * 1000);
+    #endif
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    #if WIN32
+        timeEndPeriod(1);
+    #endif
+}
+
+#if 0
+bool VulkanApp::updateApp()
+{
+    defragMemory();
+    if(glfwWindowShouldClose(sWindow))
+    {
+        return false;
+    }
+    InputApp::reset();
+    glfwPollEvents();
+
+    return true;
+}
+
+        logicUpdate();
+        bool resizeHappen = !startRender();
+
+        if (!resizeHappen)
         {
-            data->keyDowns[ key ].isDown = true;
-            ++data->keyDowns[ key ].pressCount;
-
-            if (key >= 32 && key < 128)
-            {
-                char letter = ( char ) key;
-                if (key >= 65 && key <= 90)
-                {
-                    int adder = 32;
-                    if (( mods & ( GLFW_MOD_SHIFT | GLFW_MOD_CAPS_LOCK ) ) != 0)
-                        adder = 0;
-                    letter += adder;
-                }
-                data->bufferedPresses[ data->bufferedPressesCount ] = letter;
-                ++data->bufferedPressesCount;
-            }
+            updateStats(*this);
+            vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            renderUpdate();
+            renderDraw();
+            printStats(*this);
         }
+        defragMemory();
+        static constexpr u32 SleepDuration = 5;
+        #if WIN32
+            timeBeginPeriod(1);
+            Sleep(SleepDuration);
+        #else
+            usleep(SleepDuration * 1000);
+        #endif
+            //std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        #if WIN32
+            timeEndPeriod(1);
+        #endif
+        // needed cos of resize?
+        if(resizeHappen)
+            VK_CHECK(vkDeviceWaitIdle(vulk->device));
+
     }
-    else if(action == GLFW_RELEASE && key >= 0 && key < 512)
-    {
-        data->keyDowns[ key ].isDown = false;
-        ++data->keyDowns[ key ].pressCount;
-    }
+    VK_CHECK(vkDeviceWaitIdle(vulk->device));
+
 }
 
-
-
-bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
+bool VulkanApp::init(const char *windowStr, i32 screenWidth, i32 screenHeight)
 {
     if(!initGlobalResources())
         return false;
 
     glfwSetErrorCallback(error_callback);
-    int rc = glfwInit();
+    i32 rc = glfwInit();
     ASSERT(rc);
     if (!rc)
     {
@@ -113,7 +219,7 @@ bool VulkanApp::init(const char *windowStr, int screenWidth, int screenHeight)
         printf("Couldn't create glfw window\n");
         return false;
     }
-    int w,h;
+    i32 w,h;
     glfwGetFramebufferSize(window, &w, &h);
     resizeWindow(w, h);
 
@@ -158,13 +264,12 @@ VulkanApp::~VulkanApp()
     window = nullptr;
 }
 
-void VulkanApp::resizeWindow(int w, int h)
+void VulkanApp::resizeWindow(i32 w, i32 h)
 {
     viewportWidth = w;
     viewportHeight = h;
     windowWidth = w;
     windowHeight = h;
-    //printf("Window size: %i: %i\n", w, h);
 }
 
 void VulkanApp::setVsync(VSyncType vSyncType)
@@ -178,27 +283,27 @@ void VulkanApp::setVsync(VSyncType vSyncType)
     vulk->needToResize = true;
 }
 
-bool VulkanApp::isPressed(int keyCode) const
+bool VulkanApp::isPressed(i32 keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return keyDowns[ keyCode ].isDown && keyDowns[ keyCode ].pressCount > 0;
     return false;
 }
-bool VulkanApp::isReleased(int keyCode) const
+bool VulkanApp::isReleased(i32 keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return !keyDowns[ keyCode ].isDown && keyDowns[ keyCode ].pressCount > 0;
     return false;
 }
 
-bool VulkanApp::isDown(int keyCode) const
+bool VulkanApp::isDown(i32 keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return keyDowns[ keyCode ].isDown;
     return false;
 }
 
-bool VulkanApp::isUp(int keyCode) const
+bool VulkanApp::isUp(i32 keyCode) const
 {
     if (keyCode >= 0 && keyCode < 512)
         return !keyDowns[ keyCode ].isDown;
@@ -218,7 +323,7 @@ void VulkanApp::renderUpdate()
     vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPools[vulk->frameIndex], 0, QUERY_COUNT);
 
     writeStamp();
-    vulkanResourceFrameUpdate();
+    VulkanResources::update();
 
     struct FrameBuffer
     {
@@ -280,7 +385,7 @@ void VulkanApp::run()
             printStats(*this);
         }
         defragMemory();
-        static constexpr uint32_t SleepDuration = 5;
+        static constexpr u32 SleepDuration = 5;
         #if WIN32
             timeBeginPeriod(1);
             Sleep(SleepDuration);
@@ -303,7 +408,7 @@ void VulkanApp::logicUpdate()
 {
     fontSystem.reset();
 
-    for (int i = 0; i < ARRAYSIZES(keyDowns); ++i)
+    for (i32 i = 0; i < ARRAYSIZES(keyDowns); ++i)
     {
         keyDowns[ i ].pressCount = 0u;
     }
@@ -320,15 +425,6 @@ void VulkanApp::logicUpdate()
     }
 }
 
-void VulkanApp::setTitle(const char *str)
-{
-    glfwSetWindowTitle(window, str);
-}
-
-void VulkanApp::setWindowPosition(uint32_t x, uint32_t y)
-{
-    glfwSetWindowPos(window, x, y);
-}
 
 const Camera &VulkanApp::getActiveCamera() const
 {
@@ -447,8 +543,8 @@ void VulkanApp::checkCameraKeypresses(float deltaTime, Camera &camera)
 
 static void updateStats(VulkanApp &app)
 {
-    static uint32_t gpuframeCount = 0u;
-    static uint32_t cpuframeCount = 0u;
+    static u32 gpuframeCount = 0u;
+    static u32 cpuframeCount = 0u;
     static double gpuTime = 0.0;
     static double cpuTimeStamp = app.getTime();
 
@@ -457,15 +553,15 @@ static void updateStats(VulkanApp &app)
         double timeDuration[QUERY_COUNT];
     };
     static TimeValues timeValues = {};
-    uint32_t oldPoolIndex = vulk->frameIndex;
-    uint32_t timeStamps = vulk->queryPoolIndexCounts[oldPoolIndex];
+    u32 oldPoolIndex = vulk->frameIndex;
+    u32 timeStamps = vulk->queryPoolIndexCounts[oldPoolIndex];
 
     ++cpuframeCount;
     if(timeStamps < 2u)
         return;
 
-    uint64_t queryResults[QUERY_COUNT];
-    static constexpr size_t querySize = sizeof(uint64_t);
+    u64 queryResults[QUERY_COUNT];
+    static constexpr size_t querySize = sizeof(u64);
     VkQueryPool queryPool = vulk->queryPools[oldPoolIndex];
     VkResult res = (vkGetQueryPoolResults(vulk->device, queryPool,
         0, timeStamps, querySize * timeStamps, queryResults, querySize, VK_QUERY_RESULT_64_BIT));
@@ -476,7 +572,7 @@ static void updateStats(VulkanApp &app)
         vkGetPhysicalDeviceProperties(vulk->physicalDevice, &props);
 
 
-        for(uint32_t i = QUERY_COUNT - 1; i > 0; --i)
+        for(u32 i = QUERY_COUNT - 1; i > 0; --i)
             timeValues.timeDuration[i] += (double(queryResults[i]) - double(queryResults[i - 1])) * props.limits.timestampPeriod * 1.0e-9f;
 
         gpuTime += (double(queryResults[timeStamps - 1]) - double(queryResults[0])) * props.limits.timestampPeriod * 1.0e-9f;
@@ -499,7 +595,7 @@ static void updateStats(VulkanApp &app)
             float(gpuTime * 1000.0 / gpuframeCount), (float)(cpuTime * 1000.0f / cpuframeCount),
             app.gpuFps, app.cpuFps);
 
-        for(uint32_t i = 0; i < QUERY_COUNT; ++i)
+        for(u32 i = 0; i < QUERY_COUNT; ++i)
             timeValues.timeDuration[i] = 0.0;
 
         gpuTime = 0.0;
@@ -521,3 +617,5 @@ static void printStats(VulkanApp &app)
     );
     app.setTitle(str);
 }
+
+#endif

@@ -13,7 +13,7 @@ struct Vector2
     float x;
     float y;
 
-    float &operator[](uint32_t index) { return (&x)[index]; }
+    float &operator[](u32 index) { return (&x)[index]; }
 };
 
 
@@ -28,7 +28,7 @@ struct Vector3
 
     Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
 
-    float &operator[](uint32_t index) { return (&x)[index]; }
+    float &operator[](u32 index) { return (&x)[index]; }
 
     float x;
     float y;
@@ -56,7 +56,7 @@ struct Vector4
     float z;
     float w;
 
-    float &operator[](uint32_t index) { return ( &x )[ index ]; }
+    float &operator[](u32 index) { return ( &x )[ index ]; }
 };
 
 

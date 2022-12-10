@@ -119,7 +119,7 @@ bool operator==(const Matrix &a, const Matrix &b)
 {
     static constexpr float EPS_DIFF = 5.0e-2f;
 
-    for(uint32_t i = 0; i < 16; ++i)
+    for(u32 i = 0; i < 16; ++i)
     {
         float f = Supa::absf(a[i] - b[i]);
         if(f > EPS_DIFF)
@@ -227,7 +227,7 @@ Matrix inverse(const Matrix& m)
 
     det = 1.0f / det;
     Matrix result{ Uninit };
-    for (uint32_t i = 0; i < 16; i++)
+    for (u32 i = 0; i < 16; i++)
         result[i] = inv[i] * det;
 
     return result;
@@ -238,7 +238,7 @@ bool isIdentity(const Matrix &m)
 {
     static constexpr float EPS_DIFF = 1.0e-4f;
 
-    for(uint32_t i = 0; i < 16; ++i)
+    for(u32 i = 0; i < 16; ++i)
     {
         float f = m[i];
 

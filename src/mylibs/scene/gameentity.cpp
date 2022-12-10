@@ -38,9 +38,9 @@ static bool writeGameObjectContent(const GameEntity &entity, WriteJson &json)
 {
     if(!globalResources)
         return false;
-    if(uint32_t(entity.entityType) >= globalResources->models.size())
+    if(u32(entity.entityType) >= globalResources->models.size())
         return false;
-    const auto &model = globalResources->models[uint32_t(entity.entityType)];
+    const auto &model = globalResources->models[u32(entity.entityType)];
     json.addMagicNumberAndVersion(GameEntity::MagicNumber, GameEntity::VersionNumber);
     json.addString("name", entity.name.getStr());
     writeTransform(entity.transform, json);
@@ -68,7 +68,7 @@ bool writeGameObject(const char *name, const GameEntity &entity, WriteJson &json
 
 bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
 {
-    int index = 0;
+    i32 index = 0;
     StringView objTypeName;
 
     if(!json.getChild("magicNumber").equals(GameEntity::MagicNumber))
@@ -100,12 +100,12 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
     outEntity.meshIndex = 0u;
     outEntity.animationIndex = 0u;
 
-    if(uint32_t(outEntity.entityType) < globalResources->models.size())
+    if(u32(outEntity.entityType) < globalResources->models.size())
     {
-        const auto &model = globalResources->models[uint32_t(outEntity.entityType)];
+        const auto &model = globalResources->models[u32(outEntity.entityType)];
         if(foundMesh)
         {
-            for(uint32_t meshIndex = 0u; meshIndex < model.modelMeshes.size(); ++meshIndex)
+            for(u32 meshIndex = 0u; meshIndex < model.modelMeshes.size(); ++meshIndex)
             {
                 if(model.modelMeshes[meshIndex].meshName == meshName.data())
                 {
@@ -116,7 +116,7 @@ bool loadGameObject(const JsonBlock &json, GameEntity &outEntity)
         }
         if(foundAnim)
         {
-            for(uint32_t animIndex = 0u; animIndex < model.animNames.size(); ++animIndex)
+            for(u32 animIndex = 0u; animIndex < model.animNames.size(); ++animIndex)
             {
                 if(model.animNames[animIndex] == animName.data())
                 {

@@ -2,7 +2,7 @@
 
 #include <container/podvector.h>
 
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/vulkanglobal.h>
@@ -49,7 +49,7 @@ bool MyImguiRenderer::init(GLFWwindow *window)
 {
 
     renderPass =
-        createRenderPass({ RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, .storeOp = VK_ATTACHMENT_STORE_OP_STORE } }, {});
+        MyVulkan::createRenderPass({ RenderTarget{.format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, .storeOp = VK_ATTACHMENT_STORE_OP_STORE } }, {});
 
     // Create Descriptor Pool
     {
@@ -71,7 +71,7 @@ bool MyImguiRenderer::init(GLFWwindow *window)
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
         pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
-        pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+        pool_info.poolSizeCount = (u32)IM_ARRAYSIZE(pool_sizes);
         pool_info.pPoolSizes = pool_sizes;
         VkResult err = vkCreateDescriptorPool(vulk->device, &pool_info, nullptr, &descriptorPool);
         VK_CHECK(err);

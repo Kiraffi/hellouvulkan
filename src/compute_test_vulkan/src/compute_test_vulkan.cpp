@@ -8,7 +8,7 @@
 #include <core/general.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 
 #include <math/general_math.h>
 #include <math/matrix.h>
@@ -26,8 +26,8 @@
 #include <scene/scene.h>
 
 
-static constexpr int SCREEN_WIDTH = 800;
-static constexpr int SCREEN_HEIGHT = 600;
+static constexpr i32 SCREEN_WIDTH = 800;
+static constexpr i32 SCREEN_HEIGHT = 600;
 
 
 
@@ -36,7 +36,7 @@ class VulkanComputeTest : public VulkanApp
 public:
     VulkanComputeTest() : scene(meshRenderSystem) { }
     virtual ~VulkanComputeTest() override;
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -84,7 +84,7 @@ VulkanComputeTest::~VulkanComputeTest()
 
 
 
-bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenHeight)
+bool VulkanComputeTest::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
@@ -101,13 +101,13 @@ bool VulkanComputeTest::init(const char* windowStr, int screenWidth, int screenH
 
     // Random tag data
     //struct DemoTag { const char name[17] = "debug marker tag"; } demoTag;
-    //setObjectTag(device, (uint64_t)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
+    //setObjectTag(device, (u64)uniformBuffer.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
 
 
     {
 
         beginSingleTimeCommands();
-        uint32_t quads[] = {1,0,2, 2,0,3};
+        u32 quads[] = {1,0,2, 2,0,3};
         addToCopylist(ArraySliceViewBytes(quads, ARRAYSIZES(quads)), quadIndexBuffer.buffer, 0u);
         flushBarriers(VK_PIPELINE_STAGE_TRANSFER_BIT);
 
@@ -173,7 +173,7 @@ bool VulkanComputeTest::recreateDescriptor()
         Pipeline &pipeline = computePipeline;
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -190,7 +190,7 @@ bool VulkanComputeTest::recreateDescriptor()
         Pipeline &pipeline = graphicsFinalPipeline;
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
-        for(uint32_t i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
@@ -207,8 +207,8 @@ bool VulkanComputeTest::recreateDescriptor()
 
 bool VulkanComputeTest::resized()
 {
-    uint32_t width = vulk->swapchain.width;
-    uint32_t height = vulk->swapchain.height;
+    u32 width = vulk->swapchain.width;
+    u32 height = vulk->swapchain.height;
 
     if (!meshRenderTargets.resizeMeshTargets(width, height))
         return false;
@@ -323,7 +323,7 @@ void VulkanComputeTest::renderDraw()
 
 
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

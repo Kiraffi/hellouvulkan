@@ -4,7 +4,7 @@
 
 LightingRenderTargets::~LightingRenderTargets()
 {
-    destroyImage(lightingTargetImage);
+    VulkanResources::destroyImage(lightingTargetImage);
 }
 
 bool LightingRenderTargets::resizeLightingTargets()
@@ -16,7 +16,7 @@ bool LightingRenderTargets::resizeLightingTargets()
 
 bool LightingRenderTargets::resizeLightingTargets(uint32_t width, uint32_t height)
 {
-    if (!createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SFLOAT,
+    if (!VulkanResources::createRenderTargetImage(width, height, VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         "Light HDR color target", lightingTargetImage))
     {
@@ -30,10 +30,10 @@ bool LightingRenderTargets::resizeLightingTargets(uint32_t width, uint32_t heigh
 
 void LightingRenderTargets::prepareTargetsForLightingComputeWriting()
 {
-    prepareToComputeImageWrite(lightingTargetImage);
+    VulkanResources::prepareToComputeImageWrite(lightingTargetImage);
 }
 
 void LightingRenderTargets::prepareForTonemapSampling()
 {
-    prepareToComputeSampleRead(lightingTargetImage);
+    VulkanResources::prepareToComputeSampleRead(lightingTargetImage);
 }

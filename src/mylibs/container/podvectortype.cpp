@@ -28,17 +28,17 @@
 #include <scene/gameentity.h>
 
 template void isPodType<char>();
-template void isPodType<uint8_t>();
-template void isPodType<int8_t>();
-template void isPodType<uint16_t>();
-template void isPodType<int16_t>();
-template void isPodType<uint32_t>();
-template void isPodType<int32_t>();
-template void isPodType<uint64_t>();
-template void isPodType<int64_t>();
+template void isPodType<u8>();
+template void isPodType<i8>();
+template void isPodType<u16>();
+template void isPodType<i16>();
+template void isPodType<u32>();
+template void isPodType<i32>();
+template void isPodType<u64>();
+template void isPodType<i64>();
 template void isPodType<float>();
 template void isPodType<double>();
-template void isPodType<uint32_t const*>();
+template void isPodType<u32 const*>();
 
 template void isPodType<Vector2>();
 template void isPodType<Vector3>();
@@ -100,7 +100,7 @@ template void newInPlace<JsonBlock>(JsonBlock *ptr, const JsonBlock &value);
 template void newInPlace<GltfModel>(GltfModel *ptr, const GltfModel &value);
 template void newInPlace<GltfModel::ModelMesh>(GltfModel::ModelMesh *ptr, const GltfModel::ModelMesh &value);
 
-template void newInPlace<PodVector<uint32_t>>(PodVector<uint32_t> *ptr, const PodVector<uint32_t> &value);
+template void newInPlace<PodVector<u32>>(PodVector<u32> *ptr, const PodVector<u32> &value);
 template void newInPlace<PodVector<DescriptorInfo>>(PodVector<DescriptorInfo> *ptr, const PodVector<DescriptorInfo> &value);
 template void newInPlace<PodVector<GltfModel::AnimationIndexData>>(PodVector<GltfModel::AnimationIndexData> *ptr, const PodVector<GltfModel::AnimationIndexData> &value);
 template void newInPlace<PodVector<Mat3x4>>(PodVector<Mat3x4> *ptr, const PodVector<Mat3x4> &value);
@@ -114,7 +114,7 @@ template void isNotPodType<GltfModel>();
 template void isNotPodType<GltfModel::ModelMesh>();
 template void isNotPodType<JsonBlock>();
 
-template void isNotPodType<PodVector<uint32_t>>();
+template void isNotPodType<PodVector<u32>>();
 template void isNotPodType<PodVector<DescriptorInfo>>();
 template void isNotPodType<PodVector<GltfModel::AnimationIndexData>>();
 template void isNotPodType<PodVector<Mat3x4>>();

@@ -23,6 +23,12 @@ add_custom_target(MYLIBS_GENERATED_HEADERS DEPENDS DEPENDS ${DEF_FILE})
 
 add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 
+    "app/glfw_keys.h"
+    "app/inputapp.h"
+    "app/inputapp.cpp"
+    "app/vulkan_app.h"
+    "app/vulkan_app.cpp"
+
     "container/bytebuffer.h"
     "container/mymemory.h"
     "container/podvector.h"
@@ -107,8 +113,6 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 
 
 
-    "core/vulkan_app.h"
-
     "myvulkan/myvulkan.h"
     "myvulkan/vulkanresources.h"
     "myvulkan/shader.h"
@@ -126,8 +130,6 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 
 
 
-
-    "core/vulkan_app.cpp"
 
     "myvulkan/myvma.cpp"
     "myvulkan/myvulkan.cpp"

@@ -5,12 +5,12 @@
 #include <core/mytypes.h>
 #include <core/timer.h>
 
-ByteBuffer::ByteBuffer(uint32_t dataTypeSize, BufferType bufferType)
+ByteBuffer::ByteBuffer(u32 dataTypeSize, BufferType bufferType)
     : bufferData {
          .size = 0,
          .capasity = 0,
          .memory = Memory{},
-         .dataTypeSize = uint16_t(dataTypeSize),
+         .dataTypeSize = u16(dataTypeSize),
          .dataBufferType = bufferType,
     }
 {
@@ -47,7 +47,7 @@ void ByteBuffer::copyFrom(const ByteBuffer &other)
     bufferData.size = other.bufferData.size;
 }
 
-void ByteBuffer::copyFromArray(uint8_t *arr, uint32_t count)
+void ByteBuffer::copyFromArray(u8 *arr, u32 count)
 {
     reserve(count * bufferData.size);
     Supa::memmove(getBegin(), arr, count * bufferData.dataTypeSize);
@@ -55,7 +55,7 @@ void ByteBuffer::copyFromArray(uint8_t *arr, uint32_t count)
     bufferData.size = count;
 }
 
-void ByteBuffer::reserve(uint32_t indices)
+void ByteBuffer::reserve(u32 indices)
 {
     if(bufferData.capasity < indices)
     {
@@ -65,7 +65,7 @@ void ByteBuffer::reserve(uint32_t indices)
 }
 
 
-void ByteBuffer::resize(uint32_t dstIndiceCount)
+void ByteBuffer::resize(u32 dstIndiceCount)
 {
 
     if(bufferData.capasity < dstIndiceCount)
@@ -78,11 +78,11 @@ void ByteBuffer::resize(uint32_t dstIndiceCount)
     bufferData.size = dstIndiceCount;
 }
 
-void ByteBuffer::resize(uint32_t newSize, uint8_t *defaultValue)
+void ByteBuffer::resize(u32 newSize, u8 *defaultValue)
 {
-    uint32_t oldSize = bufferData.size;
+    u32 oldSize = bufferData.size;
     resize(newSize);
-    uint8_t *ptr = getBegin() + oldSize * bufferData.dataTypeSize;
+    u8 *ptr = getBegin() + oldSize * bufferData.dataTypeSize;
     while(oldSize < newSize)
     {
         Supa::memmove(ptr, defaultValue, bufferData.dataTypeSize);
@@ -91,13 +91,13 @@ void ByteBuffer::resize(uint32_t newSize, uint8_t *defaultValue)
     }
 }
 
-void ByteBuffer::insertIndex(uint32_t index)
+void ByteBuffer::insertIndex(u32 index)
 {
     if(bufferData.size + 1 >= bufferData.capasity)
     {
-        uint32_t minCapasity = 256 / bufferData.dataTypeSize;
+        u32 minCapasity = 256 / bufferData.dataTypeSize;
         minCapasity = minCapasity < 8 ? 8 : minCapasity;
-        uint32_t newCapasity = bufferData.capasity < minCapasity ? minCapasity : bufferData.capasity * 2u;
+        u32 newCapasity = bufferData.capasity < minCapasity ? minCapasity : bufferData.capasity * 2u;
         reserve(newCapasity);
         bufferData.capasity = newCapasity;
     }
@@ -105,23 +105,23 @@ void ByteBuffer::insertIndex(uint32_t index)
     // move everything forward, if not adding to last
     if(index < bufferData.size)
     {
-        uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
+        u8 *startPtr = getBegin() + index * bufferData.dataTypeSize;
         Supa::memmove(startPtr + bufferData.dataTypeSize, startPtr,
             bufferData.dataTypeSize * (bufferData.size - index));
     }
     bufferData.size += 1;
 }
 static Timer bytebufferTimer;
-void ByteBuffer::insertIndex(uint32_t index, const uint8_t *obj)
+void ByteBuffer::insertIndex(u32 index, const u8 *obj)
 {
     //bytebufferTimer.continueTimer();
     insertIndex(index);
-    uint8_t *startPtr = getBegin() + index * bufferData.dataTypeSize;
+    u8 *startPtr = getBegin() + index * bufferData.dataTypeSize;
     Supa::memmove(startPtr, obj, bufferData.dataTypeSize);
     //bytebufferTimer.pauseTimer();
 }
 
-void ByteBuffer::removeIndex(uint32_t index)
+void ByteBuffer::removeIndex(u32 index)
 {
     ASSERT(index < bufferData.size);
     if (index >= bufferData.size)
@@ -129,7 +129,7 @@ void ByteBuffer::removeIndex(uint32_t index)
 
     if (index < bufferData.size - 1)
     {
-        uint8_t *myBegin = getMemoryBegin(bufferData.memory);
+        u8 *myBegin = getMemoryBegin(bufferData.memory);
         Supa::memmove(getBegin() + index * bufferData.dataTypeSize,
             getBegin() + (index + 1) * bufferData.dataTypeSize,
             bufferData.dataTypeSize * (bufferData.size - (index + 1))
@@ -139,21 +139,21 @@ void ByteBuffer::removeIndex(uint32_t index)
     return;
 }
 
-uint8_t *ByteBuffer::getDataIndex(uint32_t index) const
+u8 *ByteBuffer::getDataIndex(u32 index) const
 {
     ASSERT(index < bufferData.size);
     if (index >= bufferData.size)
         return nullptr;
-    uint8_t *beg = getBegin();
+    u8 *beg = getBegin();
     return beg + index * bufferData.dataTypeSize;
 }
 
-uint8_t *ByteBuffer::getBegin() const
+u8 *ByteBuffer::getBegin() const
 {
     return getMemoryBegin(bufferData.memory);
 }
 
-uint8_t *ByteBuffer::getEnd() const
+u8 *ByteBuffer::getEnd() const
 {
     return getMemoryEnd(bufferData.memory);
 }

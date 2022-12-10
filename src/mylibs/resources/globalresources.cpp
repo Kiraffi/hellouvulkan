@@ -15,9 +15,9 @@ GlobalResources *globalResources = nullptr;
 
 static bool loadModelForScene(Vector<GltfModel> &models, const char *filename, EntityType entityType)
 {
-    if(uint32_t(entityType) >= uint32_t(EntityType::NUM_OF_ENTITY_TYPES))
+    if(u32(entityType) >= u32(EntityType::NUM_OF_ENTITY_TYPES))
         return false;
-    GltfModel &gltfModel = models[uint32_t(entityType)];
+    GltfModel &gltfModel = models[u32(entityType)];
 
     bool readSuccess = readGLTF(filename, gltfModel);
 
@@ -42,7 +42,7 @@ static bool loadModelForScene(Vector<GltfModel> &models, const char *filename, E
 
 bool readAssets()
 {
-    PodVector<uint8_t> buffer;
+    PodVector<u8> buffer;
     const char *assetStr = "assets/assets.json";
     if(!loadBytes(assetStr, buffer.getBuffer()))
         return false;
@@ -69,8 +69,8 @@ bool initGlobalResources()
     globalResources = new GlobalResources();
 
     ScopedTimer timer("Scene init");
-    globalResources->models.resize(uint32_t(EntityType::NUM_OF_ENTITY_TYPES) + 1);
-    globalResources->models[uint32_t(EntityType::NUM_OF_ENTITY_TYPES)].modelMeshes.push_back(GltfModel::ModelMesh());
+    globalResources->models.resize(u32(EntityType::NUM_OF_ENTITY_TYPES) + 1);
+    globalResources->models[u32(EntityType::NUM_OF_ENTITY_TYPES)].modelMeshes.push_back(GltfModel::ModelMesh());
     // load animated, can be loaded in any order nowadays, since animated vertices has separate buffer from non-animated ones
     if(!loadModelForScene(globalResources->models, "assets/models/animatedthing.gltf", EntityType::WOBBLY_THING))
         return false;

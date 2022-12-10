@@ -5,10 +5,10 @@
 #include <math.h>
 
 // start latency in micro seconds
-static int latency = 10000;
+static i32 latency = 10000;
 
 static pa_buffer_attr bufattr;
-static int underflows = 0;
+static i32 underflows = 0;
 static pa_stream *pulseAudioStream = nullptr;
 static pa_mainloop *pulseAudioMainloop = nullptr;
 static pa_mainloop_api *pulseAudioMainloopApi = nullptr;
@@ -16,20 +16,20 @@ static pa_context *pulseAudioContext = nullptr;
 
 static constexpr double SampleFreq = 48000.0;
 static constexpr double w = 2.0 * M_PI / SampleFreq;
-static constexpr uint32_t SoundChannels = 2;
+static constexpr u32 SoundChannels = 2;
 
 #if 0
     static constexpr pa_sample_format_t SampleFormat = PA_SAMPLE_FLOAT32NE;
 #else
     static constexpr pa_sample_format_t SampleFormat = PA_SAMPLE_S16NE;
 #endif
-static constexpr uint32_t BytesPerSample = SoundChannels * (SampleFormat == PA_SAMPLE_FLOAT32NE ? 4 : 2);
+static constexpr u32 BytesPerSample = SoundChannels * (SampleFormat == PA_SAMPLE_FLOAT32NE ? 4 : 2);
 
 
 static constexpr pa_sample_spec ss =
 {
     .format = SampleFormat,
-    .rate = uint32_t(SampleFreq),
+    .rate = u32(SampleFreq),
     .channels = SoundChannels
 };
 
@@ -40,7 +40,7 @@ static constexpr pa_sample_spec ss =
 void stateCallback(pa_context *c, void *userdata)
 {
     pa_context_state_t state;
-    int *pa_ready = (int *)userdata;
+    i32 *pa_ready = (i32 *)userdata;
     state = pa_context_get_state(c);
     switch  (state)
     {
@@ -66,7 +66,7 @@ void stateCallback(pa_context *c, void *userdata)
 static void updateBufferCallback(pa_stream *s, size_t length, void *userdata)
 {
     pa_usec_t usec;
-    int neg;
+    i32 neg;
     pa_stream_get_latency(s, &usec, &neg);
 
     void *data;
@@ -117,7 +117,7 @@ static void underflowCallback(pa_stream *s, void *userdata)
     }
 }
 
-int soundMain()
+i32 soundMain()
 {
     // Create a mainloop API and connection to the default server
     pulseAudioMainloop = pa_mainloop_new();
@@ -130,7 +130,7 @@ int soundMain()
     // modify the variable to 1 so we know when we have a connection and it's
     // ready.
     // If there's an error, the callback will set pa_ready to 2
-    int pulseAudioReady = 0;
+    i32 pulseAudioReady = 0;
     pa_context_set_state_callback(pulseAudioContext, stateCallback, &pulseAudioReady);
 
     // We can't do anything until PA is ready, so just iterate the mainloop
@@ -148,13 +148,13 @@ int soundMain()
     }
     pa_stream_set_write_callback(pulseAudioStream, updateBufferCallback, NULL);
     pa_stream_set_underflow_callback(pulseAudioStream, underflowCallback, NULL);
-    bufattr.fragsize = (uint32_t)-1;
+    bufattr.fragsize = (u32)-1;
     bufattr.maxlength = pa_usec_to_bytes(latency,&ss);
     bufattr.minreq = pa_usec_to_bytes(0,&ss);
-    bufattr.prebuf = (uint32_t)-1;
+    bufattr.prebuf = (u32)-1;
     bufattr.tlength = pa_usec_to_bytes(latency,&ss);
 
-    int result = pa_stream_connect_playback(pulseAudioStream, NULL, &bufattr,
+    i32 result = pa_stream_connect_playback(pulseAudioStream, NULL, &bufattr,
         pa_stream_flags_t(PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_ADJUST_LATENCY | PA_STREAM_AUTO_TIMING_UPDATE),
         NULL, NULL);
     if (result < 0)
@@ -175,9 +175,9 @@ int soundMain()
     return 0;
 }
 
-int main(int argc, char *argv[])
+i32 main(i32 argc, char *argv[])
 {
-    int value = soundMain();
+    i32 value = soundMain();
     // clean up and disconnect
     pa_context_disconnect(pulseAudioContext);
     pa_context_unref(pulseAudioContext);

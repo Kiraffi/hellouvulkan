@@ -12,10 +12,10 @@
 
 #include <core/json.h>
 #include <core/general.h>
-#include <core/glfw_keys.h>
+#include <app/glfw_keys.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <core/vulkan_app.h>
+#include <app/vulkan_app.h>
 #include <core/writejson.h>
 
 #include <math/general_math.h>
@@ -32,8 +32,8 @@
 
 #include <imgui.h>
 
-static constexpr int SCREEN_WIDTH = 640;
-static constexpr int SCREEN_HEIGHT = 540;
+static constexpr i32 SCREEN_WIDTH = 640;
+static constexpr i32 SCREEN_HEIGHT = 540;
 
 
 // Would be header
@@ -253,7 +253,7 @@ public:
     SerializeComponent() {}
     virtual ~SerializeComponent() override;
 
-    virtual bool init(const char* windowStr, int screenWidth, int screenHeight) override;
+    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
     virtual void logicUpdate() override;
     virtual void renderUpdate() override;
     virtual void renderDraw() override;
@@ -286,7 +286,7 @@ SerializeComponent::~SerializeComponent()
 }
 
 
-bool SerializeComponent::init(const char *windowStr, int screenWidth, int screenHeight)
+bool SerializeComponent::init(const char *windowStr, i32 screenWidth, i32 screenHeight)
 {
     if(!VulkanApp::init(windowStr, screenWidth, screenHeight))
         return false;
@@ -433,9 +433,9 @@ bool SerializeComponent::init(const char *windowStr, int screenWidth, int screen
 void SerializeComponent::updateText(StringView str)
 {
     String tmpStr = "w";
-    tmpStr.append(int32_t(fontSize.x));
+    tmpStr.append(i32(fontSize.x));
     tmpStr.append(",h");
-    tmpStr.append(int32_t(fontSize.y));
+    tmpStr.append(i32(fontSize.y));
 
     fontSystem.addText(tmpStr.getStr(), Vector2(100.0f, 400.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     fontSystem.addText(String(str.ptr, str.length).getStr(), Vector2(100.0f, 100.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -472,7 +472,7 @@ void SerializeComponent::logicUpdate()
     entitySystems.syncPoints();
     {
         bool textNeedsUpdate = false;
-        for (int i = 0; i < bufferedPressesCount; ++i)
+        for (i32 i = 0; i < bufferedPressesCount; ++i)
         {
             text.append(char(bufferedPresses[i]));
             textNeedsUpdate = true;
@@ -516,7 +516,7 @@ void SerializeComponent::renderUpdate()
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
     {
         static float f = 0.0f;
-        static int counter = 0;
+        static i32 counter = 0;
 
         ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
@@ -582,7 +582,7 @@ void SerializeComponent::renderDraw()
     present(renderColorImage);
 }
 
-int main(int argCount, char **argv)
+i32 main(i32 argCount, char **argv)
 {
     initMemory();
     {

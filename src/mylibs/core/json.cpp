@@ -10,21 +10,21 @@ const JsonBlock JsonBlock::emptyBlock = { };
 
 struct JSONMarker
 {
-    JSONMarker(int start) { startIndex = start; }
-    JSONMarker(int start, int end): startIndex(start), endIndex(end) { }
+    JSONMarker(i32 start) { startIndex = start; }
+    JSONMarker(i32 start, i32 end): startIndex(start), endIndex(end) { }
 
-    int startIndex = 0;
-    int endIndex = 0;
-    int currentIndex = 0;
+    i32 startIndex = 0;
+    i32 endIndex = 0;
+    i32 currentIndex = 0;
 };
 
 static bool parseObject(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock);
 static bool parseValue(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock);
 
-static bool printBlock(const JsonBlock &bl, int spaces = 0)
+static bool printBlock(const JsonBlock &bl, i32 spaces = 0)
 {
 
-    for(int i = 0; i < spaces; ++i)
+    for(i32 i = 0; i < spaces; ++i)
         printf("  ");
 
     if(!bl.blockName.empty())
@@ -69,13 +69,13 @@ static bool printBlock(const JsonBlock &bl, int spaces = 0)
     }
     else if(bl.isInt())
     {
-        int64_t v = -2312;
+        i64 v = -2312;
         if(!bl.parseInt(v))
         {
             printf("FAILED PARSE INT\n");
             return false;
         }
-        printf("Int %i\n", ( int )v);
+        printf("i32 %i\n", ( i32 )v);
     }
     else if(bl.isDouble())
     {
@@ -109,8 +109,8 @@ static bool printBlock(const JsonBlock &bl, int spaces = 0)
 
 static bool skipWord(const StringView &buffer, JSONMarker &marker)
 {
-    int &index = marker.currentIndex;
-    int sz = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 sz = marker.endIndex;
     while(index < sz && !isspace(buffer.ptr[index]))
         ++index;
 
@@ -120,8 +120,8 @@ static bool skipWord(const StringView &buffer, JSONMarker &marker)
 
 static bool skipWhiteSpace(const StringView &buffer, JSONMarker &marker)
 {
-    int &index = marker.currentIndex;
-    int sz = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 sz = marker.endIndex;
     while(index < sz && isspace(buffer.ptr[index]))
         ++index;
 
@@ -129,14 +129,14 @@ static bool skipWhiteSpace(const StringView &buffer, JSONMarker &marker)
 }
 bool parseBetweenMarkers(const StringView &buffer, JSONMarker &marker, char beginChar, char endChar, bool ignoreBackSlashedChar = true)
 {
-    int &index = marker.currentIndex;
-    int endIndex = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 endIndex = marker.endIndex;
 
     if(buffer.ptr[index] != beginChar)
         return false;
     ++index;
 
-    int openCount = 1;
+    i32 openCount = 1;
     bool backSlash = false;
     while(index < endIndex)
     {
@@ -169,13 +169,13 @@ bool parseBetweenMarkers(const StringView &buffer, JSONMarker &marker, char begi
 
 static bool parseString(const StringView &buffer, JSONMarker &marker, StringView &outStr)
 {
-    int &index = marker.currentIndex;
+    i32 &index = marker.currentIndex;
 
-    int startIndex = index + 1;
+    i32 startIndex = index + 1;
     if(!parseBetweenMarkers(buffer, marker, '"', '"', false))
         return false;
 
-    int l = marker.currentIndex - startIndex;
+    i32 l = marker.currentIndex - startIndex;
     if(l < 0 || index >= marker.endIndex || buffer [index] != '"')
         return false;
 
@@ -187,11 +187,11 @@ static bool parseString(const StringView &buffer, JSONMarker &marker, StringView
     return true;
 }
 
-static int parseInt(const StringView &buffer, JSONMarker &marker, int64_t &outResult, bool countFrontZeroes = false)
+static i32 parseInt(const StringView &buffer, JSONMarker &marker, i64 &outResult, bool countFrontZeroes = false)
 {
-    int numCount = 0;
-    int &index = marker.currentIndex;
-    int sz = marker.endIndex;
+    i32 numCount = 0;
+    i32 &index = marker.currentIndex;
+    i32 sz = marker.endIndex;
     if(!skipWhiteSpace(buffer, marker))
         return -1;
 
@@ -202,8 +202,8 @@ static int parseInt(const StringView &buffer, JSONMarker &marker, int64_t &outRe
         index++;
     }
     outResult = 0;
-    uint32_t indexStart = index;
-    uint32_t frontZeroes = 0u;
+    u32 indexStart = index;
+    u32 frontZeroes = 0u;
     while(index < sz)
     {
         char c = buffer [index];
@@ -247,8 +247,8 @@ bool isNum(char c)
 
 bool getNumber(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
-    int &index = marker.currentIndex;
-    int endIndex = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 endIndex = marker.endIndex;
     if(index < endIndex && !isNumOrMinus(buffer [index]))
         return false;
     bool neg = false;
@@ -257,8 +257,8 @@ bool getNumber(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlo
         neg = true;
         ++index;
     }
-    int64_t integerPart = -1;
-    int numCount = parseInt(buffer, marker, integerPart);
+    i64 integerPart = -1;
+    i32 numCount = parseInt(buffer, marker, integerPart);
     if(numCount <= 0 || index > marker.endIndex)
         return false;
 
@@ -269,13 +269,13 @@ bool getNumber(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlo
     {
         ++index;
 
-        int64_t remainderPart = 0;
+        i64 remainderPart = 0;
         numCount = parseInt(buffer, marker, remainderPart, true);
         if(numCount <= 0 || index > marker.endIndex || remainderPart < 0)
             return false;
 
         double origDiv = 1.0;
-        for(int i = 0; i < numCount; ++i)
+        for(i32 i = 0; i < numCount; ++i)
             origDiv *= 10.0;
 
         double eMultip = 1.0;
@@ -283,18 +283,18 @@ bool getNumber(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlo
         if(buffer [index] == 'e')
         {
             ++index;
-            int64_t eValue = 0;
+            i64 eValue = 0;
             numCount = parseInt(buffer, marker, eValue, true);
             if(numCount <= 0 || index > marker.endIndex)
                 return false;
             if(eValue > 0)
             {
-                for(int64_t i = 0; i < eValue; ++i)
+                for(i64 i = 0; i < eValue; ++i)
                     eMultip *= 10.0;
             }
             else
             {
-                for(int64_t i = 0; i > eValue; --i)
+                for(i64 i = 0; i > eValue; --i)
                     eDiv *= 10.0;
             }
 
@@ -315,8 +315,8 @@ bool getNumber(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlo
 
 bool tryParseBoolean(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
-    int &index = marker.currentIndex;
-    int endIndex = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 endIndex = marker.endIndex;
 
     if(index + 4 < endIndex && Supa::memcmp((const void *)(&(buffer [index])), "true", 4) == 0)
     {
@@ -342,8 +342,8 @@ bool tryParseBoolean(const StringView &buffer, JSONMarker &marker, JsonBlock &in
 
 static bool parseValue(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
-    int &index = marker.currentIndex;
-    int endIndex = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 endIndex = marker.endIndex;
     bool isArray = (inOutBlock.jType & JsonBlock::ARRAY_TYPE) == JsonBlock::ARRAY_TYPE;
 
     JsonBlock *res = &inOutBlock;
@@ -420,8 +420,8 @@ static bool parseValue(const StringView &buffer, JSONMarker &marker, JsonBlock &
 
 static bool parseObject(const StringView &buffer, JSONMarker &marker, JsonBlock &inOutBlock)
 {
-    int &index = marker.currentIndex;
-    int endIndex = marker.endIndex;
+    i32 &index = marker.currentIndex;
+    i32 endIndex = marker.endIndex;
     if(buffer [index] != '{' || index >= endIndex)
         return false;
     ++index;
@@ -468,7 +468,7 @@ bool JsonBlock::parseJson(const StringView &data)
 {
     if(data.size() <= 2)
         return false;
-    JSONMarker marker(0, ( int )data.size() - 1);
+    JSONMarker marker(0, ( i32 )data.size() - 1);
     skipWhiteSpace(data, marker);
     while(marker.endIndex > 0 && data [marker.endIndex] != '}')
         --marker.endIndex;
@@ -508,7 +508,7 @@ bool JsonBlock::parseFloat(float &outFloat) const
 
 }
 
-bool JsonBlock::parseInt(int64_t &outInt) const
+bool JsonBlock::parseInt(i64 &outInt) const
 {
     if(!isInt())
         return false;
@@ -518,9 +518,9 @@ bool JsonBlock::parseInt(int64_t &outInt) const
 
 }
 
-bool JsonBlock::parseInt(int &outInt) const
+bool JsonBlock::parseInt(i32 &outInt) const
 {
-    int64_t v = 0;
+    i64 v = 0;
     if(!parseInt(v))
         return false;
     if(v < -0x1'0000'0000LL || v > 0xffff'ffffLL)
@@ -531,15 +531,15 @@ bool JsonBlock::parseInt(int &outInt) const
 
 }
 
-bool JsonBlock::parseUInt(uint32_t &outInt) const
+bool JsonBlock::parseUInt(u32 &outInt) const
 {
-    int64_t v = 0;
+    i64 v = 0;
     if(!parseInt(v))
         return false;
     if(v < 0 || v > 0xffff'ffffLL)
         return false;
 
-    outInt = uint32_t(v);
+    outInt = u32(v);
     return true;
 
 }
@@ -576,12 +576,12 @@ bool JsonBlock::parseBool(bool &outBool) const
 }
 
 
-bool JsonBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
+bool JsonBlock::parseBuffer(PodVector<u8> &outBuffer) const
 {
     if(!isString())
         return false;
 
-    int strLen = valueStr.length;
+    i32 strLen = valueStr.length;
 
     if(strLen < 37)
         return false;
@@ -592,13 +592,13 @@ bool JsonBlock::parseBuffer(PodVector<uint8_t> &outBuffer) const
     outBuffer.reserve(strLen - 37);
     outBuffer.clear();
 
-    int byteOffset = 0;
-    uint8_t currentByte = 0u;
+    i32 byteOffset = 0;
+    u8 currentByte = 0u;
 
-    for(int charIndex = 37; charIndex < strLen; ++charIndex)
+    for(i32 charIndex = 37; charIndex < strLen; ++charIndex)
     {
         char c = valueStr [charIndex];
-        uint8_t readByte = 0u;
+        u8 readByte = 0u;
 
         if(c >= 'A' && c <= 'Z') readByte = ( c - 'A' );
         if(c >= 'a' && c <= 'z') readByte = ( c - 'a' ) + 26;
@@ -645,7 +645,7 @@ bool JsonBlock::parseVec2(Vector2 &v) const
         return false;
     float f[2];
 
-    for(uint32_t i = 0; i < 2; ++i)
+    for(u32 i = 0; i < 2; ++i)
     {
         if(!children[i].parseFloat(f[i]))
             return false;
@@ -661,7 +661,7 @@ bool JsonBlock::parseVec3(Vector3 &v) const
         return false;
     float f[3];
 
-    for(uint32_t i = 0; i < 3; ++i)
+    for(u32 i = 0; i < 3; ++i)
     {
         if(!children[i].parseFloat(f[i]))
             return false;
@@ -678,7 +678,7 @@ bool JsonBlock::parseVec4(Vector4 &v) const
         return false;
     float f[4];
 
-    for(uint32_t i = 0; i < 4; ++i)
+    for(u32 i = 0; i < 4; ++i)
     {
         if(!children[i].parseFloat(f[i]))
             return false;
@@ -695,7 +695,7 @@ bool JsonBlock::parseQuat(Quaternion &q) const
     if(children.size() != 4)
         return false;
     float f[4];
-    for(uint32_t i = 0; i < 4; ++i)
+    for(u32 i = 0; i < 4; ++i)
     {
         if(!children[i].parseFloat(f[i]))
             return false;
@@ -708,23 +708,23 @@ bool JsonBlock::parseQuat(Quaternion &q) const
 }
 
 
-bool JsonBlock::parseNumberArray(double *arr, uint32_t arrayLen) const
+bool JsonBlock::parseNumberArray(double *arr, u32 arrayLen) const
 {
     if(children.size() != arrayLen)
         return false;
-    for(uint32_t i = 0; i < arrayLen; ++i)
+    for(u32 i = 0; i < arrayLen; ++i)
     {
         if(!children[i].parseDouble(arr[i]))
             return false;
     }
     return true;
 }
-bool JsonBlock::parseNumberArray(float *arr, uint32_t arrayLen) const
+bool JsonBlock::parseNumberArray(float *arr, u32 arrayLen) const
 {
     if(children.size() != arrayLen)
         return false;
 
-    for(uint32_t i = 0; i < arrayLen; ++i)
+    for(u32 i = 0; i < arrayLen; ++i)
     {
         if(!children[i].parseFloat(arr[i]))
             return false;
@@ -733,11 +733,11 @@ bool JsonBlock::parseNumberArray(float *arr, uint32_t arrayLen) const
     return true;
 }
 
-bool JsonBlock::parseIntegerArray(int64_t *arr, uint32_t arrayLen) const
+bool JsonBlock::parseIntegerArray(i64 *arr, u32 arrayLen) const
 {
     if(children.size() != arrayLen)
         return false;
-    for(uint32_t i = 0; i < arrayLen; ++i)
+    for(u32 i = 0; i < arrayLen; ++i)
     {
         if(!children[i].parseInt(arr[i]))
             return false;
@@ -746,11 +746,11 @@ bool JsonBlock::parseIntegerArray(int64_t *arr, uint32_t arrayLen) const
     return true;
 }
 
-bool JsonBlock::parseIntegerArray(int32_t *arr, uint32_t arrayLen) const
+bool JsonBlock::parseIntegerArray(i32 *arr, u32 arrayLen) const
 {
     if(children.size() != arrayLen)
         return false;
-    for(uint32_t i = 0; i < arrayLen; ++i)
+    for(u32 i = 0; i < arrayLen; ++i)
     {
         if(!children[i].parseInt(arr[i]))
             return false;
@@ -760,9 +760,9 @@ bool JsonBlock::parseIntegerArray(int32_t *arr, uint32_t arrayLen) const
 }
 
 
-bool JsonBlock::equals(uint32_t value) const
+bool JsonBlock::equals(u32 value) const
 {
-    uint32_t p = 0;
+    u32 p = 0;
 
     if(!parseUInt(p))
         return false;
@@ -792,7 +792,7 @@ bool JsonBlock::hasChild(StringView childName) const
 }
 
 
-const JsonBlock &JsonBlock::getChild(int index) const
+const JsonBlock &JsonBlock::getChild(i32 index) const
 {
     if(index < 0 || index >= children.size())
         return emptyBlock;
