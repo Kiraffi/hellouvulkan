@@ -1,15 +1,17 @@
 
+#include <app/glfw_keys.h>
+#include <app/inputapp.h>
+#include <app/vulkan_app.h>
+
 #include <container/podvector.h>
 #include <container/podvectortypedefine.h>
 #include <container/string.h>
 #include <container/vector.h>
 
 #include <core/file.h>
-#include <app/glfw_keys.h>
 #include <core/general.h>
 #include <core/mytypes.h>
 #include <core/timer.h>
-#include <app/vulkan_app.h>
 
 #include <math/general_math.h>
 #include <math/matrix.h>
@@ -18,112 +20,151 @@
 #include <math/vector3.h>
 #include <math/vector3_inline_functions.h>
 
+#include <render/font_render.h>
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-static constexpr i32 SCREEN_WIDTH  = 640;
-static constexpr i32 SCREEN_HEIGHT = 540;
+static constexpr i32 c_ScreenWidth  = 640;
+static constexpr i32 c_ScreenHeight = 540;
 
-static constexpr VkDeviceSize QuadBufferSize = 8 * 1024 * 1024u;
+static constexpr VkDeviceSize c_QuadBufferSize = 8 * 1024 * 1024u;
 
-static constexpr float buttonSize = 20.0f;
-static constexpr float smallButtonSize = 2.0f;
-static constexpr float borderSizes = 2.0f;
+static constexpr float c_ButtonSize = 20.0f;
+static constexpr float c_SmallButtonSize = 2.0f;
+static constexpr float c_BorderSizes = 2.0f;
 
-static constexpr u32  LetterStartIndex = 32;
-static constexpr u32  LetterEndIndex = 128;
-static constexpr u32 LetterCount =  LetterEndIndex -  LetterStartIndex;
+static constexpr u32 c_LetterStartIndex = 32;
+static constexpr u32 c_LetterEndIndex = 128;
+static constexpr u32 c_LetterCount = c_LetterEndIndex - c_LetterStartIndex;
 
-static constexpr u32 LetterWidth = 8;
-static constexpr u32 LetterHeight = 12;
+static constexpr u32 c_LetterWidth = 8;
+static constexpr u32 c_LetterHeight = 12;
 
-static constexpr float LetterPanelOffsetX = 10.0f;
-static constexpr float LetterPanelOffsetY = 10.0f;
+static constexpr float c_LetterPanelOffsetX = 10.0f;
+static constexpr float c_LetterPanelOffsetY = 10.0f;
+
+static constexpr VkClearValue c_ColorClear = { .color{ 0.0f, 0.5f, 1.0f, 1.0f } };
+
+static bool sResize();
+static void sResized(int width, int height);
+static void sDeinit();
+static bool sInit(const char *windowStr, i32 screenWidth, i32 screenHeight, String& fontName);
+static bool sInitRun();
+static void sUpdateCharacterImageData(u32 characterIndex);
+static void sUpdateDrawAreaData();
+static Vec2 sGetDrawAreaStartPos();
+static void sHandleInput();
+static void sRunApp();
+static void sRenderDraw();
+static void sRenderUpdate();
 
 struct GPUVertexData
 {
-    float posX;
-    float posY;
-    u16 pixelSizeX;
-    u16 pixelSizeY;
-    u32 color;
+    float m_posX;
+    float m_posY;
+    u16 m_pixelSizeX;
+    u16 m_pixelSizeY;
+    u32 m_color;
 };
 
 struct Box
 {
-    Vec2 pos;
-    Vec2 size;
+    Vec2 m_pos;
+    Vec2 m_size;
 };
 
-class VulkanFontDraw : public VulkanApp
+struct VulkanFontDrawData
 {
-public:
-    virtual ~VulkanFontDraw() override;
-    //bool initApp(const String &fontFilename);
-    virtual bool init(const char *windowStr, i32 screenWidth, i32 screenHeight) override;
+    Image m_renderColorImage;
 
-    bool initRun();
-    virtual void logicUpdate() override;
-    virtual void renderUpdate() override;
-    virtual void renderDraw() override;
-    virtual bool resized() override;
+    Buffer m_quadBuffer[VulkanGlobal::FramesInFlight];
+    Buffer m_indexDataBuffer;
 
-public:
-    void updateCharacterImageData(u32 characterIndex);
-    void updateDrawAreaData();
-    Vec2 getDrawAreaStartPos() const;
+    Pipeline m_graphicsPipeline;
 
-    Image renderColorImage;
+    String m_fontFilename;
 
-    Buffer quadBuffer[VulkanGlobal::FramesInFlight];
-    Buffer indexDataBuffer;
-
-    Pipeline graphicsPipeline;
-
-    String fontFilename;
-
-    u8 buffData[12] = {};
-    i32 chosenLetter = 'a';
+    u8 m_buffData[12] = {};
+    i32 m_chosenLetter = 'a';
 
     // index 0 = selected box, 1..letters * lettersize = letter pixels, after that drawing area
-    PodVector<GPUVertexData> vertData;
-    PodVector<u8> characterData;
+    PodVector<GPUVertexData> m_vertData;
+    PodVector<u8> m_characterData;
 
-    PodVector<Box> charactersInScreen;
-
-    static constexpr VkClearValue colorClear = { .color{ 0.0f, 0.5f, 1.0f, 1.0f } };
+    PodVector<Box> m_charactersInScreen;
 };
 
+static VulkanFontDrawData *s_data = nullptr;
 
-////////////////////////
-//
-// DEINIT
-//
-////////////////////////
 
-VulkanFontDraw::~VulkanFontDraw()
+
+
+
+
+
+static bool sResize()
 {
-    destroyPipeline(graphicsPipeline);
+    VulkanResources::destroyImage(s_data->m_renderColorImage);
 
-    destroyImage(renderColorImage);
-    for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
-        destroyBuffer(quadBuffer[i]);
-    destroyBuffer(indexDataBuffer);
+    // create color and depth images
+    if (!VulkanResources::createRenderTargetImage(
+        vulk->swapchain.width, vulk->swapchain.height, vulk->defaultColorFormat,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        "Main color target image", s_data->m_renderColorImage))
+    {
+        printf("Failed to create color image\n");
+        return false;
+    }
 
+    ASSERT(VulkanResources::createFramebuffer(s_data->m_graphicsPipeline, { s_data->m_renderColorImage }));
+    FontRenderSystem::setRenderTarget(s_data->m_renderColorImage);
+
+    return true;
 }
 
-bool VulkanFontDraw::init(const char *windowStr, i32 screenWidth, i32 screenHeight)
+static void sResized(int width, int height)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
+    sResize();
+}
+
+static void sDeinit()
+{
+    FontRenderSystem::deinit();
+    if(s_data)
+    {
+        MyVulkan::destroyPipeline(s_data->m_graphicsPipeline);
+
+        VulkanResources::destroyImage(s_data->m_renderColorImage);
+        for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
+            VulkanResources::destroyBuffer(s_data->m_quadBuffer[i]);
+        VulkanResources::destroyBuffer(s_data->m_indexDataBuffer);
+        delete s_data;
+        s_data = nullptr;
+    }
+
+    MyVulkan::deinit();
+    VulkanApp::deinitApp();
+}
+
+static bool sInit(const char *windowStr, i32 screenWidth, i32 screenHeight, const char* fontName)
+{
+    s_data = new VulkanFontDrawData();
+    s_data->m_fontFilename = fontName;
+    if (!VulkanApp::initApp("Vulkan, draw font", c_ScreenWidth, c_ScreenHeight)
+            || !InputApp::init()
+        || !MyVulkan::init()
+        || !FontRenderSystem::init(fontName))
+    {
         return false;
+    }
     for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
-        quadBuffer[i] = createBuffer(QuadBufferSize,
+        s_data->m_quadBuffer[i] = VulkanResources::createBuffer(c_QuadBufferSize,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Quad buffer");
     }
-    indexDataBuffer = createBuffer(32 * 1024 * 1024,
+    s_data->m_indexDataBuffer = VulkanResources::createBuffer(32 * 1024 * 1024,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
 
@@ -146,17 +187,20 @@ bool VulkanFontDraw::init(const char *windowStr, i32 screenWidth, i32 screenHeig
             indices[ size_t(i) * 6 + 4 ] = i * 4 + 0;
             indices[ size_t(i) * 6 + 5 ] = i * 4 + 3;
         }
-        offset = uploadToScratchbuffer(( void * ) indices.data(), size_t(sizeof(indices[ 0 ]) * indices.size()), offset);
-        uploadScratchBufferToGpuBuffer(indexDataBuffer, offset);
+        offset = VulkanResources::uploadToScratchbuffer(
+            ( void * ) indices.data(),
+            size_t(sizeof(indices[ 0 ]) * indices.size()),
+            offset);
+        VulkanResources::uploadScratchBufferToGpuBuffer(s_data->m_indexDataBuffer, offset);
     }
 
     {
-        Pipeline& pipeline = graphicsPipeline;
+        Pipeline& pipeline = s_data->m_graphicsPipeline;
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
 
-        pipeline.renderPass = createRenderPass(
+        pipeline.renderPass = MyVulkan::createRenderPass(
             { RenderTarget{ .format = vulk->defaultColorFormat, .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR } },
             {});
         ASSERT(pipeline.renderPass);
@@ -167,8 +211,8 @@ bool VulkanFontDraw::init(const char *windowStr, i32 screenWidth, i32 screenHeig
             VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
         };
 
-        if (!createGraphicsPipeline(
-            getShader(ShaderType::ColoredQuadVert), getShader(ShaderType::ColoredQuadFrag),
+        if (!MyVulkan::createGraphicsPipeline(
+            VulkanShader::getShader(ShaderType::ColoredQuadVert), VulkanShader::getShader(ShaderType::ColoredQuadFrag),
             { { rgbaAtt } }, {}, pipeline, "Font draw render"))
         {
             printf("Failed to create pipeline\n");
@@ -179,113 +223,96 @@ bool VulkanFontDraw::init(const char *windowStr, i32 screenWidth, i32 screenHeig
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
-                DescriptorInfo(quadBuffer[i]),
+                DescriptorInfo(s_data->m_quadBuffer[i]),
             };
         }
-        if (!updateBindDescriptorSet(pipeline))
+        if (!VulkanShader::updateBindDescriptorSet(pipeline))
         {
             printf("Failed to set descriptor binds!\n");
             return false;
         }
     }
 
-    return resized() && initRun();
+    sResize();
+    MyVulkan::setVulkanFrameResizedCBFunc(sResized);
+    return sInitRun();
 }
 
-
-bool VulkanFontDraw::initRun()
+static bool sInitRun()
 {
-    if (!loadBytes(fontFilename.getStr(), characterData.getBuffer()))
+    if (!loadBytes(s_data->m_fontFilename.getStr(), s_data->m_characterData.getBuffer()))
     {
-        printf("Failed to load file: %s\n", fontFilename.getStr());
+        printf("Failed to load file: %s\n", s_data->m_fontFilename.getStr());
         return false;
     }
-    charactersInScreen.resize(LetterCount);
+    s_data->m_charactersInScreen.resize(c_LetterCount);
 
-    vertData.resize(LetterHeight * LetterWidth * (LetterCount + 1) + 1);
+    s_data->m_vertData.resize(c_LetterHeight * c_LetterWidth * (c_LetterCount + 1) + 1);
 
 
     // selected red box
     {
-        float offX = (borderSizes + buttonSize) + windowWidth * 0.5f;
-        float offY = (borderSizes + buttonSize) + windowHeight * 0.5f;
+        auto& app = VulkanApp::getWindowApp();
 
-        GPUVertexData& vdata = vertData[0];
-        vdata.color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
-        vdata.pixelSizeX = u16(smallButtonSize) * LetterWidth + 4;
-        vdata.pixelSizeY = u16(smallButtonSize) * LetterHeight + 4;
-        vdata.posX = offX;
-        vdata.posY = offY;
+        float offX = (c_BorderSizes + c_ButtonSize) + app.windowWidth * 0.5f;
+        float offY = (c_BorderSizes + c_ButtonSize) + app.windowHeight * 0.5f;
+
+        GPUVertexData& vdata = s_data->m_vertData[0];
+        vdata.m_color = getColor(1.0f, 0.0f, 0.0f, 1.0f);
+        vdata.m_pixelSizeX = u16(c_SmallButtonSize) * c_LetterWidth + 4;
+        vdata.m_pixelSizeY = u16(c_SmallButtonSize) * c_LetterHeight + 4;
+        vdata.m_posX = offX;
+        vdata.m_posY = offY;
     }
 
     // Draw area boxes
     {
-        updateDrawAreaData();
+        sUpdateDrawAreaData();
     }
-    for (i32 k = 0; k < LetterCount; ++k)
+    for (i32 k = 0; k < c_LetterCount; ++k)
     {
-        i32 x = k % LetterWidth;
-        i32 y = k / LetterWidth;
+        i32 x = k % c_LetterWidth;
+        i32 y = k / c_LetterWidth;
         float smallOffX =
-            LetterPanelOffsetX + float(x * LetterWidth) * smallButtonSize + x * 2;
+            c_LetterPanelOffsetX + float(x * c_LetterWidth) * c_SmallButtonSize + x * 2;
         float smallOffY =
-            LetterPanelOffsetY + float(y * LetterHeight) * smallButtonSize + y * 2;
+            c_LetterPanelOffsetY + float(y * c_LetterHeight) * c_SmallButtonSize + y * 2;
 
-        charactersInScreen[k].pos = Vec2(smallOffX, smallOffY);
-        charactersInScreen[k].size = Vec2(LetterWidth * smallButtonSize, LetterHeight * smallButtonSize);
+        s_data->m_charactersInScreen[k].m_pos = Vec2(smallOffX, smallOffY);
+        s_data->m_charactersInScreen[k].m_size = Vec2(c_LetterWidth * c_SmallButtonSize,
+            c_LetterHeight * c_SmallButtonSize);
 
-        updateCharacterImageData(k +  LetterStartIndex);
+        sUpdateCharacterImageData(k +  c_LetterStartIndex);
     }
     return true;
 }
 
-
-bool VulkanFontDraw::resized()
+static void sUpdateCharacterImageData(u32 characterIndex)
 {
-    destroyImage(renderColorImage);
+    ASSERT(characterIndex >= c_LetterStartIndex && characterIndex < c_LetterEndIndex);
+    characterIndex -=  c_LetterStartIndex;
 
-    // create color and depth images
-    if (!createRenderTargetImage(
-        vulk->swapchain.width, vulk->swapchain.height, vulk->defaultColorFormat,
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        "Main color target image", renderColorImage))
-    {
-        printf("Failed to create color image\n");
-        return false;
-    }
+    const Vec2 startOffset = s_data->m_charactersInScreen[characterIndex].m_pos;
+    const Vec2 size = s_data->m_charactersInScreen[characterIndex].m_size / Vec2(c_LetterWidth, c_LetterHeight);
 
-    ASSERT(createFramebuffer(graphicsPipeline, { renderColorImage }));
-    fontSystem.setRenderTarget(renderColorImage);
-
-    return true;
-}
-
-void VulkanFontDraw::updateCharacterImageData(u32 characterIndex)
-{
-    ASSERT(characterIndex >=  LetterStartIndex && characterIndex <  LetterEndIndex);
-    characterIndex -=  LetterStartIndex;
-
-    const Vec2 startOffset = charactersInScreen[characterIndex].pos;
-    const Vec2 size = charactersInScreen[characterIndex].size / Vec2(LetterWidth, LetterHeight);
-
-    u32 startIndex = characterIndex * LetterHeight;
-    u8 *visibility = (u8 *)&characterData[startIndex];
+    u32 startIndex = characterIndex * c_LetterHeight;
+    u8 *visibility = (u8 *)&s_data->m_characterData[startIndex];
 
     // first LetterWidth * LetterHeight is reserved for the drawing middle.
-    GPUVertexData *vertDataPtr = &vertData[(characterIndex + 1) * LetterWidth * LetterHeight + 1];
+    GPUVertexData *vertDataPtr = &s_data->m_vertData[(characterIndex + 1) * c_LetterWidth * c_LetterHeight + 1];
 
-    for (u32 j = 0; j < LetterHeight; ++j)
+    for (u32 j = 0; j < c_LetterHeight; ++j)
     {
         u8 rowVisibility = visibility[j];
-        for (u32 i = 0; i < LetterWidth; ++i)
+        for (u32 i = 0; i < c_LetterWidth; ++i)
         {
             bool isVisible = ((rowVisibility >> i) & 1) == 1;
 
-            vertDataPtr->color = isVisible ? ~0u : 0u;
-            vertDataPtr->posX = u16(startOffset.x + i * smallButtonSize);
-            vertDataPtr->posY = u16(startOffset.y + j * smallButtonSize);
-            vertDataPtr->pixelSizeX = u16(size.x);
-            vertDataPtr->pixelSizeY = u16(size.y);
+            vertDataPtr->m_color = isVisible ? ~0u : 0u;
+            vertDataPtr->m_posX = u16(startOffset.x + i * c_SmallButtonSize);
+            vertDataPtr->m_posY = u16(startOffset.y + j * c_SmallButtonSize);
+            vertDataPtr->m_pixelSizeX = u16(size.x);
+            vertDataPtr->m_pixelSizeY = u16(size.y);
             ++vertDataPtr;
         }
 
@@ -293,110 +320,114 @@ void VulkanFontDraw::updateCharacterImageData(u32 characterIndex)
 
 }
 
-void VulkanFontDraw::updateDrawAreaData()
+static void sUpdateDrawAreaData()
 {
-    ASSERT(chosenLetter >=  LetterStartIndex && chosenLetter <  LetterEndIndex);
-    u32 startIndex = (chosenLetter -  LetterStartIndex) * LetterHeight;
-    u8 *visibility = (u8 *)&characterData[startIndex];
+    ASSERT(s_data->m_chosenLetter >=  c_LetterStartIndex && s_data->m_chosenLetter <  c_LetterEndIndex);
+    u32 startIndex = (s_data->m_chosenLetter - c_LetterStartIndex) * c_LetterHeight;
+    u8 *visibility = (u8 *)&s_data->m_characterData[startIndex];
 
         // Draw area boxes
-    Vec2 drawStart = getDrawAreaStartPos();
-    for (i32 j = 0; j < LetterHeight; ++j)
+    Vec2 drawStart = sGetDrawAreaStartPos();
+    for (i32 j = 0; j < c_LetterHeight; ++j)
     {
         u8 visibilityBits = visibility[j];
-        for (i32 i = 0; i < LetterWidth; ++i)
+        for (i32 i = 0; i < c_LetterWidth; ++i)
         {
-            Vec2 pos = drawStart + Vec2(i, j) * (borderSizes + buttonSize);
-            GPUVertexData& vdata = vertData[i + size_t(j) * LetterWidth + 1];
-            vdata.color = ((visibilityBits >> i) & 1) ? ~0u : 0u;
-            vdata.pixelSizeX = vdata.pixelSizeY = buttonSize;
-            vdata.posX = pos.x;
-            vdata.posY = pos.y;
+            Vec2 pos = drawStart + Vec2(i, j) * (c_BorderSizes + c_ButtonSize);
+            GPUVertexData& vdata = s_data->m_vertData[i + size_t(j) * c_LetterWidth + 1];
+            vdata.m_color = ((visibilityBits >> i) & 1) ? ~0u : 0u;
+            vdata.m_pixelSizeX = vdata.m_pixelSizeY = c_ButtonSize;
+            vdata.m_posX = pos.x;
+            vdata.m_posY = pos.y;
         }
     }
 }
 
-Vec2 VulkanFontDraw::getDrawAreaStartPos() const
+static Vec2 sGetDrawAreaStartPos()
 {
+    auto& app = VulkanApp::getWindowApp();
+
     return Vec2(
-        float(LetterWidth * -0.5f) * (borderSizes + buttonSize) + windowWidth * 0.5f,
-        float(LetterHeight * -0.5f) * (borderSizes + buttonSize) + windowHeight * 0.5f);
+        float(c_LetterWidth * -0.5f) * (c_BorderSizes + c_ButtonSize) + app.windowWidth * 0.5f,
+        float(c_LetterHeight * -0.5f) * (c_BorderSizes + c_ButtonSize) + app.windowHeight * 0.5f);
 }
 
 
-void VulkanFontDraw::logicUpdate()
+static void sHandleInput()
 {
-    VulkanApp::logicUpdate();
+    //VulkanApp::logicUpdate();
 
-    MouseState mouseState = getMouseState();
+    MouseState mouseState = InputApp::getMouseState();
     {
-        if (isPressed(GLFW_KEY_LEFT))
-            --chosenLetter;
+        if (InputApp::isPressed(GLFW_KEY_LEFT))
+            --s_data->m_chosenLetter;
 
-        if (isPressed(GLFW_KEY_RIGHT))
-            ++chosenLetter;
+        if (InputApp::isPressed(GLFW_KEY_RIGHT))
+            ++s_data->m_chosenLetter;
 
-        if (isPressed(GLFW_KEY_DOWN))
-            chosenLetter += 8;
+        if (InputApp::isPressed(GLFW_KEY_DOWN))
+            s_data->m_chosenLetter += 8;
 
-        if (isPressed(GLFW_KEY_UP))
-            chosenLetter -= 8;
+        if (InputApp::isPressed(GLFW_KEY_UP))
+            s_data->m_chosenLetter -= 8;
 
-        bool isControlDown = keyDowns[GLFW_KEY_LEFT_CONTROL].isDown || keyDowns[GLFW_KEY_RIGHT_CONTROL].isDown;
+        bool isControlDown =
+            InputApp::isDown(GLFW_KEY_LEFT_CONTROL) | InputApp::isDown(GLFW_KEY_RIGHT_CONTROL);
 
-        for (i32 i = 0; i < bufferedPressesCount; ++i)
+        for (i32 i = 0; i < InputApp::getBufferedInputCount(); ++i)
         {
-            if (!isControlDown && bufferedPresses[i] >=  LetterStartIndex && bufferedPresses[i] <  LetterEndIndex)
+            u32 key = InputApp::getBufferedInput(i);
+            if (!isControlDown && key >=  c_LetterStartIndex && key < c_LetterEndIndex)
             {
-                chosenLetter = (int)bufferedPresses[i];
+                s_data->m_chosenLetter = (int)key;
             }
         }
 
-        if (chosenLetter <  LetterStartIndex)
-            chosenLetter =  LetterStartIndex;
-        if (chosenLetter >=  LetterEndIndex)
-            chosenLetter =  LetterEndIndex - 1;
+        if (s_data->m_chosenLetter < c_LetterStartIndex)
+            s_data->m_chosenLetter = c_LetterStartIndex;
+        if (s_data->m_chosenLetter >= c_LetterEndIndex)
+            s_data->m_chosenLetter = c_LetterEndIndex - 1;
 
 
-        if (keyDowns[GLFW_KEY_S].isDown && keyDowns[GLFW_KEY_S].pressCount > 0u && isControlDown)
-            writeBytes(fontFilename.getStr(), characterData.getBuffer());
+        if (isControlDown && InputApp::isDown(GLFW_KEY_S))
+            writeBytes(s_data->m_fontFilename.getStr(), s_data->m_characterData.getBuffer());
 
-        if (keyDowns[GLFW_KEY_L].isDown && keyDowns[GLFW_KEY_L].pressCount > 0u && isControlDown)
+        if (isControlDown && InputApp::isDown(GLFW_KEY_L))
         {
-            loadBytes(fontFilename.getStr(), characterData.getBuffer());
-            for(u32 i  = 0; i < LetterCount; ++i)
-                updateCharacterImageData(i +  LetterStartIndex);
+            loadBytes(s_data->m_fontFilename.getStr(), s_data->m_characterData.getBuffer());
+            for(u32 i  = 0; i < c_LetterCount; ++i)
+                sUpdateCharacterImageData(i + c_LetterStartIndex);
         }
 
-        if (keyDowns[GLFW_KEY_C].isDown && keyDowns[GLFW_KEY_C].pressCount > 0u && isControlDown)
+        if (isControlDown && InputApp::isDown(GLFW_KEY_C))
         {
-            u32 ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
-            u8 *ptr = &characterData[ind];
-            for (i32 i = 0; i < LetterHeight; ++i)
+            u32 ind = (s_data->m_chosenLetter - c_LetterStartIndex) * c_LetterHeight;
+            u8 *ptr = &s_data->m_characterData[ind];
+            for (i32 i = 0; i < c_LetterHeight; ++i)
             {
-                buffData[i] = ptr[i];
+                s_data->m_buffData[i] = ptr[i];
             }
         }
 
-        if (keyDowns[GLFW_KEY_V].isDown && keyDowns[GLFW_KEY_V].pressCount > 0u && isControlDown)
+        if (isControlDown && InputApp::isDown(GLFW_KEY_V))
         {
-            u32 ind = (chosenLetter -  LetterStartIndex) * LetterHeight;
-            u8 *ptr = &characterData[ind];
-            for (i32 i = 0; i < LetterHeight; ++i)
+            u32 ind = (s_data->m_chosenLetter - c_LetterStartIndex) * c_LetterHeight;
+            u8 *ptr = &s_data->m_characterData[ind];
+            for (i32 i = 0; i < c_LetterHeight; ++i)
             {
-                ptr[i] = buffData[i];
+                ptr[i] = s_data->m_buffData[i];
             }
         }
         // check if we click any of the characters?
         if(mouseState.leftButtonDown)
         {
-            for(u32 i = 0; i < charactersInScreen.size(); ++i)
+            for(u32 i = 0; i < s_data->m_charactersInScreen.size(); ++i)
             {
-                const auto &box = charactersInScreen[i];
-                if(mouseState.x >= box.pos.x && mouseState.x <= box.pos.x + box.size.x &&
-                    mouseState.y >= box.pos.y && mouseState.y <= box.pos.y + box.size.y)
+                const auto &box = s_data->m_charactersInScreen[i];
+                if(mouseState.x >= box.m_pos.x && mouseState.x <= box.m_pos.x + box.m_size.x &&
+                    mouseState.y >= box.m_pos.y && mouseState.y <= box.m_pos.y + box.m_size.y)
                 {
-                    chosenLetter =  LetterStartIndex + i;
+                    s_data->m_chosenLetter = c_LetterStartIndex + i;
                     break;
                 }
             }
@@ -404,15 +435,16 @@ void VulkanFontDraw::logicUpdate()
         // Check if drawing or erasing font letter pixels
         if(mouseState.leftButtonDown || mouseState.rightButtonDown)
         {
-            Vec2 drawBox = Vec2(mouseState.x, mouseState.y) - getDrawAreaStartPos();
+            Vec2 drawBox = Vec2(mouseState.x, mouseState.y) - sGetDrawAreaStartPos();
 
-            i32 foundI = drawBox.x / ((borderSizes + buttonSize));
-            i32 foundJ = drawBox.y / ((borderSizes + buttonSize));
+            i32 foundI = drawBox.x / ((c_BorderSizes + c_ButtonSize));
+            i32 foundJ = drawBox.y / ((c_BorderSizes + c_ButtonSize));
             // -0.1 / 1 = 0... so cannot check if foundI >= 0
-            if(drawBox.x >= 0.0f && foundI < LetterWidth
-                && drawBox.y >= 0.0f && foundJ < LetterHeight)
+            if(drawBox.x >= 0.0f && foundI < c_LetterWidth
+                && drawBox.y >= 0.0f && foundJ < c_LetterHeight)
             {
-                u8 *visiblePtr = &characterData[(chosenLetter -  LetterStartIndex) * LetterHeight];
+                u8 *visiblePtr =
+                    &s_data->m_characterData[(s_data->m_chosenLetter - c_LetterStartIndex) * c_LetterHeight];
                 u8 &visibleRow = visiblePtr[foundJ];
                 u8 bit = (1 << foundI);
                 // set bit
@@ -423,77 +455,149 @@ void VulkanFontDraw::logicUpdate()
                     visibleRow &= ~(bit);
             }
         }
-        updateCharacterImageData(chosenLetter);
-        updateDrawAreaData();
+        sUpdateCharacterImageData(s_data->m_chosenLetter);
+        sUpdateDrawAreaData();
 
-        u32 xOff = ((chosenLetter -  LetterStartIndex) % LetterWidth);
-        u32 yOff = ((chosenLetter -  LetterStartIndex) / LetterWidth);
+        u32 xOff = ((s_data->m_chosenLetter - c_LetterStartIndex) % c_LetterWidth);
+        u32 yOff = ((s_data->m_chosenLetter - c_LetterStartIndex) / c_LetterWidth);
 
-        vertData[0].posX = LetterPanelOffsetX + (xOff * LetterWidth ) * smallButtonSize + xOff * 2 - 2;
-        vertData[0].posY = LetterPanelOffsetY + (yOff * LetterHeight) * smallButtonSize + yOff * 2 - 2;
+        s_data->m_vertData[0].m_posX = c_LetterPanelOffsetX + (xOff * c_LetterWidth ) * c_SmallButtonSize + xOff * 2 - 2;
+        s_data->m_vertData[0].m_posY = c_LetterPanelOffsetY + (yOff * c_LetterHeight) * c_SmallButtonSize + yOff * 2 - 2;
     }
 
-    ASSERT(vertData.size() * sizeof(GPUVertexData) < QuadBufferSize);
+    ASSERT(s_data->m_vertData.size() * sizeof(GPUVertexData) < c_QuadBufferSize);
 }
 
-void VulkanFontDraw::renderUpdate()
+static void sRenderUpdate()
 {
-    VulkanApp::renderUpdate();
+    vulk->queryPoolIndexCounts[vulk->frameIndex] = 0u;
 
-    addToCopylist(sliceFromPodVectorBytes(vertData), quadBuffer[vulk->frameIndex]);
+    //beginSingleTimeCommands();
+    VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(vulk->commandBuffer, &beginInfo));
+
+    vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPools[vulk->frameIndex], 0, QUERY_COUNT);
+
+    MyVulkan::writeStamp();
+    VulkanResources::update();
+
+    struct FrameBuffer
+    {
+        Matrix camMat;
+        Matrix viewProj;
+        Matrix mvp;
+        Matrix sunMatrix;
+
+        Vector2 areaSize;
+        Vector2 tmp1;
+
+        Vector4 camPos;
+        Vector4 tmp3;
+        Vector4 tmp4;
+
+        Matrix inverseMvp;
+    };
+    FrameBuffer frameBufferData;
+/*
+    // bit ugly.......
+    sunCamera.calculateOrtographicPosition(camera.position);
+    if(windowWidth > 0 && windowHeight > 0)
+        camera.updateCameraState(windowWidth, windowHeight);
+    sunCamera.updateCameraState(50.0f, 50.0f);
+
+    if (useSunCamera)
+    {
+        frameBufferData.mvp = sunCamera.worldToViewMat;
+        frameBufferData.inverseMvp = sunCamera.viewToWorldMat;
+    }
+    else
+    {
+        frameBufferData.mvp = camera.worldToViewMat;
+        frameBufferData.inverseMvp = camera.viewToWorldMat;
+    }
+    frameBufferData.sunMatrix = sunCamera.worldToViewMat;
+    frameBufferData.camPos = Vector4(camera.position, 0.0f);
+*/
+    auto& app = VulkanApp::getWindowApp();
+    frameBufferData.areaSize = Vec2(app.windowWidth, app.windowHeight);
+    VulkanResources::addToCopylist(frameBufferData, vulk->renderFrameBufferHandle[vulk->frameIndex]);
+
+    FontRenderSystem::update();
+
+    VulkanResources::addToCopylist(
+        sliceFromPodVectorBytes(s_data->m_vertData), s_data->m_quadBuffer[vulk->frameIndex]);
 }
 
-void VulkanFontDraw::renderDraw()
+static void sDraw()
 {
-    prepareToGraphicsSampleWrite(renderColorImage);
+    VulkanResources::prepareToGraphicsSampleWrite(s_data->m_renderColorImage);
 
     // Drawingg
 
     {
 
-        beginRenderPass(graphicsPipeline, { colorClear });
+        MyVulkan::beginRenderPass(s_data->m_graphicsPipeline, { c_ColorClear });
         // draw calls here
         // Render
         {
-            bindGraphicsPipelineWithDecriptors(graphicsPipeline, vulk->frameIndex);
-            vkCmdBindIndexBuffer(vulk->commandBuffer, indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(vulk->commandBuffer, u32(vertData.size() * 6), 1, 0, 0, 0);
+            MyVulkan::bindGraphicsPipelineWithDecriptors(s_data->m_graphicsPipeline, vulk->frameIndex);
+            vkCmdBindIndexBuffer(vulk->commandBuffer, s_data->m_indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(vulk->commandBuffer, u32(s_data->m_vertData.size() * 6), 1, 0, 0, 0);
 
         }
         vkCmdEndRenderPass(vulk->commandBuffer);
         //vkCmdEndRendering(vulk->commandBuffer);
     }
 
-    writeStamp();
+    MyVulkan::writeStamp();
 
-    present(renderColorImage);
+    MyVulkan::present(s_data->m_renderColorImage);
 
 }
 
+static void sRunApp()
+{
+    while(VulkanApp::updateApp())
+    {
+        sHandleInput();
 
+        if (MyVulkan::frameStart())
+        {
+            //updateStats(*this);
+            vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            sRenderUpdate();
+            sDraw();
+            //renderDraw();
+            //printStats(*this);
+        }
+
+        defragMemory();
+        VulkanApp::frameEnd();
+    }
+    VK_CHECK(vkDeviceWaitIdle(vulk->device));
+}
 
 
 
 i32 main(i32 argCount, char **argv)
 {
     initMemory();
+    const char* filename;
+    if (argCount < 2)
     {
-        String filename;
-        if (argCount < 2)
-        {
-            filename = "assets/font/new_font.dat";
-        }
-        else
-        {
-            filename = argv[ 1 ];
-        }
-        VulkanFontDraw app;
-        app.fontFilename = filename;
-        if(app.init("Vulkan, draw font", SCREEN_WIDTH, SCREEN_HEIGHT))
-        {
-            app.run();
-        }
+        filename = "assets/font/new_font.dat";
     }
+    else
+    {
+        filename = argv[ 1 ];
+    }
+    if(sInit("Vulkan, draw font", c_ScreenWidth, c_ScreenHeight, filename))
+    {
+        sRunApp();
+    }
+    sDeinit();
     deinitMemory();
     return 0;
 }

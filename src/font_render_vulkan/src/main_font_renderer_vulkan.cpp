@@ -24,32 +24,42 @@
 
 #include <render/font_render.h>
 
-static constexpr i32 SCREEN_WIDTH = 640;
-static constexpr i32 SCREEN_HEIGHT = 540;
+static constexpr i32 c_ScreenWidth = 640;
+static constexpr i32 c_ScreenHeight = 540;
+
+static void sUpdateText(StringView str);
+static bool sResize();
+static void sResized(int width, int height);
+static void sHandleInput();
+static void sDraw();
+static bool sInit();
+static void sDeinit();
+static void sRenderUpdate();
+static void sRunApp();
 
 struct FontRenderData
 {
-    Vector2 fontSize = Vector2(8.0f, 12.0f);
-    Image renderColorImage;
-    String text = "Text";
+    Vector2 m_fontSize = Vector2(8.0f, 12.0f);
+    Image m_renderColorImage;
+    String m_text = "Text";
 };
 
-static FontRenderData* sFontRenderData = nullptr;
+static FontRenderData* s_fontRenderData = nullptr;
 
 static void sUpdateText(StringView str)
 {
     String tmpStr = "w";
-    tmpStr.append(i32(sFontRenderData->fontSize.x));
+    tmpStr.append(i32(s_fontRenderData->m_fontSize.x));
     tmpStr.append(",h");
-    tmpStr.append(i32(sFontRenderData->fontSize.y));
+    tmpStr.append(i32(s_fontRenderData->m_fontSize.y));
 
     FontRenderSystem::addText(tmpStr.getStr(),
         Vector2(100.0f, 400.0f),
-        sFontRenderData->fontSize,
+        s_fontRenderData->m_fontSize,
         Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     FontRenderSystem::addText(String(str.ptr, str.length).getStr(),
         Vector2(100.0f, 100.0f),
-        sFontRenderData->fontSize,
+        s_fontRenderData->m_fontSize,
         Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
@@ -58,24 +68,24 @@ static bool sResize()
     // create color and depth images
     if(!VulkanResources::createRenderTargetImage(vulk->swapchain.width, vulk->swapchain.height, vulk->defaultColorFormat,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        "Main color target image", sFontRenderData->renderColorImage))
+        "Main color target image", s_fontRenderData->m_renderColorImage))
     {
         printf("Failed to create font render target image!\n");
         return false;
     }
-    FontRenderSystem::setRenderTarget(sFontRenderData->renderColorImage);
+    FontRenderSystem::setRenderTarget(s_fontRenderData->m_renderColorImage);
     return true;
 }
+
 static void sResized(int width, int height)
 {
     sResize();
 }
 
-
 static void sHandleInput()
 {
-    auto& text = sFontRenderData->text;
-    auto& fontSize = sFontRenderData->fontSize;
+    auto& text = s_fontRenderData->m_text;
+    auto& fontSize = s_fontRenderData->m_fontSize;
     bool textNeedsUpdate = false;
 
     for(i32 i = 0; i < InputApp::getBufferedInputCount(); ++i)
@@ -114,7 +124,7 @@ static void sHandleInput()
 
 static void sDraw()
 {
-    auto& image = sFontRenderData->renderColorImage;
+    auto& image = s_fontRenderData->m_renderColorImage;
 
     // Should probably abstract this into push images, then
     // then flush barriers for clear image
@@ -139,13 +149,13 @@ static void sDraw()
     MyVulkan::present(image);
 }
 
-bool init()
+static bool sInit()
 {
-    sFontRenderData = new FontRenderData();
+    s_fontRenderData = new FontRenderData();
     auto &vulkanInitParams = VulkanInitializationParameters::getRef();
     vulkanInitParams.useIntegratedGpu = true;
 
-    if(!VulkanApp::initApp("Vulkan, render font", SCREEN_WIDTH, SCREEN_HEIGHT)
+    if(!VulkanApp::initApp("Vulkan, render font", c_ScreenWidth, c_ScreenHeight)
         || !InputApp::init()
         || !MyVulkan::init()
         || !FontRenderSystem::init("assets/font/new_font.dat"))
@@ -158,14 +168,15 @@ bool init()
     return true;
 }
 
-void deinit()
+static void sDeinit()
 {
     FontRenderSystem::deinit();
-
-    VulkanResources::destroyImage(sFontRenderData->renderColorImage);
-    delete sFontRenderData;
-    sFontRenderData = nullptr;
-
+    if(s_fontRenderData)
+    {
+        VulkanResources::destroyImage(s_fontRenderData->m_renderColorImage);
+        delete s_fontRenderData;
+        s_fontRenderData = nullptr;
+    }
     MyVulkan::deinit();
 
     VulkanApp::deinitApp();
@@ -230,7 +241,7 @@ static void sRenderUpdate()
     FontRenderSystem::update();
 }
 
-void runApp()
+static void sRunApp()
 {
     while(VulkanApp::updateApp())
     {
@@ -255,11 +266,11 @@ void runApp()
 i32 main(i32 argCount, char **argv)
 {
     initMemory();
-    if(init())
+    if(sInit())
     {
-        runApp();
+        sRunApp();
     }
-    deinit();
+    sDeinit();
     deinitMemory();
     return 0;
 }
