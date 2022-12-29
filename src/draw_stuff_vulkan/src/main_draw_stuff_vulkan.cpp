@@ -185,8 +185,6 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     }
     s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING });
 
-
-
     s_data->m_sunCamera.m_pitch = toRadians(330.0f);
     s_data->m_sunCamera.m_yaw = toRadians(30.0f);
 
@@ -232,6 +230,7 @@ static void sHandleInput()
         counter = 0;
     }
     s_data->m_lineRenderSystem.clear();
+    MeshRenderSystem::clear();
 
     MouseState mouseState = InputApp::getMouseState();
     float dt = VulkanApp::getWindowApp().frameDt;
@@ -286,23 +285,25 @@ static void sHandleInput()
 
     Vec2 renderPos = s_data->m_camera.renderCameraInfo(Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
-    snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f, use sun camera: %s",
-        s_data->m_showNormalMap
-            ? "on" : "off", s_data->m_rotateOn ? "on"
-            : "off", toDegrees(s_data->m_rotationAmount), s_data->m_useSunCamera
-                ? "on" : "off");
+    snprintf(tmpStr, 1024,
+        "Show normal mode: %s, rotation enabled: %s, rotation amount: %.2f, use sun camera: %s",
+        s_data->m_showNormalMap ? "on" : "off",
+        s_data->m_rotateOn ? "on" : "off",
+        toDegrees(s_data->m_rotationAmount),
+        s_data->m_useSunCamera ? "on" : "off");
     FontRenderSystem::addText(tmpStr,
-        renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        renderPos + Vec2(0.0f, fontSize.y * 0.0f),
+        fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
     snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
         toDegrees(sunCamera.m_pitch), toDegrees(sunCamera.m_yaw), sundir.x, sundir.y, sundir.z);
     FontRenderSystem::addText(tmpStr,
         renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
     snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f",
         sunCamera.m_position.x, sunCamera.m_position.y, sunCamera.m_position.z);
     FontRenderSystem::addText(tmpStr,
         renderPos + Vec2(0.0f, fontSize.y * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-    MeshRenderSystem::clear();
 
     if(mouseState.leftButtonDown &&
         mouseState.x >= 0 && mouseState.y >= 0 &&
@@ -391,9 +392,6 @@ static void sRenderUpdate()
 
     FontRenderSystem::update();
 
-    //VulkanResources::addToCopylist(
-    //    sliceFromPodVectorBytes(s_data->m_vertData), s_data->m_quadBuffer[vulk->frameIndex]);
-
     u32 grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
     u32 selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
 
@@ -469,7 +467,6 @@ static void sRenderUpdate()
     s_data->m_lightRenderSystem.update();
 
     s_data->m_lineRenderSystem.prepareToRender();
-
 }
 
 static void sDraw()
@@ -559,19 +556,3 @@ i32 main(i32 argCount, char **argv)
     deinitMemory();
     return 0;
 }
-
-/*
-i32 main(i32 argCount, char **argv)
-{
-    initMemory();
-    {
-        VulkanDrawStuff app;
-        if (app.init("Vulkan, draw models", SCREEN_WIDTH, SCREEN_HEIGHT))
-        {
-            app.run();
-        }
-    }
-    deinitMemory();
-    return 0;
-}
-*/
