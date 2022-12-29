@@ -1,7 +1,7 @@
 #include "podvectortype.h"
-
 #include <type_traits>
 #include <new>
+
 template <typename T>
 void isPodType()
 {

@@ -22,7 +22,7 @@
 #include <myvulkan/vulkaninitparameters.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <render/font_render.h>
+#include <render/fontrendersystem.h>
 
 static constexpr i32 c_ScreenWidth = 640;
 static constexpr i32 c_ScreenHeight = 540;
@@ -149,13 +149,13 @@ static void sDraw()
     MyVulkan::present(image);
 }
 
-static bool sInit()
+static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     s_fontRenderData = new FontRenderData();
     auto &vulkanInitParams = VulkanInitializationParameters::getRef();
     vulkanInitParams.useIntegratedGpu = true;
 
-    if(!VulkanApp::initApp("Vulkan, render font", c_ScreenWidth, c_ScreenHeight)
+    if(!VulkanApp::initApp(windowStr, screenWidth, screenHeight)
         || !InputApp::init()
         || !MyVulkan::init()
         || !FontRenderSystem::init("assets/font/new_font.dat"))
@@ -266,7 +266,7 @@ static void sRunApp()
 i32 main(i32 argCount, char **argv)
 {
     initMemory();
-    if(sInit())
+    if(sInit("Vulkan, render font", c_ScreenWidth, c_ScreenHeight))
     {
         sRunApp();
     }

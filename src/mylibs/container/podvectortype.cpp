@@ -21,7 +21,7 @@
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/shader.h>
 
-#include <render/font_render.h>
+#include <render/fontrendersystem.h>
 #include <render/linerendersystem.h>
 #include <render/meshrendersystem.h>
 
@@ -61,7 +61,7 @@ template void isPodType<RenderTarget>();
 template void isPodType<Image>();
 template void isPodType<Shader>();
 template void isPodType<FontRenderSystem::GPUVertexData>();
-template void isPodType<MeshRenderSystem::ModelData>();
+//template void isPodType<MeshRenderSystem::ModelData>();
 template void isPodType<LineRenderSystem::Line>();
 
 template void isPodType<TinyStackString>();

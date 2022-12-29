@@ -22,7 +22,7 @@ struct Camera
     Matrix getCameraMatrix() const;
     Matrix getCameraMatrix(const Vec3 &target) const;
 
-    Vec2 renderCameraInfo(FontRenderSystem& fontSystem, Vec2 camInfoPosition, const Vec2& fontSize) const;
+    Vec2 renderCameraInfo(Vec2 camInfoPosition, const Vec2& fontSize) const;
     void calculateOrtographicPosition(const Vec3& targetPos);
 
     void lookAt(const Vec3 &targetPos);
@@ -30,24 +30,27 @@ struct Camera
     Ray getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates) const;
     Ray getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize) const;
 
-    Matrix worldToViewMat;
-    Matrix viewToWorldMat;
+    // Rethink this... camera manager?
+    void checkCameraKeypresses();
 
-    Vec3 position = Vec3(0.0f, 0.0f, -5.0f);
-    
-    float fovY = 100.0f;
+    Matrix m_worldToViewMat;
+    Matrix m_viewToWorldMat;
 
-    float width = 0.0f;
-    float height = 0.0f;
+    Vec3 m_position = Vec3(0.0f, 0.0f, -5.0f);
 
-    float pitch = 0.0f;
-    float yaw = 0.0f;
-    float roll = 0.0f;
+    float m_fovY = 100.0f;
 
-    float zNear = 0.1f;
-    float zFar = 200.0f;
+    float m_width = 0.0f;
+    float m_height = 0.0f;
 
-    CameraType cameraType = CameraType::PERSPECTIVE;
+    float m_pitch = 0.0f;
+    float m_yaw = 0.0f;
+    float m_roll = 0.0f;
+
+    float m_zNear = 0.1f;
+    float m_zFar = 200.0f;
+
+    CameraType m_cameraType = CameraType::PERSPECTIVE;
 };
 
 

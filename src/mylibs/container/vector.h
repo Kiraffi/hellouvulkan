@@ -9,7 +9,6 @@
 
 #define CHECK_NO_POD_MACRO() isNotPodType<T>();
 
-
 template <typename T>
 Vector<T>::Vector() : VectorBase(sizeof(T), BufferType::VECTOR)
 {

@@ -118,7 +118,7 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "myvulkan/shader.h"
 
     "render/convertrendertarget.h"
-    "render/font_render.h"
+    "render/fontrendersystem.h"
     "render/lightrendersystem.h"
     "render/linerendersystem.h"
     "render/meshrendersystem.h"
@@ -139,7 +139,7 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "myvulkan/shader.cpp"
 
     "render/convertrendertarget.cpp"
-    "render/font_render.cpp"
+    "render/fontrendersystem.cpp"
     "render/lightrendersystem.cpp"
     "render/linerendersystem.cpp"
     "render/meshrendersystem.cpp"

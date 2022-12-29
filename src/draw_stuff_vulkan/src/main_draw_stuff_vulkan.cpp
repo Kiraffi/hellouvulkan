@@ -1,3 +1,6 @@
+#include <app/glfw_keys.h>
+#include <app/inputapp.h>
+#include <app/vulkan_app.h>
 
 #include <components/transform_functions.h>
 
@@ -5,11 +8,9 @@
 
 #include <core/camera.h>
 #include <core/general.h>
-#include <app/glfw_keys.h>
 #include <core/json.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <app/vulkan_app.h>
 
 #include <gui/componentviews.h>
 
@@ -26,10 +27,11 @@
 
 #include <myvulkan/myvulkan.h>
 #include <myvulkan/shader.h>
+#include <myvulkan/vulkaninitparameters.h>
 #include <myvulkan/vulkanresources.h>
 
-
 #include <render/convertrendertarget.h>
+#include <render/fontrendersystem.h>
 #include <render/lightrendersystem.h>
 #include <render/linerendersystem.h>
 #include <render/meshrendersystem.h>
@@ -38,57 +40,56 @@
 #include <render/lightingrendertargets.h>
 #include <render/meshrendertargets.h>
 
+#include <resources/globalresources.h>
 
 #include <scene/scene.h>
 
-static constexpr i32 SCREEN_WIDTH = 1024;
-static constexpr i32 SCREEN_HEIGHT = 768;
+static constexpr i32 c_ScreenWidth = 1024;
+static constexpr i32 c_ScreenHeight = 768;
 
-static constexpr i32 SHADOW_WIDTH = 2048;
-static constexpr i32 SHADOW_HEIGHT = 2048;
+static constexpr i32 c_ShadowWidth = 2048;
+static constexpr i32 c_ShadowHeight = 2048;
 
 static Vec3 getSunDirection(const Camera &camera)
 {
     Vec3 sundir[3];
-    getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
+    getDirectionsFromPitchYawRoll(camera.m_pitch, camera.m_yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
 
     return -sundir[2];
 }
 
-class VulkanDrawStuff : public VulkanApp
+struct VulkanDrawStuffData
 {
-public:
-    VulkanDrawStuff() : scene(meshRenderSystem) { }
-    virtual ~VulkanDrawStuff() override;
-    virtual bool init(const char* windowStr, i32 screenWidth, i32 screenHeight) override;
-    virtual void logicUpdate() override;
-    virtual void renderUpdate() override;
-    virtual void renderDraw() override;
-    virtual bool resized() override;
+    Scene m_scene;
+    LightRenderSystem m_lightRenderSystem;
+    TonemapRenderSystem m_tonemapRenderSystem;
+    LineRenderSystem m_lineRenderSystem;
 
-public:
-    Scene scene;
-    MeshRenderSystem meshRenderSystem;
-    LightRenderSystem lightRenderSystem;
-    TonemapRenderSystem tonemapRenderSystem;
+    LightingRenderTargets m_lightingRenderTargets;
+    MeshRenderTargets m_meshRenderTargets;
 
-    LightingRenderTargets lightingRenderTargets;
-    MeshRenderTargets meshRenderTargets;
-    LineRenderSystem lineRenderSystem;
+    ConvertRenderTarget m_convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
+    Vec2 m_fontSize{ 8.0f, 12.0f };
 
-    ConvertRenderTarget convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
-    Vec2 fontSize{ 8.0f, 12.0f };
+    Camera m_camera;
+    Camera m_sunCamera;
 
-    u32 selectedEntityIndex = ~0u;
-    float rotationAmount = 0.0f;
+    u32 m_selectedEntityIndex = ~0u;
+    float m_rotationAmount = 0.0f;
 
-    bool showNormalMap = false;
-    bool rotateOn = false;
+    bool m_showNormalMap = false;
+    bool m_rotateOn = false;
+    bool m_useSunCamera = false;
 
-    Vec3 lineFrom;
-    Vec3 lineTo;
+    Vec3 m_lineFrom;
+    Vec3 m_lineTo;
 };
+VulkanDrawStuffData* s_data = nullptr;
 
+static bool sResize();
+static void sResized(int width, int height);
+static void sDeinit();
+static bool sInit(const char *windowStr, i32 screenWidth, i32 screenHeight);
 
 ////////////////////////
 //
@@ -96,50 +97,70 @@ public:
 //
 ////////////////////////
 
-VulkanDrawStuff::~VulkanDrawStuff()
+static void sDeinit()
 {
+    FontRenderSystem::deinit();
+    MeshRenderSystem::deinit();
+    if(s_data)
+    {
+        delete s_data;
+        s_data = nullptr;
+    }
+    MyVulkan::deinit();
+    VulkanApp::deinitApp();
 }
 
 
 
-bool VulkanDrawStuff::init(const char* windowStr, i32 screenWidth, i32 screenHeight)
+static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
-    if (!VulkanApp::init(windowStr, screenWidth, screenHeight))
+    s_data = new VulkanDrawStuffData();
+    auto &vulkanInitParams = VulkanInitializationParameters::getRef();
+    vulkanInitParams.useIntegratedGpu = true;
+
+    if(!VulkanApp::initApp(windowStr, screenWidth, screenHeight)
+        || !InputApp::init()
+        || !MyVulkan::init()
+        || !FontRenderSystem::init("assets/font/new_font.dat"))
+    {
         return false;
+    }
+
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
 
-    if (!convertFromS16.init(ShaderType::ConvertFromRGBAS16))
+    if (!s_data->m_convertFromS16.init(ShaderType::ConvertFromRGBAS16))
         return false;
 
-    if (!meshRenderSystem.init())
+    if (!MeshRenderSystem::init())
         return false;
 
-    if (!scene.init())
+    if (!s_data->m_scene.init())
         return false;
 
-    if (!lightRenderSystem.init())
+    if (!s_data->m_lightRenderSystem.init())
         return false;
 
-    if (!tonemapRenderSystem.init())
+    if (!s_data->m_tonemapRenderSystem.init())
         return false;
 
-    if (!meshRenderTargets.resizeShadowTarget(SHADOW_WIDTH, SHADOW_HEIGHT))
+    if (!s_data->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
         return false;
 
-    if (!lineRenderSystem.init())
+    if (!s_data->m_lineRenderSystem.init())
         return false;
-    camera.position = Vec3(0.0f, 4.0f, 5.0f);
 
-    scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
+    s_data->m_camera.m_position = Vec3(0.0f, 4.0f, 5.0f);
 
-    scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING});
-    scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
 
-    scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, -15.0f } }, .entityType = EntityType::CHARACTER });
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING});
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
 
-    scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
-    scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, -15.0f } }, .entityType = EntityType::CHARACTER });
+
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
 
     for(i32 y = -10; y < 10; ++y)
     {
@@ -149,55 +170,60 @@ bool VulkanDrawStuff::init(const char* windowStr, i32 screenWidth, i32 screenHei
             pos.x += 0.5f;
             pos.y += 0.5f;
 
-            scene.addGameEntity({ .transform = { .pos = pos }, .entityType = EntityType::LOW_POLY_CHAR });
+            s_data->m_scene.addGameEntity({ .transform = { .pos = pos }, .entityType = EntityType::LOW_POLY_CHAR });
         }
     }
 
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
     {
-        scene.addGameEntity({.transform = {.pos = {f * 5.0f, 1.0f, -5.0f}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW });
-        scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE });
-        scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH });
-        scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, }, .entityType = EntityType::BLOB });
-        scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, }, .entityType = EntityType::BLOB_FLAT });
+        s_data->m_scene.addGameEntity({.transform = {.pos = {f * 5.0f, 1.0f, -5.0f}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW });
+        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE });
+        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH });
+        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, }, .entityType = EntityType::BLOB });
+        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, }, .entityType = EntityType::BLOB_FLAT });
     }
-    scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING });
+    s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING });
 
 
 
-    sunCamera.pitch = toRadians(330.0f);
-    sunCamera.yaw = toRadians(30.0f);
+    s_data->m_sunCamera.m_pitch = toRadians(330.0f);
+    s_data->m_sunCamera.m_yaw = toRadians(30.0f);
 
-    return resized();
+    MyVulkan::setVulkanFrameResizedCBFunc(sResized);
+
+    return sResize();
 }
 
-
-bool VulkanDrawStuff::resized()
+static void sResized(int w, int h)
 {
-    if (!meshRenderTargets.resizeMeshTargets())
+    sResize();
+}
+
+static bool sResize()
+{
+    if (!s_data->m_meshRenderTargets.resizeMeshTargets())
         return false;
-    if (!lightingRenderTargets.resizeLightingTargets())
+    if (!s_data->m_lightingRenderTargets.resizeLightingTargets())
         return false;
 
-    meshRenderSystem.setRenderTargets(meshRenderTargets);
-    lineRenderSystem.setRendertargets(meshRenderTargets.albedoImage, meshRenderTargets.depthImage);
-    fontSystem.setRenderTarget(meshRenderTargets.albedoImage);
-    convertFromS16.updateSourceImages(meshRenderTargets);
+    MeshRenderSystem::setRenderTargets(s_data->m_meshRenderTargets);
+    s_data->m_lineRenderSystem.setRendertargets(
+        s_data->m_meshRenderTargets.albedoImage, s_data->m_meshRenderTargets.depthImage);
+    FontRenderSystem::setRenderTarget(s_data->m_meshRenderTargets.albedoImage);
+    s_data->m_convertFromS16.updateSourceImages(s_data->m_meshRenderTargets);
 
-    lightRenderSystem.updateReadTargets(meshRenderTargets, lightingRenderTargets);
-    tonemapRenderSystem.updateReadTargets(lightingRenderTargets.lightingTargetImage, meshRenderTargets.albedoImage);
-
-
+    s_data->m_lightRenderSystem.updateReadTargets(s_data->m_meshRenderTargets, s_data->m_lightingRenderTargets);
+    s_data->m_tonemapRenderSystem.updateReadTargets(
+        s_data->m_lightingRenderTargets.lightingTargetImage, s_data->m_meshRenderTargets.albedoImage);
 
     return true;
 }
 
 
 
-void VulkanDrawStuff::logicUpdate()
+static void sHandleInput()
 {
-    VulkanApp::logicUpdate();
     static u32 counter = 0;
     if(counter++ >= 100)
     {
@@ -205,112 +231,187 @@ void VulkanDrawStuff::logicUpdate()
         //printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
         counter = 0;
     }
-    lineRenderSystem.clear();
+    s_data->m_lineRenderSystem.clear();
 
-    MouseState mouseState = getMouseState();
+    MouseState mouseState = InputApp::getMouseState();
+    float dt = VulkanApp::getWindowApp().frameDt;
 
-    checkCameraKeypresses(dt, camera);
+    s_data->m_camera.checkCameraKeypresses();
 
-    if (isPressed(GLFW_KEY_KP_ADD))
+    if (InputApp::isPressed(GLFW_KEY_RIGHT_BRACKET))
     {
-        for (auto &entity : scene.getEntities())
+        s_data->m_useSunCamera = !s_data->m_useSunCamera;
+    }
+
+    if (InputApp::isPressed(GLFW_KEY_KP_ADD))
+    {
+        for (auto &entity : s_data->m_scene.getEntities())
         {
             ++entity.animationIndex;
         }
     }
-    if (isPressed(GLFW_KEY_KP_SUBTRACT))
+    if (InputApp::isPressed(GLFW_KEY_KP_SUBTRACT))
     {
-        for(auto &entity : scene.getEntities())
+        for(auto &entity : s_data->m_scene.getEntities())
         {
             if(entity.animationIndex > 0)
                 --entity.animationIndex;
         }
     }
 
-    if (isPressed(GLFW_KEY_SPACE))
-        showNormalMap = !showNormalMap;
+    if (InputApp::isPressed(GLFW_KEY_SPACE))
+        s_data->m_showNormalMap = !s_data->m_showNormalMap;
 
-    if (isPressed(GLFW_KEY_Z))
-        rotateOn = !rotateOn;
+    if (InputApp::isPressed(GLFW_KEY_Z))
+        s_data->m_rotateOn = !s_data->m_rotateOn;
 
-    if (isDown(GLFW_KEY_UP))
-        sunCamera.pitch -= dt * 1.0f;
-    if (isDown(GLFW_KEY_DOWN))
-        sunCamera.pitch += dt * 1.0f;
-    if (isDown(GLFW_KEY_LEFT))
-        sunCamera.yaw += dt * 1.0f;
-    if (isDown(GLFW_KEY_RIGHT))
-        sunCamera.yaw -= dt * 1.0f;
+    Camera& sunCamera = s_data->m_sunCamera;
+
+    if (InputApp::isDown(GLFW_KEY_UP))
+        sunCamera.m_pitch -= dt * 1.0f;
+    if (InputApp::isDown(GLFW_KEY_DOWN))
+        sunCamera.m_pitch += dt * 1.0f;
+    if (InputApp::isDown(GLFW_KEY_LEFT))
+        sunCamera.m_yaw += dt * 1.0f;
+    if (InputApp::isDown(GLFW_KEY_RIGHT))
+        sunCamera.m_yaw -= dt * 1.0f;
 
     Vec3 sundir = getSunDirection(sunCamera);
-    while (sunCamera.pitch >= 2.0f * PI) sunCamera.pitch -= 2.0f * PI;
-    while (sunCamera.pitch <= 0.0f) sunCamera.pitch += 2.0f * PI;
-    while (sunCamera.yaw >= 2.0f * PI) sunCamera.yaw -= 2.0f * PI;
-    while (sunCamera.yaw <= 0.0f) sunCamera.yaw += 2.0f * PI;
+    while (sunCamera.m_pitch >= 2.0f * PI) sunCamera.m_pitch -= 2.0f * PI;
+    while (sunCamera.m_pitch <= 0.0f) sunCamera.m_pitch += 2.0f * PI;
+    while (sunCamera.m_yaw >= 2.0f * PI) sunCamera.m_yaw -= 2.0f * PI;
+    while (sunCamera.m_yaw <= 0.0f) sunCamera.m_yaw += 2.0f * PI;
 
-    Vec2 renderPos = camera.renderCameraInfo(fontSystem, Vec2(10.0f, 10.0f), fontSize);
+    const Vec2& fontSize = s_data->m_fontSize;
+
+    Vec2 renderPos = s_data->m_camera.renderCameraInfo(Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
     snprintf(tmpStr, 1024, "Show normal mode: %s, rotation enabled: %s, rotaion amount: %.2f, use sun camera: %s",
-        showNormalMap ? "on" : "off", rotateOn ? "on" : "off", toDegrees(rotationAmount), useSunCamera ? "on" : "off");
-    fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        s_data->m_showNormalMap
+            ? "on" : "off", s_data->m_rotateOn ? "on"
+            : "off", toDegrees(s_data->m_rotationAmount), s_data->m_useSunCamera
+                ? "on" : "off");
+    FontRenderSystem::addText(tmpStr,
+        renderPos + Vec2(0.0f, fontSize.y * 0.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
     snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
-        toDegrees(sunCamera.pitch), toDegrees(sunCamera.yaw), sundir.x, sundir.y, sundir.z);
-    fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-    snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f", sunCamera.position.x, sunCamera.position.y, sunCamera.position.z);
-    fontSystem.addText(tmpStr, renderPos + Vec2(0.0f, fontSize.y * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        toDegrees(sunCamera.m_pitch), toDegrees(sunCamera.m_yaw), sundir.x, sundir.y, sundir.z);
+    FontRenderSystem::addText(tmpStr,
+        renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+    snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f",
+        sunCamera.m_position.x, sunCamera.m_position.y, sunCamera.m_position.z);
+    FontRenderSystem::addText(tmpStr,
+        renderPos + Vec2(0.0f, fontSize.y * 2.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
-    meshRenderSystem.clear();
+    MeshRenderSystem::clear();
 
     if(mouseState.leftButtonDown &&
         mouseState.x >= 0 && mouseState.y >= 0 &&
         mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
     {
-        selectedEntityIndex = ~0u;
+        s_data->m_selectedEntityIndex = ~0u;
 
         Vec2 coord = Vec2(mouseState.x, mouseState.y);
+        const auto& app = VulkanApp::getWindowApp();
+        Vec2 windowSize = Vec2(app.windowWidth, app.windowHeight);
         Ray ray{ Uninit };
-        if(useSunCamera)
-            ray = sunCamera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
+        if(s_data->m_useSunCamera)
+            ray = s_data->m_sunCamera.getRayFromScreenPixelCoordinates(coord, windowSize);
         else
-            ray = camera.getRayFromScreenPixelCoordinates(coord, getWindowSize());
+            ray = s_data->m_camera.getRayFromScreenPixelCoordinates(coord, windowSize);
 
-        HitPoi32 hitpoint{ Uninit };
-        selectedEntityIndex = scene.castRay(ray, hitpoint);
-        if(selectedEntityIndex != ~0u)
+        HitPoint hitpoint{ Uninit };
+        s_data->m_selectedEntityIndex = s_data->m_scene.castRay(ray, hitpoint);
+        if(s_data->m_selectedEntityIndex != ~0u)
         {
-            lineTo = lineTo = hitpoint.point;
-            lineFrom = ray.pos;
+            s_data->m_lineTo = s_data->m_lineTo = hitpoint.point;
+            s_data->m_lineFrom = ray.pos;
         }
     }
 
-    lineRenderSystem.addLine(lineFrom, lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
+    s_data->m_lineRenderSystem.addLine(s_data->m_lineFrom, s_data->m_lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
-void VulkanDrawStuff::renderUpdate()
+static void sRenderUpdate()
 {
-    VulkanApp::renderUpdate();
+    const auto& app = VulkanApp::getWindowApp();
+    float dt = app.frameDt;
+
+    vulk->queryPoolIndexCounts[vulk->frameIndex] = 0u;
+
+    //beginSingleTimeCommands();
+    VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_CHECK(vkBeginCommandBuffer(vulk->commandBuffer, &beginInfo));
+
+    vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPools[vulk->frameIndex], 0, QUERY_COUNT);
+
+    MyVulkan::writeStamp();
+    VulkanResources::update();
+
+    struct FrameBuffer
+    {
+        Matrix camMat;
+        Matrix viewProj;
+        Matrix mvp;
+        Matrix sunMatrix;
+
+        Vector2 areaSize;
+        Vector2 tmp1;
+
+        Vector4 camPos;
+        Vector4 tmp3;
+        Vector4 tmp4;
+
+        Matrix inverseMvp;
+    };
+    FrameBuffer frameBufferData;
+
+    // bit ugly.......
+    s_data->m_sunCamera.calculateOrtographicPosition(s_data->m_camera.m_position);
+    if(app.windowWidth > 0 && app.windowHeight > 0)
+        s_data->m_camera.updateCameraState(app.windowWidth, app.windowHeight);
+    s_data->m_sunCamera.updateCameraState(50.0f, 50.0f);
+
+    if (s_data->m_useSunCamera)
+    {
+        frameBufferData.mvp = s_data->m_sunCamera.m_worldToViewMat;
+        frameBufferData.inverseMvp = s_data->m_sunCamera.m_viewToWorldMat;
+    }
+    else
+    {
+        frameBufferData.mvp = s_data->m_camera.m_worldToViewMat;
+        frameBufferData.inverseMvp = s_data->m_camera.m_viewToWorldMat;
+    }
+    frameBufferData.sunMatrix = s_data->m_sunCamera.m_worldToViewMat;
+    frameBufferData.camPos = Vector4(s_data->m_camera.m_position, 0.0f);
+
+    frameBufferData.areaSize = Vec2(app.windowWidth, app.windowHeight);
+    VulkanResources::addToCopylist(frameBufferData, vulk->renderFrameBufferHandle[vulk->frameIndex]);
+
+    FontRenderSystem::update();
+
+    //VulkanResources::addToCopylist(
+    //    sliceFromPodVectorBytes(s_data->m_vertData), s_data->m_quadBuffer[vulk->frameIndex]);
 
     u32 grayColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
     u32 selectedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.75f, 0.75f, 0.75f, 1.0f));
-
 
     u32 unSelectedRedColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
     u32 unSelectedGreenColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
     u32 unSelectedBlueColor = getColor(Vec4(0.5f, 0.5f, 0.5f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
-
     u32 selectedRedColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(1.0f, 0.0f, 0.0f, 1.0f));
     u32 selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
     u32 selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
-
-    for (auto &entity : scene.getEntities())
+    for (auto &entity : s_data->m_scene.getEntities())
     {
         Vec4 linePoints4[8];
         Vec3 linePoints[8];
 
         Mat3x4 m = getModelMatrix(entity.transform);
-        const auto &bounds = scene.getBounds(entity.index);
+        const auto &bounds = s_data->m_scene.getBounds(entity.index);
         const auto &bmin = bounds.min;
         const auto &bmax = bounds.max;
 
@@ -327,101 +428,139 @@ void VulkanDrawStuff::renderUpdate()
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
-        u32 drawColor = selectedEntityIndex == entity.index ? selectedColor : grayColor;
-        lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
-        lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
-        lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
-        lineRenderSystem.addLine(linePoints[2], linePoints[6], drawColor);
-        lineRenderSystem.addLine(linePoints[3], linePoints[7], drawColor);
-        lineRenderSystem.addLine(linePoints[4], linePoints[5], drawColor);
-        lineRenderSystem.addLine(linePoints[4], linePoints[6], drawColor);
-        lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
-        lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
+        u32 drawColor = s_data->m_selectedEntityIndex == entity.index ? selectedColor : grayColor;
+        s_data->m_lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[2], linePoints[6], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[3], linePoints[7], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[4], linePoints[5], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[4], linePoints[6], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
 
-        u32 redColor = selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
-        u32 greenColor = selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
-        u32 blueColor = selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
+        u32 redColor = s_data->m_selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
+        u32 greenColor = s_data->m_selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
+        u32 blueColor = s_data->m_selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
 
-        lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
-        lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);
-        lineRenderSystem.addLine(linePoints[0], linePoints[4], blueColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);
+        s_data->m_lineRenderSystem.addLine(linePoints[0], linePoints[4], blueColor);
 
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES ||
             entity.entityType == EntityType::FLOOR)
             continue;
 
-        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 0.0f, 1.0f), rotationAmount);
+        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 0.0f, 1.0f), s_data->m_rotationAmount);
     }
-    if (rotateOn)
+    if (s_data->m_rotateOn)
     {
-        rotationAmount += 1.5f * dt;
-        while (rotationAmount >= 2.0f * PI) rotationAmount -= 2.0f * PI;
-        while (rotationAmount <= -2.0f * PI) rotationAmount += 2.0f * PI;
+        s_data->m_rotationAmount += 1.5f * dt;
+        while (s_data->m_rotationAmount >= 2.0f * PI) s_data->m_rotationAmount -= 2.0f * PI;
+        while (s_data->m_rotationAmount <= -2.0f * PI) s_data->m_rotationAmount += 2.0f * PI;
     }
 
-    scene.update(dt);
-    meshRenderSystem.prepareToRender();
+    s_data->m_scene.update(dt);
+    MeshRenderSystem::prepareToRender();
 
-    Vec3 sundir = getSunDirection(sunCamera);
-    lightRenderSystem.setSunDirection(sundir);
+    Vec3 sundir = getSunDirection(s_data->m_sunCamera);
+    s_data->m_lightRenderSystem.setSunDirection(sundir);
 
-    lightRenderSystem.update();
+    s_data->m_lightRenderSystem.update();
 
-    lineRenderSystem.prepareToRender();
+    s_data->m_lineRenderSystem.prepareToRender();
 
 }
 
-void VulkanDrawStuff::renderDraw()
+static void sDraw()
 {
-    meshRenderTargets.prepareTargetsForMeshRendering();
-    meshRenderTargets.prepareTargetsForShadowRendering();
+    s_data->m_meshRenderTargets.prepareTargetsForMeshRendering();
+    s_data->m_meshRenderTargets.prepareTargetsForShadowRendering();
     // Drawingg
     {
-        meshRenderSystem.render(meshRenderTargets);
-        meshRenderSystem.renderShadows(meshRenderTargets);
+        MeshRenderSystem::render(s_data->m_meshRenderTargets);
+        MeshRenderSystem::renderShadows(s_data->m_meshRenderTargets);
     }
 
-    if (showNormalMap)
+    if (s_data->m_showNormalMap)
     {
-        prepareToComputeSampleRead(meshRenderTargets.normalMapImage);
+        VulkanResources::prepareToComputeSampleRead(s_data->m_meshRenderTargets.normalMapImage);
 
-        prepareToComputeImageWrite(meshRenderTargets.albedoImage);
-
-        convertFromS16.render(meshRenderTargets.albedoImage.width, meshRenderTargets.albedoImage.height);
-
+        VulkanResources::prepareToComputeImageWrite(s_data->m_meshRenderTargets.albedoImage);
+        Image& image = s_data->m_meshRenderTargets.albedoImage;
+        s_data->m_convertFromS16.render(image.width, image.height);
     }
     else
     {
         {
-            meshRenderTargets.prepareTargetsForLightingComputeSampling();
-            lightingRenderTargets.prepareTargetsForLightingComputeWriting();
+            s_data->m_meshRenderTargets.prepareTargetsForLightingComputeSampling();
+            s_data->m_lightingRenderTargets.prepareTargetsForLightingComputeWriting();
 
-            lightRenderSystem.render(lightingRenderTargets.lightingTargetImage.width, lightingRenderTargets.lightingTargetImage.height);
+            Image& image = s_data->m_lightingRenderTargets.lightingTargetImage;
+            s_data->m_lightRenderSystem.render(image.width, image.height);
         }
 
         {
-            lightingRenderTargets.prepareForTonemapSampling();
-
-            prepareToComputeImageWrite(meshRenderTargets.albedoImage);
-
-            tonemapRenderSystem.render(meshRenderTargets.albedoImage.width, meshRenderTargets.albedoImage.height);
-
+            s_data->m_lightingRenderTargets.prepareForTonemapSampling();
+            Image& image = s_data->m_meshRenderTargets.albedoImage;
+            VulkanResources::prepareToComputeImageWrite(image);
+            s_data->m_tonemapRenderSystem.render(image.width, image.height);
         }
     }
 
-    prepareToGraphicsSampleWrite(meshRenderTargets.albedoImage);
+    VulkanResources::prepareToGraphicsSampleWrite(s_data->m_meshRenderTargets.albedoImage);
     {
-        prepareToGraphicsSampleWrite(meshRenderTargets.depthImage);
-        lineRenderSystem.render(meshRenderTargets.albedoImage, meshRenderTargets.depthImage);
+        VulkanResources::prepareToGraphicsSampleWrite(s_data->m_meshRenderTargets.depthImage);
+        s_data->m_lineRenderSystem.render(s_data->m_meshRenderTargets.albedoImage,
+            s_data->m_meshRenderTargets.depthImage);
     }
 
     {
-        fontSystem.render();
+        FontRenderSystem::render();
     }
 
-    present(meshRenderTargets.albedoImage);
+
+    MyVulkan::present(s_data->m_meshRenderTargets.albedoImage);
 }
 
+
+static void sRunApp()
+{
+    while(VulkanApp::updateApp())
+    {
+        sHandleInput();
+
+        if (MyVulkan::frameStart())
+        {
+            //updateStats(*this);
+            vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            sRenderUpdate();
+            sDraw();
+            //renderDraw();
+            //printStats(*this);
+        }
+
+        defragMemory();
+        VulkanApp::frameEnd();
+    }
+    VK_CHECK(vkDeviceWaitIdle(vulk->device));
+}
+
+i32 main(i32 argCount, char **argv)
+{
+    initMemory();
+    initGlobalResources();
+    if(sInit("Vulkan, draw models", c_ScreenWidth, c_ScreenHeight))
+    {
+        sRunApp();
+    }
+    sDeinit();
+    deinitGlobalResources();
+    deinitMemory();
+    return 0;
+}
+
+/*
 i32 main(i32 argCount, char **argv)
 {
     initMemory();
@@ -435,3 +574,4 @@ i32 main(i32 argCount, char **argv)
     deinitMemory();
     return 0;
 }
+*/

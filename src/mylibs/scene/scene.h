@@ -9,13 +9,9 @@
 struct Ray;
 struct HitPoint;
 
-class MeshRenderSystem;
-
 // this is bit bad access
 struct SceneData
 {
-    MeshRenderSystem& meshRenderSystem;
-
     PodVector<AnimationState> animationStates;
     PodVector<GameEntity> entities;
     PodVector<u32> freeEnityIndices;
@@ -26,9 +22,6 @@ class Scene
 public:
     static constexpr u32 MagicNumber = 1385621965u;
     static constexpr u32 VersionNumber = 1u;
-
-    Scene(MeshRenderSystem& meshRenderSystem) : sceneData(SceneData{ .meshRenderSystem = meshRenderSystem } ) {}
-
 
     bool init();
     bool update(double deltaTime);

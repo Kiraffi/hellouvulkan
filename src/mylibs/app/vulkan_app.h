@@ -6,6 +6,7 @@ struct GLFWwindow;
 
 struct WindowApp
 {
+    double appStartTime = 0.0;
     double appRuntime = 0.0;
 
     i32 windowWidth = 0;
@@ -18,7 +19,8 @@ struct WindowApp
     float cpudt = 0.0f;
     float gpudt = 0.0f;
 
-    float frameDt = 0.0f;
+    double frameDt = 0.0;
+    double lastFrameTime = 0.0;
 
     bool inited = false;
     bool resized = false;

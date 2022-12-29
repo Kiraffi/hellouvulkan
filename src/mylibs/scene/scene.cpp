@@ -50,7 +50,7 @@ bool Scene::init()
 
     for(u32 i = 0; i < u32(EntityType::NUM_OF_ENTITY_TYPES); ++i)
     {
-        if(!sceneData.meshRenderSystem.addModel(globalResources->models[i], EntityType(i)))
+        if(!MeshRenderSystem::addModel(globalResources->models[i], EntityType(i)))
         {
             defragMemory();
             return false;
@@ -106,7 +106,7 @@ bool Scene::update(double deltaTime)
 
         Mat3x4 renderMatrix = getModelMatrix(entity.transform);
         Mat3x4 normalMatrix = getModelNormalMatrix(entity.transform);
-        sceneData.meshRenderSystem.addModelToRender(renderMeshIndex, renderMatrix, normalMatrix, matrices);
+        MeshRenderSystem::addModelToRender(renderMeshIndex, renderMatrix, normalMatrix, matrices);
         ++entityIndex;
     }
     return true;

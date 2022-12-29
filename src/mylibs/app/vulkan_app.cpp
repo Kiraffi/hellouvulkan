@@ -123,13 +123,15 @@ void VulkanApp::setWindowPosition(u32 x, u32 y)
 
 bool VulkanApp::updateApp()
 {
+    double currTime = glfwGetTime();
     if(glfwWindowShouldClose(sWindow))
     {
         return false;
     }
     InputApp::reset();
     glfwPollEvents();
-
+    sWindowApp.frameDt = currTime - sWindowApp.appRuntime;
+    sWindowApp.appRuntime = currTime;
     return true;
 }
 

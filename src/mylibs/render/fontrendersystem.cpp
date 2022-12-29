@@ -1,4 +1,4 @@
-#include "font_render.h"
+#include "fontrendersystem.h"
 
 #include <container/podvector.h>
 #include <container/vector.h>
@@ -35,6 +35,7 @@ FontRenderSystemData* sFontRenderSystemData = nullptr;
 void FontRenderSystem::deinit()
 {
     ASSERT(sFontRenderSystemData);
+    if(sFontRenderSystemData)
     {
         VulkanResources::destroyImage(sFontRenderSystemData->textImage);
         MyVulkan::destroyDescriptor(sFontRenderSystemData->pipeline.descriptor);

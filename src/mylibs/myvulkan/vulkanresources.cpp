@@ -34,7 +34,7 @@ static VkImageAspectFlags sGetAspectMaskFromFormat(VkFormat format)
         case VK_FORMAT_UNDEFINED:
         {
             ASSERT(!"Undefined format");
-            aspectMask = VK_IMAGE_ASPECT_NONE_KHR;
+            aspectMask = VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM;
         }
 
         default:
