@@ -1,38 +1,19 @@
 #pragma once
 
-#include <container/podvectorsbase.h>
-
 #include <math/vector3.h>
 
-#include <myvulkan/shader.h>
-#include <myvulkan/vulkanresources.h>
+struct Image;
 
 class LineRenderSystem
 {
 public:
-    ~LineRenderSystem();
+    static bool init();
+    static void deinit();
+    static void addLine(const Vec3 &posStart, const Vec3 &posEnd, u32 color);
 
-    bool init();
-    void addLine(const Vec3 &posStart, const Vec3 &posEnd, u32 color);
+    static void clear();
+    static bool prepareToRender();
 
-
-    void clear();
-
-    bool prepareToRender();
-
-    void render(const Image &colorImage, const Image &depthImage);
-    void setRendertargets(const Image &colorImage, const Image &depthImage);
-private:
-    struct Line
-    {
-        Vec3 start;
-        u32 colorStart;
-        Vec3 end;
-        u32 colorEnd;
-    };
-
-    Buffer vertexBuffer[VulkanGlobal::FramesInFlight];
-    Pipeline lineRenderPipeline;
-
-    PodVector<Line> lines;
+    static void render(const Image &colorImage, const Image &depthImage);
+    static void setRendertargets(const Image &colorImage, const Image &depthImage);
 };

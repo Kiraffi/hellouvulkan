@@ -62,7 +62,7 @@ template void isPodType<Image>();
 template void isPodType<Shader>();
 template void isPodType<FontRenderSystem::GPUVertexData>();
 //template void isPodType<MeshRenderSystem::ModelData>();
-template void isPodType<LineRenderSystem::Line>();
+//template void isPodType<LineRenderSystem::Line>();
 
 template void isPodType<TinyStackString>();
 template void isPodType<SmallStackString>();

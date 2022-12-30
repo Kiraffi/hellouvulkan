@@ -1,11 +1,8 @@
 #pragma once
 
-#include <container/podvectorsbase.h>
 #include <math/vector3.h>
 
-#include <myvulkan/shader.h>
-#include <myvulkan/uniformbuffermanager.h>
-#include <myvulkan/vulkanresources.h>
+struct Image;
 
 static constexpr u32 MAX_LETTERS = 10000 * 4;
 

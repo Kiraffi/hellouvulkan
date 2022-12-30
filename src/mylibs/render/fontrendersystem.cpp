@@ -1,17 +1,20 @@
 #include "fontrendersystem.h"
 
+#include <app/vulkan_app.h>
+
 #include <container/podvector.h>
 #include <container/vector.h>
 
 #include <core/file.h>
 #include <core/general.h>
+#include <core/mytypes.h>
 #include <core/nullable.h>
 #include <core/timer.h>
-#include <core/mytypes.h>
-#include <app/vulkan_app.h>
 
 #include <myvulkan/myvulkan.h>
-
+#include <myvulkan/shader.h>
+#include <myvulkan/uniformbuffermanager.h>
+#include <myvulkan/vulkanresources.h>
 
 struct FontRenderSystemData
 {

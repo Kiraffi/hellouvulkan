@@ -61,7 +61,6 @@ static Vec3 getSunDirection(const Camera &camera)
 struct VulkanDrawStuffData
 {
     Scene m_scene;
-    LineRenderSystem m_lineRenderSystem;
 
     LightingRenderTargets m_lightingRenderTargets;
     MeshRenderTargets m_meshRenderTargets;
@@ -101,6 +100,7 @@ static void sDeinit()
     MeshRenderSystem::deinit();
     LightRenderSystem::deinit();
     TonemapRenderSystem::deinit();
+    LineRenderSystem::deinit();
     if(s_data)
     {
         delete s_data;
@@ -144,10 +144,10 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     if (!TonemapRenderSystem::init())
         return false;
 
-    if (!s_data->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
+    if (!LineRenderSystem::init())
         return false;
 
-    if (!s_data->m_lineRenderSystem.init())
+    if (!s_data->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
         return false;
 
     s_data->m_camera.m_position = Vec3(0.0f, 4.0f, 5.0f);
@@ -206,7 +206,7 @@ static bool sResize()
         return false;
 
     MeshRenderSystem::setRenderTargets(s_data->m_meshRenderTargets);
-    s_data->m_lineRenderSystem.setRendertargets(
+    LineRenderSystem::setRendertargets(
         s_data->m_meshRenderTargets.albedoImage, s_data->m_meshRenderTargets.depthImage);
     FontRenderSystem::setRenderTarget(s_data->m_meshRenderTargets.albedoImage);
     s_data->m_convertFromS16.updateSourceImages(s_data->m_meshRenderTargets);
@@ -229,7 +229,7 @@ static void sHandleInput()
         //printf("Bytebuffer time: %f\n", float(getByteBufferTimer() / counter));
         counter = 0;
     }
-    s_data->m_lineRenderSystem.clear();
+    LineRenderSystem::clear();
     MeshRenderSystem::clear();
 
     MouseState mouseState = InputApp::getMouseState();
@@ -329,7 +329,7 @@ static void sHandleInput()
         }
     }
 
-    s_data->m_lineRenderSystem.addLine(s_data->m_lineFrom, s_data->m_lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
+    LineRenderSystem::addLine(s_data->m_lineFrom, s_data->m_lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
 static void sRenderUpdate()
@@ -428,23 +428,23 @@ static void sRenderUpdate()
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
         u32 drawColor = s_data->m_selectedEntityIndex == entity.index ? selectedColor : grayColor;
-        s_data->m_lineRenderSystem.addLine(linePoints[1], linePoints[3], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[2], linePoints[3], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[1], linePoints[5], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[2], linePoints[6], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[3], linePoints[7], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[4], linePoints[5], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[4], linePoints[6], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[5], linePoints[7], drawColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[6], linePoints[7], drawColor);
+        LineRenderSystem::addLine(linePoints[1], linePoints[3], drawColor);
+        LineRenderSystem::addLine(linePoints[2], linePoints[3], drawColor);
+        LineRenderSystem::addLine(linePoints[1], linePoints[5], drawColor);
+        LineRenderSystem::addLine(linePoints[2], linePoints[6], drawColor);
+        LineRenderSystem::addLine(linePoints[3], linePoints[7], drawColor);
+        LineRenderSystem::addLine(linePoints[4], linePoints[5], drawColor);
+        LineRenderSystem::addLine(linePoints[4], linePoints[6], drawColor);
+        LineRenderSystem::addLine(linePoints[5], linePoints[7], drawColor);
+        LineRenderSystem::addLine(linePoints[6], linePoints[7], drawColor);
 
         u32 redColor = s_data->m_selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
         u32 greenColor = s_data->m_selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
         u32 blueColor = s_data->m_selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
 
-        s_data->m_lineRenderSystem.addLine(linePoints[0], linePoints[1], redColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[0], linePoints[2], greenColor);
-        s_data->m_lineRenderSystem.addLine(linePoints[0], linePoints[4], blueColor);
+        LineRenderSystem::addLine(linePoints[0], linePoints[1], redColor);
+        LineRenderSystem::addLine(linePoints[0], linePoints[2], greenColor);
+        LineRenderSystem::addLine(linePoints[0], linePoints[4], blueColor);
 
         if (entity.entityType == EntityType::NUM_OF_ENTITY_TYPES ||
             entity.entityType == EntityType::FLOOR)
@@ -467,7 +467,7 @@ static void sRenderUpdate()
 
     LightRenderSystem::update();
 
-    s_data->m_lineRenderSystem.prepareToRender();
+    LineRenderSystem::prepareToRender();
 }
 
 static void sDraw()
@@ -509,7 +509,7 @@ static void sDraw()
     VulkanResources::prepareToGraphicsSampleWrite(s_data->m_meshRenderTargets.albedoImage);
     {
         VulkanResources::prepareToGraphicsSampleWrite(s_data->m_meshRenderTargets.depthImage);
-        s_data->m_lineRenderSystem.render(s_data->m_meshRenderTargets.albedoImage,
+        LineRenderSystem::render(s_data->m_meshRenderTargets.albedoImage,
             s_data->m_meshRenderTargets.depthImage);
     }
 
