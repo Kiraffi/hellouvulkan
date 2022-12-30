@@ -61,7 +61,6 @@ static Vec3 getSunDirection(const Camera &camera)
 struct VulkanDrawStuffData
 {
     Scene m_scene;
-    TonemapRenderSystem m_tonemapRenderSystem;
     LineRenderSystem m_lineRenderSystem;
 
     LightingRenderTargets m_lightingRenderTargets;
@@ -101,6 +100,7 @@ static void sDeinit()
     FontRenderSystem::deinit();
     MeshRenderSystem::deinit();
     LightRenderSystem::deinit();
+    TonemapRenderSystem::deinit();
     if(s_data)
     {
         delete s_data;
@@ -141,7 +141,7 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     if (!LightRenderSystem::init())
         return false;
 
-    if (!s_data->m_tonemapRenderSystem.init())
+    if (!TonemapRenderSystem::init())
         return false;
 
     if (!s_data->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
@@ -212,7 +212,7 @@ static bool sResize()
     s_data->m_convertFromS16.updateSourceImages(s_data->m_meshRenderTargets);
 
     LightRenderSystem::updateReadTargets(s_data->m_meshRenderTargets, s_data->m_lightingRenderTargets);
-    s_data->m_tonemapRenderSystem.updateReadTargets(
+    TonemapRenderSystem::updateReadTargets(
         s_data->m_lightingRenderTargets.lightingTargetImage, s_data->m_meshRenderTargets.albedoImage);
 
     return true;
@@ -502,7 +502,7 @@ static void sDraw()
             s_data->m_lightingRenderTargets.prepareForTonemapSampling();
             Image& image = s_data->m_meshRenderTargets.albedoImage;
             VulkanResources::prepareToComputeImageWrite(image);
-            s_data->m_tonemapRenderSystem.render(image.width, image.height);
+            TonemapRenderSystem::render(image.width, image.height);
         }
     }
 

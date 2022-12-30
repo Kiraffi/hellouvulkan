@@ -5,6 +5,7 @@
 
 #include <core/file.h>
 #include <core/general.h>
+#include <core/nullable.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
 #include <app/vulkan_app.h>
@@ -14,18 +15,18 @@
 
 struct FontRenderSystemData
 {
-    PodVector<FontRenderSystem::GPUVertexData> vertData;
+    PodVector<FontRenderSystem::GPUVertexData> m_vertData;
 
-    UniformBufferHandle letterDataBufferHandle[VulkanGlobal::FramesInFlight];
-    Buffer letterIndexBuffer;
+    UniformBufferHandle m_letterDataBufferHandle[VulkanGlobal::FramesInFlight];
+    Buffer m_letterIndexBuffer;
 
-    Image textImage;
-    Pipeline pipeline;
+    Image m_textImage;
+    Pipeline m_pipeline;
 
-    VkSampler textureSampler = 0;
+    VkSampler m_textureSampler = 0;
 };
 
-FontRenderSystemData* sFontRenderSystemData = nullptr;
+static Nullable<FontRenderSystemData> s_FontRenderSystemData;
 
 ////////////////////////
 //
@@ -34,27 +35,25 @@ FontRenderSystemData* sFontRenderSystemData = nullptr;
 ////////////////////////
 void FontRenderSystem::deinit()
 {
-    ASSERT(sFontRenderSystemData);
-    if(sFontRenderSystemData)
+    ASSERT(s_FontRenderSystemData.get());
+    if(s_FontRenderSystemData.get())
     {
-        VulkanResources::destroyImage(sFontRenderSystemData->textImage);
-        MyVulkan::destroyDescriptor(sFontRenderSystemData->pipeline.descriptor);
-        MyVulkan::destroyPipeline(sFontRenderSystemData->pipeline);
+        VulkanResources::destroyImage(s_FontRenderSystemData.get()->m_textImage);
+        MyVulkan::destroyDescriptor(s_FontRenderSystemData.get()->m_pipeline.descriptor);
+        MyVulkan::destroyPipeline(s_FontRenderSystemData.get()->m_pipeline);
 
-        VulkanResources::destroySampler(sFontRenderSystemData->textureSampler);
+        VulkanResources::destroySampler(s_FontRenderSystemData.get()->m_textureSampler);
 
-        VulkanResources::destroyBuffer(sFontRenderSystemData->letterIndexBuffer);
+        VulkanResources::destroyBuffer(s_FontRenderSystemData.get()->m_letterIndexBuffer);
     }
-    delete sFontRenderSystemData;
-    sFontRenderSystemData = nullptr;
+    s_FontRenderSystemData.destroy();
 }
 
 
 
 bool FontRenderSystem::init(const char *fontFilename)
 {
-    ASSERT(sFontRenderSystemData == nullptr);
-    sFontRenderSystemData = new FontRenderSystemData;
+    s_FontRenderSystemData.create();
     PodVector<u8> data;
     if (!loadBytes(fontFilename, data.getBuffer()))
     {
@@ -66,11 +65,11 @@ bool FontRenderSystem::init(const char *fontFilename)
     {
         for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
-            sFontRenderSystemData->letterDataBufferHandle[i] =
+            s_FontRenderSystemData.get()->m_letterDataBufferHandle[i] =
                 vulk->uniformBufferManager.reserveHandle();
         }
 
-        sFontRenderSystemData->letterIndexBuffer = VulkanResources::createBuffer(1 * 1024 * 1024,
+        s_FontRenderSystemData.get()->m_letterIndexBuffer = VulkanResources::createBuffer(1 * 1024 * 1024,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index font character buffer");
 
@@ -93,7 +92,7 @@ bool FontRenderSystem::init(const char *fontFilename)
                 size_t(sizeof(indices[0]) * indices.size()),
                 offset);
             VulkanResources::uploadScratchBufferToGpuBuffer(
-                sFontRenderSystemData->letterIndexBuffer,
+                s_FontRenderSystemData.get()->m_letterIndexBuffer,
                 offset);
         }
     }
@@ -129,7 +128,7 @@ bool FontRenderSystem::init(const char *fontFilename)
             textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_SRGB,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            "TextImage", sFontRenderSystemData->textImage))
+            "TextImage", s_FontRenderSystemData.get()->m_textImage))
         {
             printf("Failed to create image for text!\n");
             return false;
@@ -137,15 +136,15 @@ bool FontRenderSystem::init(const char *fontFilename)
 
         VulkanResources::updateImageWithData(
             textureWidth, textureHeight, 4u,
-            sFontRenderSystemData->textImage,
+            s_FontRenderSystemData.get()->m_textImage,
             (u32)fontPic.size(), (void*)fontPic.data());
 
         VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         samplerInfo.magFilter = VK_FILTER_LINEAR;
         samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-        sFontRenderSystemData->textureSampler = VulkanResources::createSampler(samplerInfo);
-        if (!sFontRenderSystemData->textureSampler)
+        s_FontRenderSystemData.get()->m_textureSampler = VulkanResources::createSampler(samplerInfo);
+        if (!s_FontRenderSystemData.get()->m_textureSampler)
         {
             printf("Failed to create sampler for font rendering");
             return false;
@@ -154,7 +153,7 @@ bool FontRenderSystem::init(const char *fontFilename)
 
     // Create pipelines
     {
-        auto &pipeline = sFontRenderSystemData->pipeline;
+        auto &pipeline = s_FontRenderSystemData.get()->m_pipeline;
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
         pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
@@ -183,8 +182,9 @@ bool FontRenderSystem::init(const char *fontFilename)
         {
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo> {
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
-                DescriptorInfo(sFontRenderSystemData->letterDataBufferHandle[i]),
-                DescriptorInfo(sFontRenderSystemData->textImage.imageView, VK_IMAGE_LAYOUT_GENERAL, sFontRenderSystemData->textureSampler),
+                DescriptorInfo(s_FontRenderSystemData.get()->m_letterDataBufferHandle[i]),
+                DescriptorInfo(s_FontRenderSystemData.get()->m_textImage.imageView,
+                    VK_IMAGE_LAYOUT_GENERAL, s_FontRenderSystemData.get()->m_textureSampler),
             };
         }
         if(!VulkanShader::updateBindDescriptorSet(pipeline))
@@ -197,7 +197,7 @@ bool FontRenderSystem::init(const char *fontFilename)
 
 void FontRenderSystem::setRenderTarget(Image& image)
 {
-    ASSERT(VulkanResources::createFramebuffer(sFontRenderSystemData->pipeline, { image }));
+    ASSERT(VulkanResources::createFramebuffer(s_FontRenderSystemData.get()->m_pipeline, { image }));
 }
 
 
@@ -213,7 +213,7 @@ void FontRenderSystem::addText(const char *text, Vector2 pos, Vec2 charSize, con
     while(*text)
     {
         const char c = *text++;
-        ASSERT(sFontRenderSystemData->vertData.size() < MAX_LETTERS);
+        ASSERT(s_FontRenderSystemData.get()->m_vertData.size() < MAX_LETTERS);
 
         GPUVertexData vdata;
         vdata.color = col;
@@ -228,7 +228,7 @@ void FontRenderSystem::addText(const char *text, Vector2 pos, Vec2 charSize, con
             vdata.uvStart = Vec2(float(letter) / LetterTextureWidth, 0.0f);
             vdata.uvSize = Vec2(1.0f / LetterTextureWidth, 1.0f);
 
-            sFontRenderSystemData->vertData.emplace_back(vdata);
+            s_FontRenderSystemData.get()->m_vertData.emplace_back(vdata);
         }
         pos.x += charWidth;
     }
@@ -237,37 +237,37 @@ void FontRenderSystem::addText(const char *text, Vector2 pos, Vec2 charSize, con
 
 void FontRenderSystem::update()
 {
-    if (sFontRenderSystemData->vertData.size() == 0)
+    if (s_FontRenderSystemData.get()->m_vertData.size() == 0)
         return;
 
     VulkanResources::addToCopylist(
-        sliceFromPodVectorBytes(sFontRenderSystemData->vertData ),
-        sFontRenderSystemData->letterDataBufferHandle[vulk->frameIndex]);
+        sliceFromPodVectorBytes(s_FontRenderSystemData.get()->m_vertData ),
+        s_FontRenderSystemData.get()->m_letterDataBufferHandle[vulk->frameIndex]);
 }
 
 void FontRenderSystem::reset()
 {
-    sFontRenderSystemData->vertData.clear();
+    s_FontRenderSystemData.get()->m_vertData.clear();
 }
 
 void FontRenderSystem::render()
 {
     VkCommandBuffer commandBuffer = vulk->commandBuffer;
-    if (sFontRenderSystemData->vertData.size() == 0 || !commandBuffer)
+    if (s_FontRenderSystemData.get()->m_vertData.size() == 0 || !commandBuffer)
         return;
     MyVulkan::beginDebugRegion("Font rendering", Vec4(0.0f, 0.0f, 1.0f, 1.0f));
-    MyVulkan::beginRenderPass(sFontRenderSystemData->pipeline, {});
+    MyVulkan::beginRenderPass(s_FontRenderSystemData.get()->m_pipeline, {});
 
-    MyVulkan::bindGraphicsPipelineWithDecriptors(sFontRenderSystemData->pipeline, vulk->frameIndex);
+    MyVulkan::bindGraphicsPipelineWithDecriptors(s_FontRenderSystemData.get()->m_pipeline, vulk->frameIndex);
     vkCmdBindIndexBuffer(
         commandBuffer,
-        sFontRenderSystemData->letterIndexBuffer.buffer,
+        s_FontRenderSystemData.get()->m_letterIndexBuffer.buffer,
         0,
         VkIndexType::VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, u32(sFontRenderSystemData->vertData.size() * 6), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, u32(s_FontRenderSystemData.get()->m_vertData.size() * 6), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(vulk->commandBuffer);
-    sFontRenderSystemData->vertData.clear();
+    s_FontRenderSystemData.get()->m_vertData.clear();
     MyVulkan::endDebugRegion();
     MyVulkan::writeStamp();
 }

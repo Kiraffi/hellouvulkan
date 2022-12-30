@@ -86,6 +86,7 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "core/image.cpp"
     "core/file.cpp"
     "core/general.cpp"
+    "core/nullable.h"
     "core/timer.cpp"
     "core/json.cpp"
     "core/writejson.cpp"

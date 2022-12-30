@@ -1,24 +1,14 @@
 #pragma once
 
-#include <math/vector3.h>
-
-#include <myvulkan/shader.h>
+#include <core/mytypes.h>
 
 struct Image;
-
 class TonemapRenderSystem
 {
 public:
-    ~TonemapRenderSystem();
+    static bool init();
+    static void deinit();
+    static bool updateReadTargets(const Image& hdrTexIn, const Image& outputTex);
 
-    bool init();
-
-    bool updateReadTargets(const Image& hdrTexIn, const Image& outputTex);
-
-
-    void render(uint32_t width, uint32_t height);
-
-
-private:
-    Pipeline tonemapPipeline;
+    static void render(u32 width, u32 height);
 };
