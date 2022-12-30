@@ -3,30 +3,24 @@
 #include <math/vector3.h>
 #include <myvulkan/shader.h>
 
-#include <render/lightingrendertargets.h>
-#include <render/meshrendertargets.h>
+
+struct LightingRenderTargets;
+struct MeshRenderTargets;
 
 class LightRenderSystem
 {
 public:
-    ~LightRenderSystem();
+    static bool init();
+    static void deinit();
+    static bool updateReadTargets(const MeshRenderTargets& meshRenderTargets,
+        const LightingRenderTargets& lightingRenderTargets);
 
-    bool init();
 
-    bool updateReadTargets(const MeshRenderTargets &meshRenderTargets, const LightingRenderTargets& lightingRenderTargets);
+    static void update();
 
+    static void render(uint32_t width, uint32_t height);
 
-    void update();
+    // Maybe the system should read the sun direction from some sort of lightmanager?
+    static void setSunDirection(const Vec3& sunDir);
 
-    void render(uint32_t width, uint32_t height);
-
-    void setSunDirection(const Vec3& sunDir);
-
-private:
-    Vec3 sunDir{ 0.0f, 1.0f, 0.0f };
-
-    UniformBufferHandle lightBufferHandle[VulkanGlobal::FramesInFlight];
-
-    Pipeline lightComputePipeline;
-    VkSampler shadowTextureSampler = VK_NULL_HANDLE;
 };

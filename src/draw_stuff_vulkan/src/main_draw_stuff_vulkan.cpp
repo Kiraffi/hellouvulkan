@@ -61,7 +61,6 @@ static Vec3 getSunDirection(const Camera &camera)
 struct VulkanDrawStuffData
 {
     Scene m_scene;
-    LightRenderSystem m_lightRenderSystem;
     TonemapRenderSystem m_tonemapRenderSystem;
     LineRenderSystem m_lineRenderSystem;
 
@@ -101,6 +100,7 @@ static void sDeinit()
 {
     FontRenderSystem::deinit();
     MeshRenderSystem::deinit();
+    LightRenderSystem::deinit();
     if(s_data)
     {
         delete s_data;
@@ -138,7 +138,7 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     if (!s_data->m_scene.init())
         return false;
 
-    if (!s_data->m_lightRenderSystem.init())
+    if (!LightRenderSystem::init())
         return false;
 
     if (!s_data->m_tonemapRenderSystem.init())
@@ -211,7 +211,7 @@ static bool sResize()
     FontRenderSystem::setRenderTarget(s_data->m_meshRenderTargets.albedoImage);
     s_data->m_convertFromS16.updateSourceImages(s_data->m_meshRenderTargets);
 
-    s_data->m_lightRenderSystem.updateReadTargets(s_data->m_meshRenderTargets, s_data->m_lightingRenderTargets);
+    LightRenderSystem::updateReadTargets(s_data->m_meshRenderTargets, s_data->m_lightingRenderTargets);
     s_data->m_tonemapRenderSystem.updateReadTargets(
         s_data->m_lightingRenderTargets.lightingTargetImage, s_data->m_meshRenderTargets.albedoImage);
 
@@ -463,9 +463,9 @@ static void sRenderUpdate()
     MeshRenderSystem::prepareToRender();
 
     Vec3 sundir = getSunDirection(s_data->m_sunCamera);
-    s_data->m_lightRenderSystem.setSunDirection(sundir);
+    LightRenderSystem::setSunDirection(sundir);
 
-    s_data->m_lightRenderSystem.update();
+    LightRenderSystem::update();
 
     s_data->m_lineRenderSystem.prepareToRender();
 }
@@ -495,7 +495,7 @@ static void sDraw()
             s_data->m_lightingRenderTargets.prepareTargetsForLightingComputeWriting();
 
             Image& image = s_data->m_lightingRenderTargets.lightingTargetImage;
-            s_data->m_lightRenderSystem.render(image.width, image.height);
+            LightRenderSystem::render(image.width, image.height);
         }
 
         {
