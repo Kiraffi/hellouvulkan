@@ -7,6 +7,7 @@
 #include <container/vector.h>
 
 #include <core/general.h>
+#include <core/nullable.h>
 #include <core/timer.h>
 
 #include <math/vector3_inline_functions.h>
@@ -59,38 +60,35 @@ struct MeshRenderSystemData
     uint32_t m_animatedVerticesCount = 0u;
 };
 
-static MeshRenderSystemData* s_meshRenderSystemData = nullptr;
+static Nullable<MeshRenderSystemData> s_meshRenderSystemData;
 
 void MeshRenderSystem::deinit()
 {
-    ASSERT(s_meshRenderSystemData);
-    if(s_meshRenderSystemData)
+    if(s_meshRenderSystemData.get())
     {
-        VulkanResources::destroyImage(s_meshRenderSystemData->m_paletteImage);
+        VulkanResources::destroyImage(s_meshRenderSystemData.get()->m_paletteImage);
 
-        for (u32 i = 0; i < ARRAYSIZES(s_meshRenderSystemData->m_meshRenderGraphicsPipeline); ++i)
-            MyVulkan::destroyPipeline(s_meshRenderSystemData->m_meshRenderGraphicsPipeline[i]);
+        for (u32 i = 0; i < ARRAYSIZES(s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline); ++i)
+            MyVulkan::destroyPipeline(s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[i]);
 
-        VulkanResources::destroyBuffer(s_meshRenderSystemData->m_vertexBuffer);
-        VulkanResources::destroyBuffer(s_meshRenderSystemData->m_animationVertexBuffer);
-        VulkanResources::destroyBuffer(s_meshRenderSystemData->m_indexDataBuffer);
+        VulkanResources::destroyBuffer(s_meshRenderSystemData.get()->m_vertexBuffer);
+        VulkanResources::destroyBuffer(s_meshRenderSystemData.get()->m_animationVertexBuffer);
+        VulkanResources::destroyBuffer(s_meshRenderSystemData.get()->m_indexDataBuffer);
 
         for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
         {
-            VulkanResources::destroyBuffer(s_meshRenderSystemData->m_modelRenderMatricesBuffer[i]);
-            VulkanResources::destroyBuffer(s_meshRenderSystemData->m_modelBoneRenderMatricesBuffer[i]);
-            VulkanResources::destroyBuffer(s_meshRenderSystemData->m_modelRenderBoneStartIndexBuffer[i]);
+            VulkanResources::destroyBuffer(s_meshRenderSystemData.get()->m_modelRenderMatricesBuffer[i]);
+            VulkanResources::destroyBuffer(s_meshRenderSystemData.get()->m_modelBoneRenderMatricesBuffer[i]);
+            VulkanResources::destroyBuffer(s_meshRenderSystemData.get()->m_modelRenderBoneStartIndexBuffer[i]);
         }
-        delete s_meshRenderSystemData;
-        s_meshRenderSystemData = nullptr;
+        s_meshRenderSystemData.destroy();
     }
 }
 
 
 bool MeshRenderSystem::init()
 {
-    ASSERT(s_meshRenderSystemData == nullptr);
-    s_meshRenderSystemData = new MeshRenderSystemData();
+    s_meshRenderSystemData.create();
 
     i32 imageWidth;
     i32 imageHeight;
@@ -107,58 +105,58 @@ bool MeshRenderSystem::init()
     if (!VulkanResources::createImage(imageWidth, imageHeight, VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        "PaletteTexture", s_meshRenderSystemData->m_paletteImage))
+        "PaletteTexture", s_meshRenderSystemData.get()->m_paletteImage))
     {
         printf("Failed to create image for text!\n");
         return false;
     }
 
     VulkanResources::updateImageWithData(imageWidth, imageHeight, 4u,
-        s_meshRenderSystemData->m_paletteImage,
+        s_meshRenderSystemData.get()->m_paletteImage,
         (u32)imageWidth * imageHeight * 4u, (void*)image);
     delete image;
     image = nullptr;
 
-    s_meshRenderSystemData->m_vertexBuffer = VulkanResources::createBuffer(32u * 1024u * 1024u,
+    s_meshRenderSystemData.get()->m_vertexBuffer = VulkanResources::createBuffer(32u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Vertex buffer");
 
-    s_meshRenderSystemData->m_animationVertexBuffer = VulkanResources::createBuffer(32u * 1024u * 1024u,
+    s_meshRenderSystemData.get()->m_animationVertexBuffer = VulkanResources::createBuffer(32u * 1024u * 1024u,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Animation vertex buffer");
 
-    s_meshRenderSystemData->m_indexDataBuffer = VulkanResources::createBuffer(32 * 1024 * 1024,
+    s_meshRenderSystemData.get()->m_indexDataBuffer = VulkanResources::createBuffer(32 * 1024 * 1024,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Index data buffer");
 
     for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
     {
-        s_meshRenderSystemData->m_modelRenderMatricesBuffer[i] = VulkanResources::createBuffer(4u * 1024u * 1024u,
+        s_meshRenderSystemData.get()->m_modelRenderMatricesBuffer[i] = VulkanResources::createBuffer(4u * 1024u * 1024u,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render matrices buffer");
 
-        s_meshRenderSystemData->m_modelRenderBoneStartIndexBuffer[i] = VulkanResources::createBuffer(2u * 1024u * 1024u,
+        s_meshRenderSystemData.get()->m_modelRenderBoneStartIndexBuffer[i] = VulkanResources::createBuffer(2u * 1024u * 1024u,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render model bone start indices");
 
 
-        s_meshRenderSystemData->m_modelBoneRenderMatricesBuffer[i] = VulkanResources::createBuffer(16u * 1024u * 1024u,
+        s_meshRenderSystemData.get()->m_modelBoneRenderMatricesBuffer[i] = VulkanResources::createBuffer(16u * 1024u * 1024u,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "Render bone matrices buffer");
 
 
     }
 
-    s_meshRenderSystemData->m_modelRenderMatrices.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
-    s_meshRenderSystemData->m_animatedModelRenderMatrices.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
-    s_meshRenderSystemData->m_modelRenderBoneStartIndices.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
-    s_meshRenderSystemData->m_boneAnimatedModelRenderMatrices.reserve(65536);
-    s_meshRenderSystemData->m_models.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
+    s_meshRenderSystemData.get()->m_modelRenderMatrices.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
+    s_meshRenderSystemData.get()->m_animatedModelRenderMatrices.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
+    s_meshRenderSystemData.get()->m_modelRenderBoneStartIndices.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
+    s_meshRenderSystemData.get()->m_boneAnimatedModelRenderMatrices.reserve(65536);
+    s_meshRenderSystemData.get()->m_models.resize(u32(EntityType::NUM_OF_ENTITY_TYPES));
 
     // pipelines.
-    for(u32 i = 0; i < ARRAYSIZES(s_meshRenderSystemData->m_meshRenderGraphicsPipeline); ++i)
+    for(u32 i = 0; i < ARRAYSIZES(s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline); ++i)
     {
-        Pipeline &pipeline = s_meshRenderSystemData->m_meshRenderGraphicsPipeline[i];
+        Pipeline &pipeline = s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[i];
         PodVector<RenderTarget> renderTargets;
         //bool animationRender = (i & 2) == 0;
         bool depthOnlyRender = (i & 1) != 0;
@@ -219,18 +217,18 @@ bool MeshRenderSystem::init()
             pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
                 DescriptorInfo(vulk->renderFrameBufferHandle[i]),
 
-                DescriptorInfo(s_meshRenderSystemData->m_modelRenderMatricesBuffer[i]),
-                DescriptorInfo(s_meshRenderSystemData->m_modelBoneRenderMatricesBuffer[i]),
+                DescriptorInfo(s_meshRenderSystemData.get()->m_modelRenderMatricesBuffer[i]),
+                DescriptorInfo(s_meshRenderSystemData.get()->m_modelBoneRenderMatricesBuffer[i]),
 
-                DescriptorInfo(s_meshRenderSystemData->m_vertexBuffer),
-                DescriptorInfo(s_meshRenderSystemData->m_animationVertexBuffer),
-                DescriptorInfo(s_meshRenderSystemData->m_modelRenderBoneStartIndexBuffer[i]),
+                DescriptorInfo(s_meshRenderSystemData.get()->m_vertexBuffer),
+                DescriptorInfo(s_meshRenderSystemData.get()->m_animationVertexBuffer),
+                DescriptorInfo(s_meshRenderSystemData.get()->m_modelRenderBoneStartIndexBuffer[i]),
 
             };
             if(!depthOnlyRender)
                 pipeline.descriptorSetBinds[i].push_back(
-                    DescriptorInfo(s_meshRenderSystemData->m_paletteImage.imageView,
-                    s_meshRenderSystemData->m_paletteImage.layout, vulk->globalTextureSampler));
+                    DescriptorInfo(s_meshRenderSystemData.get()->m_paletteImage.imageView,
+                    s_meshRenderSystemData.get()->m_paletteImage.layout, vulk->globalTextureSampler));
         }
 
         if (!VulkanShader::updateBindDescriptorSet(pipeline))
@@ -325,70 +323,70 @@ bool MeshRenderSystem::addModel(const GltfModel& model, EntityType entityType)
 
         VulkanResources::addToCopylist(
             sliceFromPodVectorBytes(mesh.indices),
-            s_meshRenderSystemData->m_indexDataBuffer,
-            s_meshRenderSystemData->m_indicesCount * sizeof(u32));
+            s_meshRenderSystemData.get()->m_indexDataBuffer,
+            s_meshRenderSystemData.get()->m_indicesCount * sizeof(u32));
         if(isAnimated)
             VulkanResources::addToCopylist(
                 sliceFromPodVectorBytes(animatedRenderModel),
-                s_meshRenderSystemData->m_animationVertexBuffer,
-                s_meshRenderSystemData->m_animatedVerticesCount * sizeof(AnimatedRenderModel));
+                s_meshRenderSystemData.get()->m_animationVertexBuffer,
+                s_meshRenderSystemData.get()->m_animatedVerticesCount * sizeof(AnimatedRenderModel));
         else
             VulkanResources::addToCopylist(
                 sliceFromPodVectorBytes(renderModel),
-                s_meshRenderSystemData->m_vertexBuffer,
-                s_meshRenderSystemData->m_verticesCount * sizeof(RenderModel));
+                s_meshRenderSystemData.get()->m_vertexBuffer,
+                s_meshRenderSystemData.get()->m_verticesCount * sizeof(RenderModel));
         VulkanResources::flushBarriers(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
         MyVulkan::endSingleTimeCommands();
 
 
-        s_meshRenderSystemData->m_models[u32(entityType)] = MeshRenderSystemData::ModelData{
-            .m_indiceStart = s_meshRenderSystemData->m_indicesCount, .m_indices = newIndices,
+        s_meshRenderSystemData.get()->m_models[u32(entityType)] = MeshRenderSystemData::ModelData{
+            .m_indiceStart = s_meshRenderSystemData.get()->m_indicesCount, .m_indices = newIndices,
             .m_vertexStart = isAnimated
-                ? s_meshRenderSystemData->m_animatedVerticesCount
-                : s_meshRenderSystemData->m_verticesCount, .m_vertices = newVertices,
+                ? s_meshRenderSystemData.get()->m_animatedVerticesCount
+                : s_meshRenderSystemData.get()->m_verticesCount, .m_vertices = newVertices,
         };
 
 
         if(isAnimated)
-            s_meshRenderSystemData->m_animatedVerticesCount += newVertices;
+            s_meshRenderSystemData.get()->m_animatedVerticesCount += newVertices;
         else
-            s_meshRenderSystemData->m_verticesCount += newVertices;
-        s_meshRenderSystemData->m_indicesCount += newIndices;
+            s_meshRenderSystemData.get()->m_verticesCount += newVertices;
+        s_meshRenderSystemData.get()->m_indicesCount += newIndices;
     }
     return true;
 }
 
 void MeshRenderSystem::clear()
 {
-    for (auto& matrices : s_meshRenderSystemData->m_modelRenderMatrices)
+    for (auto& matrices : s_meshRenderSystemData.get()->m_modelRenderMatrices)
         matrices.clear();
-    for (auto& matrices : s_meshRenderSystemData->m_animatedModelRenderMatrices)
+    for (auto& matrices : s_meshRenderSystemData.get()->m_animatedModelRenderMatrices)
         matrices.clear();
-    for(auto &boneAmounts : s_meshRenderSystemData->m_modelRenderBoneStartIndices)
+    for(auto &boneAmounts : s_meshRenderSystemData.get()->m_modelRenderBoneStartIndices)
         boneAmounts.clear();
-    s_meshRenderSystemData->m_boneAnimatedModelRenderMatrices.clear();
+    s_meshRenderSystemData.get()->m_boneAnimatedModelRenderMatrices.clear();
 }
 
 bool MeshRenderSystem::addModelToRender(u32 modelIndex, const Mat3x4& renderMatrix, const Mat3x4 &renderNormalMatrix,
     const PodVector<Mat3x4>& boneAndBoneNormalMatrices)
 {
-    if (modelIndex >= s_meshRenderSystemData->m_models.size())
+    if (modelIndex >= s_meshRenderSystemData.get()->m_models.size())
         return false;
 
     if (boneAndBoneNormalMatrices.size() > 0u)
     {
-        s_meshRenderSystemData->m_animatedModelRenderMatrices[modelIndex].pushBack(renderMatrix);
-        s_meshRenderSystemData->m_animatedModelRenderMatrices[modelIndex].pushBack(renderNormalMatrix);
+        s_meshRenderSystemData.get()->m_animatedModelRenderMatrices[modelIndex].pushBack(renderMatrix);
+        s_meshRenderSystemData.get()->m_animatedModelRenderMatrices[modelIndex].pushBack(renderNormalMatrix);
 
-        s_meshRenderSystemData->m_modelRenderBoneStartIndices[modelIndex].pushBack(
-            s_meshRenderSystemData->m_boneAnimatedModelRenderMatrices.size());
-        s_meshRenderSystemData->m_boneAnimatedModelRenderMatrices.pushBack(boneAndBoneNormalMatrices);
+        s_meshRenderSystemData.get()->m_modelRenderBoneStartIndices[modelIndex].pushBack(
+            s_meshRenderSystemData.get()->m_boneAnimatedModelRenderMatrices.size());
+        s_meshRenderSystemData.get()->m_boneAnimatedModelRenderMatrices.pushBack(boneAndBoneNormalMatrices);
     }
     else
     {
-        s_meshRenderSystemData->m_modelRenderMatrices[modelIndex].push_back(renderMatrix);
-        s_meshRenderSystemData->m_modelRenderMatrices[modelIndex].push_back(renderNormalMatrix);
+        s_meshRenderSystemData.get()->m_modelRenderMatrices[modelIndex].push_back(renderMatrix);
+        s_meshRenderSystemData.get()->m_modelRenderMatrices[modelIndex].push_back(renderNormalMatrix);
     }
 
     return true;
@@ -402,14 +400,14 @@ bool MeshRenderSystem::prepareToRender()
         startIndices.reserve(65536);
         PodVector<Mat3x4> allModelRenderMatrices;
         allModelRenderMatrices.reserve(65536);
-        for (const auto& vec : s_meshRenderSystemData->m_animatedModelRenderMatrices)
+        for (const auto& vec : s_meshRenderSystemData.get()->m_animatedModelRenderMatrices)
             allModelRenderMatrices.pushBack(vec);
 
 
-        for (const auto& vec : s_meshRenderSystemData->m_modelRenderMatrices)
+        for (const auto& vec : s_meshRenderSystemData.get()->m_modelRenderMatrices)
             allModelRenderMatrices.pushBack(vec);
 
-        for(const auto & boneAmounts : s_meshRenderSystemData->m_modelRenderBoneStartIndices)
+        for(const auto & boneAmounts : s_meshRenderSystemData.get()->m_modelRenderBoneStartIndices)
         {
             for(u32 boneStartIndex : boneAmounts)
             {
@@ -419,18 +417,18 @@ bool MeshRenderSystem::prepareToRender()
         if(startIndices.size() > 0)
             VulkanResources::addToCopylist(
                 sliceFromPodVectorBytes(startIndices),
-                s_meshRenderSystemData->m_modelRenderBoneStartIndexBuffer[vulk->frameIndex]);
+                s_meshRenderSystemData.get()->m_modelRenderBoneStartIndexBuffer[vulk->frameIndex]);
 
         if(allModelRenderMatrices.size() > 0)
             VulkanResources::addToCopylist(
                 sliceFromPodVectorBytes(allModelRenderMatrices),
-                s_meshRenderSystemData->m_modelRenderMatricesBuffer[vulk->frameIndex]);
+                s_meshRenderSystemData.get()->m_modelRenderMatricesBuffer[vulk->frameIndex]);
     }
     {
-        if (s_meshRenderSystemData->m_boneAnimatedModelRenderMatrices.size() > 0)
+        if (s_meshRenderSystemData.get()->m_boneAnimatedModelRenderMatrices.size() > 0)
             VulkanResources::addToCopylist(
-                sliceFromPodVectorBytes(s_meshRenderSystemData->m_boneAnimatedModelRenderMatrices),
-                s_meshRenderSystemData->m_modelBoneRenderMatricesBuffer[vulk->frameIndex]);
+                sliceFromPodVectorBytes(s_meshRenderSystemData.get()->m_boneAnimatedModelRenderMatrices),
+                s_meshRenderSystemData.get()->m_modelBoneRenderMatricesBuffer[vulk->frameIndex]);
     }
     return true;
 }
@@ -454,21 +452,21 @@ void sMeshRenderSystemRender(bool isShadowOnly)
 
         MyVulkan::beginDebugRegion(debugName, Vec4(1.0f, 1.0f, 0.0f, 1.0f));
         MyVulkan::bindGraphicsPipelineWithDecriptors(
-            s_meshRenderSystemData->m_meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
-        for (u32 modelIndex = 0u; modelIndex < s_meshRenderSystemData->m_models.size(); ++modelIndex)
+            s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
+        for (u32 modelIndex = 0u; modelIndex < s_meshRenderSystemData.get()->m_models.size(); ++modelIndex)
         {
-            const MeshRenderSystemData::ModelData &modelData = s_meshRenderSystemData->m_models[modelIndex];
+            const MeshRenderSystemData::ModelData &modelData = s_meshRenderSystemData.get()->m_models[modelIndex];
             if(modelData.m_vertices == 0)
                 continue;
             bool animationRender = (passIndex & 2) == 0;
             u32 instances = animationRender
-                ? s_meshRenderSystemData->m_animatedModelRenderMatrices[modelIndex].size() / 2
-                : s_meshRenderSystemData->m_modelRenderMatrices[modelIndex].size() / 2;
+                ? s_meshRenderSystemData.get()->m_animatedModelRenderMatrices[modelIndex].size() / 2
+                : s_meshRenderSystemData.get()->m_modelRenderMatrices[modelIndex].size() / 2;
             if (instances)
             {
 
                 vkCmdBindIndexBuffer(vulk->commandBuffer,
-                    s_meshRenderSystemData->m_indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+                    s_meshRenderSystemData.get()->m_indexDataBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(vulk->commandBuffer, modelData.m_indices, instances,
                     modelData.m_indiceStart, modelData.m_vertexStart, instanceStartIndex);
                 instanceStartIndex += instances;
@@ -492,7 +490,7 @@ void MeshRenderSystem::render(const MeshRenderTargets& meshRenderTargets)
         {.image = &meshRenderTargets.depthImage, .clearValue = depthClear });
      */
     MyVulkan::beginRenderPass(
-        s_meshRenderSystemData->m_meshRenderGraphicsPipeline[0], { colorClear, normlClear, depthClear });
+        s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[0], { colorClear, normlClear, depthClear });
     sMeshRenderSystemRender(false);
 
     //vkCmdEndRendering(vulk->commandBuffer);
@@ -508,7 +506,7 @@ void MeshRenderSystem::renderShadows(const MeshRenderTargets& meshRenderTargets)
     static constexpr VkClearValue depthClear = { .depthStencil = { 1.0f, 0 } };
     MyVulkan::beginDebugRegion("Mesh rendering depth only", Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
-    MyVulkan::beginRenderPass(s_meshRenderSystemData->m_meshRenderGraphicsPipeline[1], { depthClear });
+    MyVulkan::beginRenderPass(s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[1], { depthClear });
 
 
 //    beginRendering({}, { .image = &meshRenderTargets.shadowDepthImage, .clearValue = depthClear });
@@ -530,7 +528,7 @@ void MeshRenderSystem::setRenderTargets(const MeshRenderTargets &meshRenderTarge
     {
         bool isShadow = (passIndex & 1) == 1;
         ASSERT(VulkanResources::createFramebuffer(
-            s_meshRenderSystemData->m_meshRenderGraphicsPipeline[passIndex],
+            s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[passIndex],
             isShadow ? renderShadowTargetImages : renderTargetImages));
     }
 }

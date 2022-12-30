@@ -1,7 +1,6 @@
 #pragma once
 
 #include <math/vector3.h>
-#include <myvulkan/shader.h>
 
 
 struct LightingRenderTargets;

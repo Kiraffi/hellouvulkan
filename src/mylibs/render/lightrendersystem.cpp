@@ -3,9 +3,12 @@
 #include <container/podvector.h>
 #include <container/vector.h>
 
+#include <core/nullable.h>
+
 #include <math/vector3_inline_functions.h>
 
 #include <myvulkan/myvulkan.h>
+#include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
 #include <render/lightingrendertargets.h>
@@ -21,7 +24,7 @@ struct LightRenderSystemData
     VkSampler m_shadowTextureSampler = VK_NULL_HANDLE;
 };
 
-LightRenderSystemData* s_lightRenderSystemData = nullptr;
+Nullable<LightRenderSystemData> s_lightRenderSystemData;
 
 struct LightBuffer
 {
@@ -32,24 +35,21 @@ struct LightBuffer
 
 void LightRenderSystem::deinit()
 {
-    if(s_lightRenderSystemData)
+    if(s_lightRenderSystemData.get())
     {
-        MyVulkan::destroyPipeline(s_lightRenderSystemData->m_lightComputePipeline);
-        VulkanResources::destroySampler(s_lightRenderSystemData->m_shadowTextureSampler);
-        delete s_lightRenderSystemData;
-        s_lightRenderSystemData = nullptr;
+        MyVulkan::destroyPipeline(s_lightRenderSystemData.get()->m_lightComputePipeline);
+        VulkanResources::destroySampler(s_lightRenderSystemData.get()->m_shadowTextureSampler);
+        s_lightRenderSystemData.destroy();
     }
 }
 
 bool LightRenderSystem::init()
 {
-    ASSERT(s_lightRenderSystemData == nullptr);
-    s_lightRenderSystemData = new LightRenderSystemData();
-
+    s_lightRenderSystemData.create();
     for(u32 i = 0; i < VulkanGlobal::FramesInFlight; ++i)
-        s_lightRenderSystemData->m_lightBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
+        s_lightRenderSystemData.get()->m_lightBufferHandle[i] = vulk->uniformBufferManager.reserveHandle();
 
-    auto& pipeline = s_lightRenderSystemData->m_lightComputePipeline;
+    auto& pipeline = s_lightRenderSystemData.get()->m_lightComputePipeline;
     pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
     if (!MyVulkan::createComputePipeline(
@@ -71,8 +71,8 @@ bool LightRenderSystem::init()
         samplerInfo.compareEnable = VK_TRUE;
         samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_LESS;
 
-        s_lightRenderSystemData->m_shadowTextureSampler = VulkanResources::createSampler(samplerInfo);
-        if (!s_lightRenderSystemData->m_shadowTextureSampler)
+        s_lightRenderSystemData.get()->m_shadowTextureSampler = VulkanResources::createSampler(samplerInfo);
+        if (!s_lightRenderSystemData.get()->m_shadowTextureSampler)
         {
             printf("Failed to create sampler for font rendering");
             return false;
@@ -90,7 +90,7 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
         outputTex.width == meshRenderTargets.normalMapImage.width && outputTex.height == meshRenderTargets.normalMapImage.height &&
         outputTex.width == meshRenderTargets.depthImage.width     && outputTex.height == meshRenderTargets.depthImage.height);
 
-    auto& pipeline = s_lightRenderSystemData->m_lightComputePipeline;
+    auto& pipeline = s_lightRenderSystemData.get()->m_lightComputePipeline;
 
     pipeline.descriptorSetBinds.resize(VulkanGlobal::FramesInFlight);
 
@@ -98,7 +98,7 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
     {
         pipeline.descriptorSetBinds[i] = PodVector<DescriptorInfo>{
             DescriptorInfo(vulk->renderFrameBufferHandle[i]),
-            DescriptorInfo(s_lightRenderSystemData->m_lightBufferHandle[i]),
+            DescriptorInfo(s_lightRenderSystemData.get()->m_lightBufferHandle[i]),
 
             //DescriptorInfo(normalTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
             //DescriptorInfo(albedoTex.imageView, VK_IMAGE_LAYOUT_GENERAL, nullptr),
@@ -107,9 +107,9 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
             DescriptorInfo(meshRenderTargets.albedoImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulk->globalTextureSampler),
 
             DescriptorInfo(meshRenderTargets.depthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                s_lightRenderSystemData->m_shadowTextureSampler),
+                s_lightRenderSystemData.get()->m_shadowTextureSampler),
             DescriptorInfo(meshRenderTargets.shadowDepthImage.imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                s_lightRenderSystemData->m_shadowTextureSampler),
+                s_lightRenderSystemData.get()->m_shadowTextureSampler),
 
             DescriptorInfo(outputTex.imageView, VK_IMAGE_LAYOUT_GENERAL, VK_NULL_HANDLE),
         };
@@ -123,20 +123,20 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
 
 void LightRenderSystem::update()
 {
-    if (s_lightRenderSystemData->m_lightBufferHandle[vulk->frameIndex].isValid())
+    if (s_lightRenderSystemData.get()->m_lightBufferHandle[vulk->frameIndex].isValid())
     {
         LightBuffer lightBuffer;
-        lightBuffer.sunDir = s_lightRenderSystemData->m_sunDir;
+        lightBuffer.sunDir = s_lightRenderSystemData.get()->m_sunDir;
 
         VulkanResources::addToCopylist(lightBuffer,
-            s_lightRenderSystemData->m_lightBufferHandle[vulk->frameIndex]);
+            s_lightRenderSystemData.get()->m_lightBufferHandle[vulk->frameIndex]);
     }
 }
 
 void LightRenderSystem::render(u32 width, u32 height)
 {
     MyVulkan::beginDebugRegion("Lighting compute", Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    MyVulkan::dispatchCompute(s_lightRenderSystemData->m_lightComputePipeline,
+    MyVulkan::dispatchCompute(s_lightRenderSystemData.get()->m_lightComputePipeline,
         vulk->frameIndex, width, height, 1, 8, 8, 1);
     MyVulkan::endDebugRegion();
     MyVulkan::writeStamp();
@@ -144,5 +144,5 @@ void LightRenderSystem::render(u32 width, u32 height)
 
 void LightRenderSystem::setSunDirection(const Vec3& sunDir)
 {
-    s_lightRenderSystemData->m_sunDir = normalize(sunDir);
+    s_lightRenderSystemData.get()->m_sunDir = normalize(sunDir);
 }
