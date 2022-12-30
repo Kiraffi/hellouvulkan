@@ -13,6 +13,8 @@ add_dependencies(draw_stuff_vulkan shaders)
 
 target_link_libraries(draw_stuff_vulkan PRIVATE
     MyLibraries
+    Vulkan::Vulkan
+    Imgui
     #MyVulkan
     #MyImgui
     glfw

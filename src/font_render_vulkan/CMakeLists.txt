@@ -13,6 +13,8 @@ add_dependencies(font_render_vulkan shaders)
 
 target_link_libraries(font_render_vulkan PRIVATE
     MyLibraries
+    Vulkan::Vulkan
+    Imgui
     #MyVulkan
     #MyImgui
     glfw

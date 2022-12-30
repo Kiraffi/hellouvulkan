@@ -198,10 +198,8 @@ add_dependencies(MyLibraries MYLIBS_GENERATED_HEADERS)
 
 target_link_libraries(MyLibraries PUBLIC
     #glfw
-    Vulkan::Vulkan
     ${WINMM_LIB}
 
-    Imgui
     #meshoptimizer
     #PRIVATE MyLibraries
 
@@ -217,7 +215,6 @@ target_link_libraries(MyGui PUBLIC
 
 
 target_link_libraries(MyImgui PUBLIC
-    Imgui
 )
 
 #target_link_libraries(MyVulkan PUBLIC
