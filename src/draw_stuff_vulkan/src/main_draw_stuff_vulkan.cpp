@@ -352,17 +352,18 @@ static void sRenderUpdate()
 
     struct FrameBuffer
     {
+        Vector2 areaSize;
+        Vector2 tmp1;
+        Vector4 tmp2[3];
+
         Matrix camMat;
         Matrix viewProj;
         Matrix mvp;
         Matrix sunMatrix;
 
-        Vector2 areaSize;
-        Vector2 tmp1;
 
         Vector4 camPos;
-        Vector4 tmp3;
-        Vector4 tmp4;
+        Vector4 tmp3[3];
 
         Matrix inverseMvp;
     };

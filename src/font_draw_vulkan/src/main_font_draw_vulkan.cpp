@@ -275,41 +275,10 @@ static void sRenderUpdate()
 
     struct FrameBuffer
     {
-        Matrix camMat;
-        Matrix viewProj;
-        Matrix mvp;
-        Matrix sunMatrix;
-
         Vector2 areaSize;
-        Vector2 tmp1;
-
-        Vector4 camPos;
-        Vector4 tmp3;
-        Vector4 tmp4;
-
-        Matrix inverseMvp;
     };
     FrameBuffer frameBufferData;
-/*
-    // bit ugly.......
-    sunCamera.calculateOrtographicPosition(camera.position);
-    if(windowWidth > 0 && windowHeight > 0)
-        camera.updateCameraState(windowWidth, windowHeight);
-    sunCamera.updateCameraState(50.0f, 50.0f);
 
-    if (useSunCamera)
-    {
-        frameBufferData.mvp = sunCamera.worldToViewMat;
-        frameBufferData.inverseMvp = sunCamera.viewToWorldMat;
-    }
-    else
-    {
-        frameBufferData.mvp = camera.worldToViewMat;
-        frameBufferData.inverseMvp = camera.viewToWorldMat;
-    }
-    frameBufferData.sunMatrix = sunCamera.worldToViewMat;
-    frameBufferData.camPos = Vector4(camera.position, 0.0f);
-*/
     auto& app = VulkanApp::getWindowApp();
     frameBufferData.areaSize = Vec2(app.windowWidth, app.windowHeight);
     VulkanResources::addToCopylist(frameBufferData, vulk->renderFrameBufferHandle[vulk->frameIndex]);
