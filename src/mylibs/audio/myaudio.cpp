@@ -1,5 +1,7 @@
 #include "myaudio.h"
 
+#include <pch.h>
+
 #include <app/glfw_keys.h>
 #include <core/general.h>
 

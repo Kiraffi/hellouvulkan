@@ -1,5 +1,5 @@
 #pragma once
-
+#include <core/general.h>
 #include <core/log.h>
 
 #if _MSC_VER

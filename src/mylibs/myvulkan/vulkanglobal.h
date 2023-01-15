@@ -4,6 +4,7 @@
 
 #include <container/podvectorsbase.h>
 #include <container/vectorsbase.h>
+#include <core/general.h>
 #include <core/mytypes.h>
 #include <myvulkan/uniformbuffermanager.h>
 

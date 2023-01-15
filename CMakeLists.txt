@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.15)
 project ("hellouvulkan" VERSION 0.0.1)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 #set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
-#ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
+ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x86)
 
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2")
@@ -34,7 +34,7 @@ set(HEADER_FILES
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-inline-functions -DNDEBUG")
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-inline-functions -ftime-report-details")
 
-add_compile_options($<$<CXX_COMPILER_ID:clang>:-ftime-trace>)
+#add_compile_options($<$<CXX_COMPILER_ID:clang>:-ftime-trace>)
 
 # adding multiprocessor compilation, in case generating visual studio solution separately
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)

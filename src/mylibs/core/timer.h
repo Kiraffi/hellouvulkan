@@ -1,5 +1,7 @@
 #pragma once
 
+#include <core/mytypes.h>
+
 #include <time.h>
 #include <stdint.h>
 

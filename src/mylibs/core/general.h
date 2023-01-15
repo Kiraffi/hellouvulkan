@@ -3,6 +3,9 @@
 #include <core/mytypes.h>
 #include <core/supa.h>
 
+#include <string.h>
+#include <stdio.h>
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
     #ifndef WIN32
         #define WIN32
@@ -24,13 +27,13 @@
 
 void myPrint(const char *ptr, ...);
 
-extern "C" i32 printf(const char *__restrict __format, ...);
-#if WIN32
-    extern "C"  __declspec(dllexport) i32 snprintf(char *buffer, size_t bufferCount, const char *__format, ...);
-#else
-extern "C" i32 snprintf (char *__restrict __s, size_t __maxlen, const char *__restrict __format, ...)
-    __THROWNL __attribute__ ((__format__ (__printf__, 3, 4)));
-#endif
+//extern "C" i32 printf(const char *__restrict __format, ...);
+//#if WIN32
+//    extern "C"  __declspec(dllexport) i32 snprintf(char *buffer, size_t bufferCount, const char *__format, ...);
+//#else
+//extern "C" i32 snprintf (char *__restrict __s, size_t __maxlen, const char *__restrict __format, ...)
+//    __THROWNL __attribute__ ((__format__ (__printf__, 3, 4)));
+//#endif
 
 static constexpr float PI = 3.14159265358979323846264338f;
 
