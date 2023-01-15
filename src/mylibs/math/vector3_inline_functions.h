@@ -6,7 +6,7 @@
 #include <core/general.h>
 #include <core/log.h>
 
-#define _GLIBCXX_BITS_SPECFUN_H 0
+//#define _GLIBCXX_BITS_SPECFUN_H 0
 #include <math.h>
 
 /*

@@ -4,10 +4,12 @@
 #include "podvectorsbase.h"
 #include "podvectortype.h"
 
+#include <core/podtype.h>
 #include <core/supa.h>
 
 #include <initializer_list>
 //#include <type_traits>
+#include "podvectortypedefine.h"
 
 #define CHECK_POD_MACRO() isPodType<T>();
 

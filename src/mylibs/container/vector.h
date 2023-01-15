@@ -4,8 +4,11 @@
 #include "vectorbase.h"
 #include "vectorsbase.h"
 
+#include <core/podtype.h>
+
 #include <initializer_list>
 //#include <new>
+#include "podvectortypedefine.h"
 
 #define CHECK_NO_POD_MACRO() isNotPodType<T>();
 

@@ -44,6 +44,8 @@
 
 #include <scene/scene.h>
 
+#include <container/podvectortypedefine.h>
+
 static constexpr i32 c_ScreenWidth = 1024;
 static constexpr i32 c_ScreenHeight = 768;
 
@@ -460,13 +462,14 @@ static void sRenderUpdate()
     }
 
     s_data->m_scene.update(dt);
-    MeshRenderSystem::prepareToRender();
 
     Vec3 sundir = getSunDirection(s_data->m_sunCamera);
     LightRenderSystem::setSunDirection(sundir);
 
     LightRenderSystem::update();
 
+
+    MeshRenderSystem::prepareToRender();
     LineRenderSystem::prepareToRender();
 }
 

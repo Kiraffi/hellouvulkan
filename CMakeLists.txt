@@ -4,20 +4,37 @@
 cmake_minimum_required (VERSION 3.15)
 project ("hellouvulkan" VERSION 0.0.1)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_EXTENSIONS FALSE)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 #check for instruction/link time optimization supported
-include(CheckIPOSupported)
+#include(CheckIPOSupported)
 
 #set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
-ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
+#ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x64)
 #ADD_DEFINITIONS(-DCMAKE_GENERATOR_PLATFORM=x86)
 
 #set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 #set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g /d1reportTime")
+
+#set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g -ftime-trace")
+if (UNIX)
+    #set(CMAKE_C_FLAGS "-O2 -fno-inline-functions -DNDEBUG")
+    #set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-inline-functions -DNDEBUG")
+    set(CMAKE_C_FLAGS "-O2 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+endif (UNIX)
+
+set(HEADER_FILES
+    pch.h)
+
+
+#set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-inline-functions -DNDEBUG")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O2 -fno-inline-functions -ftime-report-details")
+
+add_compile_options($<$<CXX_COMPILER_ID:clang>:-ftime-trace>)
 
 # adding multiprocessor compilation, in case generating visual studio solution separately
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
@@ -36,12 +53,10 @@ include(${PROJECT_SOURCE_DIR}/cmake/my_cmake.cmake)
 #set(OpenGL_GL_PREFERENCE "GLVND")
 #set(OpenGL_GL_PREFERENCE LEGACY)
 
-if (UNIX)
-    #do something
-endif (UNIX)
 
 #find_package(OpenGL REQUIRED)
 #find_package(Vulkan REQUIRED)
+
 
 if (DEFINED VULKAN_SDK_PATH)
   set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include")
@@ -135,10 +150,13 @@ include_directories("external/stb/")
 include_directories("src/mylibs")
 include_directories("external/VulkanMemoryAllocator/include")
 
+#ADD_DEFINITIONS(-DIMGUI_DISABLE_SSE=1)
 ADD_DEFINITIONS(-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS=1)
-#ADD_DEFINITIONS(-DIMGUI_DISABLE_OBSOLETE_KEYIO=1)
 ADD_DEFINITIONS(-DIMGUI_DISABLE_METRICS_WINDOW=1)
-ADD_DEFINITIONS(-DIMGUI_DISABLE_DEMO_WINDOWS=1)
+#ADD_DEFINITIONS(-DIMGUI_DISABLE_OBSOLETE_KEYIO=1)
+
+#ADD_DEFINITIONS(-DIMGUI_DISABLE_DEMO_WINDOWS=1)
+
 #ADD_DEFINITIONS(-DIMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS=1)
 #ADD_DEFINITIONS(-DIMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS=1)
 #ADD_DEFINITIONS(-DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS=1)
@@ -152,7 +170,7 @@ ADD_DEFINITIONS(-DIMGUI_DISABLE_DEMO_WINDOWS=1)
 #ADD_DEFINITIONS(-DIMGUI_DISABLE_SSE=1)
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
-add_library(Imgui #OBJECT EXCLUDE_FROM_ALL
+add_library(Imgui STATIC #OBJECT EXCLUDE_FROM_ALL
     "external/imgui/imgui.cpp"
     "external/imgui/imgui_draw.cpp"
     "external/imgui/imgui_tables.cpp"
@@ -160,7 +178,8 @@ add_library(Imgui #OBJECT EXCLUDE_FROM_ALL
     "external/imgui/backends/imgui_impl_glfw.cpp"
     "external/imgui/backends/imgui_impl_vulkan.cpp"
 )
-
+#target_compile_features(Imgui PRIVATE cxx_std_11)
+#target_precompile_headers(Imgui PRIVATE src/mylibs/${HEADER_FILES})
 
 add_library(MyAudio OBJECT EXCLUDE_FROM_ALL
     "external/miniaudio/extras/miniaudio_split/miniaudio.c"

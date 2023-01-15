@@ -9,11 +9,11 @@
 #include <core/file.h>
 #include <core/general.h>
 #include <core/json.h>
+#include <core/timer.h>
 
 #include <math/matrix.h>
 #include <math/quaternion_inline_functions.h>
 
-#include <core/timer.h>
 
 struct GltfData;
 

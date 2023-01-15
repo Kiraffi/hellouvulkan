@@ -37,8 +37,8 @@ public:
     static Buffer createBuffer(size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryFlags, const char* bufferName);
     static void destroyBuffer(Buffer& buffer);
 
-    static u64 uploadToScratchbuffer(void* data, u64 size, u64 offset);
-    static void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, u64 sizes);
+    static size_t uploadToScratchbuffer(void* data, size_t size, size_t offset);
+    static void uploadScratchBufferToGpuBuffer(Buffer& gpuBuffer, size_t sizes);
 
     static bool createFramebuffer(Pipeline& pipeline, const PodVector<Image>& colorsAndDepthImages);
 

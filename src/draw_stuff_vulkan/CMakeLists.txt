@@ -19,3 +19,5 @@ target_link_libraries(draw_stuff_vulkan PRIVATE
     #MyImgui
     glfw
     )
+
+#set_target_properties(draw_stuff_vulkan PROPERTIES LINK_OPTIONS -m32)

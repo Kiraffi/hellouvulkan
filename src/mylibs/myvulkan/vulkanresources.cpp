@@ -8,7 +8,8 @@
 
 #include <vk_mem_alloc.h>
 
-//#include <algorithm>
+//#include <bits/stdc++.h>
+#include <algorithm>
 #include <vector>
 
 static std::vector<Image*> sRenderTargetImages;

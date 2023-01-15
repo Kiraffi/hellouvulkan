@@ -22,7 +22,7 @@ add_custom_command(
 add_custom_target(MYLIBS_GENERATED_HEADERS DEPENDS DEPENDS ${DEF_FILE})
 
 add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
-
+    "pch.h"
     "app/glfw_keys.h"
     "app/inputapp.h"
     "app/inputapp.cpp"
@@ -49,6 +49,7 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "core/camera.h"
     "core/file.h"
     "core/general.h"
+    "core/podtype.h"
     "core/timer.h"
     "core/json.h"
     "core/writejson.h"
@@ -157,6 +158,7 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
 #    "audio/myaudio.cpp"
 
 #)
+target_precompile_headers(MyLibraries PRIVATE ${HEADER_FILES})
 
 add_library(MyGui OBJECT EXCLUDE_FROM_ALL
     "mygui/mygui.h"
