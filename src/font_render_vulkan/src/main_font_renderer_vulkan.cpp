@@ -125,7 +125,7 @@ static void sHandleInput()
 static void sDraw()
 {
     auto& image = s_fontRenderData->m_renderColorImage;
-
+    //VulkanResources::flushBarriers(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
     // Should probably abstract this into push images, then
     // then flush barriers for clear image
     {

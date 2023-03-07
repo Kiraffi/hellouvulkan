@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/VulkanMemoryAllocator" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/meshoptimizer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/miniaudio" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/stb" vcs="Git" />
+  </component>
+</project>

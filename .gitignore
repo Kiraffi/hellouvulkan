@@ -1,5 +1,11 @@
 hellogl
 
+# some timeing
+-.json
+
+# cmake-build
+cmake-build*/**
+
 # Generated header/cpp-files
 **/generated_components.cpp
 **/generated_components.h
