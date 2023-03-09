@@ -1,0 +1,52 @@
+- Add rendertargets
+    Maybe just a list with
+        RenderResolutionFull,
+        RenderResolutionQuarter,
+        Some custom resolution for X,
+        WindowResolution (editor?)
+
+- Try to make adding new project easier, less repeating stuff, copy pasteing?
+    Currently there is a lot of copy paste, like the buffer setup. Should figure out how to fix this.
+        Would make sense to have some 3d specific buffer binded at some slot, and 2d maybe another.
+            Also common for something.... Then this could be made as a function call.
+    How much should I really specialize the render paths between projects?
+        It probably makes very little sense that you can define different rendering strategies on different
+            projects.
+    If using global static systems like fontrendersystem, inputsystem, etc. there could be single cpp/h
+        file with header that does common initialization. Might look bit ugly code-wise and is kind of
+        same as inheriting from base class....
+
+- Add maybe render systems, or systems in general?
+    What if I want to read Input from different systems?
+        How to communicate between systems? Just global accessors?
+    Builder pattern?
+
+- Look serialization maybe once again? Could it be just something super simple?
+    It has some read write access for etc... way overcomplex.
+    Was thinking of multithreading, but would I really?
+
+- Animation system? Maybe a lot in the future.
+    There is not much of animation system...
+
+- There is no particlesystem
+
+- Sounds?
+
+- Builders... Use builder for creategraphicspipeline and createcomputepipeline.
+
+- There is no gameplay... Project bonkers.... Lots of blendering for evenings?
+    Needs character, maybe should just go with cube
+    Needs enemies, again cubes?
+    Needs map, again simple stuff?
+
+- Rendering pipeline pretty much missing
+    Shadows broken...
+    Tonemap and lighting are quite random.
+
+- GUI?
+    Making very simple gui?
+    Using Imgui?
+
+
+
+

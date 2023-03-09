@@ -261,7 +261,7 @@ void FontRenderSystem::render()
     MyVulkan::beginDebugRegion("Font rendering", Vec4(0.0f, 0.0f, 1.0f, 1.0f));
     MyVulkan::beginRenderPass(s_FontRenderSystemData.get()->m_pipeline, {});
 
-    MyVulkan::bindGraphicsPipelineWithDecriptors(s_FontRenderSystemData.get()->m_pipeline, vulk->frameIndex);
+    MyVulkan::bindGraphicsPipelineWithDescriptors(s_FontRenderSystemData.get()->m_pipeline, vulk->frameIndex);
     vkCmdBindIndexBuffer(
         commandBuffer,
         s_FontRenderSystemData.get()->m_letterIndexBuffer.buffer,

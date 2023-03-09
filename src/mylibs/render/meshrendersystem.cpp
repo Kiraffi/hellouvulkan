@@ -451,7 +451,7 @@ void sMeshRenderSystemRender(bool isShadowOnly)
         const char* debugName = debugNames[passIndex];
 
         MyVulkan::beginDebugRegion(debugName, Vec4(1.0f, 1.0f, 0.0f, 1.0f));
-        MyVulkan::bindGraphicsPipelineWithDecriptors(
+        MyVulkan::bindGraphicsPipelineWithDescriptors(
             s_meshRenderSystemData.get()->m_meshRenderGraphicsPipeline[passIndex], vulk->frameIndex);
         for (u32 modelIndex = 0u; modelIndex < s_meshRenderSystemData.get()->m_models.size(); ++modelIndex)
         {

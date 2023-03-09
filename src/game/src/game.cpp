@@ -50,7 +50,7 @@ static constexpr i32 SHADOW_HEIGHT = 2048;
 static Vec3 getSunDirection(const Camera &camera)
 {
     Vec3 sundir[3];
-    getDirectionsFromPitchYawRoll(camera.pitch, camera.yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
+    getDirectionsFromPitchYawRoll(camera.m_pitch, camera.m_yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
 
     return -sundir[2];
 }

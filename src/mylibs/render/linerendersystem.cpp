@@ -129,7 +129,7 @@ void LineRenderSystem::render(const Image &colorImage, const Image &depthImage)
         RenderImage{.image = &colorImage, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD }},
         {.image = &depthImage, .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD });
         */
-    MyVulkan::bindGraphicsPipelineWithDecriptors(s_lineRenderSystemData.get()->m_lineRenderPipeline,
+    MyVulkan::bindGraphicsPipelineWithDescriptors(s_lineRenderSystemData.get()->m_lineRenderPipeline,
         vulk->frameIndex);
     vkCmdDraw(vulk->commandBuffer, s_lineRenderSystemData.get()->m_lines.size() * 2, 1, 0, 0);
 

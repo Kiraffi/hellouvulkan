@@ -1,10 +1,39 @@
 #pragma once
 
+#include <container/podvector.h>
 #include <math/vector3.h>
 
 struct Image;
 
 static constexpr u32 MAX_LETTERS = 10000 * 4;
+
+class RenderSystem
+{
+public:
+    RenderSystem();
+    virtual ~RenderSystem();
+
+    void virtual updateRenderTargets(PodVector<Image> &images);
+    void virtual update();
+    void virtual reset();
+};
+
+enum RenderResolutions
+{
+    FULL_WINDOW_SIZE,
+    RENDER_RESOLUTION_FULL,
+    RENDER_RESOLUTION_QUARTER,
+
+};
+
+class RenderTargets
+{
+public:
+
+private:
+    f32 width;
+    f32 height;
+};
 
 class FontRenderSystem
 {

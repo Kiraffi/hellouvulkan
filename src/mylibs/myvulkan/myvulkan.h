@@ -91,9 +91,9 @@ public:
     static void destroyPipeline(Pipeline& pipelineWithDescriptors);
     static void destroyDescriptor(Descriptor &descriptor);
 
-    static void bindComputePipelineWithDecriptors(
+    static void bindComputePipelineWithDescriptors(
         const Pipeline &pipelineWithDescriptor, u32 index);
-    static void bindGraphicsPipelineWithDecriptors(
+    static void bindGraphicsPipelineWithDescriptors(
         const Pipeline &pipelineWithDescriptor, u32 index);
 
     static void writeStamp();
