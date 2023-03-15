@@ -434,7 +434,7 @@ static void sDraw()
         // draw calls here
         // Render
         {
-            MyVulkan::bindGraphicsPipelineWithDecriptors(s_computeData->m_graphicsFinalPipeline, vulk->frameIndex);
+            MyVulkan::bindGraphicsPipelineWithDescriptors(s_computeData->m_graphicsFinalPipeline, vulk->frameIndex);
             vkCmdBindIndexBuffer(vulk->commandBuffer, s_computeData->m_quadIndexBuffer.buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(vulk->commandBuffer, 6, 1, 0, 0, 0);
         }

@@ -20,7 +20,7 @@
 #include <myvulkan/shader.h>
 #include <myvulkan/vulkanresources.h>
 
-#include <render/font_render.h>
+#include <render/fontrendersystem.h>
 
 #include <math.h> // rand and RAND_MAX
 

@@ -1,4 +1,5 @@
 #include "examplegui.h"
+#include "core/mytypes.h"
 
 #include <imgui.h>
 

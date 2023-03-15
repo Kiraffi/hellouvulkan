@@ -15,6 +15,8 @@
 #include <core/mytypes.h>
 
 #include <gui/componentviews.h>
+#include <gpu/gpustructs.h>
+
 
 #include <math/general_math.h>
 #include <math/hitpoint.h>
@@ -48,6 +50,7 @@
 
 #include <container/podvectortypedefine.h>
 
+#include <systems/camerasystem.h>
 
 static Vec3 getSunDirection(const Camera &camera)
 {
@@ -100,6 +103,7 @@ static void sDeinit()
     LightRenderSystem::deinit();
     TonemapRenderSystem::deinit();
     LineRenderSystem::deinit();
+    CameraSystem::deinit();
     if(s_data)
     {
         delete s_data;
@@ -366,7 +370,7 @@ static void sRenderUpdate()
 
         Matrix inverseMvp;
     };
-    FrameBuffer frameBufferData;
+    GpuFrameBuffer frameBufferData;
 
     // bit ugly.......
     s_data->m_sunCamera.calculateOrtographicPosition(s_data->m_camera.m_position);
@@ -387,7 +391,7 @@ static void sRenderUpdate()
     frameBufferData.sunMatrix = s_data->m_sunCamera.m_worldToViewMat;
     frameBufferData.camPos = Vector4(s_data->m_camera.m_position, 0.0f);
 
-    frameBufferData.areaSize = Vec2(app.windowWidth, app.windowHeight);
+    frameBufferData.windowSize = Vec2(app.windowWidth, app.windowHeight);
     VulkanResources::addToCopylist(frameBufferData, vulk->renderFrameBufferHandle[vulk->frameIndex]);
 
     FontRenderSystem::update();

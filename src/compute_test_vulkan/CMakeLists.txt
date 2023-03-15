@@ -7,14 +7,14 @@ include(${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake)
 #print_variables()
 
 # Add source to this project's executable.
-add_executable (common_project "src/common_project.cpp")
+add_executable (compute_test_vulkan "src/compute_test_vulkan.cpp")
 
-add_dependencies(common_project shaders)
+add_dependencies(compute_test_vulkan shaders)
 
-target_link_libraries(common_project PRIVATE
+target_link_libraries(compute_test_vulkan PRIVATE
     MyLibraries
     Vulkan::Vulkan
-    #Imgui
+    Imgui
     #MyVulkan
     #MyImgui
     glfw

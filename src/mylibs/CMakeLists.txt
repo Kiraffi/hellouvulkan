@@ -150,7 +150,9 @@ add_library(MyLibraries OBJECT EXCLUDE_FROM_ALL
     "render/lightingrendertargets.cpp"
     "render/meshrendertargets.cpp"
 
-)
+        "systems/camerasystem.cpp" "systems/camerasystem.h"
+
+        gpu/gpustructs.h)
 
 #add_library(MyAudio OBJECT EXCLUDE_FROM_ALL
 #    "audio/myaudio.h"
