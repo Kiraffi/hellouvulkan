@@ -29,6 +29,7 @@ struct Camera
 
     Ray getRayFromNormalizedCoordinates(const Vec2 &normalizedCoordinates) const;
     Ray getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates, const Vec2 &windowSize) const;
+    Ray getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates) const;
 
     // Rethink this... camera manager?
     void checkCameraKeypresses();

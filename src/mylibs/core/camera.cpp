@@ -235,3 +235,12 @@ Ray Camera::getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates,
     return getRayFromNormalizedCoordinates(coord);
 }
 
+Ray Camera::getRayFromScreenPixelCoordinates(const Vec2 &screenPixelCoordinates) const
+{
+    const auto& app = VulkanApp::getWindowApp();
+    Vec2 windowSize = Vec2(app.windowWidth, app.windowHeight);
+
+    // Calculate the click as ndc. Half pixel offset as rendering.
+    Vec2 coord = (screenPixelCoordinates + 0.5f) / windowSize;
+    return getRayFromNormalizedCoordinates(coord);
+}

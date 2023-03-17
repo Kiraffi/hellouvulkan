@@ -1,63 +1,68 @@
-#include <pch.h>
+#include "pch.h"
 
-#include <app/glfw_keys.h>
-#include <app/inputapp.h>
-#include <app/vulkan_app.h>
+#include "common_project.h"
 
-#include <components/transform_functions.h>
+#include "app/glfw_keys.h"
+#include "app/inputapp.h"
+#include "app/vulkan_app.h"
 
-#include <container/podvector.h>
+#include "components/transform_functions.h"
 
-#include <core/camera.h>
-#include <core/general.h>
-#include <core/json.h>
-#include <core/timer.h>
-#include <core/mytypes.h>
+#include "container/podvector.h"
 
-#include <gui/componentviews.h>
-#include <gpu/gpustructs.h>
+#include "core/camera.h"
+#include "core/general.h"
+#include "core/json.h"
+#include "core/timer.h"
+#include "core/mytypes.h"
+
+#include "gui/componentviews.h"
+#include "gpu/gpustructs.h"
 
 
-#include <math/general_math.h>
-#include <math/hitpoint.h>
-#include <math/matrix.h>
-#include <math/plane.h>
-#include <math/quaternion.h>
-#include <math/ray.h>
-#include <math/vector3.h>
-#include <math/quaternion_inline_functions.h>
+#include "math/general_math.h"
+#include "math/hitpoint.h"
+#include "math/matrix.h"
+#include "math/plane.h"
+#include "math/quaternion.h"
+#include "math/ray.h"
+#include "math/vector3.h"
+#include "math/quaternion_inline_functions.h"
 
-#include <model/gltf.h>
+#include "model/gltf.h"
 
-#include <myvulkan/myvulkan.h>
-#include <myvulkan/shader.h>
-#include <myvulkan/vulkaninitparameters.h>
-#include <myvulkan/vulkanresources.h>
+#include "myvulkan/myvulkan.h"
+#include "myvulkan/shader.h"
+#include "myvulkan/vulkaninitparameters.h"
+#include "myvulkan/vulkanresources.h"
 
-#include <render/convertrendertarget.h>
-#include <render/fontrendersystem.h>
-#include <render/lightrendersystem.h>
-#include <render/linerendersystem.h>
-#include <render/meshrendersystem.h>
-#include <render/tonemaprendersystem.h>
+#include "render/convertrendertarget.h"
+#include "render/fontrendersystem.h"
+#include "render/lightrendersystem.h"
+#include "render/linerendersystem.h"
+#include "render/meshrendersystem.h"
+#include "render/tonemaprendersystem.h"
 
-#include <render/lightingrendertargets.h>
-#include <render/meshrendertargets.h>
+#include "render/lightingrendertargets.h"
+#include "render/meshrendertargets.h"
 
-#include <resources/globalresources.h>
+#include "resources/globalresources.h"
 
-#include <scene/scene.h>
+#include "scene/scene.h"
 
-#include <container/podvectortypedefine.h>
+#include "container/podvectortypedefine.h"
 
-#include <systems/camerasystem.h>
+#include "systems/camerasystem.h"
 
 static Vec3 getSunDirection(const Camera &camera)
 {
-    Vec3 sundir[3];
-    getDirectionsFromPitchYawRoll(camera.m_pitch, camera.m_yaw, 0.0f, sundir[0], sundir[1], sundir[2]);
+    Vec3 sunDir[3];
+    getDirectionsFromPitchYawRoll(
+        camera.m_pitch,
+        camera.m_yaw,
+        0.0f, sunDir[0], sunDir[1], sunDir[2]);
 
-    return -sundir[2];
+    return -sunDir[2];
 }
 
 struct CommonVulkan
@@ -70,15 +75,11 @@ struct CommonVulkan
     ConvertRenderTarget m_convertFromS16{ VK_FORMAT_R16G16B16A16_SNORM };
     Vec2 m_fontSize{ 8.0f, 12.0f };
 
-    Camera m_camera;
-    Camera m_sunCamera;
-
     u32 m_selectedEntityIndex = ~0u;
     float m_rotationAmount = 0.0f;
 
     bool m_showNormalMap = false;
     bool m_rotateOn = false;
-    bool m_useSunCamera = false;
 
     Vec3 m_lineFrom;
     Vec3 m_lineTo;
@@ -118,11 +119,13 @@ static void sDeinit()
 static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
     s_data = new CommonVulkan();
+
     auto &vulkanInitParams = VulkanInitializationParameters::getRef();
     vulkanInitParams.useIntegratedGpu = true;
 
     if(!VulkanApp::initApp(windowStr, screenWidth, screenHeight)
        || !InputApp::init()
+       || !CameraSystem::init()
        || !MyVulkan::init()
        || !FontRenderSystem::init("assets/font/new_font.dat"))
     {
@@ -152,8 +155,6 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
 
     if (!s_data->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
         return false;
-
-    s_data->m_camera.m_position = Vec3(0.0f, 4.0f, 5.0f);
 
     s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
 
@@ -188,8 +189,8 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     }
     s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING });
 
-    s_data->m_sunCamera.m_pitch = toRadians(330.0f);
-    s_data->m_sunCamera.m_yaw = toRadians(30.0f);
+    //s_data->m_sunCamera.m_pitch = toRadians(330.0f);
+    //s_data->m_sunCamera.m_yaw = toRadians(30.0f);
 
     MyVulkan::setVulkanFrameResizedCBFunc(sResized);
 
@@ -216,7 +217,7 @@ static bool sResize()
 
     LightRenderSystem::updateReadTargets(s_data->m_meshRenderTargets, s_data->m_lightingRenderTargets);
     TonemapRenderSystem::updateReadTargets(
-            s_data->m_lightingRenderTargets.lightingTargetImage, s_data->m_meshRenderTargets.albedoImage);
+        s_data->m_lightingRenderTargets.lightingTargetImage, s_data->m_meshRenderTargets.albedoImage);
 
     return true;
 }
@@ -237,13 +238,6 @@ static void sHandleInput()
 
     MouseState mouseState = InputApp::getMouseState();
     float dt = VulkanApp::getWindowApp().frameDt;
-
-    s_data->m_camera.checkCameraKeypresses();
-
-    if (InputApp::isPressed(GLFW_KEY_RIGHT_BRACKET))
-    {
-        s_data->m_useSunCamera = !s_data->m_useSunCamera;
-    }
 
     if (InputApp::isPressed(GLFW_KEY_KP_ADD))
     {
@@ -267,41 +261,31 @@ static void sHandleInput()
     if (InputApp::isPressed(GLFW_KEY_Z))
         s_data->m_rotateOn = !s_data->m_rotateOn;
 
-    Camera& sunCamera = s_data->m_sunCamera;
+    CameraSystem::update();
 
-    if (InputApp::isDown(GLFW_KEY_UP))
-        sunCamera.m_pitch -= dt * 1.0f;
-    if (InputApp::isDown(GLFW_KEY_DOWN))
-        sunCamera.m_pitch += dt * 1.0f;
-    if (InputApp::isDown(GLFW_KEY_LEFT))
-        sunCamera.m_yaw += dt * 1.0f;
-    if (InputApp::isDown(GLFW_KEY_RIGHT))
-        sunCamera.m_yaw -= dt * 1.0f;
-
-    Vec3 sundir = getSunDirection(sunCamera);
-    while (sunCamera.m_pitch >= 2.0f * PI) sunCamera.m_pitch -= 2.0f * PI;
-    while (sunCamera.m_pitch <= 0.0f) sunCamera.m_pitch += 2.0f * PI;
-    while (sunCamera.m_yaw >= 2.0f * PI) sunCamera.m_yaw -= 2.0f * PI;
-    while (sunCamera.m_yaw <= 0.0f) sunCamera.m_yaw += 2.0f * PI;
+    const Camera& camera = CameraSystem::getCurrentCamera();
+    const Camera& sunCamera = CameraSystem::getSunCamera(); //s_data->m_sunCamera;
+    Vec3 sunDir = CameraSystem::getSunDirection();
 
     const Vec2& fontSize = s_data->m_fontSize;
 
-    Vec2 renderPos = s_data->m_camera.renderCameraInfo(Vec2(10.0f, 10.0f), fontSize);
+    Vec2 renderPos = camera.renderCameraInfo(Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
     snprintf(tmpStr, 1024,
              "Show normal mode: %s, rotation enabled: %s, rotation amount: %.2f, use sun camera: %s",
              s_data->m_showNormalMap ? "on" : "off",
              s_data->m_rotateOn ? "on" : "off",
              toDegrees(s_data->m_rotationAmount),
-             s_data->m_useSunCamera ? "on" : "off");
+             CameraSystem::useSunCamera() ? "on" : "off");
     FontRenderSystem::addText(tmpStr,
                               renderPos + Vec2(0.0f, fontSize.y * 0.0f),
                               fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
     snprintf(tmpStr, 1024, "SunPitch: %.3f, SunYaw: %.3f, Sundir: %.3f, %.3f, %.3f",
-             toDegrees(sunCamera.m_pitch), toDegrees(sunCamera.m_yaw), sundir.x, sundir.y, sundir.z);
+             toDegrees(sunCamera.m_pitch), toDegrees(sunCamera.m_yaw), sunDir.x, sunDir.y, sunDir.z);
     FontRenderSystem::addText(tmpStr,
-                              renderPos + Vec2(0.0f, fontSize.y * 1.0f), fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+                              renderPos + Vec2(0.0f, fontSize.y * 1.0f),
+                              fontSize, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
     snprintf(tmpStr, 1024, "Sun pos: %.3f, %.3f, %.3f",
              sunCamera.m_position.x, sunCamera.m_position.y, sunCamera.m_position.z);
@@ -315,19 +299,13 @@ static void sHandleInput()
         s_data->m_selectedEntityIndex = ~0u;
 
         Vec2 coord = Vec2(mouseState.x, mouseState.y);
-        const auto& app = VulkanApp::getWindowApp();
-        Vec2 windowSize = Vec2(app.windowWidth, app.windowHeight);
-        Ray ray{ Uninit };
-        if(s_data->m_useSunCamera)
-            ray = s_data->m_sunCamera.getRayFromScreenPixelCoordinates(coord, windowSize);
-        else
-            ray = s_data->m_camera.getRayFromScreenPixelCoordinates(coord, windowSize);
+        Ray ray = camera.getRayFromScreenPixelCoordinates(coord);
 
-        HitPoint hitpoint{ Uninit };
-        s_data->m_selectedEntityIndex = s_data->m_scene.castRay(ray, hitpoint);
+        HitPoint hitPoint{ Uninit };
+        s_data->m_selectedEntityIndex = s_data->m_scene.castRay(ray, hitPoint);
         if(s_data->m_selectedEntityIndex != ~0u)
         {
-            s_data->m_lineTo = s_data->m_lineTo = hitpoint.point;
+            s_data->m_lineTo = s_data->m_lineTo = hitPoint.point;
             s_data->m_lineFrom = ray.pos;
         }
     }
@@ -349,48 +327,14 @@ static void sRenderUpdate()
     VK_CHECK(vkBeginCommandBuffer(vulk->commandBuffer, &beginInfo));
 
     vkCmdResetQueryPool(vulk->commandBuffer, vulk->queryPools[vulk->frameIndex], 0, QUERY_COUNT);
+    vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
     MyVulkan::writeStamp();
     VulkanResources::update();
 
-    struct FrameBuffer
-    {
-        Vector2 areaSize;
-        Vector2 tmp1;
-        Vector4 tmp2[3];
-
-        Matrix camMat;
-        Matrix viewProj;
-        Matrix mvp;
-        Matrix sunMatrix;
-
-
-        Vector4 camPos;
-        Vector4 tmp3[3];
-
-        Matrix inverseMvp;
-    };
     GpuFrameBuffer frameBufferData;
 
-    // bit ugly.......
-    s_data->m_sunCamera.calculateOrtographicPosition(s_data->m_camera.m_position);
-    if(app.windowWidth > 0 && app.windowHeight > 0)
-        s_data->m_camera.updateCameraState(app.windowWidth, app.windowHeight);
-    s_data->m_sunCamera.updateCameraState(50.0f, 50.0f);
-
-    if (s_data->m_useSunCamera)
-    {
-        frameBufferData.mvp = s_data->m_sunCamera.m_worldToViewMat;
-        frameBufferData.inverseMvp = s_data->m_sunCamera.m_viewToWorldMat;
-    }
-    else
-    {
-        frameBufferData.mvp = s_data->m_camera.m_worldToViewMat;
-        frameBufferData.inverseMvp = s_data->m_camera.m_viewToWorldMat;
-    }
-    frameBufferData.sunMatrix = s_data->m_sunCamera.m_worldToViewMat;
-    frameBufferData.camPos = Vector4(s_data->m_camera.m_position, 0.0f);
-
+    CameraSystem::fillGpuFrameBuffer(frameBufferData);
     frameBufferData.windowSize = Vec2(app.windowWidth, app.windowHeight);
     VulkanResources::addToCopylist(frameBufferData, vulk->renderFrameBufferHandle[vulk->frameIndex]);
 
@@ -464,9 +408,6 @@ static void sRenderUpdate()
 
     s_data->m_scene.update(dt);
 
-    Vec3 sundir = getSunDirection(s_data->m_sunCamera);
-    LightRenderSystem::setSunDirection(sundir);
-
     LightRenderSystem::update();
 
 
@@ -535,7 +476,6 @@ static void sRunApp()
         if (MyVulkan::frameStart())
         {
             //updateStats(*this);
-            vulk->currentStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             sRenderUpdate();
             sDraw();
             //renderDraw();

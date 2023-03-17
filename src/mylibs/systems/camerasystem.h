@@ -14,5 +14,9 @@ public:
     static Vector3 getSunDirection();
     static void fillGpuFrameBuffer(GpuFrameBuffer &buffer);
     static Camera& getCurrentCamera();
+    static Camera& getSunCamera();
+    static Camera& getCurrentIndexedCamera();
+
+    static bool useSunCamera();
 };
 

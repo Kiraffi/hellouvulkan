@@ -18,4 +18,5 @@ target_link_libraries(compute_test_vulkan PRIVATE
     #MyVulkan
     #MyImgui
     glfw
+    Common_Project
     )

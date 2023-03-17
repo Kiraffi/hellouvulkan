@@ -14,6 +14,8 @@
 #include <render/lightingrendertargets.h>
 #include <render/meshrendertargets.h>
 
+#include "systems/camerasystem.h"
+
 struct LightRenderSystemData
 {
     Vec3 m_sunDir{ 0.0f, 1.0f, 0.0f };
@@ -123,6 +125,7 @@ bool LightRenderSystem::updateReadTargets(const MeshRenderTargets& meshRenderTar
 
 void LightRenderSystem::update()
 {
+    s_lightRenderSystemData.get()->m_sunDir = normalize(CameraSystem::getSunDirection());
     if (s_lightRenderSystemData.get()->m_lightBufferHandle[vulk->frameIndex].isValid())
     {
         LightBuffer lightBuffer;
@@ -140,9 +143,4 @@ void LightRenderSystem::render(u32 width, u32 height)
         vulk->frameIndex, width, height, 1, 8, 8, 1);
     MyVulkan::endDebugRegion();
     MyVulkan::writeStamp();
-}
-
-void LightRenderSystem::setSunDirection(const Vec3& sunDir)
-{
-    s_lightRenderSystemData.get()->m_sunDir = normalize(sunDir);
 }

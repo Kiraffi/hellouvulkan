@@ -18,8 +18,4 @@ public:
     static void update();
 
     static void render(uint32_t width, uint32_t height);
-
-    // Maybe the system should read the sun direction from some sort of lightmanager?
-    static void setSunDirection(const Vec3& sunDir);
-
 };

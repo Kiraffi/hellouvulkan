@@ -4,7 +4,7 @@
 project ("hellouvulkan libs" VERSION 0.0.1)
 
 include("${CMAKE_HOME_DIRECTORY}/cmake/my_cmake.cmake")
-print_variables()
+#print_variables()
 
 set(DEF_FILE "${CMAKE_CURRENT_LIST_DIR}/mylibscomponents.def")
 set(DEF_OUT_FILE "${CMAKE_CURRENT_LIST_DIR}/components/generated")

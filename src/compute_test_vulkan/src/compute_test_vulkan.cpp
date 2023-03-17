@@ -4,6 +4,8 @@
 #include <app/inputapp.h>
 #include <app/vulkan_app.h>
 
+//#include <common_project/common_project.h>
+
 #include <components/transform.h>
 
 #include <container/podvector.h>
@@ -34,11 +36,11 @@
 #include <resources/globalresources.h>
 
 #include <scene/scene.h>
+#include "../../common_project/common_project/common_project.h"
 
 
-
-static constexpr i32 c_ScreenWidth = 800;
-static constexpr i32 c_ScreenHeight = 600;
+//static constexpr i32 c_ScreenWidth = 800;
+//static constexpr i32 c_ScreenHeight = 600;
 
 static void sRunApp();
 static void sHandleInput();
@@ -75,6 +77,7 @@ static ComputeTestData *s_computeData = nullptr;
 
 i32 main(i32 argCount, char **argv)
 {
+    /*
     initMemory();
     initGlobalResources();
 
@@ -89,6 +92,9 @@ i32 main(i32 argCount, char **argv)
     deinitGlobalResources();
 
     deinitMemory();
+     */
+
+    commonMain("Vulkan, compute test", c_ScreenWidth, c_ScreenHeight);
     return 0;
 }
 

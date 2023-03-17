@@ -6,6 +6,7 @@
 #include "core/camera.h"
 #include "core/nullable.h"
 #include "gpu/gpustructs.h"
+#include "math/general_math.h"
 #include "math/quaternion_inline_functions.h"
 #include "math/vector3.h"
 #include "math/vector3_inline_functions.h"
@@ -32,13 +33,32 @@ Vector3 CameraSystem::getSunDirection()
 }
 Camera& CameraSystem::getCurrentCamera()
 {
+    if (!s_data.get()->m_useSunCamera)
+    {
+        return getCurrentIndexedCamera();
+    }
+    return s_data.get()->m_sunCamera;
+}
+
+Camera& CameraSystem::getCurrentIndexedCamera()
+{
     return s_data.get()->m_cameras[s_data.get()->m_currCameraIndex];
+}
+
+Camera& CameraSystem::getSunCamera()
+{
+    return s_data.get()->m_sunCamera;
+}
+
+bool CameraSystem::useSunCamera()
+{
+    return s_data.get()->m_useSunCamera;
 }
 void CameraSystem::fillGpuFrameBuffer(GpuFrameBuffer &buffer)
 {
     const auto& app = VulkanApp::getWindowApp();
 
-    auto& camera = getCurrentCamera();
+    auto& camera = getCurrentIndexedCamera();
     auto& sunCamera = s_data.get()->m_sunCamera;
 
     // bit ugly.......
@@ -47,27 +67,24 @@ void CameraSystem::fillGpuFrameBuffer(GpuFrameBuffer &buffer)
         camera.updateCameraState(app.windowWidth, app.windowHeight);
     sunCamera.updateCameraState(50.0f, 50.0f);
 
-    if (s_data.get()->m_useSunCamera)
-    {
-        buffer.mvp = sunCamera.m_worldToViewMat;
-        buffer.inverseMvp = sunCamera.m_viewToWorldMat;
-    }
-    else
-    {
-        buffer.mvp = camera.m_worldToViewMat;
-        buffer.inverseMvp = camera.m_viewToWorldMat;
-    }
+    Camera& currentCamera = getCurrentCamera();
+
+    buffer.mvp = currentCamera.m_worldToViewMat;
+    buffer.inverseMvp = currentCamera.m_viewToWorldMat;
     buffer.sunMatrix = sunCamera.m_worldToViewMat;
     buffer.camPos = Vector4(camera.m_position, 0.0f);
-
 }
 
 bool CameraSystem::init()
 {
     s_data.create();
     s_data.get()->m_cameras.pushBack(Camera{});
+
     s_data.get()->m_currCameraIndex = 0;
     s_data.get()->m_cameras[0].m_position = Vec3(0.0f, 4.0f, 5.0f);
+
+    s_data.get()->m_sunCamera.m_pitch = toRadians(330.0f);
+    s_data.get()->m_sunCamera.m_yaw = toRadians(30.0f);
 
     return true;
 }

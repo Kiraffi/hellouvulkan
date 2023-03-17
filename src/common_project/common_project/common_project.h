@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/mytypes.h"
+
 static constexpr i32 c_ScreenWidth = 1024;
 static constexpr i32 c_ScreenHeight = 768;
 
