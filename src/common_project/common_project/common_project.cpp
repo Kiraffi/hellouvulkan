@@ -54,17 +54,6 @@
 
 #include "systems/camerasystem.h"
 
-static Vec3 getSunDirection(const Camera &camera)
-{
-    Vec3 sunDir[3];
-    getDirectionsFromPitchYawRoll(
-        camera.m_pitch,
-        camera.m_yaw,
-        0.0f, sunDir[0], sunDir[1], sunDir[2]);
-
-    return -sunDir[2];
-}
-
 struct CommonVulkan
 {
     Scene m_scene;
