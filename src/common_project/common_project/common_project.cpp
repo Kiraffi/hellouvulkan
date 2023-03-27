@@ -15,6 +15,7 @@
 #include "core/json.h"
 #include "core/timer.h"
 #include "core/mytypes.h"
+#include "core/nullable.h"
 
 #include "gui/componentviews.h"
 #include "gpu/gpustructs.h"
@@ -56,6 +57,7 @@
 
 struct CommonVulkan
 {
+    myUpdateFunctionPtr m_updateFunc = nullptr;
     Scene m_scene;
 
     LightingRenderTargets m_lightingRenderTargets;
@@ -73,7 +75,8 @@ struct CommonVulkan
     Vec3 m_lineFrom;
     Vec3 m_lineTo;
 };
-CommonVulkan* s_data = nullptr;
+
+Nullable<CommonVulkan> s_data;
 
 static bool sResize();
 static void sResized(int width, int height);
@@ -94,11 +97,9 @@ static void sDeinit()
     TonemapRenderSystem::deinit();
     LineRenderSystem::deinit();
     CameraSystem::deinit();
-    if(s_data)
-    {
-        delete s_data;
-        s_data = nullptr;
-    }
+
+    s_data.destroy();
+
     MyVulkan::deinit();
     VulkanApp::deinitApp();
 }
@@ -107,8 +108,6 @@ static void sDeinit()
 
 static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
 {
-    s_data = new CommonVulkan();
-
     auto &vulkanInitParams = VulkanInitializationParameters::getRef();
     vulkanInitParams.useIntegratedGpu = true;
 
@@ -124,13 +123,13 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     // TEMPORARY!
     //glfwSetWindowPos(window, 2000, 100);
 
-    if (!s_data->m_convertFromS16.init(ShaderType::ConvertFromRGBAS16))
+    if (!s_data.get()->m_convertFromS16.init(ShaderType::ConvertFromRGBAS16))
         return false;
 
     if (!MeshRenderSystem::init())
         return false;
 
-    if (!s_data->m_scene.init())
+    if (!s_data.get()->m_scene.init())
         return false;
 
     if (!LightRenderSystem::init())
@@ -142,18 +141,18 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
     if (!LineRenderSystem::init())
         return false;
 
-    if (!s_data->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
+    if (!s_data.get()->m_meshRenderTargets.resizeShadowTarget(c_ShadowWidth, c_ShadowHeight))
         return false;
+/*
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
 
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, -0.1f, 0.0f }, .scale = { 10.0f, 1.0f, 10.0f } }, .entityType = EntityType::FLOOR });
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING});
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
 
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING});
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {-3.0f, 1.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, -15.0f } }, .entityType = EntityType::CHARACTER });
 
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 0.1f, -15.0f } }, .entityType = EntityType::CHARACTER });
-
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {-3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {3.0f, 0.1f, -20.0f } }, .entityType = EntityType::LOW_POLY_CHAR });
 
     for(i32 y = -10; y < 10; ++y)
     {
@@ -163,23 +162,23 @@ static bool sInit(const char* windowStr, i32 screenWidth, i32 screenHeight)
             pos.x += 0.5f;
             pos.y += 0.5f;
 
-            s_data->m_scene.addGameEntity({ .transform = { .pos = pos }, .entityType = EntityType::LOW_POLY_CHAR });
+            s_data.get()->m_scene.addGameEntity({ .transform = { .pos = pos }, .entityType = EntityType::LOW_POLY_CHAR });
         }
     }
 
 
     for (float f = -2.5f; f <= 2.5f; f += 1.0f)
     {
-        s_data->m_scene.addGameEntity({.transform = {.pos = {f * 5.0f, 1.0f, -5.0f}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW });
-        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE });
-        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH });
-        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, }, .entityType = EntityType::BLOB });
-        s_data->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, }, .entityType = EntityType::BLOB_FLAT });
+        s_data.get()->m_scene.addGameEntity({.transform = {.pos = {f * 5.0f, 1.0f, -5.0f}, .scale = {0.1f, 0.1f, 0.1f } }, .entityType = EntityType::ARROW });
+        s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 10.0f}, }, .entityType = EntityType::TREE });
+        s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 15.0f}, }, .entityType = EntityType::TREE_SMOOTH });
+        s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 20.0f}, }, .entityType = EntityType::BLOB });
+        s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {f * 5.0f, 0.0f, 25.0f}, }, .entityType = EntityType::BLOB_FLAT });
     }
-    s_data->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING });
-
-    //s_data->m_sunCamera.m_pitch = toRadians(330.0f);
-    //s_data->m_sunCamera.m_yaw = toRadians(30.0f);
+    s_data.get()->m_scene.addGameEntity({ .transform = {.pos = {0.0f, 1.0f, 2.0f } }, .entityType = EntityType::TEST_THING });
+*/
+    //s_data.get()->m_sunCamera.m_pitch = toRadians(330.0f);
+    //s_data.get()->m_sunCamera.m_yaw = toRadians(30.0f);
 
     MyVulkan::setVulkanFrameResizedCBFunc(sResized);
 
@@ -193,20 +192,20 @@ static void sResized(int w, int h)
 
 static bool sResize()
 {
-    if (!s_data->m_meshRenderTargets.resizeMeshTargets())
+    if (!s_data.get()->m_meshRenderTargets.resizeMeshTargets())
         return false;
-    if (!s_data->m_lightingRenderTargets.resizeLightingTargets())
+    if (!s_data.get()->m_lightingRenderTargets.resizeLightingTargets())
         return false;
 
-    MeshRenderSystem::setRenderTargets(s_data->m_meshRenderTargets);
+    MeshRenderSystem::setRenderTargets(s_data.get()->m_meshRenderTargets);
     LineRenderSystem::setRendertargets(
-            s_data->m_meshRenderTargets.albedoImage, s_data->m_meshRenderTargets.depthImage);
-    FontRenderSystem::setRenderTarget(s_data->m_meshRenderTargets.albedoImage);
-    s_data->m_convertFromS16.updateSourceImages(s_data->m_meshRenderTargets);
+            s_data.get()->m_meshRenderTargets.albedoImage, s_data.get()->m_meshRenderTargets.depthImage);
+    FontRenderSystem::setRenderTarget(s_data.get()->m_meshRenderTargets.albedoImage);
+    s_data.get()->m_convertFromS16.updateSourceImages(s_data.get()->m_meshRenderTargets);
 
-    LightRenderSystem::updateReadTargets(s_data->m_meshRenderTargets, s_data->m_lightingRenderTargets);
+    LightRenderSystem::updateReadTargets(s_data.get()->m_meshRenderTargets, s_data.get()->m_lightingRenderTargets);
     TonemapRenderSystem::updateReadTargets(
-        s_data->m_lightingRenderTargets.lightingTargetImage, s_data->m_meshRenderTargets.albedoImage);
+        s_data.get()->m_lightingRenderTargets.lightingTargetImage, s_data.get()->m_meshRenderTargets.albedoImage);
 
     return true;
 }
@@ -230,14 +229,14 @@ static void sHandleInput()
 
     if (InputApp::isPressed(GLFW_KEY_KP_ADD))
     {
-        for (auto &entity : s_data->m_scene.getEntities())
+        for (auto &entity : s_data.get()->m_scene.getEntities())
         {
             ++entity.animationIndex;
         }
     }
     if (InputApp::isPressed(GLFW_KEY_KP_SUBTRACT))
     {
-        for(auto &entity : s_data->m_scene.getEntities())
+        for(auto &entity : s_data.get()->m_scene.getEntities())
         {
             if(entity.animationIndex > 0)
                 --entity.animationIndex;
@@ -245,26 +244,26 @@ static void sHandleInput()
     }
 
     if (InputApp::isPressed(GLFW_KEY_SPACE))
-        s_data->m_showNormalMap = !s_data->m_showNormalMap;
+        s_data.get()->m_showNormalMap = !s_data.get()->m_showNormalMap;
 
     if (InputApp::isPressed(GLFW_KEY_Z))
-        s_data->m_rotateOn = !s_data->m_rotateOn;
+        s_data.get()->m_rotateOn = !s_data.get()->m_rotateOn;
 
     CameraSystem::update();
 
     const Camera& camera = CameraSystem::getCurrentCamera();
-    const Camera& sunCamera = CameraSystem::getSunCamera(); //s_data->m_sunCamera;
+    const Camera& sunCamera = CameraSystem::getSunCamera(); //s_data.get()->m_sunCamera;
     Vec3 sunDir = CameraSystem::getSunDirection();
 
-    const Vec2& fontSize = s_data->m_fontSize;
+    const Vec2& fontSize = s_data.get()->m_fontSize;
 
     Vec2 renderPos = camera.renderCameraInfo(Vec2(10.0f, 10.0f), fontSize);
     char tmpStr[1024];
     snprintf(tmpStr, 1024,
              "Show normal mode: %s, rotation enabled: %s, rotation amount: %.2f, use sun camera: %s",
-             s_data->m_showNormalMap ? "on" : "off",
-             s_data->m_rotateOn ? "on" : "off",
-             toDegrees(s_data->m_rotationAmount),
+             s_data.get()->m_showNormalMap ? "on" : "off",
+             s_data.get()->m_rotateOn ? "on" : "off",
+             toDegrees(s_data.get()->m_rotationAmount),
              CameraSystem::useSunCamera() ? "on" : "off");
     FontRenderSystem::addText(tmpStr,
                               renderPos + Vec2(0.0f, fontSize.y * 0.0f),
@@ -285,21 +284,21 @@ static void sHandleInput()
        mouseState.x >= 0 && mouseState.y >= 0 &&
        mouseState.x < vulk->swapchain.width && mouseState.y < vulk->swapchain.height)
     {
-        s_data->m_selectedEntityIndex = ~0u;
+        s_data.get()->m_selectedEntityIndex = ~0u;
 
         Vec2 coord = Vec2(mouseState.x, mouseState.y);
         Ray ray = camera.getRayFromScreenPixelCoordinates(coord);
 
         HitPoint hitPoint{ Uninit };
-        s_data->m_selectedEntityIndex = s_data->m_scene.castRay(ray, hitPoint);
-        if(s_data->m_selectedEntityIndex != ~0u)
+        s_data.get()->m_selectedEntityIndex = s_data.get()->m_scene.castRay(ray, hitPoint);
+        if(s_data.get()->m_selectedEntityIndex != ~0u)
         {
-            s_data->m_lineTo = s_data->m_lineTo = hitPoint.point;
-            s_data->m_lineFrom = ray.pos;
+            s_data.get()->m_lineTo = s_data.get()->m_lineTo = hitPoint.point;
+            s_data.get()->m_lineFrom = ray.pos;
         }
     }
 
-    LineRenderSystem::addLine(s_data->m_lineFrom, s_data->m_lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
+    LineRenderSystem::addLine(s_data.get()->m_lineFrom, s_data.get()->m_lineTo, getColor(0.0f, 1.0f, 0.0f, 1.0f));
 }
 
 static void sRenderUpdate()
@@ -340,13 +339,13 @@ static void sRenderUpdate()
     u32 selectedGreenColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 1.0f, 0.0f, 1.0f));
     u32 selectedBlueColor = getColor(Vec4(1.0f, 1.0f, 1.0f, 1.0f) * Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
-    for (auto &entity : s_data->m_scene.getEntities())
+    for (auto &entity : s_data.get()->m_scene.getEntities())
     {
         Vec4 linePoints4[8];
         Vec3 linePoints[8];
 
         Mat3x4 m = getModelMatrix(entity.transform);
-        const auto &bounds = s_data->m_scene.getBounds(entity.index);
+        const auto &bounds = s_data.get()->m_scene.getBounds(entity.index);
         const auto &bmin = bounds.min;
         const auto &bmax = bounds.max;
 
@@ -363,7 +362,7 @@ static void sRenderUpdate()
             linePoints[i] = Vec3(linePoints4[i].x, linePoints4[i].y, linePoints4[i].z);
 
         Vec4 multip(0.5f, 0.5f, 0.5f, 1.0f);
-        u32 drawColor = s_data->m_selectedEntityIndex == entity.index ? selectedColor : grayColor;
+        u32 drawColor = s_data.get()->m_selectedEntityIndex == entity.index ? selectedColor : grayColor;
         LineRenderSystem::addLine(linePoints[1], linePoints[3], drawColor);
         LineRenderSystem::addLine(linePoints[2], linePoints[3], drawColor);
         LineRenderSystem::addLine(linePoints[1], linePoints[5], drawColor);
@@ -374,9 +373,9 @@ static void sRenderUpdate()
         LineRenderSystem::addLine(linePoints[5], linePoints[7], drawColor);
         LineRenderSystem::addLine(linePoints[6], linePoints[7], drawColor);
 
-        u32 redColor = s_data->m_selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
-        u32 greenColor = s_data->m_selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
-        u32 blueColor = s_data->m_selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
+        u32 redColor = s_data.get()->m_selectedEntityIndex == entity.index ? selectedRedColor : unSelectedRedColor;
+        u32 greenColor = s_data.get()->m_selectedEntityIndex == entity.index ? selectedGreenColor : unSelectedGreenColor;
+        u32 blueColor = s_data.get()->m_selectedEntityIndex == entity.index ? selectedBlueColor : unSelectedBlueColor;
 
         LineRenderSystem::addLine(linePoints[0], linePoints[1], redColor);
         LineRenderSystem::addLine(linePoints[0], linePoints[2], greenColor);
@@ -386,16 +385,16 @@ static void sRenderUpdate()
             entity.entityType == EntityType::FLOOR)
             continue;
 
-        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 0.0f, 1.0f), s_data->m_rotationAmount);
+        entity.transform.rot = getQuaternionFromAxisAngle(Vec3(0.0f, 0.0f, 1.0f), s_data.get()->m_rotationAmount);
     }
-    if (s_data->m_rotateOn)
+    if (s_data.get()->m_rotateOn)
     {
-        s_data->m_rotationAmount += 1.5f * dt;
-        while (s_data->m_rotationAmount >= 2.0f * PI) s_data->m_rotationAmount -= 2.0f * PI;
-        while (s_data->m_rotationAmount <= -2.0f * PI) s_data->m_rotationAmount += 2.0f * PI;
+        s_data.get()->m_rotationAmount += 1.5f * dt;
+        while (s_data.get()->m_rotationAmount >= 2.0f * PI) s_data.get()->m_rotationAmount -= 2.0f * PI;
+        while (s_data.get()->m_rotationAmount <= -2.0f * PI) s_data.get()->m_rotationAmount += 2.0f * PI;
     }
 
-    s_data->m_scene.update(dt);
+    s_data.get()->m_scene.update(dt);
 
     LightRenderSystem::update();
 
@@ -406,45 +405,45 @@ static void sRenderUpdate()
 
 static void sDraw()
 {
-    s_data->m_meshRenderTargets.prepareTargetsForMeshRendering();
-    s_data->m_meshRenderTargets.prepareTargetsForShadowRendering();
+    s_data.get()->m_meshRenderTargets.prepareTargetsForMeshRendering();
+    s_data.get()->m_meshRenderTargets.prepareTargetsForShadowRendering();
     // Drawingg
     {
-        MeshRenderSystem::render(s_data->m_meshRenderTargets);
-        MeshRenderSystem::renderShadows(s_data->m_meshRenderTargets);
+        MeshRenderSystem::render(s_data.get()->m_meshRenderTargets);
+        MeshRenderSystem::renderShadows(s_data.get()->m_meshRenderTargets);
     }
 
-    if (s_data->m_showNormalMap)
+    if (s_data.get()->m_showNormalMap)
     {
-        VulkanResources::prepareToComputeSampleRead(s_data->m_meshRenderTargets.normalMapImage);
+        VulkanResources::prepareToComputeSampleRead(s_data.get()->m_meshRenderTargets.normalMapImage);
 
-        VulkanResources::prepareToComputeImageWrite(s_data->m_meshRenderTargets.albedoImage);
-        Image& image = s_data->m_meshRenderTargets.albedoImage;
-        s_data->m_convertFromS16.render(image.width, image.height);
+        VulkanResources::prepareToComputeImageWrite(s_data.get()->m_meshRenderTargets.albedoImage);
+        Image& image = s_data.get()->m_meshRenderTargets.albedoImage;
+        s_data.get()->m_convertFromS16.render(image.width, image.height);
     }
     else
     {
         {
-            s_data->m_meshRenderTargets.prepareTargetsForLightingComputeSampling();
-            s_data->m_lightingRenderTargets.prepareTargetsForLightingComputeWriting();
+            s_data.get()->m_meshRenderTargets.prepareTargetsForLightingComputeSampling();
+            s_data.get()->m_lightingRenderTargets.prepareTargetsForLightingComputeWriting();
 
-            Image& image = s_data->m_lightingRenderTargets.lightingTargetImage;
+            Image& image = s_data.get()->m_lightingRenderTargets.lightingTargetImage;
             LightRenderSystem::render(image.width, image.height);
         }
 
         {
-            s_data->m_lightingRenderTargets.prepareForTonemapSampling();
-            Image& image = s_data->m_meshRenderTargets.albedoImage;
+            s_data.get()->m_lightingRenderTargets.prepareForTonemapSampling();
+            Image& image = s_data.get()->m_meshRenderTargets.albedoImage;
             VulkanResources::prepareToComputeImageWrite(image);
             TonemapRenderSystem::render(image.width, image.height);
         }
     }
 
-    VulkanResources::prepareToGraphicsSampleWrite(s_data->m_meshRenderTargets.albedoImage);
+    VulkanResources::prepareToGraphicsSampleWrite(s_data.get()->m_meshRenderTargets.albedoImage);
     {
-        VulkanResources::prepareToGraphicsSampleWrite(s_data->m_meshRenderTargets.depthImage);
-        LineRenderSystem::render(s_data->m_meshRenderTargets.albedoImage,
-                                 s_data->m_meshRenderTargets.depthImage);
+        VulkanResources::prepareToGraphicsSampleWrite(s_data.get()->m_meshRenderTargets.depthImage);
+        LineRenderSystem::render(s_data.get()->m_meshRenderTargets.albedoImage,
+                                 s_data.get()->m_meshRenderTargets.depthImage);
     }
 
     {
@@ -452,7 +451,7 @@ static void sDraw()
     }
 
 
-    MyVulkan::present(s_data->m_meshRenderTargets.albedoImage);
+    MyVulkan::present(s_data.get()->m_meshRenderTargets.albedoImage);
 }
 
 
@@ -460,8 +459,14 @@ static void sRunApp()
 {
     while(VulkanApp::updateApp())
     {
-        sHandleInput();
+        const auto& app = VulkanApp::getWindowApp();
+        float dt = app.frameDt;
 
+        sHandleInput();
+        if(s_data.get()->m_updateFunc)
+        {
+            s_data.get()->m_updateFunc(dt);
+        }
         if (MyVulkan::frameStart())
         {
             //updateStats(*this);
@@ -477,13 +482,20 @@ static void sRunApp()
     VK_CHECK(vkDeviceWaitIdle(vulk->device));
 }
 
-void commonMain(const char* windowStr, i32 windowWidth, i32 windowHeight)
+void commonMain(const char* windowStr, i32 windowWidth, i32 windowHeight,
+                myInitFunctionPtr initFunc,
+                myUpdateFunctionPtr updateFunc)
 {
     initMemory();
+
     initGlobalResources();
+    s_data.create();
+    s_data.get()->m_updateFunc = updateFunc;
+
     if(sInit(windowStr, windowWidth, windowHeight))
     {
-        sRunApp();
+        if(!initFunc || initFunc(s_data.get()->m_scene))
+            sRunApp();
     }
     sDeinit();
     deinitGlobalResources();

@@ -1,5 +1,35 @@
 #include <pch.h>
 
+#include <scene/scene.h>
+
+#if 1
+#include "../../common_project/common_project/common_project.h"
+
+
+bool testInit(Scene &scene)
+{
+    scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
+
+    //printf("Test init\n");
+    return true;
+}
+
+bool testUpdate(f32 dt)
+{
+    //printf("Test update: %f\n", dt);
+    return true;
+}
+
+i32 main(i32 argCount, char **argv)
+{
+    commonMain("Vulkan, compute test",
+               c_ScreenWidth, c_ScreenHeight,
+               testInit, testUpdate);
+    return 0;
+}
+
+#else
+
 #include <app/glfw_keys.h>
 #include <app/inputapp.h>
 #include <app/vulkan_app.h>
@@ -15,7 +45,8 @@
 #include <core/general.h>
 #include <core/timer.h>
 #include <core/mytypes.h>
-#include <app/vulkan_app.h>
+
+
 
 #include <math/general_math.h>
 #include <math/matrix.h>
@@ -35,12 +66,8 @@
 
 #include <resources/globalresources.h>
 
-#include <scene/scene.h>
-#include "../../common_project/common_project/common_project.h"
-
-
-//static constexpr i32 c_ScreenWidth = 800;
-//static constexpr i32 c_ScreenHeight = 600;
+static constexpr i32 c_ScreenWidth = 800;
+static constexpr i32 c_ScreenHeight = 600;
 
 static void sRunApp();
 static void sHandleInput();
@@ -75,9 +102,22 @@ struct ComputeTestData
 
 static ComputeTestData *s_computeData = nullptr;
 
+bool testInit(Scene &scene)
+{
+    scene.addGameEntity({ .transform = {.pos = {3.0f, 0.0f, 0.0f } }, .entityType = EntityType::WOBBLY_THING });
+
+    //printf("Test init\n");
+    return true;
+}
+
+bool testUpdate(f32 dt)
+{
+    //printf("Test update: %f\n", dt);
+    return true;
+}
+
 i32 main(i32 argCount, char **argv)
 {
-    /*
     initMemory();
     initGlobalResources();
 
@@ -92,9 +132,7 @@ i32 main(i32 argCount, char **argv)
     deinitGlobalResources();
 
     deinitMemory();
-     */
 
-    commonMain("Vulkan, compute test", c_ScreenWidth, c_ScreenHeight);
     return 0;
 }
 
@@ -196,7 +234,10 @@ static bool sInit(const char *windowStr, i32 screenWidth, i32 screenHeight)
         Pipeline &pipeline = s_computeData->m_computePipeline;
         pipeline.descriptor.descriptorSets.resize(VulkanGlobal::FramesInFlight);
 
-        if(!MyVulkan::createComputePipeline(VulkanShader::getShader(ShaderType::ComputeTestComp), pipeline, "Compute copy pipeline test"))
+        if(!MyVulkan::createComputePipeline(
+            VulkanShader::getShader(ShaderType::ComputeTestComp),
+            pipeline,
+            "Compute copy pipeline test"))
         {
             printf("Failed to create compute pipeline!\n");
             return false;
@@ -220,7 +261,8 @@ static bool sInit(const char *windowStr, i32 screenWidth, i32 screenHeight)
         };
 
         if(!MyVulkan::createGraphicsPipeline(
-            VulkanShader::getShader(ShaderType::TexturedQuadVert), VulkanShader::getShader(ShaderType::TexturedQuadFrag),
+            VulkanShader::getShader(ShaderType::TexturedQuadVert),
+            VulkanShader::getShader(ShaderType::TexturedQuadFrag),
             { rgbaAtt }, {}, pipeline, "Graphics copy pipeline test"))
         {
             printf("Failed to create graphics pipeline\n");
@@ -454,3 +496,4 @@ static void sDraw()
     //present(computeColorImage);
     MyVulkan::present(s_computeData->m_renderColorFinalImage);
 }
+#endif
