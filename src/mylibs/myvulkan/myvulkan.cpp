@@ -410,7 +410,7 @@ static bool sCreateSwapchain(VSyncType vsyncMode)
         createInfo.presentMode = presentMode;
         createInfo.clipped = VK_TRUE;
 
-        VkSwapchainKHR swapchain = nullptr;
+        VkSwapchainKHR swapchain = {};
     //    PreCallValidateCreateSwapchainKHR()
         VkResult res = vkCreateSwapchainKHR(vulk->device, &createInfo, nullptr, &swapchain);
         VK_CHECK(res);
