@@ -190,7 +190,7 @@ static VkDebugUtilsMessengerEXT sRegisterDebugCB()
         | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = sDebugReportCB;
 
-    VkDebugUtilsMessengerEXT debugMessenger = nullptr;
+    VkDebugUtilsMessengerEXT debugMessenger = {};
 
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
         vulk->instance, "vkCreateDebugUtilsMessengerEXT");
